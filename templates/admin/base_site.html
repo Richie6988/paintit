@@ -1,0 +1,9 @@
+{% extends "admin/base.html" %}
+{% load static %}
+{% block title %}{{ title }} | PaintIt Admin{% endblock %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'studio/css/admin.css' %}">{% endblock %}
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}" class="pit-brand">
+  <img src="{% static 'studio/img/icon.svg' %}" alt="PaintIt"><span>PaintIt Admin</span></a></div>
+{% endblock %}
+{% block nav-global %}{% endblock %}

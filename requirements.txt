@@ -1,0 +1,15 @@
+Django>=5.0
+numpy
+opencv-python-headless
+scikit-learn
+scipy
+segno
+Pillow
+requests
+stripe
+reportlab
+whitenoise
+dj-database-url
+gunicorn
+psycopg2-binary
+redis

@@ -1,0 +1,26 @@
+{% extends "studio/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Livraison" %} · PaintIt{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="progress"><span>1. {% trans "Photo" %}</span><span>2. {% trans "Aperçu" %}</span><b>3. {% trans "Livraison" %}</b><span>4. {% trans "Paiement" %}</span></div>
+  <h1>{% trans "Où livrer votre kit ?" %}</h1>
+  <p class="sub">{{ order.price }} &euro;</p>
+  {% if msg %}<p class="{% if msg.kind == 'ok' %}ok-note{% else %}err{% endif %}">{{ msg.text }}</p>{% endif %}
+  {% if form.non_field_errors %}<p class="err">{{ form.non_field_errors|striptags }}</p>{% endif %}
+  <form method="post" class="form">
+    {% csrf_token %}
+    {% for field in form %}
+      <label class="field">
+        <span>{{ field.label }}</span>
+        {{ field }}
+        {% if field.errors %}<em class="err">{{ field.errors|striptags }}</em>{% endif %}
+      </label>
+    {% endfor %}
+    <div class="actions">
+      <a class="ghost" href="{% url 'studio:preview' %}">{% trans "Retour" %}</a>
+      <button class="cta" type="submit">{% trans "Aller au paiement" %}</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "studio/base.html" %}
+{% load i18n %}
+{% block title %}DigiPaint&trade; · PaintIt{% endblock %}
+{% block content %}
+<section class="panel wide">
+  <div class="portal-hero">
+    <div>
+      <h1>DigiPaint&trade; , {% trans "vos toiles" %}</h1>
+      <p class="sub">{% trans "Peignez vos toiles numériques, gagnez des points, revenez quand vous voulez." %}</p>
+    </div>
+  </div>
+
+  <div class="verifybar" id="verifybar">
+    {% if verified_email %}
+      <span>&#10003; {% trans "Galerie liée à" %} <b>{{ verified_email }}</b></span>
+      <a class="ghost" href="{% url 'studio:paint_logout' %}">{% trans "Se déconnecter" %}</a>
+    {% else %}
+      <form method="post" action="{% url 'studio:paint_link' %}" class="vf-row">{% csrf_token %}
+        <input type="email" name="email" placeholder="votre@email.com" required>
+        <button class="cta" type="submit">{% trans "Voir ma galerie" %}</button>
+      </form>
+      <em class="hint">{% trans "Saisissez votre e-mail pour afficher et sauvegarder vos toiles." %}</em>
+    {% endif %}
+  </div>
+
+  <div id="grid" class="models-grid">
+    <a class="add-card" href="{% url 'studio:paint_new' %}" title="{% trans 'Créer un design' %}">
+      <span class="plus">+</span>
+      <span class="add-label">{% if free_used %}{% trans "Ajouter" %} · 0,99 &euro;{% else %}{% trans "Créer" %} · {% trans "gratuit" %}{% endif %}</span>
+    </a>
+    {% for c in canvases %}
+      <div class="model-card" data-uid="{{ c.uid }}">
+        <a class="mc-thumb" href="{% url 'studio:digipaint' c.uid %}">
+          <div class="mc-img" style="aspect-ratio:{{ c.width_cm|floatformat:0 }}/{{ c.height_cm|floatformat:0 }}">
+            <img src="{% url 'studio:order_image' c.uid 'preview' %}" alt=""><span class="mc-play"><svg class="icplay" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span>
+          </div>
+        </a>
+        <button class="mc-del del" data-uid="{{ c.uid }}" title="{% trans 'Supprimer' %}"><svg class="ic16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13h10l1-13"/></svg></button>
+        <div class="mc-meta"><b>{{ c.colors }} {% trans "couleurs" %}</b>
+          <small>{% if c.source == 'gift' %}<svg class="ic14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12"/><path d="M12 8C10.5 8 8.5 7.2 8.5 5.7S10.5 4 12 8zM12 8c1.5 0 3.5-.8 3.5-2.3S13.5 4 12 8z"/></svg> {% trans "offerte" %}{% else %}{% trans "numérique" %}{% endif %}</small></div>
+        <div class="mc-actions">
+          <a class="mc-btn primary" href="{% url 'studio:digipaint_buy' c.uid %}?v=blank"><svg class="ic16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/><path d="M3 4h2l2.3 11h9.4l1.5-7H6.2"/></svg> {% trans "Kit toile vierge" %}</a>
+          <a class="mc-btn" href="{% url 'studio:print_page' c.uid %}"><svg class="ic16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m6 16 4-4 3 3 3-4 3 4"/><circle cx="8.5" cy="9" r="1.1"/></svg> {% trans "Tableau fini" %} <span class="soon-tag">{% trans "bientôt" %}</span></a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  <p id="empty" class="sub" {% if canvases %}hidden{% endif %}>{% trans "Aucune toile pour l'instant." %}</p>
+
+</section>
+<script>
+(function(){
+  var CSRF="{{ csrf_token }}", VERIFIED={% if verified_email %}true{% else %}false{% endif %};
+  var grid=document.getElementById('grid');
+  try{var done=JSON.parse(localStorage.getItem('PIT_DONE')||'{}');var gm={};try{gm=JSON.parse(localStorage.getItem('PIT_GAME')||'{}');}catch(e){}
+    document.querySelectorAll('.model-card[data-uid]').forEach(function(card){var uid=card.dataset.uid;
+      if(done[uid]){card.classList.add('shiny');card.insertAdjacentHTML('beforeend','<span class="shiny-badge"><svg viewBox="0 0 24 24" fill="#e0a400"><path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6z"/></svg></span>');}
+      var board=(gm[uid]&&gm[uid].g)?gm[uid].g:uid;
+      if(board!==uid){var im=card.querySelector('.mc-img img');if(im)im.src='/preview/img/'+board+'/preview/';}
+      try{var st=JSON.parse(localStorage.getItem('digipaint:'+board)||'null');
+        if(st){var painted=Object.keys(st.painted||{}).length,total=st.total||0,score=st.score||0;
+          var meta=card.querySelector('.mc-meta');
+          if(meta){var k=document.createElement('div');k.className='mc-kpi';
+            k.innerHTML='<span>Score <b>'+score+'</b></span><span><b>'+painted+(total?'/'+total:'')+'</b> {% trans "zones" %}</span>';meta.appendChild(k);}}}catch(e){}
+    });}catch(e){}
+  grid.addEventListener('click',function(e){var b=e.target.closest('.del');if(!b)return;e.preventDefault();
+    var uid=b.dataset.uid;if(!confirm('Supprimer ce design ?'))return;
+    fetch('/paint/'+uid+'/delete/',{method:'POST',headers:{'X-CSRFToken':CSRF}}).then(function(){
+      try{['PIT_MODELS','PIT_GAME','PIT_DONE'].forEach(function(k){var o=JSON.parse(localStorage.getItem(k)||(k==='PIT_MODELS'?'[]':'{}'));
+        if(Array.isArray(o))o=o.filter(function(x){return x.uid!==uid;});else delete o[uid];localStorage.setItem(k,JSON.stringify(o));});}catch(err){}
+      var card=grid.querySelector('.model-card[data-uid="'+uid+'"]');if(card)card.remove();});
+  });
+})();
+</script>
+{% endblock %}

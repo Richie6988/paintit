@@ -1,0 +1,42 @@
+{% extends "studio/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Paiement" %} · PaintIt{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="progress"><span>1. {% trans "Photo" %}</span><span>2. {% trans "Aperçu" %}</span><span>3. {% trans "Livraison" %}</span><b>4. {% trans "Paiement" %}</b></div>
+  <h1>{% trans "Récapitulatif" %}</h1>
+
+  <div class="recap">
+    <p><b>{% trans "Peinture par numéros personnalisée" %}</b></p>
+    <ul>
+      <li>{% trans "Format" %} : {{ order.format_label }} ({{ order.orientation }})</li>
+      <li>{% trans "Couleurs" %} : {{ order.colors }}</li>
+      <li>{% trans "Livraison" %} : {{ shipping.full_name }}, {{ shipping.address1 }} {{ shipping.postal_code }} {{ shipping.city }} ({{ shipping.country }})</li>
+    </ul>
+  </div>
+
+  {% if msg %}<p class="{% if msg.kind == 'ok' %}ok-note{% else %}err{% endif %}">{{ msg.text }}</p>{% endif %}
+
+  <form method="post" class="code-row">
+    {% csrf_token %}
+    <input type="text" name="code" placeholder="{% trans 'Code de réduction' %}" value="{% if discount %}{{ discount.code }}{% else %}{{ prefill_code }}{% endif %}">
+    <button class="ghost" type="submit">{% trans "Appliquer" %}</button>
+  </form>
+
+  <div class="totals">
+    <div class="line"><span>{% trans "Sous-total" %}</span><span>{{ order.price }} &euro;</span></div>
+    {% if discount %}<div class="line disc"><span>{% trans "Remise" %} ({{ discount.code }}, -{{ discount.percent }}%)</span><span>-{{ discount.amount }} &euro;</span></div>{% endif %}
+    <div class="line grand"><span>{% trans "Total" %}</span><span>{{ total }} &euro;</span></div>
+  </div>
+
+
+  <form method="post" action="{% url 'studio:place_order' %}">
+    {% csrf_token %}
+    <p class="delivery-eta"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px"><path d="M2 7h11v8H2z"/><path d="M13 9h4l3 3v3h-7z"/><circle cx="6.5" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/></svg>{% blocktrans %}Livraison estimée : {{ delivery_min }} à {{ delivery_max }} jours ouvrés{% endblocktrans %}</p>
+    <div class="actions">
+      <a class="ghost" href="{% url 'studio:delivery' %}">{% trans "Retour" %}</a>
+      <button class="cta" type="submit">{% trans "Valider et payer" %}</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

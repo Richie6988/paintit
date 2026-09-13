@@ -1,0 +1,127 @@
+{% extends "studio/base.html" %}
+{% load i18n l10n %}
+{% block title %}{% trans "Aperçu" %} · PaintIt{% endblock %}
+{% block content %}
+<section class="panel wide" id="protected">
+  <div class="progress"><span>1. {% trans "Photo" %}</span><b>2. {% trans "Aperçu" %}</b><span>3. {% trans "Livraison" %}</span><span>4. {% trans "Paiement" %}</span></div>
+  <h1>{% trans "Voici votre tableau" %}</h1>
+
+  <p class="sub">{% trans "Cliquez sur une image pour la voir en grand." %}</p>
+
+  <div class="reveal-hero">
+    <div class="reveal" id="prevReveal" style="--pos:55%;aspect-ratio:{{ order.width_cm|unlocalize }}/{{ order.height_cm|unlocalize }}">
+      <img class="reveal-img" src="{% url 'studio:order_image' order.uid 'template' %}" alt="" draggable="false">
+      <div class="reveal-top"><img class="reveal-img" src="{% url 'studio:order_image' order.uid 'source' %}" alt="" draggable="false"></div>
+      <div class="reveal-handle"><span class="knob"></span></div>
+      <span class="rh-cap">{% trans "Votre photo" %}</span><span class="rh-cap r">{% trans "Votre toile" %}</span>
+    </div>
+    <p class="reveal-hint">{% trans "Glissez pour comparer votre photo et la toile à peindre." %}</p>
+    <div class="prev-thumbs">
+      <button type="button" class="pthumb" data-full="{% url 'studio:order_image' order.uid 'preview' %}">
+        <img src="{% url 'studio:order_image' order.uid 'preview' %}" alt=""><span>{% trans "Toile coloriée" %}</span></button>
+      <button type="button" class="pthumb" data-full="{% url 'studio:order_image' order.uid 'template' %}">
+        <img src="{% url 'studio:order_image' order.uid 'template' %}" alt=""><span>{% trans "Toile numérotée" %}</span></button>
+    </div>
+  </div>
+  <div class="overlay-lb" id="prevLb"><img id="prevLbImg" src="" alt=""></div>
+
+  <form method="post" action="{% url 'studio:set_options' %}" class="options">
+    {% csrf_token %}
+    {% if brushes_available %}
+    <label class="check">
+      <input type="checkbox" name="brushes" id="brushes" {% if order.brushes %}checked{% endif %}>
+      <span>{% blocktrans with p=brushes_price %}Ajouter un set de pinceaux (+{{ p }} &euro;){% endblocktrans %}</span>
+    </label>
+    {% else %}<span></span>{% endif %}
+    <button class="cta" type="submit">{% trans "Je commande" %}</button>
+  </form>
+
+  <div class="digital-offer">
+    <div class="do-txt"><b>{% trans "Jouez votre toile en digital" %}</b>
+      <span>{% trans "Peignez-la en ligne, gagnez des points, retrouvez-la dans votre galerie." %}</span></div>
+    {% if digital_owned %}
+      <a class="digibtn" href="{% url 'studio:digipaint' order.uid %}">{% trans "Jouer" %} · {% trans "offert" %}</a>
+    {% else %}
+      <a class="digibtn" href="{% url 'studio:paint_unlock' order.uid %}">{% trans "Jouer" %} · 0,99 &euro;</a>
+    {% endif %}
+  </div>
+
+  <div class="kit-included">
+    <h3>{% trans "Inclus dans le kit" %}</h3>
+    <div class="kit-items">
+      <div class="kit-item">
+        <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">
+          <rect x="10" y="24" width="14" height="26" rx="2" fill="#e85d75"/><rect x="9" y="20" width="16" height="6" rx="2" fill="#fff"/>
+          <rect x="27" y="24" width="14" height="26" rx="2" fill="#3fd07a"/><rect x="26" y="20" width="16" height="6" rx="2" fill="#fff"/>
+          <rect x="44" y="24" width="14" height="26" rx="2" fill="#2f6bf2"/><rect x="43" y="20" width="16" height="6" rx="2" fill="#fff"/>
+        </g></svg>
+        <span>{% trans "Pots de peinture assortis" %}</span>
+      </div>
+      <div class="kit-item">
+        <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">
+          <rect x="16" y="8" width="32" height="44" rx="3" fill="#eef2f9"/><path d="M22 18h20M22 26h20M22 34h14" stroke-width="2.4"/>
+          <rect x="20" y="40" width="12" height="8" rx="1.5" fill="#f6b93b"/></g></svg>
+        <span>{% trans "Poster et instructions" %}</span>
+      </div>
+      <div class="kit-item">
+        <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">
+          <path d="M12 22 32 12l20 10v20L32 52 12 42z" fill="#eef2f9"/><path d="M12 22l20 10 20-10M32 32v20"/></g></svg>
+        <span>{% trans "Livraison" %}</span>
+      </div>
+      <div class="kit-item">
+        <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">
+          <rect x="10" y="16" width="44" height="30" rx="4" fill="#dfe8ff"/><path d="M24 26l10 5-10 5z" fill="#2f6bf2" stroke="none"/>
+          <path d="M20 52h24" stroke-width="2.4"/></g></svg>
+        <span>{% trans "Jeu DigiPaint" %}</span>
+      </div>
+      <div class="kit-item">
+        <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">
+          <path d="M10 20h44v10a4 4 0 0 0 0 8v6H10v-6a4 4 0 0 0 0-8z" fill="#fff4e0"/>
+          <path d="M28 20v24" stroke-dasharray="2 3"/><text x="38" y="38" font-size="11" font-weight="800" fill="#c98a00" stroke="none">%</text></g></svg>
+        <span>{% trans "Coupon de réduction" %}</span>
+      </div>
+    </div>
+  </div>
+
+</section>
+<script>
+  (function () {
+    var z = document.getElementById('protected');
+    if (z) ['contextmenu','dragstart','selectstart'].forEach(function(ev){ z.addEventListener(ev, function(e){e.preventDefault();}); });
+    var base = {{ order.canvas_price|unlocalize }}, bp = {{ brushes_price|unlocalize }};
+    var cb = document.getElementById('brushes'), t = document.getElementById('ptotal');
+    function upd(){ if(!t) return; t.textContent = (base + (cb && cb.checked ? bp : 0)).toFixed(2).replace('.', ','); }
+    if (cb) cb.addEventListener('change', upd);
+    upd();
+  })();
+</script>
+<script>
+(function(){ try{
+  var m={uid:"{{ order.uid|escapejs }}",w:{{ order.width_cm|unlocalize }},h:{{ order.height_cm|unlocalize }},
+    colors:{{ order.colors }},orientation:"{{ order.orientation|escapejs }}",
+    format_label:"{{ order.format_label|escapejs }}",price:{{ order.canvas_price|unlocalize }},
+    date:Date.now()};
+  var list=JSON.parse(localStorage.getItem('PIT_MODELS')||'[]').filter(function(x){return x.uid!==m.uid;});
+  list.unshift(m); localStorage.setItem('PIT_MODELS', JSON.stringify(list.slice(0,60)));
+}catch(e){} })();
+</script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  var r=document.getElementById('prevReveal');
+  if(r){var dragging=false;
+    function setPos(x){var b=r.getBoundingClientRect();var p=(x-b.left)/b.width;p=Math.max(0,Math.min(1,p));r.style.setProperty('--pos',(p*100)+'%');}
+    function down(e){dragging=true;setPos((e.touches?e.touches[0]:e).clientX);e.preventDefault();}
+    function move(e){if(dragging)setPos((e.touches?e.touches[0]:e).clientX);}
+    r.addEventListener('mousedown',down); r.addEventListener('touchstart',down,{passive:false});
+    window.addEventListener('mousemove',move); window.addEventListener('touchmove',move,{passive:false});
+    window.addEventListener('mouseup',function(){dragging=false;}); window.addEventListener('touchend',function(){dragging=false;});
+  }
+  var lb=document.getElementById('prevLb'), lbi=document.getElementById('prevLbImg');
+  if(lb&&lbi){
+    document.querySelectorAll('.pthumb').forEach(function(b){b.addEventListener('click',function(){lbi.src=b.dataset.full;lb.classList.add('show');});});
+    lb.addEventListener('click',function(){lb.classList.remove('show');});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')lb.classList.remove('show');});
+  }
+});
+</script>
+{% endblock %}

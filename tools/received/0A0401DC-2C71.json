@@ -1,0 +1,258 @@
+{
+  "reference": "0A0401DC-2C71",
+  "created_at": "2026-09-08T15:32:06",
+  "quantity": 1,
+  "dropship": true,
+  "product": {
+    "type": "peinture_par_numeros",
+    "format": "40 x 50 cm",
+    "orientation": "portrait",
+    "width_cm": 40.0,
+    "height_cm": 50.0,
+    "colors": 24
+  },
+  "instructions": {
+    "fill_pots": true,
+    "pot_volume_ml": 3.5,
+    "number_pots": true,
+    "print_template_svg": "0A0401DC-2C71_template.svg",
+    "print_poster_a4": "0A0401DC-2C71_poster.png",
+    "add_logo": true,
+    "brand": "PaintIt"
+  },
+  "pots": [
+    {
+      "number": 1,
+      "hex": "#668487",
+      "rgb": [
+        102,
+        132,
+        135
+      ]
+    },
+    {
+      "number": 2,
+      "hex": "#43311D",
+      "rgb": [
+        67,
+        49,
+        29
+      ]
+    },
+    {
+      "number": 3,
+      "hex": "#DDDBBF",
+      "rgb": [
+        221,
+        219,
+        191
+      ]
+    },
+    {
+      "number": 4,
+      "hex": "#170606",
+      "rgb": [
+        23,
+        6,
+        6
+      ]
+    },
+    {
+      "number": 5,
+      "hex": "#A48A6C",
+      "rgb": [
+        164,
+        138,
+        108
+      ]
+    },
+    {
+      "number": 6,
+      "hex": "#F2C581",
+      "rgb": [
+        242,
+        197,
+        129
+      ]
+    },
+    {
+      "number": 7,
+      "hex": "#6A3E1D",
+      "rgb": [
+        106,
+        62,
+        29
+      ]
+    },
+    {
+      "number": 8,
+      "hex": "#8A5D37",
+      "rgb": [
+        138,
+        93,
+        55
+      ]
+    },
+    {
+      "number": 9,
+      "hex": "#CA965E",
+      "rgb": [
+        202,
+        150,
+        94
+      ]
+    },
+    {
+      "number": 10,
+      "hex": "#F8F5D7",
+      "rgb": [
+        248,
+        245,
+        215
+      ]
+    },
+    {
+      "number": 11,
+      "hex": "#B17440",
+      "rgb": [
+        177,
+        116,
+        64
+      ]
+    },
+    {
+      "number": 12,
+      "hex": "#55442E",
+      "rgb": [
+        85,
+        68,
+        46
+      ]
+    },
+    {
+      "number": 13,
+      "hex": "#89ADA3",
+      "rgb": [
+        137,
+        173,
+        163
+      ]
+    },
+    {
+      "number": 14,
+      "hex": "#4F210A",
+      "rgb": [
+        79,
+        33,
+        10
+      ]
+    },
+    {
+      "number": 15,
+      "hex": "#F9DCA3",
+      "rgb": [
+        249,
+        220,
+        163
+      ]
+    },
+    {
+      "number": 16,
+      "hex": "#ADB29F",
+      "rgb": [
+        173,
+        178,
+        159
+      ]
+    },
+    {
+      "number": 17,
+      "hex": "#6D5A42",
+      "rgb": [
+        109,
+        90,
+        66
+      ]
+    },
+    {
+      "number": 18,
+      "hex": "#516A73",
+      "rgb": [
+        81,
+        106,
+        115
+      ]
+    },
+    {
+      "number": 19,
+      "hex": "#322E4C",
+      "rgb": [
+        50,
+        46,
+        76
+      ]
+    },
+    {
+      "number": 20,
+      "hex": "#30140B",
+      "rgb": [
+        48,
+        20,
+        11
+      ]
+    },
+    {
+      "number": 21,
+      "hex": "#DDAE72",
+      "rgb": [
+        221,
+        174,
+        114
+      ]
+    },
+    {
+      "number": 22,
+      "hex": "#8B7459",
+      "rgb": [
+        139,
+        116,
+        89
+      ]
+    },
+    {
+      "number": 23,
+      "hex": "#7D9491",
+      "rgb": [
+        125,
+        148,
+        145
+      ]
+    },
+    {
+      "number": 24,
+      "hex": "#BFC6B2",
+      "rgb": [
+        191,
+        198,
+        178
+      ]
+    }
+  ],
+  "files": [
+    "0A0401DC-2C71_template.svg",
+    "0A0401DC-2C71_poster.png",
+    "order.json",
+    "print.json",
+    "0A0401DC-2C71_colors.json"
+  ],
+  "ship_to": {
+    "name": "Marie C",
+    "phone": "+33 0612345678",
+    "address1": "1 rue",
+    "address2": "",
+    "postal_code": "75005",
+    "city": "Paris",
+    "country": "France"
+  },
+  "amount_eur": 35.8
+}

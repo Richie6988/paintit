@@ -1,0 +1,848 @@
+#
+msgid ""
+msgstr ""
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Créer mon tableau"
+msgstr "Create my canvas"
+
+msgid "Peinture par numéros personnalisée, fabriquée à partir de vos photos"
+msgstr "Custom paint by numbers, made from your photos"
+
+msgid "Votre souvenir, votre chef-d'œuvre"
+msgstr "Your memory, your masterpiece"
+
+msgid ""
+"Laissez-vous tenter par la<br><em>peinture par numéros</em> personnalisée"
+msgstr "Treat yourself to<br><em>custom paint by numbers</em>"
+
+msgid ""
+"Envoyez une photo, on la transforme en toile à peindre : canvas, numéros et "
+"pots de couleur assortis. Livré chez vous, prêt à créer."
+msgstr ""
+"Send a photo, we turn it into a canvas to paint: outlines, numbers and "
+"matching paint pots. Delivered to your door, ready to create."
+
+msgid "Personnaliser ma peinture"
+msgstr "Customize my painting"
+
+msgid "Aperçu gratuit en quelques secondes, sans engagement"
+msgstr "Free preview in seconds, no commitment"
+
+msgid "Glissez pour révéler la toile"
+msgstr "Drag to reveal the canvas"
+
+msgid "Vous envoyez une photo"
+msgstr "You send a photo"
+
+msgid "Un portrait, un animal, un paysage, tout fonctionne."
+msgstr "A portrait, a pet, a landscape, anything works."
+
+msgid "On génère l'aperçu"
+msgstr "We generate the preview"
+
+msgid "Canvas et numéros calculés automatiquement."
+msgstr "Outlines and numbers computed automatically."
+
+msgid "On livre le kit"
+msgstr "We ship the kit"
+
+msgid "Toile numérotée, palette et pinceaux à votre porte."
+msgstr "Numbered canvas, palette and brushes at your door."
+
+msgid "Prêt à peindre votre histoire ?"
+msgstr "Ready to paint your story?"
+
+msgid "Commencer maintenant"
+msgstr "Start now"
+
+msgid "Personnaliser"
+msgstr "Customize"
+
+msgid "Photo"
+msgstr "Photo"
+
+msgid "Aperçu"
+msgstr "Preview"
+
+msgid "Livraison"
+msgstr "Delivery"
+
+msgid "Paiement"
+msgstr "Payment"
+
+msgid "Envoyez votre photo"
+msgstr "Send your photo"
+
+msgid "Choisissez une image nette et bien éclairée pour un meilleur rendu."
+msgstr "Pick a sharp, well-lit image for the best result."
+
+msgid "Aucune image sélectionnée"
+msgstr "No image selected"
+
+msgid "Dimensions"
+msgstr "Dimensions"
+
+msgid "Prix"
+msgstr "Price"
+
+msgid "Générer mon aperçu"
+msgstr "Generate my preview"
+
+msgid "Nous composons votre toile..."
+msgstr "Composing your canvas..."
+
+msgid "Analyse des couleurs et trace des zones"
+msgstr "Analyzing colors and tracing zones"
+
+msgid "Voici votre tableau"
+msgstr "Here is your painting"
+
+msgid "Rendu final colorié"
+msgstr "Final colored render"
+
+msgid "Toile numérotée à peindre"
+msgstr "Numbered canvas to paint"
+
+msgid "couleurs"
+msgstr "colors"
+
+msgid "ref."
+msgstr "ref."
+
+msgid "Changer de photo"
+msgstr "Change photo"
+
+msgid "Je commande"
+msgstr "Order now"
+
+msgid "Où livrer votre kit ?"
+msgstr "Where to deliver your kit?"
+
+msgid "Retour"
+msgstr "Back"
+
+msgid "Aller au paiement"
+msgstr "Go to payment"
+
+msgid "Récapitulatif"
+msgstr "Summary"
+
+msgid "Format"
+msgstr "Format"
+
+msgid "Couleurs"
+msgstr "Colors"
+
+msgid "Reference"
+msgstr "Reference"
+
+msgid "Code de réduction"
+msgstr "Discount code"
+
+msgid "Appliquer"
+msgstr "Apply"
+
+msgid "Sous-total"
+msgstr "Subtotal"
+
+msgid "Remise"
+msgstr "Discount"
+
+msgid "Total"
+msgstr "Total"
+
+msgid ""
+"Astuce : chaque poster imprimé porte un code fidélité (le QR). Scannez-le "
+"pour appliquer automatiquement la remise, ou saisissez-le ci-dessus. Usage "
+"unique."
+msgstr ""
+"Tip: each printed poster carries a loyalty code (the QR). Scan it to apply "
+"the discount automatically, or enter it above. Single use."
+
+msgid "Valider et payer"
+msgstr "Confirm and pay"
+
+msgid "Commande confirmée"
+msgstr "Order confirmed"
+
+msgid "Confirmée"
+msgstr "Confirmed"
+
+msgid "Merci !"
+msgstr "Thank you!"
+
+msgid "Votre commande %(uid)s est enregistrée."
+msgstr "Your order %(uid)s has been recorded."
+
+msgid "Commande fournisseur"
+msgstr "Supplier order"
+
+msgid "Produit"
+msgstr "Product"
+
+msgid "Dossier de production"
+msgstr "Production folder"
+
+msgid "Retour à l'accueil"
+msgstr "Back to home"
+
+msgid "Portrait"
+msgstr "Portrait"
+
+msgid "Paysage"
+msgstr "Landscape"
+
+msgid "12 couleurs"
+msgstr "12 colors"
+
+msgid "24 couleurs"
+msgstr "24 colors"
+
+msgid "36 couleurs"
+msgstr "36 colors"
+
+msgid "Debutant"
+msgstr "Beginner"
+
+msgid "Moyen"
+msgstr "Intermediate"
+
+msgid "Expert"
+msgstr "Expert"
+
+msgid "Votre photo"
+msgstr "Your photo"
+
+msgid "Orientation"
+msgstr "Orientation"
+
+msgid "Nombre de couleurs"
+msgstr "Number of colors"
+
+msgid "Difficulte"
+msgstr "Difficulty"
+
+msgid "Nom complet"
+msgstr "Full name"
+
+msgid "E-mail"
+msgstr "Email"
+
+msgid "Indicatif"
+msgstr "Country code"
+
+msgid "Téléphone"
+msgstr "Phone"
+
+msgid "Adresse"
+msgstr "Address"
+
+msgid "Complément"
+msgstr "Address line 2"
+
+msgid "Code postal"
+msgstr "Postal code"
+
+msgid "Ville"
+msgstr "City"
+
+msgid "Pays"
+msgstr "Country"
+
+msgid "Contact"
+msgstr "Contact"
+
+msgid "Nous contacter"
+msgstr "Contact us"
+
+msgid "Une question ? Écrivez-nous."
+msgstr "A question? Write to us."
+
+msgid "Merci, votre message a bien été envoyé."
+msgstr "Thanks, your message has been sent."
+
+msgid "Envoyer"
+msgstr "Send"
+
+msgid "Nom"
+msgstr "Name"
+
+msgid "Sujet"
+msgstr "Subject"
+
+msgid "Message"
+msgstr "Message"
+
+msgid "Excellent"
+msgstr "Excellent"
+
+msgid "sur la base de 1 200+ avis"
+msgstr "based on 1,200+ reviews"
+
+msgid "Le rendu est bluffant, ma mère a adoré son cadeau."
+msgstr "Stunning result, my mother loved her gift."
+
+msgid "Facile à peindre, les couleurs correspondent parfaitement."
+msgstr "Easy to paint, the colors match perfectly."
+
+msgid "Livraison rapide et qualité au top. Je recommande !"
+msgstr "Fast delivery and top quality. Highly recommend!"
+
+msgid "Client vérifié"
+msgstr "Verified customer"
+
+msgid "Livraison offerte"
+msgstr "Free delivery"
+
+msgid "Aperçu gratuit en quelques secondes"
+msgstr "Free preview in seconds"
+
+msgid "Télécharger le reçu (PDF)"
+msgstr "Download receipt (PDF)"
+
+msgid "Photo conservée, changez simplement les options."
+msgstr "Photo kept, just change the options."
+
+msgid "Ajouter un set de pinceaux (+%(p)s &euro;)"
+msgstr "Add a brush set (+%(p)s &euro;)"
+
+msgid "Peinture par numéros personnalisée"
+msgstr "Personalized paint-by-numbers"
+
+msgid "Apercu du cadrage"
+msgstr "Cropping preview"
+
+msgid "Votre photo sera recadree au centre selon l'orientation choisie."
+msgstr "Your photo will be centre-cropped to the chosen orientation."
+
+msgid "Confidentialité"
+msgstr "Privacy"
+
+msgid "Confidentialité et données personnelles"
+msgstr "Privacy & personal data"
+
+msgid ""
+"Vos données (photo envoyée, informations de commande et de livraison) sont "
+"utilisées uniquement pour traiter et livrer votre commande. Elles sont "
+"conservées le temps nécessaire au traitement, puis supprimées dans un délai "
+"d'un mois."
+msgstr ""
+"Your data (the photo you upload, order and delivery details) is used solely "
+"to process and deliver your order. It is kept only as long as needed to "
+"fulfil the order, then deleted within one month."
+
+msgid ""
+"Le paiement est traité par Stripe et la fabrication par notre imprimeur "
+"partenaire ; nous ne stockons aucune donnée de carte bancaire."
+msgstr ""
+"Payment is handled by Stripe and production by our printing partner; we "
+"never store any bank card data."
+
+msgid ""
+"Conformément au RGPD, vous pouvez demander l'accès, la rectification ou la "
+"suppression de vos données à tout moment en nous contactant."
+msgstr ""
+"In accordance with the GDPR, you can request access to, correction of, or "
+"deletion of your data at any time by contacting us."
+
+msgid "Glissez l'image pour recentrer le cadrage."
+msgstr "Drag the image to reposition the crop."
+
+msgid "Pièces jointes (image ou PDF)"
+msgstr "Attachments (image or PDF)"
+
+msgid "Jusqu'à 5 fichiers, 8 Mo chacun."
+msgstr "Up to 5 files, 8 MB each."
+
+msgid "Ajouter un set de pinceaux"
+msgstr "Add a brush set"
+
+msgid "Livraison estimée : %(delivery_min)s à %(delivery_max)s jours ouvrés"
+msgstr ""
+"Estimated delivery: %(delivery_min)s to %(delivery_max)s business days"
+
+msgid "Jouer en DigiPaint"
+msgstr "Play DigiPaint"
+
+msgid "Photo conservée, ajustez le cadrage si besoin."
+msgstr "Photo kept, adjust the crop if needed."
+
+msgid "toile 40 x 50 cm, livraison offerte"
+msgstr "40 x 50 cm canvas, free delivery"
+
+msgid "Mes créations"
+msgstr "My creations"
+
+msgid "Retrouvez vos toiles pour rejouer en DigiPaint ou les commander."
+msgstr "Find your canvases to replay in DigiPaint or order them."
+
+msgid "Aucune création pour l'instant. Créez votre première toile !"
+msgstr "No creations yet. Create your first canvas!"
+
+msgid "Créer"
+msgstr "Create"
+
+msgid "Jouer"
+msgstr "Play"
+
+msgid "Commander"
+msgstr "Order"
+
+msgid "Retirer"
+msgstr "Remove"
+
+msgid "Sauvegarder ma galerie"
+msgstr "Save my gallery"
+
+msgid "M'envoyer par e-mail"
+msgstr "Email it to me"
+
+msgid "Recevez vos codes par e-mail pour reprendre sur un autre appareil."
+msgstr "Get your codes by email to resume on another device."
+
+msgid "J'ai un code"
+msgstr "I have a code"
+
+msgid "Ouvrez directement votre design DigiPaint."
+msgstr "Open your DigiPaint design directly."
+
+msgid "Saisissez votre e-mail."
+msgstr "Enter your email."
+
+msgid "Envoyé ! Vérifiez votre boîte mail."
+msgstr "Sent! Check your inbox."
+
+msgid "E-mail invalide."
+msgstr "Invalid email."
+
+msgid "Erreur, réessayez."
+msgstr "Error, try again."
+
+msgid "Cliquez sur l'image pour peindre en DigiPaint."
+msgstr "Click the image to paint in DigiPaint."
+
+msgid "Cliquez sur une image pour la voir en grand."
+msgstr "Click an image to view it larger."
+
+msgid "Votre récompense : la toile numérique !"
+msgstr "Your reward: the digital canvas!"
+
+msgid ""
+"Peignez votre œuvre en ligne, gagnez des points, retrouvez-la dans Mes "
+"créations."
+msgstr "Paint your artwork online, earn points, find it in My creations."
+
+msgid "Jouer maintenant"
+msgstr "Play now"
+
+msgid "%(n)s pots de peinture inclus dans l'achat"
+msgstr "%(n)s paint pots included in your purchase"
+
+msgid "Ma galerie"
+msgstr "My gallery"
+
+msgid "Votre galerie DigiPaint"
+msgstr "Your DigiPaint gallery"
+
+msgid ""
+"Peignez vos toiles numériques, gagnez des points, revenez quand vous voulez."
+msgstr "Paint your digital canvases, earn points, come back anytime."
+
+msgid "Ajouter une toile"
+msgstr "Add a canvas"
+
+msgid "Créer ma toile gratuite"
+msgstr "Create my free canvas"
+
+msgid "Galerie liée à"
+msgstr "Gallery linked to"
+
+msgid "Se déconnecter"
+msgstr "Sign out"
+
+msgid "Recevoir un code"
+msgstr "Get a code"
+
+msgid "Charger ma galerie"
+msgstr "Load my gallery"
+
+msgid "Retrouvez votre galerie sur tout appareil grâce à votre e-mail."
+msgstr "Find your gallery on any device with your email."
+
+msgid "Aucune toile pour l'instant."
+msgstr "No canvas yet."
+
+msgid "offerte"
+msgstr "gift"
+
+msgid "numérique"
+msgstr "digital"
+
+msgid "Kit toile vierge"
+msgstr "Blank canvas kit"
+
+msgid "Tableau fini"
+msgstr "Finished painting"
+
+msgid "Commander le tableau fini"
+msgstr "Order the finished painting"
+
+msgid "Une impression d'art de votre œuvre, prête à accrocher."
+msgstr "A fine-art print of your artwork, ready to hang."
+
+msgid "Matière"
+msgstr "Material"
+
+msgid "Cadre"
+msgstr "Frame"
+
+msgid "Sous verre"
+msgstr "Under glass"
+
+msgid "Valider la commande"
+msgstr "Place order"
+
+msgid "Une impression d'art de votre oeuvre, prête à accrocher."
+msgstr "A fine-art print of your artwork, ready to hang."
+
+msgid "Retour à la galerie"
+msgstr "Back to gallery"
+
+msgid "Toile digitale offerte"
+msgstr "Free digital canvas"
+
+msgid "Tester notre algorithme"
+msgstr "Try our algorithm"
+
+msgid "Laissez-vous tenter par la peinture par numéros personnalisée"
+msgstr "Treat yourself to custom paint by numbers"
+
+msgid "Vous jouez en digital"
+msgstr "Play digitally"
+
+msgid "ou"
+msgstr "or"
+
+msgid "Une impression d'art de votre œuvre peinte, prête à accrocher."
+msgstr "A fine-art print of your painted artwork, ready to hang."
+
+msgid "Complément d'adresse"
+msgstr "Address line 2"
+
+msgid "Jouez votre toile en digital"
+msgstr "Play your canvas digitally"
+
+msgid ""
+"Peignez-la en ligne, gagnez des points, retrouvez-la dans votre galerie."
+msgstr "Paint it online, earn points, find it in your gallery."
+
+msgid "Inclus dans le kit"
+msgstr "Included in the kit"
+
+msgid "Pots de peinture assortis"
+msgstr "Matching paint pots"
+
+msgid "Emballage soigné"
+msgstr "Careful packaging"
+
+msgid "Ce que vous recevrez dans le colis"
+msgstr "What you'll receive in the parcel"
+
+msgid "Poster"
+msgstr "Poster"
+
+msgid "Canvas et numéros calculés automatiquement en moins d'une minute."
+msgstr "Canvas and numbers computed automatically in under a minute."
+
+msgid ""
+"Toile numérotée, palette et pinceaux à votre porte, avec votre toile "
+"digitale offerte."
+msgstr ""
+"Numbered canvas, palette and brushes to your door, with your free digital "
+"canvas."
+
+msgid ""
+"Toile numérique gratuite (la première), sauvegardez-la par e-mail pour la "
+"conserver."
+msgstr "Free digital canvas (your first), save it by email to keep it."
+
+msgid ""
+"La génération peut prendre jusqu'à une minute. Plus il y a de couleurs, plus"
+" c'est détaillé (et un peu plus long)."
+msgstr ""
+"Generation can take up to a minute. More colours means more detail (and a "
+"bit longer)."
+
+msgid "Comment jouer"
+msgstr "How to play"
+
+msgid "Tapez un numéro pour choisir cette couleur (2 puis 3 = 23)."
+msgstr "Type a number to pick that colour (2 then 3 = 23)."
+
+msgid ""
+"Touchez une zone de ce numéro pour la peindre : son numéro passe au vert."
+msgstr "Tap an area with that number to paint it: its number turns green."
+
+msgid "Ctrl + flèches gauche/droite : couleur précédente ou suivante."
+msgstr "Ctrl + left/right arrows: previous or next colour."
+
+msgid "Flèches pour se déplacer, touche F pour recentrer."
+msgstr "Arrow keys to move, press F to recenter."
+
+msgid "Molette ou pincement à deux doigts pour zoomer."
+msgstr "Mouse wheel or two-finger pinch to zoom."
+
+msgid "Bouton # : afficher ou masquer les numéros."
+msgstr "# button: show or hide numbers."
+
+msgid "Touchez la carte (en bas à droite) pour vous déplacer."
+msgstr "Tap the map (bottom-right) to move around."
+
+msgid "Score"
+msgstr "Score"
+
+msgid "Zones"
+msgstr "Zones"
+
+msgid "Voir ma galerie"
+msgstr "View my gallery"
+
+msgid "Saisissez votre e-mail pour afficher et sauvegarder vos toiles."
+msgstr "Enter your email to show and save your canvases."
+
+msgid "Notre algorithme transforme votre photo en toile a peindre."
+msgstr "Our algorithm turns your photo into a canvas to paint."
+
+msgid ""
+"Vos données (photo envoyée, informations de commande et de livraison) sont "
+"utilisées uniquement pour traiter et livrer votre commande et vous permettre"
+" de jouer votre toile numérique. Les fichiers de votre toile sont conservés "
+"tant que le modèle figure dans votre galerie ; si vous le supprimez de votre"
+" galerie, les fichiers associés sont effacés. Les informations de commande "
+"sont conservées le temps nécessaire au traitement et à nos obligations "
+"légales."
+msgstr ""
+"Your data (uploaded photo, order and delivery information) is used only to "
+"process and deliver your order and to let you play your digital canvas. Your"
+" canvas files are kept as long as the model is in your gallery; if you "
+"remove it from your gallery, the associated files are deleted. Order "
+"information is kept as long as needed for processing and our legal "
+"obligations."
+
+msgid "Bibliothèque"
+msgstr "Library"
+
+msgid "Des modèles prêts à peindre, gratuitement."
+msgstr "Ready-to-paint models, for free."
+
+msgid "Galerie"
+msgstr "Gallery"
+
+msgid ""
+"Nous prenons le soin de vos données au sérieux. Voici, en clair, ce que nous"
+" collectons et pourquoi."
+msgstr ""
+"We take care of your data seriously. Here, in plain terms, is what we "
+"collect and why."
+
+msgid "Données que nous collectons"
+msgstr "Data we collect"
+
+msgid ""
+"La photo que vous envoyez, le rendu généré (toile numérotée et version "
+"colorée), et, en cas d'achat, vos informations de commande et de livraison "
+"(nom, e-mail, adresse, téléphone). Si vous liez votre galerie, votre e-mail "
+"sert d'identifiant de galerie."
+msgstr ""
+"The photo you upload, the generated result (numbered canvas and colour "
+"version), and, when you order, your order and delivery details (name, email,"
+" address, phone). If you link your gallery, your email is used as your "
+"gallery identifier."
+
+msgid "Pourquoi nous les utilisons"
+msgstr "Why we use it"
+
+msgid ""
+"Uniquement pour générer votre toile, traiter et livrer votre commande, vous "
+"permettre de jouer et retrouver vos toiles numériques, et vous envoyer les "
+"e-mails liés (confirmation, reçu, code de galerie)."
+msgstr ""
+"Only to generate your canvas, process and deliver your order, let you play "
+"and find your digital canvases, and send related emails (confirmation, "
+"receipt, gallery code)."
+
+msgid "Durée de conservation"
+msgstr "Retention period"
+
+msgid ""
+"Les fichiers d'une toile sont conservés tant que le modèle figure dans votre"
+" galerie. Si vous le supprimez de votre galerie, les fichiers associés sont "
+"effacés. Les informations de commande sont conservées le temps nécessaire au"
+" traitement et à nos obligations légales (comptabilité)."
+msgstr ""
+"A canvas's files are kept as long as the model is in your gallery. If you "
+"remove it from your gallery, the associated files are deleted. Order "
+"information is kept as long as needed for processing and our legal "
+"obligations (accounting)."
+
+msgid "Partage et paiement"
+msgstr "Sharing and payment"
+
+msgid ""
+"Le paiement est traité par Stripe ; nous ne stockons aucune donnée de carte "
+"bancaire. La fabrication est confiée à nos imprimeurs partenaires, qui ne "
+"reçoivent que le nécessaire à la production et à l'expédition. Nous ne "
+"vendons jamais vos données."
+msgstr ""
+"Payment is handled by Stripe; we never store card data. Production is "
+"entrusted to our partner printers, who only receive what is needed to "
+"produce and ship. We never sell your data."
+
+msgid "Vos droits (RGPD)"
+msgstr "Your rights (GDPR)"
+
+msgid ""
+"Vous pouvez à tout moment demander l'accès, la rectification, la portabilité"
+" ou la suppression de vos données, et retirer votre consentement. Écrivez-"
+"nous et nous répondons dans les meilleurs délais."
+msgstr ""
+"You can at any time request access, correction, portability or deletion of "
+"your data, and withdraw consent. Write to us and we reply as soon as "
+"possible."
+
+msgid "Glissez pour comparer photo et toile."
+msgstr "Drag to compare photo and canvas."
+
+msgid "Votre toile"
+msgstr "Your canvas"
+
+msgid "Tapez un numéro pour choisir la couleur (2 puis 3 = 23)."
+msgstr "Type a number to pick the colour (2 then 3 = 23)."
+
+msgid "Touchez une zone de ce numéro : son numéro passe au vert."
+msgstr "Tap an area with that number: its number turns green."
+
+msgid "Couleur précédente / suivante."
+msgstr "Previous / next colour."
+
+msgid "Flèches pour se déplacer"
+msgstr "Arrows to move"
+
+msgid "recentrer"
+msgstr "recenter"
+
+msgid "Molette ou pincement pour zoomer."
+msgstr "Wheel or pinch to zoom."
+
+msgid "Afficher / masquer les numéros."
+msgstr "Show / hide numbers."
+
+msgid "Touchez la carte (bas-droite) pour vous déplacer."
+msgstr "Tap the map (bottom-right) to move."
+
+msgid "Pour continuer"
+msgstr "To continue"
+
+msgid ""
+"Débloquez cette toile pour continuer à jouer et la sauvegarder dans votre "
+"galerie."
+msgstr "Unlock this canvas to keep playing and save it to your gallery."
+
+msgid "Débloquer"
+msgstr "Unlock"
+
+msgid "Partagez votre code. Vos amis économisent, et vous êtes récompensé."
+msgstr "Share your code. Your friends save, and you get rewarded."
+
+msgid "Copier"
+msgstr "Copy"
+
+msgid "Poster et instructions"
+msgstr "Poster and instructions"
+
+msgid "Jeu DigiPaint"
+msgstr "DigiPaint game"
+
+msgid "Coupon de réduction"
+msgstr "Discount coupon"
+
+msgid "Des modèles prêts à peindre"
+msgstr "Ready-to-paint models"
+
+msgid "Choisissez un modèle PaintIt et jouez tout de suite, gratuitement."
+msgstr "Pick a PaintIt model and play right away, for free."
+
+msgid "Voir tous les modèles"
+msgstr "See all models"
+
+msgid "Modèles"
+msgstr "Models"
+
+msgid "Modèles PaintIt prêts à peindre"
+msgstr "Ready-to-paint PaintIt models"
+
+msgid "Glissez pour comparer votre photo et la toile à peindre."
+msgstr "Drag to compare your photo and the canvas to paint."
+
+msgid "Toile coloriée"
+msgstr "Coloured canvas"
+
+msgid "Toile numérotée"
+msgstr "Numbered canvas"
+
+msgid "Imprimer les numéros sur le tableau"
+msgstr "Print the numbers on the artwork"
+
+msgid "Offert avec votre commande"
+msgstr "Free with your order"
+
+msgid "Votre toile numérique est prête à peindre"
+msgstr "Your digital canvas is ready to paint"
+
+msgid "Tous les modèles PaintIt, prêts à peindre. Certains sont gratuits."
+msgstr "All PaintIt models, ready to paint. Some are free."
+
+msgid "La bibliothèque de modèles arrive bientôt."
+msgstr "The model library is coming soon."
+
+msgid "vos toiles"
+msgstr "your canvases"
+
+msgid "Peinture"
+msgstr "Paint"
+
+msgid "Bientôt disponible"
+msgstr "Coming soon"
+
+msgid "Votre œuvre, imprimée et prête à accrocher"
+msgstr "Your artwork, printed and ready to hang"
+
+msgid ""
+"Une impression d'art haut de gamme de votre toile peinte : au choix toile, "
+"aluminium ou bois, avec ou sans cadre. Nous finalisons notre atelier "
+"d'impression."
+msgstr ""
+"A premium art print of your painted canvas: choose canvas, aluminium or "
+"wood, with or without a frame. We're finalising our print studio."
+
+msgid ""
+"Laissez votre e-mail pour être prévenu(e) dès l'ouverture des commandes."
+msgstr "Leave your email to be notified when orders open."
+
+msgid "Prévenez-moi"
+msgstr "Notify me"
+
+msgid "Merci ! Nous vous préviendrons dès l'ouverture."
+msgstr "Thanks! We'll let you know when it opens."
+
+msgid "bientôt"
+msgstr "soon"
+
+msgid ""
+"À partir de n'importe quelle photo, votre toile disponible en quelques "
+"secondes"
+msgstr "From any photo, your canvas ready in seconds"

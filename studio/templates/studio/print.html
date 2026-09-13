@@ -1,0 +1,45 @@
+{% extends "studio/base.html" %}
+{% load i18n l10n %}
+{% block title %}{% trans "Tableau fini" %} · PaintIt{% endblock %}
+{% block content %}
+<section class="panel wide">
+  <h1>{% trans "Commander le tableau fini" %}</h1>
+  <p class="sub">{% trans "Une impression d'art de votre œuvre peinte, prête à accrocher." %}</p>
+
+  <div class="print-grid">
+    <div class="print-art" id="art" title="Agrandir" style="cursor:zoom-in"></div>
+    <div class="overlay-lb" id="printLightbox"><div class="lb-inner" id="printLbInner"></div></div>
+
+    <div class="print-form">
+      <div class="soon-panel">
+        <span class="soon-badge">{% trans "Bientôt disponible" %}</span>
+        <h3>{% trans "Votre œuvre, imprimée et prête à accrocher" %}</h3>
+        <p>{% trans "Une impression d'art haut de gamme de votre toile peinte : au choix toile, aluminium ou bois, avec ou sans cadre. Nous finalisons notre atelier d'impression." %}</p>
+        <p class="hint">{% trans "Laissez votre e-mail pour être prévenu(e) dès l'ouverture des commandes." %}</p>
+        {% if notified %}<p class="ok-msg">&#10003; {% trans "Merci ! Nous vous préviendrons dès l'ouverture." %}</p>{% else %}
+        <form method="post" action="{% url 'studio:print_notify' uid %}" class="notify-form">{% csrf_token %}
+          <input type="email" name="email" placeholder="votre@email.com" required>
+          <button class="cta" type="submit">{% trans "Prévenez-moi" %}</button>
+        </form>{% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  var UID="{{ uid|escapejs }}";
+  var board=UID; try{var gm=JSON.parse(localStorage.getItem('PIT_GAME')||'{}');if(gm[UID]&&gm[UID].g)board=gm[UID].g;}catch(e){}
+  var art=document.getElementById('art');
+  fetch("/preview/img/"+board+"/digipaint/",{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
+    var st=null; try{st=JSON.parse(localStorage.getItem('digipaint:'+board)||'null');}catch(e){}
+    var painted=(st&&st.painted)?Object.keys(st.painted).length:0;
+    if(painted>0){art.innerHTML=t;var svg=art.querySelector('svg');if(!svg)return;
+      var zs=svg.querySelectorAll('.z');Object.keys(st.painted).forEach(function(i){if(zs[i])zs[i].style.fill=st.painted[i];});}
+    else{art.innerHTML='<img src="/preview/img/'+board+'/preview/" alt="">';}
+  });
+  if(art)art.addEventListener('click',function(){var lb=document.getElementById('printLightbox');document.getElementById('printLbInner').innerHTML=this.innerHTML;lb.classList.add('show');});
+  var lb=document.getElementById('printLightbox');if(lb)lb.addEventListener('click',function(){this.classList.remove('show');});
+})();
+</script>
+{% endblock %}

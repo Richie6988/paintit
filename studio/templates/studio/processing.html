@@ -1,0 +1,38 @@
+{% extends "studio/base.html" %}
+{% load i18n static %}
+{% block title %}{% trans "Creation en cours" %} · PaintIt{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="loader-inline">
+    <div class="art-frame">{% include "studio/_loader.html" %}</div>
+    <p class="loader-title">{% trans "Nous composons votre toile..." %}</p>
+    <div class="bar"><i id="pbar" style="width:6%"></i></div>
+    <p class="loader-sub" id="loadersub">{% trans "Lecture de l'image" %}&hellip;</p>
+  </div>
+</section>
+<script>
+  (function () {
+    var uid = "{{ uid|escapejs }}";
+    var bar = document.getElementById('pbar'), sub = document.getElementById('loadersub');
+    var shown = 6;
+    function poll() {
+      fetch("{% url 'studio:gen_progress' %}?uid=" + encodeURIComponent(uid), {cache: 'no-store'})
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.error && d.error !== null && d.done && !d.pct) { window.location = "{% url 'studio:upload' %}"; return; }
+          if (typeof d.pct === 'number') { shown = Math.max(shown, d.pct); bar.style.width = shown + '%'; }
+          if (d.label) sub.textContent = d.label + '\u2026';
+          if (d.done) {
+            if (d.error) { window.location = "{% url 'studio:upload' %}"; return; }
+            bar.style.width = '100%';
+            window.location = "{% url 'studio:gen_finalize' %}?uid=" + encodeURIComponent(uid);
+            return;
+          }
+          setTimeout(poll, 500);
+        })
+        .catch(function () { setTimeout(poll, 800); });
+    }
+    poll();
+  })();
+</script>
+{% endblock %}

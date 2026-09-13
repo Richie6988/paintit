@@ -1,0 +1,87 @@
+{% extends "studio/base.html" %}
+{% load static i18n %}
+{% block content %}
+<section class="hero">
+  <div class="hero-text">
+    <p class="eyebrow">{% trans "Votre souvenir, votre chef-d'œuvre" %}</p>
+    <h1>{% trans "Laissez-vous tenter par la peinture par numéros personnalisée" %}</h1>
+    <p class="sub">{% trans "À partir de n'importe quelle photo, votre toile disponible en quelques secondes" %}</p>
+    <a class="cta" href="{% url 'studio:upload' %}">{% trans "Tester notre algorithme" %}</a>
+    <p class="reassure">{% trans "Aperçu gratuit en quelques secondes, sans engagement" %}</p>
+  </div>
+
+  <div class="hero-visual">
+    <div class="reveal" id="reveal" style="--pos:50%">
+      <img class="reveal-img" id="revealBase" src="{% static 'studio/showcase/moto_template.png' %}" alt="" draggable="false" onerror="this.dataset.bad=1">
+      <div class="reveal-top" id="revealTop">
+        <img class="reveal-img" id="revealPhoto" src="{% static 'studio/showcase/moto_pbn.png' %}" alt="" draggable="false">
+      </div>
+      <div class="reveal-handle" id="revealHandle"><span class="knob"></span></div>
+    </div>
+    <p class="reveal-hint">{% trans "La toile coloriée et sa version à peindre par numéros" %}</p>
+  </div>
+</section>
+
+<section class="steps">
+  <div class="step"><span>1</span><h3>{% trans "Vous envoyez une photo" %}</h3><p>{% trans "Un portrait, un animal, un paysage, tout fonctionne." %}</p></div>
+  <div class="step"><span>2</span><h3>{% trans "On génère l'aperçu" %}</h3><p>{% trans "Canvas et numéros calculés automatiquement en moins d'une minute." %}</p></div>
+  <div class="step step-split"><span>3</span>
+    <div class="paths">
+      <div class="path">
+        <h3>{% trans "On livre le kit" %}</h3>
+        <p>{% trans "Toile numérotée, palette et pinceaux à votre porte, avec votre toile digitale offerte." %}</p>
+      </div>
+      <div class="path-or">{% trans "ou" %}</div>
+      <div class="path">
+        <h3>{% trans "Vous jouez en digital" %}</h3>
+        <p>{% trans "Toile numérique gratuite (la première), sauvegardez-la par e-mail pour la conserver." %}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% if library_preview %}
+<section class="lib-showcase">
+  <h2>{% trans "Des modèles prêts à peindre" %}</h2>
+  <p class="sub">{% trans "Choisissez un modèle PaintIt et jouez tout de suite, gratuitement." %}</p>
+  <div class="lib-strip">
+    {% for m in library_preview %}
+    <a class="lib-tile" href="{% url 'studio:digipaint' m.uid %}">
+      <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="" loading="lazy">
+      <span>{{ m.title }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  <a class="cta" href="{% url 'studio:gallery' %}">{% trans "Voir tous les modèles" %}</a>
+</section>
+{% endif %}
+
+<section class="closing">
+  <h2>{% trans "Prêt à peindre votre histoire ?" %}</h2>
+  <a class="cta big" href="{% url 'studio:upload' %}">{% trans "Commencer maintenant" %}</a>
+</section>
+
+<script>
+  (function () {
+    var r = document.getElementById('reveal');
+    var dragging = false;
+    function setPos(x){ var b=r.getBoundingClientRect(); var p=(x-b.left)/b.width;
+      p=Math.max(0,Math.min(1,p)); r.style.setProperty('--pos',(p*100)+'%'); }
+    function down(e){ dragging=true; autoOn=false; setPos((e.touches?e.touches[0]:e).clientX); e.preventDefault(); }
+    function move(e){ if(dragging) setPos((e.touches?e.touches[0]:e).clientX); }
+    r.addEventListener('mousedown',down); r.addEventListener('touchstart',down,{passive:false});
+    window.addEventListener('mousemove',move); window.addEventListener('touchmove',move,{passive:false});
+    window.addEventListener('mouseup',function(){dragging=false;}); window.addEventListener('touchend',function(){dragging=false;});
+    // Animation auto du slider (oscillation), en pause des que l'utilisateur le prend en main
+    var autoOn=true, t=0;
+    setInterval(function(){ if(!autoOn||dragging) return; t+=0.03; var p=50+42*Math.sin(t);
+      r.style.setProperty('--pos',p+'%'); }, 33);
+    // Alternance moto <-> autres designs
+    var seq=['moto','rose','moto','aquarium','moto','chien','moto','foret','moto','cerisier','moto','people','moto','pop-art','moto','cat_cartoon','moto','children'];
+    var i=0, base=document.getElementById('revealBase'), photo=document.getElementById('revealPhoto');
+    if(base&&photo){var dir=base.getAttribute('src').replace(/[^/]+$/,'');
+      setInterval(function(){i=(i+1)%seq.length;var s=seq[i];base.style.opacity=0;photo.style.opacity=0;
+        setTimeout(function(){base.src=dir+s+'_template.png';photo.src=dir+s+'_pbn.png';base.style.opacity=1;photo.style.opacity=1;},260);},3600);}
+  })();
+</script>
+{% endblock %}

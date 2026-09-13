@@ -1,0 +1,26 @@
+{% extends "studio/base.html" %}
+{% load i18n %}
+{% block title %}Gallery · PaintIt{% endblock %}
+{% block content %}
+<section class="panel wide">
+  <h1>{% trans "Gallery" %}</h1>
+  <p class="sub">{% trans "Tous les modèles PaintIt, prêts à peindre. Certains sont gratuits." %}</p>
+
+  {% if library %}
+    {% for cat, models in library.items %}
+      <h3 class="lib-cat">{{ cat }}</h3>
+      <div class="models-grid">
+        {% for m in models %}
+          <a class="model-card" href="{% url 'studio:digipaint' m.uid %}">
+            <div class="mc-thumb"><div class="mc-img" style="aspect-ratio:40/50">
+              <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="" loading="lazy"><span class="mc-play"><svg class="icplay" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span></div></div>
+            <div class="mc-meta"><b>{{ m.title }}</b><small>{{ cat }}</small></div>
+          </a>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="sub">{% trans "La bibliothèque de modèles arrive bientôt." %}</p>
+  {% endif %}
+</section>
+{% endblock %}

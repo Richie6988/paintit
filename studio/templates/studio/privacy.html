@@ -1,0 +1,26 @@
+{% extends "studio/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Confidentialité" %} · PaintIt{% endblock %}
+{% block content %}
+<section class="panel prose">
+  <h1>{% trans "Confidentialité et données personnelles" %}</h1>
+  <p class="sub">{% trans "Nous prenons le soin de vos données au sérieux. Voici, en clair, ce que nous collectons et pourquoi." %}</p>
+
+  <h2>{% trans "Données que nous collectons" %}</h2>
+  <p>{% trans "La photo que vous envoyez, le rendu généré (toile numérotée et version colorée), et, en cas d'achat, vos informations de commande et de livraison (nom, e-mail, adresse, téléphone). Si vous liez votre galerie, votre e-mail sert d'identifiant de galerie." %}</p>
+
+  <h2>{% trans "Pourquoi nous les utilisons" %}</h2>
+  <p>{% trans "Uniquement pour générer votre toile, traiter et livrer votre commande, vous permettre de jouer et retrouver vos toiles numériques, et vous envoyer les e-mails liés (confirmation, reçu, code de galerie)." %}</p>
+
+  <h2>{% trans "Durée de conservation" %}</h2>
+  <p>{% trans "Les fichiers d'une toile sont conservés tant que le modèle figure dans votre galerie. Si vous le supprimez de votre galerie, les fichiers associés sont effacés. Les informations de commande sont conservées le temps nécessaire au traitement et à nos obligations légales (comptabilité)." %}</p>
+
+  <h2>{% trans "Partage et paiement" %}</h2>
+  <p>{% trans "Le paiement est traité par Stripe ; nous ne stockons aucune donnée de carte bancaire. La fabrication est confiée à nos imprimeurs partenaires, qui ne reçoivent que le nécessaire à la production et à l'expédition. Nous ne vendons jamais vos données." %}</p>
+
+  <h2>{% trans "Vos droits (RGPD)" %}</h2>
+  <p>{% trans "Vous pouvez à tout moment demander l'accès, la rectification, la portabilité ou la suppression de vos données, et retirer votre consentement. Écrivez-nous et nous répondons dans les meilleurs délais." %}</p>
+
+  <p style="margin-top:18px"><a class="cta" href="{% url 'studio:contact' %}">{% trans "Nous contacter" %}</a></p>
+</section>
+{% endblock %}

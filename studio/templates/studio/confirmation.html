@@ -1,0 +1,62 @@
+{% extends "studio/base.html" %}
+{% load i18n l10n %}
+{% block title %}{% trans "Commande confirmée" %} · PaintIt{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="progress"><span>1. {% trans "Photo" %}</span><span>2. {% trans "Aperçu" %}</span><span>3. {% trans "Livraison" %}</span><b>{% trans "Confirmée" %}</b></div>
+  <h1>{% trans "Merci !" %}</h1>
+  <p class="sub">{% blocktrans with uid=order.uid %}Votre commande {{ uid }} est enregistrée.{% endblocktrans %}</p>
+
+
+  <div class="recap">
+    <ul>
+      <li>{% trans "Produit" %} : {{ order.format_label }} ({{ order.orientation }}), {{ order.colors }} {% trans "couleurs" %}</li>
+      <li>{% trans "Sous-total" %} : {{ order.price }} &euro;</li>
+      {% if discount %}<li>{% trans "Remise" %} {{ discount.code }} : -{{ discount.amount }} &euro;</li>{% endif %}
+      <li><b>{% trans "Total" %} : {{ total }} &euro;</b></li>
+    </ul>
+  </div>
+
+  <div class="parcel">
+    <h3>{% trans "Ce que vous recevrez dans le colis" %}</h3>
+    <img class="poster-img" src="{% url 'studio:order_image' uid 'poster' %}" alt="{% trans 'Poster' %}"
+         onerror="this.closest('.parcel').style.display='none'">
+  </div>
+
+  {% if referral_code %}
+  <div class="referral">
+    <b>{% blocktrans %}Parrainez vos amis : {{ referral_percent }}% offerts{% endblocktrans %}</b>
+    <p>{% trans "Partagez votre code. Vos amis économisent, et vous êtes récompensé." %}</p>
+    <div class="ref-code"><code id="refCode">{{ referral_code }}</code>
+      <button class="btn-sm" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('refCode').textContent)">{% trans "Copier" %}</button></div>
+    <p class="hint">{% blocktrans %}Un code depuis un produit physique (poster) donne encore plus.{% endblocktrans %}</p>
+  </div>
+  {% endif %}
+
+  <div class="reward2">
+    <img class="reward-thumb" src="{% url 'studio:order_image' order.uid 'preview' %}" alt="" onerror="this.style.display='none'">
+    <div class="reward-body">
+      <span class="reward-badge">{% trans "Offert avec votre commande" %}</span>
+      <b>{% trans "Votre toile numérique est prête à peindre" %}</b>
+      <span>{% trans "Peignez-la en ligne, gagnez des points, retrouvez-la dans votre galerie." %}</span>
+    </div>
+    <a class="reward-cta" href="{% url 'studio:digipaint' order.uid %}">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+      {% trans "Jouer maintenant" %}</a>
+  </div>
+
+  <div class="actions">
+    <a class="ghost" href="{% url 'studio:receipt_pdf' uid %}">{% trans "Télécharger le reçu (PDF)" %}</a>
+    <a class="ghost" href="{% url 'studio:home' %}">{% trans "Retour à l'accueil" %}</a>
+  </div>
+</section>
+<script>
+(function(){ try{
+  var m={uid:"{{ uid|escapejs }}",w:{{ order.width_cm|default:40|unlocalize }},h:{{ order.height_cm|default:50|unlocalize }},
+    colors:{{ order.colors|default:24|unlocalize }},orientation:"{{ order.orientation|escapejs }}",
+    format_label:"{{ order.format_label|escapejs }}",date:Date.now(),bought:true};
+  var l=JSON.parse(localStorage.getItem('PIT_MODELS')||'[]').filter(function(x){return x.uid!==m.uid;});
+  l.unshift(m); localStorage.setItem('PIT_MODELS',JSON.stringify(l.slice(0,60)));
+}catch(e){} })();
+</script>
+{% endblock %}

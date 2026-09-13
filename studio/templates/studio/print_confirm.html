@@ -1,0 +1,19 @@
+{% extends "studio/base.html" %}
+{% load i18n l10n %}
+{% block title %}{% trans "Commande confirmée" %} · PaintIt{% endblock %}
+{% block content %}
+<section class="panel">
+  <h1>{% trans "Merci !" %}</h1>
+  <p class="sub">{% blocktrans with uid=uid %}Votre tableau fini {{ uid }} est en préparation.{% endblocktrans %}</p>
+  <div class="recap"><ul>
+    <li>{% trans "Dimensions" %} : {{ spec.dimension }} cm</li>
+    <li>{% trans "Matière" %} : {{ spec.material }}</li>
+    <li>{% trans "Cadre" %} : {{ spec.frame }}</li>
+    {% if spec.glass %}<li>{% trans "Sous verre" %}</li>{% endif %}
+    <li><b>{% trans "Total" %} : {{ total }} &euro;</b></li>
+  </ul></div>
+  <div class="actions">
+    <a class="ghost" href="{% url 'studio:paint_portal' %}">{% trans "Retour à la galerie" %}</a>
+  </div>
+</section>
+{% endblock %}

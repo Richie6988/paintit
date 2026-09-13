@@ -1,0 +1,85 @@
+{% load static %}
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PaintIt · Tour de contrôle</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+ :root{--navy:#12224f;--blue:#2f6bf2;--green:#3fa65a;--amber:#f6b93b;--ring:#e2e8f2;--muted:#5b647a}
+ *{box-sizing:border-box} body{font-family:Inter,system-ui,sans-serif;background:#eef2f9;color:var(--navy);margin:0}
+ .top{display:flex;align-items:center;justify-content:space-between;background:var(--navy);color:#fff;padding:14px 24px}
+ .top .brand{display:inline-flex;align-items:center;gap:10px}
+ .top .brand img{height:30px}
+ .top .brand b{color:#fff;font-size:1.05rem;letter-spacing:.02em}
+ .top .links a{color:#cfe0ff;text-decoration:none;margin-left:16px;font-size:.9rem}
+ .wrap{max-width:1200px;margin:0 auto;padding:24px}
+ h1{font-size:1.4rem;margin:0 0 16px}
+ .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+ .kpi{background:#fff;border:1px solid var(--ring);border-radius:14px;padding:16px 18px}
+ .kpi b{display:block;font-size:1.7rem;line-height:1.1} .kpi span{color:var(--muted);font-size:.82rem}
+ .kpi.g b{color:var(--green)} .kpi.b b{color:var(--blue)} .kpi.a b{color:#c98a00}
+ .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+ .card{background:#fff;border:1px solid var(--ring);border-radius:14px;padding:18px;margin-bottom:16px}
+ .card h2{font-size:1rem;margin:0 0 12px}
+ table{width:100%;border-collapse:collapse;font-size:.86rem}
+ th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--ring);white-space:nowrap}
+ th{color:var(--muted);font-weight:600}
+ .pill{padding:2px 8px;border-radius:999px;font-size:.75rem;font-weight:600}
+ .st-fulfilled{background:#e7f6ec;color:#237a3e}.st-pending{background:#fff4e0;color:#a86a00}
+ .st-paid{background:#e9f0ff;color:#1f56cf}.st-failed{background:#fde8e8;color:#b23}
+ @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+</style></head><body>
+<div class="top">
+  <span class="brand"><img src="{% static 'studio/img/icon.svg' %}" alt="PaintIt"><b>PaintIt</b></span>
+  <div class="links"><a href="/admin/">&larr; Admin</a><a href="/admin/studio/order/">Commandes</a>
+    <a href="/admin/studio/contactmessage/">Messages</a><a href="/admin/studio/pricing/">Grille tarifaire</a></div>
+</div>
+<div class="wrap">
+  <h1>Tour de contrôle</h1>
+  <div class="kpis">
+    <div class="kpi b"><b>{{ kpis.orders }}</b><span>Commandes honorées</span></div>
+    <div class="kpi b"><b>{{ kpis.turnover }} &euro;</b><span>Chiffre d'affaires</span></div>
+    <div class="kpi a"><b>{{ kpis.cost }} &euro;</b><span>Coût dropshipping</span></div>
+    <div class="kpi g"><b>{{ kpis.benefit }} &euro;</b><span>Marge</span></div>
+    <div class="kpi"><b>{{ kpis.pending }}</b><span>En attente de paiement</span></div>
+    <div class="kpi"><b>{{ kpis.discounts_used }}/{{ kpis.discounts_issued }}</b><span>Codes utilisés / émis</span></div>
+    <div class="kpi a"><b>{{ kpis.unanswered }}</b><span>Messages sans réponse</span></div>
+    <div class="kpi g"><b>Offerte</b><span>Livraison</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h2>CA vs coût (par mois)</h2><canvas id="rev" height="150"></canvas></div>
+    <div class="card"><h2>Marge (par mois)</h2><canvas id="ben" height="150"></canvas></div>
+  </div>
+  <div class="card">
+    <h2>Ventes par format</h2>
+    <table><thead><tr><th>Format</th><th>Commandes</th><th>CA</th><th>Marge</th></tr></thead>
+    <tbody>
+      {% for f in per_format %}
+      <tr><td>{{ f.label }}</td><td>{{ f.n }}</td><td>{{ f.t }} &euro;</td><td>{{ f.b }} &euro;</td></tr>
+      {% empty %}<tr><td colspan="4" style="color:var(--muted)">Aucune vente.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+  <div class="card">
+    <h2>Dernières commandes</h2>
+    <table><thead><tr><th>Ref</th><th>Statut</th><th>Produit</th><th>Total</th><th>Marge</th><th>Client</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for o in recent %}
+      <tr><td>{{ o.uid }}</td>
+        <td><span class="pill st-{{ o.status }}">{{ o.status }}</span></td>
+        <td>{{ o.format_label }} · {{ o.colors }}c{% if o.brushes %} · pinceaux{% endif %}</td>
+        <td>{{ o.total }} &euro;</td><td>{{ o.benefit }} &euro;</td>
+        <td>{{ o.customer_email }}</td><td>{{ o.created_at|date:"d/m H:i" }}</td></tr>
+      {% empty %}<tr><td colspan="7" style="color:var(--muted)">Aucune commande.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+</div>
+{{ months|json_script:"m" }}{{ turnover|json_script:"t" }}{{ cost|json_script:"c" }}{{ benefit|json_script:"b" }}
+<script>
+ var g=function(i){return JSON.parse(document.getElementById(i).textContent)};
+ var M=g('m'),T=g('t'),C=g('c'),B=g('b');
+ new Chart(document.getElementById('rev'),{type:'bar',data:{labels:M,datasets:[
+   {label:'CA',data:T,backgroundColor:'#2f6bf2'},{label:'Cout',data:C,backgroundColor:'#f6b93b'}]}});
+ new Chart(document.getElementById('ben'),{type:'line',data:{labels:M,datasets:[
+   {label:'Marge',data:B,borderColor:'#3fa65a',backgroundColor:'#3fa65a33',fill:true,tension:.3}]}});
+</script>
+</body></html>

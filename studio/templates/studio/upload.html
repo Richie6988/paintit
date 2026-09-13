@@ -1,0 +1,93 @@
+{% extends "studio/base.html" %}
+{% load i18n l10n %}
+{% block title %}{% trans "Personnaliser" %} · PaintIt{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="progress"><b>1. {% trans "Photo" %}</b><span>2. {% trans "Aperçu" %}</span><span>3. {% trans "Livraison" %}</span><span>4. {% trans "Paiement" %}</span></div>
+  <h1>{% trans "Envoyez votre photo" %}</h1>
+  <p class="sub">{% trans "Choisissez une image nette et bien éclairée pour un meilleur rendu." %}</p>
+
+  <form method="post" enctype="multipart/form-data" class="form" id="pbn-form">
+    {% csrf_token %}
+    <input type="hidden" name="focus_x" id="focus_x" value="0.5">
+    <input type="hidden" name="focus_y" id="focus_y" value="0.5">
+    <label class="field">
+      <span>{{ form.photo.label }}</span>
+      <div class="drop">
+        {{ form.photo }}
+        {% if has_photo %}<span class="kept">{% trans "Photo conservée, ajustez le cadrage si besoin." %}</span>{% endif %}
+      </div>
+      {% if form.photo.errors %}<em class="err">{{ form.photo.errors|striptags }}</em>{% endif %}
+    </label>
+
+    <div class="field">
+      <span>{{ form.orientation.label }}</span>
+      <div class="segmented">
+        {% for r in form.orientation %}<label class="seg">{{ r.tag }}<span>{{ r.choice_label }}</span></label>{% endfor %}
+      </div>
+    </div>
+
+    <div class="field" id="cropfield" {% if not has_photo %}hidden{% endif %}>
+      <span>{% trans "Aperçu du cadrage" %}</span>
+      <div class="cropbox" id="cropbox">
+        <img id="cropimg" alt="" draggable="false" {% if has_photo %}src="{% url 'studio:current_photo' %}"{% endif %}>
+      </div>
+      <em class="hint">{% trans "Glissez l'image pour recentrer le cadrage." %}</em>
+    </div>
+
+    <div class="field">
+      <span>{{ form.colors.label }}</span>
+      <div class="segmented">
+        {% for r in form.colors %}<label class="seg">{{ r.tag }}<span>{{ r.choice_label }}</span></label>{% endfor %}
+      </div>
+    </div>
+
+    <p class="gen-note"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>{% trans "La génération peut prendre jusqu'à une minute. Plus il y a de couleurs, plus c'est détaillé (et un peu plus long)." %}</p>
+    <button class="cta" type="submit">{% trans "Générer mon aperçu" %}</button>
+  </form>
+</section>
+
+
+<script>
+  (function () {
+    var input = document.getElementById('id_photo');
+    var cropbox = document.getElementById('cropbox');
+    var cropimg = document.getElementById('cropimg');
+    var fxIn = document.getElementById('focus_x'), fyIn = document.getElementById('focus_y');
+    var px = 50, py = 50, dragging = false, sx = 0, sy = 0, spx = 50, spy = 50;
+    function applyPos(){ if(cropimg) cropimg.style.objectPosition = px+'% '+py+'%';
+      fxIn.value=(px/100).toFixed(4); fyIn.value=(py/100).toFixed(4); }
+    function resetFocus(){ px=50; py=50; applyPos(); }
+    function frame(){
+      var pay = document.querySelector('input[name=orientation]:checked').value === 'paysage';
+      if(cropbox) cropbox.style.aspectRatio = pay ? '50 / 40' : '40 / 50';
+    }
+    function showCrop(src){ var f=document.getElementById('cropfield');
+      if(src) cropimg.src=src; if(f) f.hidden=false; resetFocus(); frame(); }
+    if (cropbox) {
+      cropbox.addEventListener('pointerdown', function(e){ if(!cropimg||!cropimg.src)return;
+        dragging=true; sx=e.clientX; sy=e.clientY; spx=px; spy=py; cropbox.classList.add('grabbing');
+        try{cropbox.setPointerCapture(e.pointerId);}catch(err){} e.preventDefault(); });
+      cropbox.addEventListener('pointermove', function(e){ if(!dragging)return;
+        var bw=cropbox.clientWidth,bh=cropbox.clientHeight,nw=cropimg.naturalWidth,nh=cropimg.naturalHeight;
+        if(!nw||!nh)return; var ri=nw/nh,rb=bw/bh;
+        var oX=ri>rb?(bh*ri-bw):0, oY=ri<rb?(bw/ri-bh):0, dx=e.clientX-sx, dy=e.clientY-sy;
+        if(oX>0) px=Math.min(100,Math.max(0,spx-dx/oX*100));
+        if(oY>0) py=Math.min(100,Math.max(0,spy-dy/oY*100)); applyPos(); });
+      ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
+        cropbox.addEventListener(ev,function(){dragging=false;cropbox.classList.remove('grabbing');}); });
+    }
+    if (input) input.addEventListener('change', function () {
+      var f=input.files&&input.files[0]; if(!f)return; var url=URL.createObjectURL(f);
+      var probe=new Image();
+      probe.onload=function(){ var want=probe.naturalHeight>=probe.naturalWidth?'portrait':'paysage';
+        var r=document.querySelector('input[name=orientation][value="'+want+'"]'); if(r)r.checked=true;
+        showCrop(url); };
+      probe.src=url;
+    });
+    document.querySelectorAll('input[name=orientation]').forEach(function(r){
+      r.addEventListener('change', function(){ resetFocus(); frame(); }); });
+    frame(); applyPos();
+  })();
+</script>
+{% endblock %}

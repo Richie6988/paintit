@@ -1,0 +1,867 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PaintIt\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Créer mon tableau"
+msgstr "Mein Bild erstellen"
+
+msgid "Peinture par numéros personnalisée, fabriquée à partir de vos photos"
+msgstr "Individuelles Malen nach Zahlen, aus Ihren Fotos gefertigt"
+
+msgid "Votre souvenir, votre chef-d'œuvre"
+msgstr "Ihre Erinnerung, Ihr Meisterwerk"
+
+msgid ""
+"Laissez-vous tenter par la<br><em>peinture par numéros</em> personnalisée"
+msgstr "Gönnen Sie sich<br><em>individuelles Malen nach Zahlen</em>"
+
+msgid ""
+"Envoyez une photo, on la transforme en toile à peindre : canvas, numéros et "
+"pots de couleur assortis. Livré chez vous, prêt à créer."
+msgstr ""
+"Senden Sie ein Foto, wir verwandeln es in eine Leinwand zum Ausmalen: "
+"Canvas, Zahlen und passende Farbtöpfe. Zu Ihnen geliefert, bereit zum Malen."
+
+msgid "Personnaliser ma peinture"
+msgstr "Mein Gemälde gestalten"
+
+msgid "Aperçu gratuit en quelques secondes, sans engagement"
+msgstr "Kostenlose Vorschau in Sekunden, unverbindlich"
+
+msgid "Glissez pour révéler la toile"
+msgstr "Ziehen, um die Leinwand zu zeigen"
+
+msgid "Vous envoyez une photo"
+msgstr "Sie senden ein Foto"
+
+msgid "Un portrait, un animal, un paysage, tout fonctionne."
+msgstr "Ein Porträt, ein Tier, eine Landschaft – alles geht."
+
+msgid "On génère l'aperçu"
+msgstr "Wir erstellen die Vorschau"
+
+msgid "Canvas et numéros calculés automatiquement."
+msgstr "Canvas und Zahlen automatisch berechnet."
+
+msgid "On livre le kit"
+msgstr "Wir liefern das Set"
+
+msgid "Toile numérotée, palette et pinceaux à votre porte."
+msgstr "Nummerierte Leinwand, Palette und Pinsel bis vor die Tür."
+
+msgid "Prêt à peindre votre histoire ?"
+msgstr "Bereit, Ihre Geschichte zu malen?"
+
+msgid "Commencer maintenant"
+msgstr "Jetzt starten"
+
+msgid "Personnaliser"
+msgstr "Gestalten"
+
+msgid "Photo"
+msgstr "Foto"
+
+msgid "Aperçu"
+msgstr "Vorschau"
+
+msgid "Livraison"
+msgstr "Lieferung"
+
+msgid "Paiement"
+msgstr "Zahlung"
+
+msgid "Envoyez votre photo"
+msgstr "Senden Sie Ihr Foto"
+
+msgid "Choisissez une image nette et bien éclairée pour un meilleur rendu."
+msgstr ""
+"Wählen Sie ein scharfes, gut beleuchtetes Bild für das beste Ergebnis."
+
+msgid "Aucune image sélectionnée"
+msgstr "Kein Bild ausgewählt"
+
+msgid "Dimensions"
+msgstr "Maße"
+
+msgid "Prix"
+msgstr "Preis"
+
+msgid "Générer mon aperçu"
+msgstr "Vorschau erstellen"
+
+msgid "Nous composons votre toile..."
+msgstr "Wir gestalten Ihre Leinwand..."
+
+msgid "Analyse des couleurs et trace des zones"
+msgstr "Farbanalyse und Zonen werden gezeichnet"
+
+msgid "Voici votre tableau"
+msgstr "Hier ist Ihr Bild"
+
+msgid "Rendu final colorié"
+msgstr "Farbige Endansicht"
+
+msgid "Toile numérotée à peindre"
+msgstr "Nummerierte Leinwand zum Malen"
+
+msgid "couleurs"
+msgstr "Farben"
+
+msgid "ref."
+msgstr "Ref."
+
+msgid "Changer de photo"
+msgstr "Foto ändern"
+
+msgid "Je commande"
+msgstr "Jetzt bestellen"
+
+msgid "Où livrer votre kit ?"
+msgstr "Wohin sollen wir liefern?"
+
+msgid "Retour"
+msgstr "Zurück"
+
+msgid "Aller au paiement"
+msgstr "Zur Zahlung"
+
+msgid "Récapitulatif"
+msgstr "Übersicht"
+
+msgid "Format"
+msgstr "Format"
+
+msgid "Couleurs"
+msgstr "Farben"
+
+msgid "Reference"
+msgstr "Referenz"
+
+msgid "Code de réduction"
+msgstr "Rabattcode"
+
+msgid "Appliquer"
+msgstr "Anwenden"
+
+msgid "Sous-total"
+msgstr "Zwischensumme"
+
+msgid "Remise"
+msgstr "Rabatt"
+
+msgid "Total"
+msgstr "Gesamt"
+
+msgid ""
+"Astuce : chaque poster imprimé porte un code fidélité (le QR). Scannez-le "
+"pour appliquer automatiquement la remise, ou saisissez-le ci-dessus. Usage "
+"unique."
+msgstr ""
+"Tipp: Jedes gedruckte Poster trägt einen Treuecode (den QR). Scannen Sie "
+"ihn, um den Rabatt automatisch anzuwenden, oder geben Sie ihn oben ein. "
+"Einmalig verwendbar."
+
+msgid "Valider et payer"
+msgstr "Bestätigen und bezahlen"
+
+msgid "Commande confirmée"
+msgstr "Bestellung bestätigt"
+
+msgid "Confirmée"
+msgstr "Bestätigt"
+
+msgid "Merci !"
+msgstr "Danke!"
+
+msgid "Votre commande %(uid)s est enregistrée."
+msgstr "Ihre Bestellung %(uid)s wurde aufgenommen."
+
+msgid "Commande fournisseur"
+msgstr "Lieferantenbestellung"
+
+msgid "Produit"
+msgstr "Produkt"
+
+msgid "Dossier de production"
+msgstr "Produktionsordner"
+
+msgid "Retour à l'accueil"
+msgstr "Zurück zur Startseite"
+
+msgid "Portrait"
+msgstr "Hochformat"
+
+msgid "Paysage"
+msgstr "Querformat"
+
+msgid "12 couleurs"
+msgstr "12 Farben"
+
+msgid "24 couleurs"
+msgstr "24 Farben"
+
+msgid "36 couleurs"
+msgstr "36 Farben"
+
+msgid "Debutant"
+msgstr "Anfänger"
+
+msgid "Moyen"
+msgstr "Mittel"
+
+msgid "Expert"
+msgstr "Experte"
+
+msgid "Votre photo"
+msgstr "Ihr Foto"
+
+msgid "Orientation"
+msgstr "Ausrichtung"
+
+msgid "Nombre de couleurs"
+msgstr "Anzahl der Farben"
+
+msgid "Difficulte"
+msgstr "Schwierigkeit"
+
+msgid "Nom complet"
+msgstr "Vollständiger Name"
+
+msgid "E-mail"
+msgstr "E-Mail"
+
+msgid "Indicatif"
+msgstr "Ländervorwahl"
+
+msgid "Téléphone"
+msgstr "Telefon"
+
+msgid "Adresse"
+msgstr "Adresse"
+
+msgid "Complément"
+msgstr "Adresszusatz"
+
+msgid "Code postal"
+msgstr "Postleitzahl"
+
+msgid "Ville"
+msgstr "Stadt"
+
+msgid "Pays"
+msgstr "Land"
+
+msgid "Contact"
+msgstr "Kontakt"
+
+msgid "Nous contacter"
+msgstr "Kontaktieren Sie uns"
+
+msgid "Une question ? Écrivez-nous."
+msgstr "Eine Frage? Schreiben Sie uns."
+
+msgid "Merci, votre message a bien été envoyé."
+msgstr "Danke, Ihre Nachricht wurde gesendet."
+
+msgid "Envoyer"
+msgstr "Senden"
+
+msgid "Nom"
+msgstr "Name"
+
+msgid "Sujet"
+msgstr "Betreff"
+
+msgid "Message"
+msgstr "Nachricht"
+
+msgid "Excellent"
+msgstr "Ausgezeichnet"
+
+msgid "sur la base de 1 200+ avis"
+msgstr "auf Basis von 1.200+ Bewertungen"
+
+msgid "Le rendu est bluffant, ma mère a adoré son cadeau."
+msgstr "Das Ergebnis ist verblüffend, meine Mutter liebte ihr Geschenk."
+
+msgid "Facile à peindre, les couleurs correspondent parfaitement."
+msgstr "Leicht zu malen, die Farben passen perfekt."
+
+msgid "Livraison rapide et qualité au top. Je recommande !"
+msgstr "Schnelle Lieferung und top Qualität. Sehr empfehlenswert!"
+
+msgid "Client vérifié"
+msgstr "Verifizierter Kunde"
+
+msgid "Livraison offerte"
+msgstr "Kostenlose Lieferung"
+
+msgid "Aperçu gratuit en quelques secondes"
+msgstr "Kostenlose Vorschau in Sekunden"
+
+msgid "Télécharger le reçu (PDF)"
+msgstr "Beleg herunterladen (PDF)"
+
+msgid "Photo conservée, changez simplement les options."
+msgstr "Foto beibehalten, ändern Sie einfach die Optionen."
+
+msgid "Ajouter un set de pinceaux (+%(p)s &euro;)"
+msgstr "Pinselset hinzufügen (+%(p)s &euro;)"
+
+msgid "Peinture par numéros personnalisée"
+msgstr "Individuelles Malen nach Zahlen"
+
+msgid "Apercu du cadrage"
+msgstr "Zuschnitt-Vorschau"
+
+msgid "Votre photo sera recadree au centre selon l'orientation choisie."
+msgstr "Ihr Foto wird je nach gewählter Ausrichtung mittig zugeschnitten."
+
+msgid "Confidentialité"
+msgstr "Datenschutz"
+
+msgid "Confidentialité et données personnelles"
+msgstr "Datenschutz & persönliche Daten"
+
+msgid ""
+"Vos données (photo envoyée, informations de commande et de livraison) sont "
+"utilisées uniquement pour traiter et livrer votre commande. Elles sont "
+"conservées le temps nécessaire au traitement, puis supprimées dans un délai "
+"d'un mois."
+msgstr ""
+"Ihre Daten (das hochgeladene Foto, Bestell- und Lieferangaben) werden "
+"ausschließlich zur Bearbeitung und Lieferung Ihrer Bestellung verwendet. Sie"
+" werden nur so lange gespeichert, wie es zur Abwicklung nötig ist, und "
+"danach innerhalb eines Monats gelöscht."
+
+msgid ""
+"Le paiement est traité par Stripe et la fabrication par notre imprimeur "
+"partenaire ; nous ne stockons aucune donnée de carte bancaire."
+msgstr ""
+"Die Zahlung wird von Stripe abgewickelt und die Produktion von unserem "
+"Druckpartner; wir speichern keine Kartendaten."
+
+msgid ""
+"Conformément au RGPD, vous pouvez demander l'accès, la rectification ou la "
+"suppression de vos données à tout moment en nous contactant."
+msgstr ""
+"Gemäß der DSGVO können Sie jederzeit Auskunft, Berichtigung oder Löschung "
+"Ihrer Daten verlangen, indem Sie uns kontaktieren."
+
+msgid "Glissez l'image pour recentrer le cadrage."
+msgstr "Ziehen Sie das Bild, um den Ausschnitt zu verschieben."
+
+msgid "Pièces jointes (image ou PDF)"
+msgstr "Anhänge (Bild oder PDF)"
+
+msgid "Jusqu'à 5 fichiers, 8 Mo chacun."
+msgstr "Bis zu 5 Dateien, je 8 MB."
+
+msgid "Ajouter un set de pinceaux"
+msgstr "Pinselset hinzufügen"
+
+msgid "Livraison estimée : %(delivery_min)s à %(delivery_max)s jours ouvrés"
+msgstr ""
+"Voraussichtliche Lieferung: %(delivery_min)s bis %(delivery_max)s Werktage"
+
+msgid "Jouer en DigiPaint"
+msgstr "DigiPaint spielen"
+
+msgid "Photo conservée, ajustez le cadrage si besoin."
+msgstr "Foto beibehalten, Zuschnitt bei Bedarf anpassen."
+
+msgid "toile 40 x 50 cm, livraison offerte"
+msgstr "Leinwand 40 x 50 cm, kostenlose Lieferung"
+
+msgid "Mes créations"
+msgstr "Meine Werke"
+
+msgid "Retrouvez vos toiles pour rejouer en DigiPaint ou les commander."
+msgstr ""
+"Finden Sie Ihre Leinwaende zum Weiterspielen in DigiPaint oder zum "
+"Bestellen."
+
+msgid "Aucune création pour l'instant. Créez votre première toile !"
+msgstr "Noch keine Werke. Erstellen Sie Ihre erste Leinwand!"
+
+msgid "Créer"
+msgstr "Erstellen"
+
+msgid "Jouer"
+msgstr "Spielen"
+
+msgid "Commander"
+msgstr "Bestellen"
+
+msgid "Retirer"
+msgstr "Entfernen"
+
+msgid "Sauvegarder ma galerie"
+msgstr "Meine Galerie sichern"
+
+msgid "M'envoyer par e-mail"
+msgstr "Per E-Mail senden"
+
+msgid "Recevez vos codes par e-mail pour reprendre sur un autre appareil."
+msgstr ""
+"Erhalten Sie Ihre Codes per E-Mail, um auf einem anderen Geraet "
+"fortzufahren."
+
+msgid "J'ai un code"
+msgstr "Ich habe einen Code"
+
+msgid "Ouvrez directement votre design DigiPaint."
+msgstr "Oeffnen Sie Ihr DigiPaint-Design direkt."
+
+msgid "Saisissez votre e-mail."
+msgstr "Geben Sie Ihre E-Mail ein."
+
+msgid "Envoyé ! Vérifiez votre boîte mail."
+msgstr "Gesendet! Pruefen Sie Ihr Postfach."
+
+msgid "E-mail invalide."
+msgstr "Ungueltige E-Mail."
+
+msgid "Erreur, réessayez."
+msgstr "Fehler, bitte erneut versuchen."
+
+msgid "Cliquez sur l'image pour peindre en DigiPaint."
+msgstr "Klicken Sie auf das Bild, um in DigiPaint zu malen."
+
+msgid "Cliquez sur une image pour la voir en grand."
+msgstr "Klicken Sie auf ein Bild, um es zu vergroessern."
+
+msgid "Votre récompense : la toile numérique !"
+msgstr "Ihre Belohnung: die digitale Leinwand!"
+
+msgid ""
+"Peignez votre œuvre en ligne, gagnez des points, retrouvez-la dans Mes "
+"créations."
+msgstr ""
+"Malen Sie Ihr Werk online, sammeln Sie Punkte, finden Sie es in Meine Werke."
+
+msgid "Jouer maintenant"
+msgstr "Jetzt spielen"
+
+msgid "%(n)s pots de peinture inclus dans l'achat"
+msgstr "%(n)s Farbtoepfe im Kauf enthalten"
+
+msgid "Ma galerie"
+msgstr "Meine Galerie"
+
+msgid "Votre galerie DigiPaint"
+msgstr "Ihre DigiPaint-Galerie"
+
+msgid ""
+"Peignez vos toiles numériques, gagnez des points, revenez quand vous voulez."
+msgstr ""
+"Malen Sie Ihre digitalen Leinwaende, sammeln Sie Punkte, kommen Sie "
+"jederzeit zurueck."
+
+msgid "Ajouter une toile"
+msgstr "Leinwand hinzufügen"
+
+msgid "Créer ma toile gratuite"
+msgstr "Meine kostenlose Leinwand erstellen"
+
+msgid "Galerie liée à"
+msgstr "Galerie verknüpft mit"
+
+msgid "Se déconnecter"
+msgstr "Abmelden"
+
+msgid "Recevoir un code"
+msgstr "Code erhalten"
+
+msgid "Charger ma galerie"
+msgstr "Galerie laden"
+
+msgid "Retrouvez votre galerie sur tout appareil grâce à votre e-mail."
+msgstr "Finden Sie Ihre Galerie auf jedem Geraet mit Ihrer E-Mail."
+
+msgid "Aucune toile pour l'instant."
+msgstr "Noch keine Leinwand."
+
+msgid "offerte"
+msgstr "Geschenk"
+
+msgid "numérique"
+msgstr "digital"
+
+msgid "Kit toile vierge"
+msgstr "Leinwand-Set (leer)"
+
+msgid "Tableau fini"
+msgstr "Fertiges Bild"
+
+msgid "Commander le tableau fini"
+msgstr "Fertiges Bild bestellen"
+
+msgid "Une impression d'art de votre œuvre, prête à accrocher."
+msgstr "Ein Kunstdruck Ihres Werks, bereit zum Aufhaengen."
+
+msgid "Matière"
+msgstr "Material"
+
+msgid "Cadre"
+msgstr "Rahmen"
+
+msgid "Sous verre"
+msgstr "Unter Glas"
+
+msgid "Valider la commande"
+msgstr "Bestellung abschließen"
+
+msgid "Une impression d'art de votre oeuvre, prête à accrocher."
+msgstr "Ein Kunstdruck Ihres Werks."
+
+msgid "Retour à la galerie"
+msgstr "Zurück zur Galerie"
+
+msgid "Toile digitale offerte"
+msgstr "Digitale Leinwand gratis"
+
+msgid "Tester notre algorithme"
+msgstr "Unseren Algorithmus testen"
+
+msgid "Laissez-vous tenter par la peinture par numéros personnalisée"
+msgstr "Gönnen Sie sich individuelles Malen nach Zahlen"
+
+msgid "Vous jouez en digital"
+msgstr "Digital spielen"
+
+msgid "ou"
+msgstr "oder"
+
+msgid "Une impression d'art de votre œuvre peinte, prête à accrocher."
+msgstr "Ein Kunstdruck Ihres gemalten Werks, bereit zum Aufhaengen."
+
+msgid "Complément d'adresse"
+msgstr "Adresszusatz"
+
+msgid "Jouez votre toile en digital"
+msgstr "Spielen Sie Ihre Leinwand digital"
+
+msgid ""
+"Peignez-la en ligne, gagnez des points, retrouvez-la dans votre galerie."
+msgstr "Malen Sie online, sammeln Sie Punkte, in Ihrer Galerie."
+
+msgid "Inclus dans le kit"
+msgstr "Im Set enthalten"
+
+msgid "Pots de peinture assortis"
+msgstr "Passende Farbtoepfe"
+
+msgid "Emballage soigné"
+msgstr "Sorgfaeltige Verpackung"
+
+msgid "Ce que vous recevrez dans le colis"
+msgstr "Was Sie im Paket erhalten"
+
+msgid "Poster"
+msgstr "Poster"
+
+msgid "Canvas et numéros calculés automatiquement en moins d'une minute."
+msgstr "Leinwand und Zahlen automatisch in unter einer Minute berechnet."
+
+msgid ""
+"Toile numérotée, palette et pinceaux à votre porte, avec votre toile "
+"digitale offerte."
+msgstr ""
+"Nummerierte Leinwand, Palette und Pinsel, mit Ihrer gratis digitalen "
+"Leinwand."
+
+msgid ""
+"Toile numérique gratuite (la première), sauvegardez-la par e-mail pour la "
+"conserver."
+msgstr ""
+"Gratis digitale Leinwand (die erste), per E-Mail sichern, um sie zu "
+"behalten."
+
+msgid ""
+"La génération peut prendre jusqu'à une minute. Plus il y a de couleurs, plus"
+" c'est détaillé (et un peu plus long)."
+msgstr ""
+"Die Generierung kann bis zu einer Minute dauern. Mehr Farben, mehr Detail "
+"(und etwas laenger)."
+
+msgid "Comment jouer"
+msgstr "So wird gespielt"
+
+msgid "Tapez un numéro pour choisir cette couleur (2 puis 3 = 23)."
+msgstr "Tippen Sie eine Zahl, um die Farbe zu waehlen (2 dann 3 = 23)."
+
+msgid ""
+"Touchez une zone de ce numéro pour la peindre : son numéro passe au vert."
+msgstr "Tippen Sie ein Feld mit dieser Zahl an: die Zahl wird gruen."
+
+msgid "Ctrl + flèches gauche/droite : couleur précédente ou suivante."
+msgstr "Strg + Pfeil links/rechts: vorige oder naechste Farbe."
+
+msgid "Flèches pour se déplacer, touche F pour recentrer."
+msgstr "Pfeiltasten zum Bewegen, F zum Zentrieren."
+
+msgid "Molette ou pincement à deux doigts pour zoomer."
+msgstr "Mausrad oder Zwei-Finger-Zoom."
+
+msgid "Bouton # : afficher ou masquer les numéros."
+msgstr "#-Taste: Zahlen ein-/ausblenden."
+
+msgid "Touchez la carte (en bas à droite) pour vous déplacer."
+msgstr "Tippen Sie auf die Karte (unten rechts), um sich zu bewegen."
+
+msgid "Score"
+msgstr "Punkte"
+
+msgid "Zones"
+msgstr "Felder"
+
+msgid "Voir ma galerie"
+msgstr "Meine Galerie ansehen"
+
+msgid "Saisissez votre e-mail pour afficher et sauvegarder vos toiles."
+msgstr ""
+"Geben Sie Ihre E-Mail ein, um Ihre Leinwaende anzuzeigen und zu speichern."
+
+msgid "Notre algorithme transforme votre photo en toile a peindre."
+msgstr "Unser Algorithmus verwandelt Ihr Foto in eine Leinwand zum Ausmalen."
+
+msgid ""
+"Vos données (photo envoyée, informations de commande et de livraison) sont "
+"utilisées uniquement pour traiter et livrer votre commande et vous permettre"
+" de jouer votre toile numérique. Les fichiers de votre toile sont conservés "
+"tant que le modèle figure dans votre galerie ; si vous le supprimez de votre"
+" galerie, les fichiers associés sont effacés. Les informations de commande "
+"sont conservées le temps nécessaire au traitement et à nos obligations "
+"légales."
+msgstr ""
+"Ihre Daten (hochgeladenes Foto, Bestell- und Lieferdaten) werden nur zur "
+"Bearbeitung und Lieferung Ihrer Bestellung und zum Spielen Ihrer digitalen "
+"Leinwand verwendet. Die Dateien Ihrer Leinwand werden aufbewahrt, solange "
+"das Modell in Ihrer Galerie ist; wenn Sie es aus Ihrer Galerie entfernen, "
+"werden die zugehoerigen Dateien geloescht. Bestelldaten werden so lange "
+"aufbewahrt, wie es fuer die Bearbeitung und unsere gesetzlichen Pflichten "
+"noetig ist."
+
+msgid "Bibliothèque"
+msgstr "Bibliothek"
+
+msgid "Des modèles prêts à peindre, gratuitement."
+msgstr "Fertige Vorlagen zum Ausmalen, gratis."
+
+msgid "Galerie"
+msgstr "Galerie"
+
+msgid ""
+"Nous prenons le soin de vos données au sérieux. Voici, en clair, ce que nous"
+" collectons et pourquoi."
+msgstr ""
+"Wir nehmen den Schutz Ihrer Daten ernst. Hier klar erklaert, was wir "
+"erfassen und warum."
+
+msgid "Données que nous collectons"
+msgstr "Daten, die wir erfassen"
+
+msgid ""
+"La photo que vous envoyez, le rendu généré (toile numérotée et version "
+"colorée), et, en cas d'achat, vos informations de commande et de livraison "
+"(nom, e-mail, adresse, téléphone). Si vous liez votre galerie, votre e-mail "
+"sert d'identifiant de galerie."
+msgstr ""
+"Das hochgeladene Foto, das erzeugte Ergebnis (nummerierte Leinwand und "
+"Farbversion) und bei einer Bestellung Ihre Bestell- und Lieferdaten (Name, "
+"E-Mail, Adresse, Telefon). Wenn Sie Ihre Galerie verknuepfen, dient Ihre "
+"E-Mail als Galerie-Kennung."
+
+msgid "Pourquoi nous les utilisons"
+msgstr "Warum wir sie nutzen"
+
+msgid ""
+"Uniquement pour générer votre toile, traiter et livrer votre commande, vous "
+"permettre de jouer et retrouver vos toiles numériques, et vous envoyer les "
+"e-mails liés (confirmation, reçu, code de galerie)."
+msgstr ""
+"Nur um Ihre Leinwand zu erzeugen, Ihre Bestellung zu bearbeiten und zu "
+"liefern, Sie spielen und Ihre digitalen Leinwaende wiederfinden zu lassen "
+"und zugehoerige E-Mails zu senden (Bestaetigung, Beleg, Galerie-Code)."
+
+msgid "Durée de conservation"
+msgstr "Aufbewahrungsdauer"
+
+msgid ""
+"Les fichiers d'une toile sont conservés tant que le modèle figure dans votre"
+" galerie. Si vous le supprimez de votre galerie, les fichiers associés sont "
+"effacés. Les informations de commande sont conservées le temps nécessaire au"
+" traitement et à nos obligations légales (comptabilité)."
+msgstr ""
+"Die Dateien einer Leinwand werden aufbewahrt, solange das Modell in Ihrer "
+"Galerie ist. Entfernen Sie es, werden die zugehoerigen Dateien geloescht. "
+"Bestelldaten werden so lange aufbewahrt, wie es fuer die Bearbeitung und "
+"gesetzliche Pflichten (Buchhaltung) noetig ist."
+
+msgid "Partage et paiement"
+msgstr "Weitergabe und Zahlung"
+
+msgid ""
+"Le paiement est traité par Stripe ; nous ne stockons aucune donnée de carte "
+"bancaire. La fabrication est confiée à nos imprimeurs partenaires, qui ne "
+"reçoivent que le nécessaire à la production et à l'expédition. Nous ne "
+"vendons jamais vos données."
+msgstr ""
+"Die Zahlung wickelt Stripe ab; wir speichern keine Kartendaten. Die "
+"Produktion uebernehmen unsere Partnerdruckereien, die nur das Noetige fuer "
+"Produktion und Versand erhalten. Wir verkaufen Ihre Daten nie."
+
+msgid "Vos droits (RGPD)"
+msgstr "Ihre Rechte (DSGVO)"
+
+msgid ""
+"Vous pouvez à tout moment demander l'accès, la rectification, la portabilité"
+" ou la suppression de vos données, et retirer votre consentement. Écrivez-"
+"nous et nous répondons dans les meilleurs délais."
+msgstr ""
+"Sie koennen jederzeit Auskunft, Berichtigung, Uebertragbarkeit oder "
+"Loeschung Ihrer Daten verlangen und Ihre Einwilligung widerrufen. Schreiben "
+"Sie uns, wir antworten schnellstmoeglich."
+
+msgid "Glissez pour comparer photo et toile."
+msgstr "Ziehen Sie, um Foto und Leinwand zu vergleichen."
+
+msgid "Votre toile"
+msgstr "Ihre Leinwand"
+
+msgid "Tapez un numéro pour choisir la couleur (2 puis 3 = 23)."
+msgstr "Tippen Sie eine Zahl fuer die Farbe (2 dann 3 = 23)."
+
+msgid "Touchez une zone de ce numéro : son numéro passe au vert."
+msgstr "Tippen Sie ein Feld mit dieser Zahl: die Zahl wird gruen."
+
+msgid "Couleur précédente / suivante."
+msgstr "Vorige / naechste Farbe."
+
+msgid "Flèches pour se déplacer"
+msgstr "Pfeile zum Bewegen"
+
+msgid "recentrer"
+msgstr "zentrieren"
+
+msgid "Molette ou pincement pour zoomer."
+msgstr "Rad oder Pinch zum Zoomen."
+
+msgid "Afficher / masquer les numéros."
+msgstr "Zahlen ein-/ausblenden."
+
+msgid "Touchez la carte (bas-droite) pour vous déplacer."
+msgstr "Karte antippen (unten rechts) zum Bewegen."
+
+msgid "Pour continuer"
+msgstr "Zum Fortfahren"
+
+msgid ""
+"Débloquez cette toile pour continuer à jouer et la sauvegarder dans votre "
+"galerie."
+msgstr ""
+"Schalten Sie diese Leinwand frei, um weiterzuspielen und in Ihrer Galerie zu"
+" speichern."
+
+msgid "Débloquer"
+msgstr "Freischalten"
+
+msgid "Partagez votre code. Vos amis économisent, et vous êtes récompensé."
+msgstr "Teilen Sie Ihren Code. Ihre Freunde sparen und Sie werden belohnt."
+
+msgid "Copier"
+msgstr "Kopieren"
+
+msgid "Poster et instructions"
+msgstr "Poster und Anleitung"
+
+msgid "Jeu DigiPaint"
+msgstr "DigiPaint-Spiel"
+
+msgid "Coupon de réduction"
+msgstr "Rabattgutschein"
+
+msgid "Des modèles prêts à peindre"
+msgstr "Fertige Vorlagen zum Ausmalen"
+
+msgid "Choisissez un modèle PaintIt et jouez tout de suite, gratuitement."
+msgstr "Waehlen Sie eine PaintIt-Vorlage und spielen Sie sofort, gratis."
+
+msgid "Voir tous les modèles"
+msgstr "Alle Vorlagen ansehen"
+
+msgid "Modèles"
+msgstr "Vorlagen"
+
+msgid "Modèles PaintIt prêts à peindre"
+msgstr "Fertige PaintIt-Vorlagen"
+
+msgid "Glissez pour comparer votre photo et la toile à peindre."
+msgstr "Ziehen Sie, um Ihr Foto und die Leinwand zu vergleichen."
+
+msgid "Toile coloriée"
+msgstr "Farbige Leinwand"
+
+msgid "Toile numérotée"
+msgstr "Nummerierte Leinwand"
+
+msgid "Imprimer les numéros sur le tableau"
+msgstr "Zahlen auf dem Bild drucken"
+
+msgid "Offert avec votre commande"
+msgstr "Gratis zu Ihrer Bestellung"
+
+msgid "Votre toile numérique est prête à peindre"
+msgstr "Ihre digitale Leinwand ist bereit zum Ausmalen"
+
+msgid "Tous les modèles PaintIt, prêts à peindre. Certains sont gratuits."
+msgstr "Alle PaintIt-Vorlagen, bereit zum Ausmalen. Einige sind gratis."
+
+msgid "La bibliothèque de modèles arrive bientôt."
+msgstr "Die Vorlagen-Bibliothek kommt bald."
+
+msgid "vos toiles"
+msgstr "Ihre Leinwaende"
+
+msgid "Peinture"
+msgstr "Farbe"
+
+msgid "Bientôt disponible"
+msgstr "Bald verfuegbar"
+
+msgid "Votre œuvre, imprimée et prête à accrocher"
+msgstr "Ihr Werk, gedruckt und aufhaengefertig"
+
+msgid ""
+"Une impression d'art haut de gamme de votre toile peinte : au choix toile, "
+"aluminium ou bois, avec ou sans cadre. Nous finalisons notre atelier "
+"d'impression."
+msgstr ""
+"Ein hochwertiger Kunstdruck Ihrer bemalten Leinwand: wahlweise Leinwand, "
+"Aluminium oder Holz, mit oder ohne Rahmen. Wir richten unser Druckatelier "
+"ein."
+
+msgid ""
+"Laissez votre e-mail pour être prévenu(e) dès l'ouverture des commandes."
+msgstr ""
+"Hinterlassen Sie Ihre E-Mail, um bei Bestellstart benachrichtigt zu werden."
+
+msgid "Prévenez-moi"
+msgstr "Benachrichtigen"
+
+msgid "Merci ! Nous vous préviendrons dès l'ouverture."
+msgstr "Danke! Wir informieren Sie bei Start."
+
+msgid "bientôt"
+msgstr "bald"
+
+msgid ""
+"À partir de n'importe quelle photo, votre toile disponible en quelques "
+"secondes"
+msgstr "Aus jedem Foto, Ihre Leinwand in Sekunden bereit"
