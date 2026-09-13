@@ -48,7 +48,6 @@
     {% for m in library_preview %}
     <a class="lib-tile" href="{% url 'studio:digipaint' m.uid %}">
       <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="" loading="lazy">
-      <span>{{ m.title }}</span>
     </a>
     {% endfor %}
   </div>
@@ -77,7 +76,7 @@
     setInterval(function(){ if(!autoOn||dragging) return; t+=0.03; var p=50+42*Math.sin(t);
       r.style.setProperty('--pos',p+'%'); }, 33);
     // Alternance moto <-> autres designs
-    var seq=['moto','rose','moto','aquarium','moto','chien','moto','foret','moto','cerisier','moto','people','moto','pop-art','moto','cat_cartoon','moto','children'];
+    var seq=['rose','aquarium','chien','foret','cerisier','moto','people','pop-art','cat_cartoon','children'];
     var i=0, base=document.getElementById('revealBase'), photo=document.getElementById('revealPhoto');
     if(base&&photo){var dir=base.getAttribute('src').replace(/[^/]+$/,'');
       setInterval(function(){i=(i+1)%seq.length;var s=seq[i];base.style.opacity=0;photo.style.opacity=0;
