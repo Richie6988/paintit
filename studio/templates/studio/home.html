@@ -66,21 +66,21 @@
     var dragging = false;
     function setPos(x){ var b=r.getBoundingClientRect(); var p=(x-b.left)/b.width;
       p=Math.max(0,Math.min(1,p)); r.style.setProperty('--pos',(p*100)+'%'); }
-    function down(e){ dragging=true; autoOn=false; setPos((e.touches?e.touches[0]:e).clientX); e.preventDefault(); }
+    function down(e){ dragging=true; autoOn=false; if(window.__rot){clearInterval(window.__rot);window.__rot=null;} setPos((e.touches?e.touches[0]:e).clientX); e.preventDefault(); }
     function move(e){ if(dragging) setPos((e.touches?e.touches[0]:e).clientX); }
     r.addEventListener('mousedown',down); r.addEventListener('touchstart',down,{passive:false});
     window.addEventListener('mousemove',move); window.addEventListener('touchmove',move,{passive:false});
     window.addEventListener('mouseup',function(){dragging=false;}); window.addEventListener('touchend',function(){dragging=false;});
     // Animation auto du slider (oscillation), en pause des que l'utilisateur le prend en main
     var autoOn=true, t=0;
-    setInterval(function(){ if(!autoOn||dragging) return; t+=0.03; var p=50+42*Math.sin(t);
+    setInterval(function(){ if(!autoOn||dragging) return; t+=0.018; var p=50+42*Math.sin(t);
       r.style.setProperty('--pos',p+'%'); }, 33);
     // Alternance moto <-> autres designs
     var seq=['rose','aquarium','chien','foret','cerisier','moto','people','pop-art','cat_cartoon','children'];
     var i=0, base=document.getElementById('revealBase'), photo=document.getElementById('revealPhoto');
     if(base&&photo){var dir=base.getAttribute('src').replace(/[^/]+$/,'');
-      setInterval(function(){i=(i+1)%seq.length;var s=seq[i];base.style.opacity=0;photo.style.opacity=0;
-        setTimeout(function(){base.src=dir+s+'_template.png';photo.src=dir+s+'_pbn.png';base.style.opacity=1;photo.style.opacity=1;},260);},3600);}
+      window.__rot=setInterval(function(){i=(i+1)%seq.length;var s=seq[i];base.style.opacity=0;photo.style.opacity=0;
+        setTimeout(function(){base.src=dir+s+'_template.png';photo.src=dir+s+'_pbn.png';base.style.opacity=1;photo.style.opacity=1;},260);},6500);}
   })();
 </script>
 {% endblock %}

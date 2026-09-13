@@ -200,6 +200,8 @@
   <input type="range" id="crange" min="2" max="99" value="24" step="1" style="padding:0">
   <label>Difficulty</label>
   <select id="diff"><option value="facile">Easy</option><option value="moyen" selected>Medium</option><option value="difficile">Hard</option><option value="extreme">Extreme</option></select>
+  <label>{% trans "Nombre max de zones" %} (2&ndash;9999)</label>
+  <input type="number" id="zmax" min="2" max="9999" step="1" placeholder="auto" style="padding:8px 10px">
   <button class="btn pri" id="regen" style="width:100%">Regenerate game canvas</button>
   <div class="hint" id="genstatus"></div>
   <label>Save for later</label>
@@ -334,16 +336,16 @@
   (function(){
     var vp=document.getElementById('reelViewport'), track=document.getElementById('palbar');
     if(!vp||!track)return;
-    var offset=0, singleH=0, dragging=false, startY=0, startOff=0, moved=0;
+    var offset=0, singleH=0, dragging=false, startY=0, startOff=0, moved=0, ptype='mouse';
     window.reelLayout=function(){singleH=track.scrollHeight/2||0;apply();};
     function apply(){if(singleH>0){offset=((offset%singleH)+singleH)%singleH;}track.style.transform='translateY('+(-offset)+'px)';}
     window.reelScrollBy=function(dy){offset+=dy;apply();};
     window.reelScrollToN=function(n){var pot=track.querySelector('.reel-pot[data-n=\"'+n+'\"]');if(!pot)return;
       offset=pot.offsetTop-(vp.clientHeight/2-pot.offsetHeight/2);apply();};
-    vp.addEventListener('pointerdown',function(e){dragging=true;moved=0;startY=e.clientY;startOff=offset;vp.classList.add('drag');});
-    window.addEventListener('pointermove',function(e){if(!dragging)return;var d=e.clientY-startY;moved=Math.max(moved,Math.abs(d));offset=startOff-d;apply();});
+    vp.addEventListener('pointerdown',function(e){dragging=true;moved=0;startY=e.clientY;startOff=offset;ptype=e.pointerType||'mouse';vp.classList.add('drag');});
+    window.addEventListener('pointermove',function(e){if(!dragging)return;var raw=e.clientY-startY;moved=Math.max(moved,Math.abs(raw));var mult=(ptype==='touch')?2.2:1;offset=startOff-raw*mult;apply();});
     window.addEventListener('pointerup',function(){if(dragging){dragging=false;vp.classList.remove('drag');}});
-    vp.addEventListener('wheel',function(e){e.preventDefault();reelScrollBy(e.deltaY>0?58:-58);},{passive:false});
+    vp.addEventListener('wheel',function(e){e.preventDefault();reelScrollBy(e.deltaY>0?24:-24);},{passive:false});
     track.addEventListener('click',function(e){if(moved>6){e.stopPropagation();e.preventDefault();}moved=0;},true);
     setTimeout(window.reelLayout,60);window.addEventListener('resize',window.reelLayout);
   })();
@@ -401,7 +403,7 @@
   var crange=document.getElementById('crange'),cval=document.getElementById('cval'),gs=document.getElementById('genstatus');
   crange.addEventListener('input',function(){cval.textContent=crange.value;});
   document.getElementById('regen').addEventListener('click',function(){var n=crange.value,diff=document.getElementById('diff').value;loading.classList.add('show');loadtxt.textContent='Generating ('+n+' colours)…';gs.textContent='';pop.classList.remove('show');
-    fetch("/paint/"+UID+"/regen/",{method:'POST',headers:{'X-CSRFToken':CSRF,'Content-Type':'application/x-www-form-urlencoded'},body:'colors='+n+'&difficulty='+diff})
+    fetch("/paint/"+UID+"/regen/",{method:'POST',headers:{'X-CSRFToken':CSRF,'Content-Type':'application/x-www-form-urlencoded'},body:'colors='+n+'&difficulty='+diff+(document.getElementById('zmax').value?('&max_zones='+document.getElementById('zmax').value):'')})
       .then(function(r){return r.json();}).then(function(d){if(d.error){loading.classList.remove('show');gs.textContent='Error.';return;}poll(d.job);}).catch(function(){loading.classList.remove('show');});});
   function poll(g){fetch("/create/progress/?uid="+encodeURIComponent(g),{cache:'no-store'}).then(function(r){return r.json();}).then(function(p){if(p.pct)loadtxt.textContent='Generating… '+p.pct+'%';
     if(p.done){fetch("/paint/"+UID+"/game-palette/",{cache:'no-store'}).then(function(r){return r.json();}).then(function(pp){if(pp.palette){
