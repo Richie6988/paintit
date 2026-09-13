@@ -13,9 +13,9 @@ SAMPLES = [
     ("aquarium.jpg", "Aquarium tropical",   "Animaux",   "lib-animaux-1",   36, "aquarium"),
     ("chien.jpg",    "Beagle",              "Animaux",   "lib-animaux-2",   24, "chien"),
     ("moto.jpg",     "Moto de course",      "Vehicules", "lib-vehicules-1", 24, "moto"),
-    ("people.jpg",   "People",              "People",    "lib-people-1",    12, "people"),
+    ("people.jpg",   "People",              "People",    "lib-people-1",    2, "people"),
     ("pop-art.jpg",  "pop-art",             "pop-art",   "lib-pop-art-1",   12, "pop-art"),
-    ("cat.jpg",      "cat_cartoon",         "cat_cartoon", "lib-cat_cartoon-1", 12, "cat_cartoon"),
+    ("cat.jpg",      "cat",         "cat", "lib-cat-1", 12, "cat"),
     ("children.jpg", "children",            "children",  "lib-children-1",  12, "children"),
 ]
 
