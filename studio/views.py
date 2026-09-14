@@ -1,4 +1,6 @@
 import os
+import logging
+logger = logging.getLogger("studio.views")
 import threading
 import uuid
 
@@ -610,6 +612,8 @@ def _run_game_generation(gameuid, src, colors, w, h, detail=1.0, source_name=Non
         jobs.update(gameuid, pct=100, label="final", done=True,
                     order={"colors_list": result.get("colors_list", [])})
     except Exception as exc:                       # pragma: no cover
+        logger.exception("Echec generation jeu %s (colors=%s, min_zone_mm=%s, density=%s, max_zones=%s)",
+                         gameuid, colors, min_zone_mm, density, max_zones)
         jobs.update(gameuid, done=True, error=str(exc))
     finally:
         from django.db import connections
@@ -663,8 +667,16 @@ def digipaint_palette(request, uid):
 
 
 def robots(request):
-    return HttpResponse("User-agent: *\nDisallow: /create/\nDisallow: /preview/\n"
-                        "Disallow: /media/\nDisallow: /delivery/\nDisallow: /checkout/\n", content_type="text/plain")
+    site = settings.SITE_URL
+    body = (
+        "User-agent: *\n"
+        "Disallow: /create/\nDisallow: /preview/\nDisallow: /media/\n"
+        "Disallow: /delivery/\nDisallow: /checkout/\n"
+        "Allow: /llm.txt\nAllow: /llm.json\n"
+        "\n# Infos pour les IA / LLM :\n"
+        "# %s/llm.txt\n# %s/llm.json\n" % (site, site)
+    )
+    return HttpResponse(body, content_type="text/plain")
 
 
 def devtools(request):

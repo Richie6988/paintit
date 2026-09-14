@@ -30,28 +30,18 @@
  .seg{display:flex;background:#f4f6fb;border:1px solid #e2e8f2;border-radius:10px;overflow:hidden}
  .seg button{background:transparent;border:0;color:#5b647a;padding:7px 12px;font-weight:600;cursor:pointer}.seg button.on{background:var(--accent);color:#fff}
  /* Palette verticale a gauche : 3 pots libres + 6 pots numerotes (roue verticale) */
- .color-reel.side{position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:20;
-   display:flex;flex-direction:column;gap:6px;align-items:center;width:50px}
- .reel-fixed{display:flex;flex-direction:column;gap:8px;align-items:center;
-   background:rgba(255,255,255,.92);border:1px solid #e2e8f2;border-radius:14px;padding:6px;box-shadow:0 4px 12px rgba(18,34,79,.12)}
- .color-reel.side .reel-viewport{height:calc(6 * 34px);overflow:hidden;position:relative;cursor:grab;width:100%;
-   background:rgba(255,255,255,.92);border:1px solid #e2e8f2;border-radius:14px;box-shadow:0 4px 12px rgba(18,34,79,.12);
-   -webkit-mask:linear-gradient(180deg,transparent,#000 10%,#000 90%,transparent);mask:linear-gradient(180deg,transparent,#000 10%,#000 90%,transparent)}
- .color-reel.side .reel-track{display:flex;flex-direction:column;gap:8px;align-items:center;width:100%;padding:6px 0;will-change:transform}
- .reel-viewport.drag{cursor:grabbing}
+ /* Palette EN HAUT : tous les pots visibles (matrice), scroll si beaucoup */
+ .palbar{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;justify-content:center;
+   padding:10px 14px;background:#fff;border-bottom:1px solid #e2e8f2;position:relative;z-index:6;max-height:24vh;overflow-y:auto}
  .reel-pot{flex:0 0 auto;background:none;border:none;cursor:pointer;padding:0;display:flex;flex-direction:column;align-items:center;gap:1px}
- .rp-pot{width:40px;height:22px;border-radius:11px;border:2px solid #fff;position:relative;
+ .rp-pot{width:30px;height:30px;border-radius:50%;border:2px solid #fff;position:relative;
    box-shadow:0 2px 5px rgba(0,0,0,.22),inset 0 2px 4px rgba(255,255,255,.6),inset 0 -3px 5px rgba(0,0,0,.18)}
- .rp-pot::after{content:"";position:absolute;top:3px;left:9px;width:13px;height:4px;border-radius:4px;background:rgba(255,255,255,.6)}
- .reel-pot{flex:0 0 auto;background:none;border:none;cursor:pointer;padding:0;display:flex;flex-direction:column;align-items:center;gap:3px}
- .rp-pot{width:54px;height:54px;border-radius:50%;border:3px solid #fff;position:relative;
-   box-shadow:0 5px 12px rgba(0,0,0,.3),inset 0 4px 8px rgba(255,255,255,.55),inset 0 -7px 11px rgba(0,0,0,.25)}
- .rp-pot::after{content:"";position:absolute;top:8px;left:13px;width:18px;height:9px;border-radius:50%;background:rgba(255,255,255,.7);transform:rotate(-22deg)}
- .rp-empty{background:#fff !important;border-style:dashed;border-color:#b8c2d8;color:#8a97b4;font-size:1.6rem;display:flex;align-items:center;justify-content:center;box-shadow:none}
+ .rp-pot::after{content:"";position:absolute;top:5px;left:8px;width:10px;height:4px;border-radius:4px;background:rgba(255,255,255,.55)}
+ .rp-empty{background:#fff !important;border:2px dashed #b8c2d8;color:#8a97b4;font-size:1.05rem;display:flex;align-items:center;justify-content:center;box-shadow:none}
  .rp-empty::after{display:none}
- .rp-num{font-size:.66rem;font-weight:800;color:#12224f;text-shadow:0 1px 0 #fff;line-height:1}
- .reel-pot.sel .rp-pot{transform:scale(1.14);outline:2px solid var(--accent);outline-offset:2px}
- .reel-pot.sel .rp-num{font-size:1.05rem;color:var(--accent);font-weight:900}
+ .rp-num{font-size:.62rem;font-weight:800;color:#12224f;line-height:1}
+ .reel-pot.sel .rp-pot{transform:scale(1.2);outline:2px solid var(--accent);outline-offset:2px;z-index:1}
+ .reel-pot.sel .rp-num{color:var(--accent);font-weight:900}
  .sw{flex:0 0 auto;width:44px;height:44px;border-radius:12px;border:2px solid transparent;position:relative;cursor:pointer;display:flex;align-items:flex-end;justify-content:flex-end;padding:3px;font-size:.92rem;font-weight:800;color:#0b1226;text-shadow:0 1px 2px rgba(255,255,255,.75)}
  .sw{transition:transform .12s ease,box-shadow .12s ease}
  .sw:hover{transform:translateY(-2px) scale(1.08);box-shadow:0 4px 12px rgba(0,0,0,.35),0 0 0 2px rgba(255,255,255,.7)}
@@ -142,9 +132,8 @@
    .palbar{padding:8px 8px;gap:6px}
    .minimap{width:132px !important}
    .mini-pos{width:12px;height:12px}
-   .color-reel.side{left:8px}
-   .color-reel.side .reel-viewport{height:calc(5 * 56px)}
-   .rp-pot{width:42px;height:42px}
+   .palbar{max-height:22vh}
+   .rp-pot{width:28px;height:28px}
    .zoomctl{bottom:14px}
    .zoomctl button{width:44px;height:44px}
    .boardhelp{left:8px;right:8px;bottom:8px;width:auto;max-width:none}
@@ -177,6 +166,7 @@
   <button class="btn iconbtn" id="reset" title="Restart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7M21 3v5h-5"/></svg></button>
   <a class="btn iconbtn" href="{% url 'studio:paint_portal' %}" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
 </div>
+<div class="palbar" id="palbar"></div>
 <div class="stagewrap">
   <div class="board" id="board">
     <div id="svgwrap"><div id="host"></div></div>
@@ -226,10 +216,6 @@
 
 
 <div class="overlaym" id="modal"><img id="modalimg" alt="aperçu final"></div>
-<div class="color-reel side" id="colorReel">
-  <div class="reel-fixed" id="reelFixed"></div>
-  <div class="reel-viewport" id="reelViewport"><div class="reel-track" id="palbar"></div></div>
-</div>
 
 <div class="win" id="win"><div class="wincard"><div class="shine-sweep"></div>
   <h2>{% trans "Terminé !" %}</h2><div class="badge"><svg viewBox="0 0 24 24" width="16" height="16" fill="#0b1226" style="vertical-align:-3px"><path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6z"/></svg> {% trans "Œuvre certifiée" %}</div>
@@ -288,24 +274,19 @@
     cx=Math.max(0,Math.min(1,cx));cy=Math.max(0,Math.min(1,cy));
     dot.style.left=(mini.offsetLeft+cx*mini.offsetWidth)+'px';
     dot.style.top=(mini.offsetTop+cy*mini.offsetHeight)+'px';dot.style.display='block';}
-  function isCtl(t){return t&&t.closest&&t.closest('.zoomctl,.minimap,.progress,.loading,.pop,.overlaym,.win,.color-reel');}
+  function isCtl(t){return t&&t.closest&&t.closest('.zoomctl,.minimap,.progress,.loading,.pop,.overlaym,.win,.palbar');}
 
   function potHTML(hex){return '<span class="rp-pot" style="background:'+hex+'"></span>';}
   function customHTML(i){return customPots[i]?('<span class="rp-pot" style="background:'+customPots[i]+'"></span>')
       :('<span class="rp-pot rp-empty">+</span>');}
   function buildPalette(pal){byN={};palNums=pal.map(function(c){return c.number;});pal.forEach(function(c){byN[c.number]=c.hex;});selectedN=pal.length?pal[0].number:1;
     var track=document.getElementById('palbar');track.innerHTML='';
-    var fixed=document.getElementById('reelFixed'); if(fixed)fixed.innerHTML='';
-    function fill(){
-      pal.forEach(function(c){var d=document.createElement('button');d.className='reel-pot';d.dataset.n=c.number;
-        d.innerHTML=potHTML(c.hex)+'<span class="rp-num">'+c.number+'</span>';
-        d.addEventListener('click',function(){selectedN=c.number;mode='match';setMode();markSel();});track.appendChild(d);});
-    }
-    fill();fill();   // pots numerotes x2 -> roue verticale infinie
-    if(fixed){for(var i=0;i<3;i++){(function(i){var d=document.createElement('button');d.className='reel-pot custom';d.dataset.pot=i;
+    pal.forEach(function(c){var d=document.createElement('button');d.className='reel-pot';d.dataset.n=c.number;
+      d.innerHTML=potHTML(c.hex)+'<span class="rp-num">'+c.number+'</span>';
+      d.addEventListener('click',function(){selectedN=c.number;mode='match';setMode();markSel();});track.appendChild(d);});
+    for(var i=0;i<3;i++){(function(i){var d=document.createElement('button');d.className='reel-pot custom';d.dataset.pot=i;
       d.innerHTML=customHTML(i);
-      d.addEventListener('click',function(){if(!customPots[i]||selectedPot===i){openPot(i);}else{selectPot(i);}});fixed.appendChild(d);})(i);}}
-    if(window.reelLayout)reelLayout();
+      d.addEventListener('click',function(){if(!customPots[i]||selectedPot===i){openPot(i);}else{selectPot(i);}});track.appendChild(d);})(i);}
     markSel();}
   function fitView(){var svg=host.querySelector('svg');if(!svg)return;wrap.style.transform='';var s=svg.getBoundingClientRect(),b=boardEl.getBoundingClientRect(),pad=24;
     var fit=Math.min((b.width-pad*2)/s.width,(b.height-pad*2)/s.height);sc=fit>0?fit:1;tx=(b.width-s.width*sc)/2;ty=(b.height-s.height*sc)/2;apply();}
@@ -323,9 +304,9 @@
       }).catch(function(){ if(u!==UID){ return loadBoard(UID, PAL); } });}
   function restore(){var st=load();if(!st)return;score=st.score||0;var d=st.done||{};Object.keys(st.painted||{}).forEach(function(i){var z=zones[i];if(z){z.style.fill=st.painted[i];if(d[i]){z.dataset.done='1';if(z.parentNode)z.parentNode.classList.add('done');done++;}}});}
   function updateHUD(){scoreEl.textContent=score;zonesEl.textContent=done+'/'+total;var pb=document.getElementById('pbar');if(pb)pb.style.width=(total?Math.round(done/total*100):0)+'%';}
-  function floatPts(z,txt){try{var bb=z.getBoundingClientRect();var f=document.createElement('div');f.className='float';f.textContent=txt;f.style.left=(bb.left+bb.width/2)+'px';f.style.top=(bb.top+bb.height/2)+'px';document.body.appendChild(f);setTimeout(function(){f.remove();},1000);}catch(e){}}
+  function floatPts(z,txt,px,py){try{var x=px,y=py;if(x==null||y==null){var bb=z.getBoundingClientRect();x=bb.left+bb.width/2;y=bb.top+bb.height/2;}var f=document.createElement('div');f.className='float';f.textContent=txt;f.style.left=x+'px';f.style.top=y+'px';document.body.appendChild(f);setTimeout(function(){f.remove();},1000);}catch(e){}}
   function showCombo(mult){if(mult>1){comboEl.textContent='x'+mult+' COMBO';comboEl.classList.add('show');clearTimeout(comboTimer);comboTimer=setTimeout(function(){comboEl.classList.remove('show');},1000);}}
-  function onZone(z){
+  function onZone(z,px,py){
     if(mode==='free'){pushHist(z);z.style.fill=freeColor;z.classList.add('pop');setTimeout(function(){z.classList.remove('pop');},320);save();return;}
     if(z.dataset.done==='1')return;
     var num=parseInt(z.dataset.n,10);
@@ -335,7 +316,7 @@
       var mult=Math.min(6,1+Math.floor(combo/4));
       var a=parseFloat(z.dataset.a)||100,base=Math.max(1,Math.min(60,Math.round(520/Math.sqrt(a)))),pts=base*mult;
       z.style.fill=byN[selectedN]||'#888';z.dataset.done='1';if(z.parentNode)z.parentNode.classList.add('done');z.classList.add('pop');setTimeout(function(){z.classList.remove('pop');},320);if(navigator.vibrate)navigator.vibrate(12);score+=pts;done++;
-      floatPts(z,'+'+pts+(mult>1?'  x'+mult:''));showCombo(mult);updateHUD();save();if(done>=total)win();
+      floatPts(z,'+'+pts+(mult>1?'  x'+mult:''),px,py);showCombo(mult);updateHUD();save();if(done>=total)win();
     }else{combo=0;var o=z.style.fill;z.style.transition='fill .08s';z.style.fill='#ffd2d2';setTimeout(function(){z.style.fill=o||'';z.style.transition='fill .15s';},140);}
   }
   function setMode(){var free=mode==='free';document.getElementById('lockBtn').classList.toggle('unlocked',free);document.getElementById('freecolor').style.display='none';markSel();}
@@ -345,20 +326,9 @@
       potPickIdx=-1;selectPot(idx);}});
   document.getElementById('lockBtn').addEventListener('click',function(){mode=(mode==='free')?'match':'free';if(mode==='match')selectedPot=-1;setMode();});
   (function(){
-    var vp=document.getElementById('reelViewport'), track=document.getElementById('palbar');
-    if(!vp||!track)return;
-    var offset=0, singleH=0, dragging=false, startY=0, startOff=0, moved=0, ptype='mouse';
-    window.reelLayout=function(){singleH=track.scrollHeight/2||0;apply();};
-    function apply(){if(singleH>0){offset=((offset%singleH)+singleH)%singleH;}track.style.transform='translateY('+(-offset)+'px)';}
-    window.reelScrollBy=function(dy){offset+=dy;apply();};
-    window.reelScrollToN=function(n){var pot=track.querySelector('.reel-pot[data-n=\"'+n+'\"]');if(!pot)return;
-      offset=pot.offsetTop-(vp.clientHeight/2-pot.offsetHeight/2);apply();};
-    vp.addEventListener('pointerdown',function(e){dragging=true;moved=0;startY=e.clientY;startOff=offset;ptype=e.pointerType||'mouse';vp.classList.add('drag');});
-    window.addEventListener('pointermove',function(e){if(!dragging)return;var raw=e.clientY-startY;moved=Math.max(moved,Math.abs(raw));var mult=(ptype==='touch')?2.2:1;offset=startOff-raw*mult;apply();});
-    window.addEventListener('pointerup',function(){if(dragging){dragging=false;vp.classList.remove('drag');}});
-    vp.addEventListener('wheel',function(e){e.preventDefault();reelScrollBy(e.deltaY>0?24:-24);},{passive:false});
-    track.addEventListener('click',function(e){if(moved>6){e.stopPropagation();e.preventDefault();}moved=0;},true);
-    setTimeout(window.reelLayout,60);window.addEventListener('resize',window.reelLayout);
+    var pb=document.getElementById('palbar');
+    window.reelScrollBy=function(dx){if(pb)pb.scrollLeft+=dx;};
+    window.reelScrollToN=function(n){if(!pb)return;var pot=pb.querySelector('.reel-pot[data-n=\"'+n+'\"]');if(pot&&pot.scrollIntoView)pot.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});};
   })();
   document.getElementById('numBtn').addEventListener('click',function(){var off=boardEl.classList.toggle('hidenums');this.classList.toggle('off',off);});
   document.getElementById('filterBtn').addEventListener('click',function(){var on=boardEl.classList.toggle('focusleft');this.classList.toggle('on',on);});
@@ -375,7 +345,7 @@
     if(panStart&&e.pointerId===panStart.id){var dx=e.clientX-panStart.x,dy=e.clientY-panStart.y;if(!moved&&Math.abs(dx)+Math.abs(dy)>4)moved=true;if(moved){tx=panStart.tx+dx;ty=panStart.ty+dy;apply();}}});
   function up(e){var wasTap=panStart&&e.pointerId===panStart.id&&!moved;delete pts[e.pointerId];if(Object.keys(pts).length<2)pinchD=0;
     if(wasTap){var el=document.elementFromPoint(e.clientX,e.clientY);
-      if(el&&el.classList&&el.classList.contains('z')){onZone(el);}}
+      if(el&&el.classList&&el.classList.contains('z')){onZone(el,e.clientX,e.clientY);}}
     panStart=null;}
   boardEl.addEventListener('pointerup',up);boardEl.addEventListener('pointercancel',function(e){delete pts[e.pointerId];panStart=null;pinchD=0;});
   document.getElementById('zin').addEventListener('click',function(){var r=boardEl.getBoundingClientRect();zoomAt(r.width/2,r.height/2,1.25);});
