@@ -1,0 +1,174 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PBN Lab — Pipeline peinture par numéros</title>
+<link rel="stylesheet" href="{% static 'pbn/style.css' %}">
+</head>
+<body>
+<header class="topbar">
+  <div class="logo">🎨 PBN <span>Lab</span></div>
+  <div class="topbar-sub">Pipeline d'apprentissage — vectorisation image & couleurs</div>
+  <div class="job-badge" id="jobBadge" hidden>job <code id="jobId"></code></div>
+</header>
+
+<main class="layout">
+  <!-- ===================== PANNEAU PARAMÈTRES ===================== -->
+  <aside class="panel" id="panel">
+    <section class="group">
+      <h3>1 · Image</h3>
+      <label class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <span id="dropLabel">Glissez une image ici<br><em>ou cliquez pour parcourir</em></span>
+        <img id="thumb" hidden alt="">
+      </label>
+    </section>
+
+    <section class="group">
+      <h3>2 · Support physique</h3>
+      <div class="row">
+        <div class="param">
+          <label>Largeur (cm)</label>
+          <div class="ctrl"><input type="range" id="widthCm" min="5" max="120" step="1" value="30">
+          <output id="widthCmOut">30</output></div>
+        </div>
+        <div class="param">
+          <label>Hauteur (cm)</label>
+          <div class="ctrl"><input type="range" id="heightCm" min="0" max="120" step="1" value="0">
+          <output id="heightCmOut">auto</output></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="param">
+          <label>dpi</label>
+          <div class="ctrl"><input type="range" id="dpi" min="72" max="600" step="1" value="150">
+          <output id="dpiOut">150</output></div>
+        </div>
+        <div class="param">
+          <label>Plafond px</label>
+          <div class="ctrl"><input type="range" id="maxPx" min="0" max="4000" step="100" value="1400">
+          <output id="maxPxOut">1400</output></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="group">
+      <h3>3 · Couleurs</h3>
+      <div class="param">
+        <label>Nombre de couleurs (K)</label>
+        <div class="ctrl"><input type="range" id="colors" min="2" max="48" step="1" value="12">
+        <output id="colorsOut">12</output></div>
+      </div>
+      <div class="param">
+        <label>Seed K-means</label>
+        <div class="ctrl"><input type="range" id="seed" min="0" max="50" step="1" value="0">
+        <output id="seedOut">0</output></div>
+      </div>
+    </section>
+
+    <section class="group">
+      <h3>4 · Lissage & CNN</h3>
+      <div class="param">
+        <label>Algorithme</label>
+        <div class="segmented" id="smoothSeg">
+          <button data-v="meanshift" class="on">Mean-shift</button>
+          <button data-v="bilateral">Bilateral</button>
+          <button data-v="none">Aucun</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="param">
+          <label>Détail</label>
+          <div class="segmented" id="detailSeg">
+            <button data-v="low">Faible</button>
+            <button data-v="med" class="on">Moyen</button>
+            <button data-v="high">Élevé</button>
+          </div>
+        </div>
+        <div class="param">
+          <label>Module CNN</label>
+          <div class="segmented" id="cnnSeg">
+            <button data-v="none" class="on">Off</button>
+            <button data-v="hed">HED</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="group">
+      <h3>5 · Zones peignables</h3>
+      <div class="param">
+        <label>Zone min (mm)</label>
+        <div class="ctrl"><input type="range" id="minZoneMm" min="1" max="15" step="0.5" value="3">
+        <output id="minZoneMmOut">3</output></div>
+      </div>
+      <div class="param">
+        <label>Rayon inscrit min (mm)</label>
+        <div class="ctrl"><input type="range" id="minPaintMm" min="0.2" max="3" step="0.1" value="0.6">
+        <output id="minPaintMmOut">0.6</output></div>
+      </div>
+      <div class="row">
+        <div class="param">
+          <label>Plafond zones</label>
+          <div class="ctrl"><input type="range" id="maxZones" min="0" max="3000" step="50" value="0">
+          <output id="maxZonesOut">auto</output></div>
+        </div>
+        <div class="param">
+          <label>Densité (z/cm²)</label>
+          <div class="ctrl"><input type="range" id="density" min="0" max="1.5" step="0.05" value="0">
+          <output id="densityOut">auto</output></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="group">
+      <h3>6 · Traits & rendu</h3>
+      <div class="param">
+        <label>Épaisseur trait (mm)</label>
+        <div class="ctrl"><input type="range" id="strokeMm" min="0.05" max="1" step="0.05" value="0.25">
+        <output id="strokeMmOut">0.25</output></div>
+      </div>
+      <div class="param">
+        <label>Échelle palette</label>
+        <div class="ctrl"><input type="range" id="palScale" min="1" max="6" step="1" value="3">
+        <output id="palScaleOut">3</output></div>
+      </div>
+    </section>
+
+    <section class="group">
+      <h3>7 · Branding & QR</h3>
+      <div class="param"><label>Marque</label>
+        <input type="text" id="brand" value="PAINT BY NUMBERS" class="text"></div>
+      <div class="param"><label>Texte remise</label>
+        <input type="text" id="discountText" value="-15% sur votre prochaine commande" class="text"></div>
+      <div class="param"><label>URL remise</label>
+        <input type="text" id="discountUrl" value="https://exemple.com/remise" class="text"></div>
+      <label class="check"><input type="checkbox" id="noQr">
+        <span>Désactiver le QR de fidélité</span></label>
+      <div class="param"><label>Logo (optionnel)</label>
+        <input type="file" id="logoInput" accept="image/*"></div>
+    </section>
+
+    <div class="actions">
+      <button class="btn primary" id="runBtn" disabled>▶ Lancer le pipeline</button>
+      <button class="btn" id="rerunBtn" hidden>↺ Recharger l'image (mêmes params)</button>
+      <div class="progress"><div class="bar" id="progressBar"></div></div>
+    </div>
+  </aside>
+
+  <!-- ===================== TIMELINE DES ÉTAPES ===================== -->
+  <section class="timeline" id="timeline">
+    <div class="placeholder" id="placeholder">
+      <div class="ph-icon">🖼️</div>
+      <p>Chargez une image puis lancez le pipeline.<br>
+      Chaque étape s'affichera ici <strong>en temps réel</strong> avec ses fichiers.</p>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+<script src="{% static 'pbn/app.js' %}"></script>
+</body>
+</html>

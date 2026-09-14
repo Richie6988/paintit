@@ -1108,3 +1108,54 @@ def shop_pricing(request):
     }
     return render(request, "studio/shop_pricing.html", ctx)
 
+
+
+# ---------------- PBN Lab (page cachee /pbn, staff-only) ----------------
+@staff_member_required
+def pbn_lab_page(request):
+    return render(request, "pbn/index.html")
+
+
+@staff_member_required
+@csrf_exempt
+def pbn_lab_upload(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST requis"}, status=405)
+    f = request.FILES.get("image")
+    if not f:
+        return JsonResponse({"error": "aucune image"}, status=400)
+    import json as _json
+    from . import pbn_lab
+    try:
+        params = _json.loads(request.POST.get("params", "{}") or "{}")
+    except ValueError:
+        params = {}
+    job = pbn_lab.Job(settings.MEDIA_ROOT)
+    try:
+        step = pbn_lab.step_upload(job, f.read(), f.name, params)
+    except Exception as exc:
+        logger.exception("PBN lab upload")
+        return JsonResponse({"error": str(exc)}, status=400)
+    return JsonResponse({"job_id": job.id, "step": step})
+
+
+@staff_member_required
+@csrf_exempt
+def pbn_lab_step(request, key):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST requis"}, status=405)
+    from . import pbn_lab
+    job_id = request.POST.get("job_id")
+    if not job_id:
+        return JsonResponse({"error": "job_id manquant"}, status=400)
+    fn = dict(pbn_lab.STEPS).get(key)
+    if not fn:
+        return JsonResponse({"error": "etape inconnue: %s" % key}, status=400)
+    job = pbn_lab.Job(settings.MEDIA_ROOT, job_id=job_id)
+    params = (job.load_meta() or {}).get("params", {})
+    try:
+        step = fn(job, params)
+    except Exception as exc:
+        logger.exception("PBN lab step %s", key)
+        return JsonResponse({"error": str(exc)}, status=500)
+    return JsonResponse({"step": step})

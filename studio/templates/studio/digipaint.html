@@ -319,7 +319,7 @@
       floatPts(z,'+'+pts+(mult>1?'  x'+mult:''),px,py);showCombo(mult);updateHUD();save();if(done>=total)win();
     }else{combo=0;var o=z.style.fill;z.style.transition='fill .08s';z.style.fill='#ffd2d2';setTimeout(function(){z.style.fill=o||'';z.style.transition='fill .15s';},140);}
   }
-  function setMode(){var free=mode==='free';document.getElementById('lockBtn').classList.toggle('unlocked',free);document.getElementById('freecolor').style.display='none';markSel();}
+  function setMode(){var free=mode==='free';document.getElementById('lockBtn').classList.toggle('unlocked',free);document.getElementById('freecolor').style.display=free?'inline-block':'none';markSel();}
   document.getElementById('freecolor').addEventListener('input',function(){freeColor=this.value;
     if(potPickIdx>=0){var idx=potPickIdx;customPots[idx]=this.value;saveCustom();
       document.querySelectorAll('.reel-pot.custom[data-pot=\"'+idx+'\"]').forEach(function(el){el.innerHTML=customHTML(idx);});
@@ -359,8 +359,8 @@
   window.addEventListener('keydown',function(e){if(/input|textarea|select/i.test((e.target&&e.target.tagName)||''))return;var st=40,r=boardEl.getBoundingClientRect();
     if((e.ctrlKey||e.metaKey)&&(e.key==='z'||e.key==='Z')){undo();e.preventDefault();return;}
     if(e.ctrlKey&&e.key==='ArrowLeft'){cycleColor(-1);e.preventDefault();return;} if(e.ctrlKey&&e.key==='ArrowRight'){cycleColor(1);e.preventDefault();return;}
-    if(e.key==='ArrowLeft'){tx+=st;apply();e.preventDefault();}else if(e.key==='ArrowRight'){tx-=st;apply();e.preventDefault();}
-    else if(e.key==='ArrowUp'){cycleColor(-1);e.preventDefault();}else if(e.key==='ArrowDown'){cycleColor(1);e.preventDefault();}
+    if(e.key==='ArrowLeft'){cycleColor(-1);e.preventDefault();}else if(e.key==='ArrowRight'){cycleColor(1);e.preventDefault();}
+    else if(e.key==='ArrowUp'){ty+=st;apply();e.preventDefault();}else if(e.key==='ArrowDown'){ty-=st;apply();e.preventDefault();}
     else if(e.key==='+'||e.key==='='){zoomAt(r.width/2,r.height/2,1.2);e.preventDefault();}else if(e.key==='-'){zoomAt(r.width/2,r.height/2,1/1.2);e.preventDefault();}
     else if(e.key==='f'||e.key==='F'){fCycle();e.preventDefault();}
     else if(/^[0-9]$/.test(e.key)){numBuf+=e.key;pickNum();clearTimeout(numTimer);numTimer=setTimeout(function(){numBuf='';},900);e.preventDefault();}});
