@@ -15,11 +15,39 @@
       <span>&#10003; {% trans "Galerie liée à" %} <b>{{ verified_email }}</b></span>
       <a class="ghost" href="{% url 'studio:paint_logout' %}">{% trans "Se déconnecter" %}</a>
     {% else %}
-      <form method="post" action="{% url 'studio:paint_link' %}" class="vf-row">{% csrf_token %}
-        <input type="email" name="email" placeholder="votre@email.com" required>
-        <button class="cta" type="submit">{% trans "Voir ma galerie" %}</button>
+      <form class="vf-row" id="emailForm" onsubmit="return false">{% csrf_token %}
+        <input type="email" id="veEmail" placeholder="votre@email.com" required autocomplete="email">
+        <button class="cta" id="veSend" type="submit">{% trans "Recevoir un code" %}</button>
       </form>
-      <em class="hint">{% trans "Saisissez votre e-mail pour afficher et sauvegarder vos toiles." %}</em>
+      <form class="vf-row" id="codeForm" style="display:none" onsubmit="return false">
+        <input type="text" id="veCode" placeholder="{% trans 'Code à 6 chiffres' %}" inputmode="numeric" autocomplete="one-time-code">
+        <button class="cta" id="veVerify" type="submit">{% trans "Voir ma galerie" %}</button>
+      </form>
+      <em class="hint" id="veHint">{% trans "Saisissez votre e-mail : vous recevrez un code pour retrouver vos toiles sur tous vos appareils." %}</em>
+      <script>
+      (function(){
+        var CSRF="{{ csrf_token }}", email="";
+        var ef=document.getElementById('emailForm'), cf=document.getElementById('codeForm'), hint=document.getElementById('veHint');
+        if(!ef)return;
+        document.getElementById('veSend').addEventListener('click',function(){
+          email=(document.getElementById('veEmail').value||'').trim(); if(!email){hint.textContent='{% trans "Saisissez votre e-mail." %}';return;}
+          hint.textContent='{% trans "Envoi…" %}';
+          fetch("{% url 'studio:paint_send_code' %}",{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':CSRF},body:'email='+encodeURIComponent(email)})
+            .then(function(r){return r.json();}).then(function(d){
+              if(d.ok){ef.style.display='none';cf.style.display='';document.getElementById('veCode').focus();
+                hint.textContent='{% trans "Code envoyé à" %} '+email+'. {% trans "Vérifiez votre boîte mail." %}';}
+              else hint.textContent='{% trans "E-mail invalide." %}';
+            }).catch(function(){hint.textContent='{% trans "Erreur, réessayez." %}';});
+        });
+        document.getElementById('veVerify').addEventListener('click',function(){
+          var code=(document.getElementById('veCode').value||'').trim(); if(!code)return;
+          fetch("{% url 'studio:paint_verify' %}",{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':CSRF},body:'email='+encodeURIComponent(email)+'&code='+encodeURIComponent(code)})
+            .then(function(r){return r.json();}).then(function(d){
+              if(d.ok)location.href=d.redirect||'/paint/'; else hint.textContent='{% trans "Code invalide ou expiré." %}';
+            }).catch(function(){hint.textContent='{% trans "Erreur, réessayez." %}';});
+        });
+      })();
+      </script>
     {% endif %}
   </div>
 

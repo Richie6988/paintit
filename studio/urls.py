@@ -21,6 +21,7 @@ urlpatterns = [
     path("paint/pay/", views.paint_pay, name="paint_pay"),
     path("paint/send-code/", views.paint_send_code, name="paint_send_code"),
     path("paint/verify/", views.paint_verify_code, name="paint_verify"),
+    path("paint/unlock-success/", views.paint_unlock_success, name="paint_unlock_success"),
     path("paint/link/", views.paint_link_email, name="paint_link"),
     path("paint/logout/", views.paint_logout, name="paint_logout"),
     path("paint/<str:uid>/delete/", views.paint_delete, name="paint_delete"),

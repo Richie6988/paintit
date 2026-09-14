@@ -204,15 +204,49 @@ class PricingAdmin(admin.ModelAdmin):
 
 @admin.register(DigitalCanvas)
 class DigitalCanvasAdmin(admin.ModelAdmin):
-    list_display = ("uid", "title", "category", "email", "source", "colors", "created_at")
-    list_editable = ("title", "category")
+    list_display = ("uid", "apercu", "apercu_source", "title", "category", "price", "email", "source", "colors", "created_at")
+    list_editable = ("title", "category", "price")
     list_filter = ("source", "category", "colors", "orientation")
     search_fields = ("uid", "email", "title", "category")
     ordering = ("-created_at",)
-    fields = ("uid", "email", "title", "category", "source", "colors", "orientation",
+    fields = ("apercus", "uid", "email", "title", "category", "price", "source", "colors", "orientation",
               "width_cm", "height_cm", "created_at")
-    readonly_fields = ("uid", "created_at")
+    readonly_fields = ("uid", "created_at", "apercus")
     actions = ("add_to_store", "remove_from_store", "delete_with_files")
+
+    @admin.display(description="Toile")
+    def apercu(self, obj):
+        if not obj.uid:
+            return "-"
+        u = "/preview/img/%s/preview/" % obj.uid
+        return format_html('<a href="{}" target="_blank"><img src="{}" '
+                           'style="height:52px;border-radius:6px;border:1px solid #e2e8f2"></a>', u, u)
+
+    @admin.display(description="Original")
+    def apercu_source(self, obj):
+        if not obj.uid:
+            return "-"
+        u = "/preview/img/%s/source/" % obj.uid
+        return format_html('<a href="{}" target="_blank"><img src="{}" '
+                           'style="height:52px;border-radius:6px;border:1px solid #e2e8f2" '
+                           'onerror="this.style.display=\'none\'"></a>', u, u)
+
+    @admin.display(description="Aperçus (original / toile / numérotée)")
+    def apercus(self, obj):
+        if not obj.uid:
+            return "-"
+        src = "/preview/img/%s/source/" % obj.uid
+        prev = "/preview/img/%s/preview/" % obj.uid
+        tpl = "/preview/img/%s/template/" % obj.uid
+        return format_html(
+            '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">'
+            '<div><div style="font-size:.8em;color:#5b647a;margin-bottom:4px">Photo originale</div>'
+            '<a href="{0}" target="_blank"><img src="{0}" style="max-height:260px;border-radius:10px;border:1px solid #e2e8f2" onerror="this.parentNode.parentNode.style.opacity=.4"></a></div>'
+            '<div><div style="font-size:.8em;color:#5b647a;margin-bottom:4px">Toile coloriée</div>'
+            '<a href="{1}" target="_blank"><img src="{1}" style="max-height:260px;border-radius:10px;border:1px solid #e2e8f2"></a></div>'
+            '<div><div style="font-size:.8em;color:#5b647a;margin-bottom:4px">Toile numérotée</div>'
+            '<a href="{2}" target="_blank"><img src="{2}" style="max-height:260px;border-radius:10px;border:1px solid #e2e8f2"></a></div>'
+            '</div>', src, prev, tpl)
 
     @admin.action(description="Ajouter au store (bibliotheque)")
     def add_to_store(self, request, queryset):

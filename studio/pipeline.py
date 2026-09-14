@@ -80,7 +80,8 @@ def source_file(outdir, uid):
 
 
 def generate(image_path, colors, width_cm, height_cm, uid=None, dpi=None, progress=None,
-             focus=(0.5, 0.5), detail=1.0, source_name=None):
+             focus=(0.5, 0.5), detail=1.0, source_name=None,
+             max_zones=None, min_zone_mm=None, density=None):
     """Pipeline peinture-par-numeros en mode dynamique : le plancher de zone
     s'adapte au nombre de couleurs et a la taille du canvas (peignable et fun).
     detail<1 = plus de zones (plus difficile) ; detail>1 = moins de zones."""
@@ -92,14 +93,18 @@ def generate(image_path, colors, width_cm, height_cm, uid=None, dpi=None, progre
     _center_crop_to_ratio(image_path, cropped, float(width_cm) / float(height_cm),
                           fx=focus[0], fy=focus[1])
 
-    min_zone_mm, min_paint_mm = _dynamic_min_zone(width_cm, height_cm, colors)
+    _mzm_override = float(min_zone_mm) if min_zone_mm else None   # surcharge utilisateur
+    mzm, mpm = _dynamic_min_zone(width_cm, height_cm, colors)
     if detail and detail != 1.0:
-        min_zone_mm = round(max(1.1, min_zone_mm * float(detail)), 2)
-        min_paint_mm = round(min_zone_mm * 0.35, 2)
+        mzm = round(max(1.1, mzm * float(detail)), 2)
+        mpm = round(mzm * 0.35, 2)
+    if _mzm_override:
+        mzm = round(max(0.5, _mzm_override), 2)
+        mpm = round(mzm * 0.35, 2)
     ns = SimpleNamespace(
         image=cropped, colors=int(colors), width_cm=float(width_cm),
         height_cm=float(height_cm), dpi=int(dpi or settings.PBN_DPI),
-        min_zone_mm=min_zone_mm, min_paint_mm=min_paint_mm,
+        min_zone_mm=mzm, min_paint_mm=mpm,
         detail=("low" if int(colors) >= 24 else "med"), smooth="meanshift", cnn="none",
         hed_model_dir="./hed", stroke_mm=0.25, seed=0, out=uid, outdir=outdir,
         max_px=int(min(1400, max(1100, max(float(width_cm), float(height_cm)) * 20))),
@@ -107,6 +112,8 @@ def generate(image_path, colors, width_cm, height_cm, uid=None, dpi=None, progre
         discount_url=settings.PBN_DISCOUNT_URL,
         discount_text="-15% sur votre prochaine commande",
         uid=uid, no_qr=False, progress=progress,
+        max_zones=(int(max_zones) if max_zones else None),
+        density=(float(density) if density else None),
     )
     svg_path, prev_path, pal_path, tpl_png_path, colors_path, preview_svg_path, digipaint_path = pbn.run(ns)
 

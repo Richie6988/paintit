@@ -85,6 +85,20 @@
         showCrop(url); };
       probe.src=url;
     });
+    // Glisser-deposer fluide (comme /pbn) : survol + depot -> reutilise l'apercu/crop
+    var drop=document.querySelector('.drop');
+    if(drop&&input){
+      ['dragover','dragenter'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.add('over');});});
+      ['dragleave','dragend'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.remove('over');});});
+      drop.addEventListener('drop',function(e){
+        e.preventDefault();drop.classList.remove('over');
+        var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+        if(!f)return;
+        if(!/^image\//.test(f.type)){return;}
+        try{var dt=new DataTransfer();dt.items.add(f);input.files=dt.files;}catch(err){}
+        input.dispatchEvent(new Event('change',{bubbles:true}));
+      });
+    }
     document.querySelectorAll('input[name=orientation]').forEach(function(r){
       r.addEventListener('change', function(){ resetFocus(); frame(); }); });
     frame(); applyPos();

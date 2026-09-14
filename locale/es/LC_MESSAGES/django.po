@@ -855,3 +855,82 @@ msgstr "Número máx. de zonas"
 
 msgid "La toile coloriée et sa version à peindre par numéros"
 msgstr "El lienzo coloreado y su versión para pintar por números"
+
+msgid "Réglages du tableau"
+msgstr "Ajustes del lienzo"
+
+msgid "Ajustez le rendu puis régénérez, ou retrouvez vos toiles par e-mail."
+msgstr "Ajusta el resultado y regenera, o recupera tus lienzos por correo."
+
+msgid "Régénérer le tableau"
+msgstr "Regenerar lienzo"
+
+msgid "Détail (couleurs)"
+msgstr "Detalle (colores)"
+
+msgid "Difficulté"
+msgstr "Dificultad"
+
+msgid "Facile"
+msgstr "Fácil"
+
+msgid "Difficile"
+msgstr "Difícil"
+
+msgid "Extrême"
+msgstr "Extremo"
+
+msgid "Taille min"
+msgstr "Tamaño mín"
+
+msgid "Plafond de zones"
+msgstr "Límite de zonas"
+
+msgid "Mes toiles"
+msgstr "Mis lienzos"
+
+msgid "Sauvegarder pour plus tard"
+msgstr "Guardar para después"
+
+msgid "Recevoir mon code par e-mail"
+msgstr "Enviarme mi código"
+
+msgid "Vous recevrez un code par e-mail."
+msgstr "Recibirás un código por correo."
+
+msgid "Ouvrir un autre code"
+msgstr "Abrir otro código"
+
+msgid "Ouvrir"
+msgstr "Abrir"
+
+msgid "Fermer"
+msgstr "Cerrar"
+
+msgid "Code à 6 chiffres"
+msgstr "Código de 6 dígitos"
+
+msgid ""
+"Saisissez votre e-mail : vous recevrez un code pour retrouver vos toiles sur"
+" tous vos appareils."
+msgstr ""
+"Escribe tu correo: recibirás un código para recuperar tus lienzos en "
+"cualquier dispositivo."
+
+msgid "Envoi…"
+msgstr "Enviando…"
+
+msgid "Code envoyé à"
+msgstr "Código enviado a"
+
+msgid "Vérifiez votre boîte mail."
+msgstr "Revisa tu bandeja."
+
+msgid "Code invalide ou expiré."
+msgstr "Código no válido o caducado."
+
+msgid "Rechercher une toile…"
+msgstr "Buscar un lienzo…"
+
+msgid "Aucun résultat."
+msgstr "Sin resultados."

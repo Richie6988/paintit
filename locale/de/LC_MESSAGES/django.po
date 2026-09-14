@@ -871,3 +871,81 @@ msgstr "Max. Anzahl Felder"
 
 msgid "La toile coloriée et sa version à peindre par numéros"
 msgstr "Die farbige Leinwand und ihre Malen-nach-Zahlen-Version"
+
+msgid "Réglages du tableau"
+msgstr "Bild-Einstellungen"
+
+msgid "Ajustez le rendu puis régénérez, ou retrouvez vos toiles par e-mail."
+msgstr "Ergebnis anpassen und neu erzeugen, oder Bilder per E-Mail finden."
+
+msgid "Régénérer le tableau"
+msgstr "Bild neu erzeugen"
+
+msgid "Détail (couleurs)"
+msgstr "Detail (Farben)"
+
+msgid "Difficulté"
+msgstr "Schwierigkeit"
+
+msgid "Facile"
+msgstr "Leicht"
+
+msgid "Difficile"
+msgstr "Schwer"
+
+msgid "Extrême"
+msgstr "Extrem"
+
+msgid "Taille min"
+msgstr "Min. Größe"
+
+msgid "Plafond de zones"
+msgstr "Zonen-Limit"
+
+msgid "Mes toiles"
+msgstr "Meine Bilder"
+
+msgid "Sauvegarder pour plus tard"
+msgstr "Für später speichern"
+
+msgid "Recevoir mon code par e-mail"
+msgstr "Code per E-Mail senden"
+
+msgid "Vous recevrez un code par e-mail."
+msgstr "Sie erhalten einen Code per E-Mail."
+
+msgid "Ouvrir un autre code"
+msgstr "Anderen Code öffnen"
+
+msgid "Ouvrir"
+msgstr "Öffnen"
+
+msgid "Fermer"
+msgstr "Schließen"
+
+msgid "Code à 6 chiffres"
+msgstr "6-stelliger Code"
+
+msgid ""
+"Saisissez votre e-mail : vous recevrez un code pour retrouver vos toiles sur"
+" tous vos appareils."
+msgstr ""
+"E-Mail eingeben: Sie erhalten einen Code, um Ihre Bilder überall zu finden."
+
+msgid "Envoi…"
+msgstr "Senden…"
+
+msgid "Code envoyé à"
+msgstr "Code gesendet an"
+
+msgid "Vérifiez votre boîte mail."
+msgstr "Prüfen Sie Ihr Postfach."
+
+msgid "Code invalide ou expiré."
+msgstr "Ungültiger oder abgelaufener Code."
+
+msgid "Rechercher une toile…"
+msgstr "Bild suchen…"
+
+msgid "Aucun résultat."
+msgstr "Keine Ergebnisse."

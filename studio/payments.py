@@ -47,5 +47,38 @@ def create_checkout_session(order, shipping, request):
     return session.url
 
 
+def create_digital_session(uid, request, amount_eur=0.99, email=None):
+    """Checkout Stripe pour deverrouiller une toile numerique (0,99 EUR)."""
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        client_reference_id=uid,
+        customer_email=email or None,
+        metadata={"uid": uid, "kind": "digital"},
+        line_items=[{
+            "quantity": 1,
+            "price_data": {
+                "currency": "eur",
+                "unit_amount": int(round(float(amount_eur) * 100)),
+                "product_data": {"name": "Toile numerique DigiPaint (%s)" % uid},
+            },
+        }],
+        success_url=request.build_absolute_uri(
+            reverse("studio:paint_unlock_success")) + "?uid=" + uid + "&sid={CHECKOUT_SESSION_ID}",
+        cancel_url=request.build_absolute_uri(reverse("studio:digipaint", args=[uid])),
+    )
+    return session.url
+
+
+def session_is_paid(session_id):
+    """Verifie qu'une session Checkout est bien payee."""
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    try:
+        sess = stripe.checkout.Session.retrieve(session_id)
+        return sess.get("payment_status") == "paid", (sess.get("metadata") or {}).get("uid")
+    except Exception:
+        return False, None
+
+
 def verify_webhook(payload, sig_header):
     return stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_WEBHOOK_SECRET)

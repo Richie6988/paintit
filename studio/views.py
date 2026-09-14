@@ -335,11 +335,9 @@ def paint_portal(request):
 
 
 def gallery(request):
-    """Onglet Gallery : tous les modeles PaintIt (certains gratuits), par categorie."""
-    library = {}
-    for c in DigitalCanvas.objects.filter(email="__library__").order_by("category", "title"):
-        library.setdefault(c.category or "Autres", []).append(c)
-    return render(request, "studio/gallery.html", {"library": library})
+    """Onglet Gallery : toutes les toiles PaintIt en vrac, filtrables par recherche."""
+    models = list(DigitalCanvas.objects.filter(email="__library__").order_by("category", "title"))
+    return render(request, "studio/gallery.html", {"models": models})
 
 
 def paint_send_code(request):
@@ -429,14 +427,11 @@ def paint_unlock(request, uid):
     return redirect("studio:digipaint", uid=uid)
 
 
-def paint_confirm(request, uid):
-    """Mur de paiement 'pour continuer' : enregistre la toile (0,99 EUR ; demo -> immediat)
-    pour continuer a jouer ET sauvegarder dans la galerie."""
-    if request.method != "POST":
-        return JsonResponse({"ok": False}, status=405)
+def _credit_digital(request, uid):
+    """Enregistre/deverrouille la toile numerique dans la galerie de l'utilisateur."""
     verified = request.session.get("verified_email", "")
     o = request.session.get("order") or {}
-    import os, re, json as _json
+    import os, json as _json
     d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
     colors = o.get("colors", 24); ori = o.get("orientation", "portrait"); w = o.get("width_cm", 40); h = o.get("height_cm", 50)
     cj = os.path.join(d, f"{uid}_colors.json")
@@ -453,7 +448,34 @@ def paint_confirm(request, uid):
     if verified:
         uids = request.session.get("my_uids", [])
         if uid not in uids: uids.append(uid); request.session["my_uids"] = uids[-60:]
+
+
+def paint_confirm(request, uid):
+    """Mur de paiement 'pour continuer' (0,99 EUR). Stripe si configure, sinon demo immediat."""
+    if request.method != "POST":
+        return JsonResponse({"ok": False}, status=405)
+    if payments.stripe_live():
+        try:
+            url = payments.create_digital_session(
+                uid, request, email=request.session.get("verified_email") or None)
+            return JsonResponse({"ok": True, "redirect": url})
+        except Exception as exc:
+            logger.exception("Stripe digital session %s", uid)
+            return JsonResponse({"ok": False, "error": str(exc)}, status=502)
+    # Demo : pas de paiement reel -> credit immediat.
+    _credit_digital(request, uid)
     return JsonResponse({"ok": True})
+
+
+def paint_unlock_success(request):
+    """Retour Stripe apres paiement de la toile numerique : credite puis ouvre le jeu."""
+    uid = request.GET.get("uid", "")
+    sid = request.GET.get("sid", "")
+    if uid and sid and payments.stripe_live():
+        paid, meta_uid = payments.session_is_paid(sid)
+        if paid and (meta_uid == uid or not meta_uid):
+            _credit_digital(request, uid)
+    return redirect("studio:digipaint", uid=uid)
 
 
 def paint_delete(request, uid):
@@ -609,8 +631,15 @@ def _run_game_generation(gameuid, src, colors, w, h, detail=1.0, source_name=Non
         jobs.update(gameuid, pct=int(pct), label=label)
     try:
         result = generate(src, colors, w, h, uid=gameuid, progress=cb, focus=(0.5, 0.5), detail=detail, source_name=source_name, max_zones=max_zones, min_zone_mm=min_zone_mm, density=density)
-        jobs.update(gameuid, pct=100, label="final", done=True,
-                    order={"colors_list": result.get("colors_list", [])})
+        cl = result.get("colors_list", [])
+        jobs.update(gameuid, pct=100, label="final", done=True, order={"colors_list": cl})
+        # Met a jour le nombre de couleurs de la toile (cartes "mes designs")
+        try:
+            base_uid = gameuid[:-2] if gameuid.endswith("-G") else gameuid
+            if cl:
+                DigitalCanvas.objects.filter(uid=base_uid).update(colors=len(cl))
+        except Exception:
+            pass
     except Exception as exc:                       # pragma: no cover
         logger.exception("Echec generation jeu %s (colors=%s, min_zone_mm=%s, density=%s, max_zones=%s)",
                          gameuid, colors, min_zone_mm, density, max_zones)
@@ -621,13 +650,20 @@ def _run_game_generation(gameuid, src, colors, w, h, detail=1.0, source_name=Non
 
 
 def digipaint_regen(request, uid):
-    order = request.session.get("order")
-    if not order or order.get("uid") != uid or request.method != "POST":
+    if request.method != "POST":
         raise Http404
     from .pipeline import source_file
     src = source_file(os.path.join(settings.MEDIA_ROOT, "orders", uid), uid)
     if not src or not os.path.exists(src):
         return JsonResponse({"error": "source"}, status=404)
+    order = request.session.get("order") or {}
+    # Dimensions : session si meme uid, sinon fiche DigitalCanvas, sinon 40x50
+    if order.get("uid") == uid and order.get("width_cm"):
+        w_cm, h_cm = order["width_cm"], order["height_cm"]
+    else:
+        dc = DigitalCanvas.objects.filter(uid=uid).first()
+        w_cm = (dc.width_cm if dc else None) or 40
+        h_cm = (dc.height_cm if dc else None) or 50
     try:
         colors = int(request.POST.get("colors", "24"))
     except (TypeError, ValueError):
@@ -647,7 +683,7 @@ def digipaint_regen(request, uid):
     gameuid = uid + "-G"
     jobs.start(gameuid)
     threading.Thread(target=_run_game_generation, daemon=True,
-                     args=(gameuid, src, colors, order["width_cm"], order["height_cm"], detail),
+                     args=(gameuid, src, colors, w_cm, h_cm, detail),
                      kwargs={"source_name": os.path.basename(src), "max_zones": max_zones,
                              "min_zone_mm": min_zone_mm, "density": density}).start()
     request.session["game_uid"] = gameuid

@@ -4,23 +4,37 @@
 {% block content %}
 <section class="panel wide">
   <h1>{% trans "Gallery" %}</h1>
-  <p class="sub">{% trans "Tous les modèles PaintIt, prêts à peindre. Certains sont gratuits." %}</p>
-
-  {% if library %}
-    {% for cat, models in library.items %}
-      <h3 class="lib-cat">{{ cat }}</h3>
-      <div class="models-grid">
-        {% for m in models %}
-          <a class="model-card" href="{% url 'studio:digipaint' m.uid %}">
-            <div class="mc-thumb"><div class="mc-img" style="aspect-ratio:40/50">
-              <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="" loading="lazy"><span class="mc-play"><svg class="icplay" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span></div></div>
-            <div class="mc-meta"><b>{{ m.title }}</b><small>{{ cat }}</small></div>
-          </a>
-        {% endfor %}
-      </div>
-    {% endfor %}
+  <input type="search" id="gsearch" class="g-search" placeholder="{% trans 'Rechercher une toile…' %}" autocomplete="off">
+  {% if models %}
+    <div class="models-grid" id="ggrid">
+      {% for m in models %}
+        <a class="model-card gcard" href="{% url 'studio:digipaint' m.uid %}"
+           data-name="{{ m.title|lower }}" data-cat="{{ m.category|lower }}">
+          <div class="mc-thumb"><div class="mc-img" style="aspect-ratio:40/50">
+            <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="" loading="lazy">
+            {% if m.price and m.price > 0 %}<span class="g-price">{{ m.price|floatformat:2 }}&nbsp;&euro;</span>{% endif %}
+            <span class="mc-play"><svg class="icplay" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span>
+          </div></div>
+        </a>
+      {% endfor %}
+    </div>
+    <p class="sub" id="gnone" style="display:none">{% trans "Aucun résultat." %}</p>
   {% else %}
     <p class="sub">{% trans "La bibliothèque de modèles arrive bientôt." %}</p>
   {% endif %}
 </section>
+<script>
+(function(){
+  var q=document.getElementById('gsearch');if(!q)return;
+  var cards=[].slice.call(document.querySelectorAll('.gcard')),none=document.getElementById('gnone');
+  q.addEventListener('input',function(){
+    var v=q.value.trim().toLowerCase(),n=0;
+    cards.forEach(function(c){
+      var ok=!v||(c.dataset.name||'').indexOf(v)>=0||(c.dataset.cat||'').indexOf(v)>=0;
+      c.style.display=ok?'':'none';if(ok)n++;
+    });
+    if(none)none.style.display=n?'none':'';
+  });
+})();
+</script>
 {% endblock %}

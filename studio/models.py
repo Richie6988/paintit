@@ -183,6 +183,7 @@ class DigitalCanvas(models.Model):
     source = models.CharField(max_length=12, default="digital")   # digital | gift | library
     category = models.CharField(max_length=40, blank=True, default="")
     title = models.CharField(max_length=80, blank=True, default="")
+    price = models.DecimalField(max_digits=6, decimal_places=2, default=0)  # 0 = gratuit (galerie)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

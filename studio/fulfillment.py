@@ -194,7 +194,7 @@ def build(order, shipping):
             "width_cm": order["width_cm"], "height_cm": order["height_cm"],
             "colors": order["colors"],
             "mode": "dynamique, zone mini %.1f mm (~%.0f mm2)" % (
-                order.get("min_zone_mm", 2.6), order.get("min_zone_mm", 2.6) ** 2),
+                (order.get("min_zone_mm") or 2.6), (order.get("min_zone_mm") or 2.6) ** 2),
             "brushes": bool(order.get("brushes")),
         },
         "pricing": {

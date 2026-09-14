@@ -103,10 +103,21 @@
  .spin{width:42px;height:42px;border:4px solid #2a3c6b;border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
  .overlaym{position:fixed;inset:0;background:rgba(6,10,24,.9);display:none;align-items:center;justify-content:center;z-index:30;padding:20px}.overlaym.show{display:flex}
  .overlaym img{max-width:94vw;max-height:90vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6);cursor:crosshair}
- .pop{position:absolute;top:52px;right:14px;width:270px;background:var(--panel);border:1px solid #2a3c6b;border-radius:14px;padding:14px;display:none;z-index:20;box-shadow:0 16px 40px rgba(0,0,0,.5)}
- .pop.show{display:block}.pop label{font-size:.82rem;color:var(--muted)}
- .pop input,.pop select{width:100%;margin:6px 0 8px;border-radius:9px;border:1px solid #2a3c6b;background:#0b1226;color:#eaf0ff;padding:9px}
- .pop .hint{font-size:.78rem;color:var(--muted);margin:2px 0 10px}
+ .pop{position:fixed;inset:0;background:rgba(10,18,40,.5);display:none;z-index:40;align-items:center;justify-content:center;padding:16px}
+ .pop-card{background:#fff;color:#12224f;border-radius:20px;width:min(600px,96vw);max-height:92vh;overflow:auto;padding:22px 22px 26px;box-shadow:0 30px 80px rgba(10,18,40,.4);position:relative}
+ .pop-card h2{font-size:1.25rem;margin:0 0 4px;color:#12224f}
+ .pop-card .sub{color:#5b647a;font-size:.86rem;margin-bottom:14px}
+ .pop-close{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;border:1px solid #e2e8f2;background:#fff;color:#12224f;font-size:1.4rem;line-height:1;cursor:pointer}
+ .pop-close:hover{background:#f4f6fb}
+ .pop-sec{border-top:1px solid #eef1f6;padding-top:14px;margin-top:16px}
+ .pop-sec:first-of-type{border-top:none;padding-top:0;margin-top:0}
+ .pop-sec h3{font-size:.78rem;text-transform:uppercase;letter-spacing:1px;color:#8a97b4;margin:0 0 8px}
+ .pop .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+ .pop.show{display:flex}.pop label{display:block;font-size:.85rem;color:#33415c;font-weight:600;margin-top:10px}
+ .pop input,.pop select{width:100%;margin:5px 0 4px;border-radius:11px;border:1px solid #cdd8ea;background:#fff;color:#12224f;padding:11px 12px;font-size:1rem;font-weight:600}
+ .pop input[type=range]{padding:0;accent-color:var(--accent)}
+ .pop .btn.big{width:100%;padding:14px;font-size:1.02rem;font-weight:800;margin-top:14px}
+ .pop .hint{font-size:.8rem;color:#5b647a;margin:6px 0 0}
  .win{position:fixed;inset:0;background:rgba(6,10,24,.88);display:none;align-items:center;justify-content:center;z-index:32}.win.show{display:flex}
  .wincard{position:relative;background:var(--panel);border:1px solid #2a3c6b;border-radius:20px;padding:30px 34px;text-align:center;max-width:380px;overflow:hidden}
  .wincard h2{margin:0 0 4px}.wincard .big{font-size:2.6rem;font-weight:800;color:var(--good)}
@@ -193,25 +204,38 @@
 </div>
 
 <div class="pop" id="pop">
-  <label>Detail (colours): <b id="cval">24</b></label>
-  <input type="range" id="crange" min="2" max="99" value="24" step="1" style="padding:0">
-  <label>Difficulty</label>
-  <select id="diff"><option value="facile">Easy</option><option value="moyen" selected>Medium</option><option value="difficile">Hard</option><option value="extreme">Extreme</option></select>
-  <label>{% trans "Taille min de zone" %} (mm)</label>
-  <input type="number" id="zmin" min="0.5" max="20" step="0.1" placeholder="auto" style="padding:8px 10px">
-  <label>{% trans "Densité" %} (zones/cm&sup2;)</label>
-  <input type="number" id="zdens" min="0.02" max="5" step="0.01" placeholder="auto" style="padding:8px 10px">
-  <label>{% trans "Plafond de zones" %} (2&ndash;9999)</label>
-  <input type="number" id="zmax" min="2" max="9999" step="1" placeholder="auto" style="padding:8px 10px">
-  <button class="btn pri" id="regen" style="width:100%">Regenerate game canvas</button>
-  <div class="hint" id="genstatus"></div>
-  <label>Save for later</label>
-  <input id="slEmail" type="email" placeholder="votre@email.com">
-  <button class="btn" id="slSave" style="width:100%">Email me my code</button>
-  <div class="hint" id="slMsg">Get your code by email.</div>
-  <label>Open another code</label>
-  <input id="codein" placeholder="Code">
-  <button class="btn" id="codego" style="width:100%">Open</button>
+  <div class="pop-card">
+    <button class="pop-close" id="popClose" title="{% trans 'Fermer' %}">&times;</button>
+    <h2>{% trans "Réglages du tableau" %}</h2>
+    <p class="sub">{% trans "Ajustez le rendu puis régénérez, ou retrouvez vos toiles par e-mail." %}</p>
+
+    <div class="pop-sec">
+      <h3>{% trans "Régénérer le tableau" %}</h3>
+      <label>{% trans "Détail (couleurs)" %} : <b id="cval">24</b></label>
+      <input type="range" id="crange" min="2" max="99" value="24" step="1">
+      <label>{% trans "Difficulté" %}</label>
+      <select id="diff"><option value="facile">{% trans "Facile" %}</option><option value="moyen" selected>{% trans "Moyen" %}</option><option value="difficile">{% trans "Difficile" %}</option><option value="extreme">{% trans "Extrême" %}</option></select>
+      <div class="grid2">
+        <div><label>{% trans "Taille min" %} (mm)</label><input type="number" id="zmin" min="0.5" max="20" step="0.1" placeholder="auto"></div>
+        <div><label>{% trans "Densité" %} (z/cm&sup2;)</label><input type="number" id="zdens" min="0.02" max="5" step="0.01" placeholder="auto"></div>
+      </div>
+      <label>{% trans "Plafond de zones" %} (2&ndash;9999)</label>
+      <input type="number" id="zmax" min="2" max="9999" step="1" placeholder="auto">
+      <button class="btn pri big" id="regen">{% trans "Régénérer le tableau" %}</button>
+      <div class="hint" id="genstatus"></div>
+    </div>
+
+    <div class="pop-sec">
+      <h3>{% trans "Mes toiles" %}</h3>
+      <label>{% trans "Sauvegarder pour plus tard" %}</label>
+      <input id="slEmail" type="email" placeholder="votre@email.com">
+      <button class="btn big" id="slSave">{% trans "Recevoir mon code par e-mail" %}</button>
+      <div class="hint" id="slMsg">{% trans "Vous recevrez un code par e-mail." %}</div>
+      <label>{% trans "Ouvrir un autre code" %}</label>
+      <input id="codein" placeholder="Code">
+      <button class="btn big" id="codego">{% trans "Ouvrir" %}</button>
+    </div>
+  </div>
 </div>
 
 
@@ -236,7 +260,7 @@
   if(!OWNED){setTimeout(function(){document.getElementById('paywall').classList.add('show');},120000);}
   document.getElementById('pwPay').addEventListener('click',function(){
     fetch("/paint/"+UID+"/confirm/",{method:'POST',headers:{'X-CSRFToken':CSRF}})
-      .then(function(r){return r.json();}).then(function(d){if(d.ok){OWNED=true;document.getElementById('paywall').classList.remove('show');}});
+      .then(function(r){return r.json();}).then(function(d){if(d&&d.redirect){location.href=d.redirect;return;}if(d&&d.ok){OWNED=true;document.getElementById('paywall').classList.remove('show');}});
   });
   var host=document.getElementById('host'), wrap=document.getElementById('svgwrap'), boardEl=document.getElementById('board');
   var scoreEl=document.getElementById('score'), zonesEl=document.getElementById('zones'), pbar=document.getElementById('pbar'), comboEl=document.getElementById('combo');
@@ -296,7 +320,7 @@
     else{var b=boardEl.getBoundingClientRect();var cur=sc;fitView();var fit=sc;sc=fit;
       zoomAt(b.width/2,b.height/2,2);}}
   function loadBoard(u,pal){board=u;score=0;done=0;combo=0;lastN=null;
-    var mini=document.getElementById('mini');if(mini)mini.src=imgURL(u,'preview');
+    var mini=document.getElementById('mini');if(mini)mini.src=imgURL(u,'preview')+'?t='+Date.now();
     return fetch(imgURL(u,'digipaint'),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('http');return r.text();}).then(function(t){
         host.innerHTML=t;var svg=host.querySelector('svg');if(!svg)throw new Error('nosvg');
         zones=Array.prototype.slice.call(svg.querySelectorAll('.z'));total=zones.length;
@@ -320,10 +344,21 @@
     }else{combo=0;var o=z.style.fill;z.style.transition='fill .08s';z.style.fill='#ffd2d2';setTimeout(function(){z.style.fill=o||'';z.style.transition='fill .15s';},140);}
   }
   function setMode(){var free=mode==='free';document.getElementById('lockBtn').classList.toggle('unlocked',free);document.getElementById('freecolor').style.display=free?'inline-block':'none';markSel();}
-  document.getElementById('freecolor').addEventListener('input',function(){freeColor=this.value;
-    if(potPickIdx>=0){var idx=potPickIdx;customPots[idx]=this.value;saveCustom();
+  (function(){
+    var fc=document.getElementById('freecolor');
+    // Cible du sélecteur : le pot en cours d'édition, sinon le pot libre déjà sélectionné.
+    function targetPot(){ if(potPickIdx>=0)return potPickIdx; if(mode==='free'&&selectedPot>=0)return selectedPot; return -1; }
+    function applyLive(){
+      freeColor=fc.value; var idx=targetPot(); if(idx<0)return;
+      customPots[idx]=fc.value; saveCustom();
       document.querySelectorAll('.reel-pot.custom[data-pot=\"'+idx+'\"]').forEach(function(el){el.innerHTML=customHTML(idx);});
-      potPickIdx=-1;selectPot(idx);}});
+      selectPot(idx);                       // le pot devient (ou reste) la teinte active, en direct
+    }
+    // 'input' se déclenche en continu pendant le drag/click dans le sélecteur -> mise à jour fluide du pot.
+    fc.addEventListener('input', applyLive);
+    // 'change' = sélecteur fermé -> on fige la sélection.
+    fc.addEventListener('change', function(){ applyLive(); potPickIdx=-1; });
+  })();
   document.getElementById('lockBtn').addEventListener('click',function(){mode=(mode==='free')?'match':'free';if(mode==='match')selectedPot=-1;setMode();});
   (function(){
     var pb=document.getElementById('palbar');
@@ -369,7 +404,7 @@
   function teleport(rx,ry){var svg=host.querySelector('svg');if(!svg)return;var r=svg.getBoundingClientRect(),b=boardEl.getBoundingClientRect();
     var natW=r.width/sc,natH=r.height/sc;sc=Math.max(sc,3);tx=b.width/2-rx*natW*sc;ty=b.height/2-ry*natH*sc;apply();}
   // 1er clic : deplier la grande carte au centre. Clic sur la carte : se teleporter.
-  document.getElementById('mini').addEventListener('click',function(){modalimg.src=imgURL(board,'preview');modal.classList.add('show');});
+  document.getElementById('mini').addEventListener('click',function(){modalimg.src=imgURL(board,'preview')+'?t='+Date.now();modal.classList.add('show');});
   modalimg.addEventListener('click',function(e){e.stopPropagation();var ir=this.getBoundingClientRect();
     teleport((e.clientX-ir.left)/ir.width,(e.clientY-ir.top)/ir.height);modal.classList.remove('show');});
   modal.addEventListener('click',function(){modal.classList.remove('show');});
@@ -378,7 +413,8 @@
   document.getElementById('helpBtn').addEventListener('click',function(e){e.stopPropagation();document.getElementById('boardhelp').classList.toggle('show');});
   document.addEventListener('click',function(e){var h=document.getElementById('boardhelp');
     if(h&&h.classList.contains('show')&&!h.contains(e.target)&&!(e.target.closest&&e.target.closest('#helpBtn')))h.classList.remove('show');});
-  document.addEventListener('click',function(e){if(!pop.contains(e.target)&&e.target.id!=='menuBtn')pop.classList.remove('show');});
+  document.getElementById('popClose').addEventListener('click',function(){pop.classList.remove('show');});
+  pop.addEventListener('click',function(e){if(e.target===pop)pop.classList.remove('show');});
   document.getElementById('codego').addEventListener('click',function(){var v=(document.getElementById('codein').value||'').trim();if(v)location.href='/paint/'+encodeURIComponent(v)+'/';});
   document.getElementById('slSave').addEventListener('click',function(){var email=(document.getElementById('slEmail').value||'').trim(),msg=document.getElementById('slMsg');if(!email){msg.textContent='Enter your email.';return;}
     fetch("/my-models/email/",{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':CSRF},body:'email='+encodeURIComponent(email)+'&models='+encodeURIComponent(JSON.stringify([MODEL]))})

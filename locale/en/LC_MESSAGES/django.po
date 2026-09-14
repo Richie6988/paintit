@@ -852,3 +852,81 @@ msgstr "Max number of zones"
 
 msgid "La toile coloriée et sa version à peindre par numéros"
 msgstr "The coloured canvas and its paint-by-numbers version"
+
+msgid "Réglages du tableau"
+msgstr "Canvas settings"
+
+msgid "Ajustez le rendu puis régénérez, ou retrouvez vos toiles par e-mail."
+msgstr "Tune the result then regenerate, or find your canvases by email."
+
+msgid "Régénérer le tableau"
+msgstr "Regenerate canvas"
+
+msgid "Détail (couleurs)"
+msgstr "Detail (colours)"
+
+msgid "Difficulté"
+msgstr "Difficulty"
+
+msgid "Facile"
+msgstr "Easy"
+
+msgid "Difficile"
+msgstr "Hard"
+
+msgid "Extrême"
+msgstr "Extreme"
+
+msgid "Taille min"
+msgstr "Min size"
+
+msgid "Plafond de zones"
+msgstr "Zone cap"
+
+msgid "Mes toiles"
+msgstr "My canvases"
+
+msgid "Sauvegarder pour plus tard"
+msgstr "Save for later"
+
+msgid "Recevoir mon code par e-mail"
+msgstr "Email me my code"
+
+msgid "Vous recevrez un code par e-mail."
+msgstr "You'll get a code by email."
+
+msgid "Ouvrir un autre code"
+msgstr "Open another code"
+
+msgid "Ouvrir"
+msgstr "Open"
+
+msgid "Fermer"
+msgstr "Close"
+
+msgid "Code à 6 chiffres"
+msgstr "6-digit code"
+
+msgid ""
+"Saisissez votre e-mail : vous recevrez un code pour retrouver vos toiles sur"
+" tous vos appareils."
+msgstr ""
+"Enter your email: you'll get a code to find your canvases on any device."
+
+msgid "Envoi…"
+msgstr "Sending…"
+
+msgid "Code envoyé à"
+msgstr "Code sent to"
+
+msgid "Vérifiez votre boîte mail."
+msgstr "Check your inbox."
+
+msgid "Code invalide ou expiré."
+msgstr "Invalid or expired code."
+
+msgid "Rechercher une toile…"
+msgstr "Search a canvas…"
+
+msgid "Aucun résultat."
+msgstr "No results."
