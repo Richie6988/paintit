@@ -450,9 +450,31 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
                     cx = min(max(x * mmx, hw + 0.5), w_mm - hw - 0.5)
                     cy = min(max(y * mmy + fs * 0.34, fs * 0.9), h_mm - fs * 0.25)
                     txt = f'<text class="zn" x="{cx:.2f}" y="{cy:.2f}" font-size="{fs:.2f}">{num}</text>'
-            out.append('<g class="cell"><path class="z" fill="#eef1f6" stroke="#141414" '
-                       f'stroke-width="0.18" stroke-linejoin="round" fill-rule="evenodd" '
-                       f'data-n="{num}" data-a="{area}" d="{" ".join(segs)}"/>{txt}</g>')
+            out.append('<g class="cell"><path class="z" fill="#eef1f6" '
+                       f'fill-rule="evenodd" data-n="{num}" data-a="{area}" d="{" ".join(segs)}"/>{txt}</g>')
+    # UN SEUL calque de contours (chaque bord trace une fois) -> pas de double ligne
+    eps_px = max(0.8, eps)
+    lines = []
+    for poly in _trace_boundaries(labels):
+        closed = len(poly) > 2 and poly[0] == poly[-1]
+        pts = poly[:-1] if closed else poly
+        if len(pts) < 2:
+            continue
+        arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
+        approx = cv2.approxPolyDP(arr, eps_px, closed)
+        base = [(float(p[0][0]), float(p[0][1])) for p in approx]
+        if len(base) < 2:
+            continue
+        sm = _chaikin(base, closed, iters=3) if len(base) >= 3 else base
+        d = "M " + " L ".join(f"{x*mmx:.2f} {y*mmy:.2f}" for x, y in sm)
+        if closed:
+            d += " Z"
+        lines.append(d)
+    if lines:
+        out.append('<g class="lines" fill="none" stroke="#141414" stroke-width="0.18" '
+                   'stroke-linejoin="round" stroke-linecap="round">')
+        out += [f'<path d="{d}"/>' for d in lines]
+        out.append('</g>')
     out.append("</svg>")
     return "\n".join(out)
 
@@ -485,6 +507,29 @@ def build_preview_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
             b = palette_bgr[c]
             hexc = "#%02X%02X%02X" % (int(b[2]), int(b[1]), int(b[0]))
             out.append(f'<path fill="{hexc}" fill-rule="evenodd" d="{" ".join(segs)}"/>')
+    # UN SEUL calque de contours (chaque bord trace une fois) -> pas de double ligne
+    eps_px = max(0.8, eps)
+    lines = []
+    for poly in _trace_boundaries(labels):
+        closed = len(poly) > 2 and poly[0] == poly[-1]
+        pts = poly[:-1] if closed else poly
+        if len(pts) < 2:
+            continue
+        arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
+        approx = cv2.approxPolyDP(arr, eps_px, closed)
+        base = [(float(p[0][0]), float(p[0][1])) for p in approx]
+        if len(base) < 2:
+            continue
+        sm = _chaikin(base, closed, iters=3) if len(base) >= 3 else base
+        d = "M " + " L ".join(f"{x*mmx:.2f} {y*mmy:.2f}" for x, y in sm)
+        if closed:
+            d += " Z"
+        lines.append(d)
+    if lines:
+        out.append('<g class="lines" fill="none" stroke="#141414" stroke-width="0.18" '
+                   'stroke-linejoin="round" stroke-linecap="round">')
+        out += [f'<path d="{d}"/>' for d in lines]
+        out.append('</g>')
     out.append("</svg>")
     return "\n".join(out)
 
@@ -681,7 +726,12 @@ def run(args):
     # Plafond du NOMBRE de zones (peignable) : dependant de la surface et des couleurs.
     area_cm2 = (w_mm * h_mm) / 100.0
     density = 0.20 + args.colors * 0.010          # zones/cm2 (etat de l'art : plus fin)
+    if getattr(args, "density", None):
+        density = float(args.density)
     max_zones = int(np.clip(area_cm2 * density, 240, 3000))
+    _mz = getattr(args, "max_zones", None)
+    if _mz:
+        max_zones = int(np.clip(int(_mz), 2, 9999))
     labels = limit_zones(labels, args.colors, min_area, max_zones, min_radius=min_radius)
     print(f"[i] zones finales: {count_zones(labels, args.colors)} (plafond {max_zones})")
     _p(58, "zones")

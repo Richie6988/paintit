@@ -161,6 +161,17 @@ class ContactMessage(models.Model):
         return f"{self.subject} ({self.email})"
 
 
+
+class ContactAttachment(models.Model):
+    message = models.ForeignKey(ContactMessage, related_name="attachments", on_delete=models.CASCADE)
+    file = models.FileField(upload_to="contact/%Y/%m/")
+    original_name = models.CharField(max_length=200, blank=True, default="")
+    content_type = models.CharField(max_length=80, blank=True, default="")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.original_name or (self.file.name if self.file else "piece jointe")
+
 class DigitalCanvas(models.Model):
     """Toile numerique d'un joueur (galerie), rattachee a un e-mail verifie si dispo."""
     email = models.EmailField(blank=True, default="")

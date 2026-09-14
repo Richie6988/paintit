@@ -1,5 +1,5 @@
 {% extends "studio/base.html" %}
-{% load i18n l10n %}
+{% load i18n l10n static %}
 {% block title %}{% trans "Aperçu" %} · PaintIt{% endblock %}
 {% block content %}
 <section class="panel wide" id="protected">
@@ -27,6 +27,8 @@
 
   <form method="post" action="{% url 'studio:set_options' %}" class="options">
     {% csrf_token %}
+    <div class="price-line">{% trans "Prix" %} : <b id="ptotal">{{ order.canvas_price|floatformat:2 }}</b> &euro;
+      <small>{% trans "livraison offerte" %}</small></div>
     {% if brushes_available %}
     <label class="check">
       <input type="checkbox" name="brushes" id="brushes" {% if order.brushes %}checked{% endif %}>
@@ -49,20 +51,8 @@
   <div class="kit-included">
     <h3>{% trans "Inclus dans le kit" %}</h3>
     <div class="kit-items">
-      <div class="kit-item">
-        <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">
-          <rect x="10" y="24" width="14" height="26" rx="2" fill="#e85d75"/><rect x="9" y="20" width="16" height="6" rx="2" fill="#fff"/>
-          <rect x="27" y="24" width="14" height="26" rx="2" fill="#3fd07a"/><rect x="26" y="20" width="16" height="6" rx="2" fill="#fff"/>
-          <rect x="44" y="24" width="14" height="26" rx="2" fill="#2f6bf2"/><rect x="43" y="20" width="16" height="6" rx="2" fill="#fff"/>
-        </g></svg>
-        <span>{% trans "Pots de peinture assortis" %}</span>
-      </div>
-      <div class="kit-item">
-        <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">
-          <rect x="16" y="8" width="32" height="44" rx="3" fill="#eef2f9"/><path d="M22 18h20M22 26h20M22 34h14" stroke-width="2.4"/>
-          <rect x="20" y="40" width="12" height="8" rx="1.5" fill="#f6b93b"/></g></svg>
-        <span>{% trans "Poster et instructions" %}</span>
-      </div>
+      <div class="kit-item"><img class="kit-photo" src="{% static 'studio/img/kit_pots.jpg' %}" alt=""><span>{% trans "Pots de peinture assortis" %}</span></div>
+      <div class="kit-item"><img class="kit-photo" src="{% static 'studio/img/kit_poster.png' %}" alt=""><span>{% trans "Poster et instructions" %}</span></div>
       <div class="kit-item">
         <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">
           <path d="M12 22 32 12l20 10v20L32 52 12 42z" fill="#eef2f9"/><path d="M12 22l20 10 20-10M32 32v20"/></g></svg>

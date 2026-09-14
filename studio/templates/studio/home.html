@@ -66,21 +66,27 @@
     var dragging = false;
     function setPos(x){ var b=r.getBoundingClientRect(); var p=(x-b.left)/b.width;
       p=Math.max(0,Math.min(1,p)); r.style.setProperty('--pos',(p*100)+'%'); }
-    function down(e){ dragging=true; autoOn=false; if(window.__rot){clearInterval(window.__rot);window.__rot=null;} setPos((e.touches?e.touches[0]:e).clientX); e.preventDefault(); }
+    var autoOn=true, t=0;
+    var seq={{ showcase_slugs|safe }}; if(!seq||!seq.length){seq=['rose'];}
+    var i=0, base=document.getElementById('revealBase'), photo=document.getElementById('revealPhoto'), dir='';
+    function rotStep(){var s=(i=(i+1)%seq.length,seq[i]);base.style.opacity=0;photo.style.opacity=0;
+      setTimeout(function(){base.src=dir+s+'_template.png';photo.src=dir+s+'_pbn.png';base.style.opacity=1;photo.style.opacity=1;},260);}
+    function startRot(){autoOn=true; if(!window.__rot&&base&&photo){window.__rot=setInterval(rotStep,6500);}}
+    function stopRot(){autoOn=false; if(window.__rot){clearInterval(window.__rot);window.__rot=null;}}
+    function down(e){ dragging=true; stopRot(); setPos((e.touches?e.touches[0]:e).clientX); e.preventDefault(); }
     function move(e){ if(dragging) setPos((e.touches?e.touches[0]:e).clientX); }
     r.addEventListener('mousedown',down); r.addEventListener('touchstart',down,{passive:false});
     window.addEventListener('mousemove',move); window.addEventListener('touchmove',move,{passive:false});
     window.addEventListener('mouseup',function(){dragging=false;}); window.addEventListener('touchend',function(){dragging=false;});
-    // Animation auto du slider (oscillation), en pause des que l'utilisateur le prend en main
-    var autoOn=true, t=0;
+    // Reprise de l'animation : quand la souris sort de la zone OU clic en dehors
+    r.addEventListener('mouseleave',function(){if(!dragging)startRot();});
+    document.addEventListener('pointerdown',function(e){if(!r.contains(e.target))startRot();});
+    // Oscillation du slider (en pause quand pris en main)
     setInterval(function(){ if(!autoOn||dragging) return; t+=0.018; var p=50+42*Math.sin(t);
       r.style.setProperty('--pos',p+'%'); }, 33);
-    // Alternance moto <-> autres designs
-    var seq=['rose','aquarium','chien','foret','cerisier','moto','people','pop-art','cat_cartoon','children'];
-    var i=0, base=document.getElementById('revealBase'), photo=document.getElementById('revealPhoto');
-    if(base&&photo){var dir=base.getAttribute('src').replace(/[^/]+$/,'');
-      window.__rot=setInterval(function(){i=(i+1)%seq.length;var s=seq[i];base.style.opacity=0;photo.style.opacity=0;
-        setTimeout(function(){base.src=dir+s+'_template.png';photo.src=dir+s+'_pbn.png';base.style.opacity=1;photo.style.opacity=1;},260);},6500);}
+    // Rotation des modeles
+    if(base&&photo){dir=base.getAttribute('src').replace(/[^/]+$/,'');
+      base.src=dir+seq[0]+'_template.png';photo.src=dir+seq[0]+'_pbn.png';startRot();}
   })();
 </script>
 {% endblock %}

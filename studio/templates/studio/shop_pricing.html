@@ -1,7 +1,26 @@
 {% extends "admin/base_site.html" %}
 {% block content %}
-<div style="max-width:1100px">
-  <h1>Grille tarifaire , Kit &amp; Tableau fini</h1>
+<style>
+ /* ERP lisible */
+ .sp-wrap{max-width:1100px}
+ .sp-wrap h2{margin-top:0;font-size:1.15rem}
+ .sp-wrap h3{margin:16px 0 6px;color:#334}
+ .sp-wrap table{border-collapse:collapse;width:100%;margin:6px 0 12px}
+ .sp-wrap th{text-align:left;color:#5b647a;font-size:.82rem;font-weight:700;border-bottom:1px solid #e6ebf4;padding:4px 8px}
+ .sp-wrap td{padding:6px 8px;border-bottom:1px solid #f0f3fa;vertical-align:middle}
+ .sp-wrap label{font-weight:600;color:#334;display:inline-block;margin-top:6px}
+ .sp-wrap input[type=number],.sp-wrap input[type=email]{
+   font-size:1.05rem;font-weight:800;color:#12224f;padding:9px 12px;border:1px solid #cdd8ea;border-radius:10px;
+   text-align:right;background:#fff;width:120px}
+ .sp-wrap input[type=number]:focus{outline:2px solid #2f6bf2;border-color:#2f6bf2}
+ .eur{display:inline-flex;align-items:center;gap:6px}
+ .eur::after{content:"\20AC";font-weight:800;color:#5b647a}
+ .sp-wrap input[type=checkbox]{width:20px;height:20px}
+ .sp-save{margin-top:18px}
+ .sp-save button{padding:12px 22px;font-size:1rem;font-weight:800}
+</style>
+<div class="sp-wrap">
+  <h1>Grille tarifaire : Kit &amp; Tableau fini</h1>
   <p style="color:#5b647a">Choisissez ce qui est disponible et a quel prix pour chaque produit.
     Le Kit est mono-format (40x50 cm) avec 12 / 24 / 36 couleurs. Le Tableau fini est une impression d'art.</p>
 
@@ -11,7 +30,7 @@
       <div style="background:#fff;border:1px solid #e2e8f2;border-radius:14px;padding:18px">
         <h2 style="margin-top:0">Kit a peindre</h2>
         <label>Prix de base (40x50 cm)</label><br>
-        <input type="number" step="0.01" name="p_40x50" value="{{ kit.p_40x50 }}"><br><br>
+        <span class="eur"><input type="number" step="0.01" name="p_40x50" value="{{ kit.p_40x50 }}"></span><br><br>
         <h3>Couleurs (supplement)</h3>
         <table><tr><th>Couleurs</th><th>Prix (+)</th><th>Dispo</th></tr>
         {% for c in kit_colors %}<tr>
@@ -20,12 +39,12 @@
           <td style="text-align:center"><input type="checkbox" name="av_c{{ c.key }}" {% if c.av %}checked{% endif %}></td>
         </tr>{% endfor %}</table>
         <h3>Options</h3>
-        <label>Pinceaux (prix)</label> <input type="number" step="0.01" name="brushes_price" value="{{ kit.brushes_price }}" style="width:90px">
+        <label>Pinceaux (prix)</label> <span class="eur"><input type="number" step="0.01" name="brushes_price" value="{{ kit.brushes_price }}" style="width:90px"></span>
         <input type="checkbox" name="av_brushes" {% if kit.av_brushes %}checked{% endif %}> dispo<br><br>
         <label>Livraison (jours min / max)</label><br>
         <input type="number" name="delivery_days_min" value="{{ kit.delivery_days_min }}" style="width:70px">
         <input type="number" name="delivery_days_max" value="{{ kit.delivery_days_max }}" style="width:70px"><br><br>
-        <label>Remise fidelite (0.15 = 15%)</label> <input type="number" step="0.01" name="discount_rate" value="{{ kit.discount_rate }}" style="width:90px">
+        <label>Remise fidelite (0.15 = 15%)</label> <span class="eur"><input type="number" step="0.01" name="discount_rate" value="{{ kit.discount_rate }}" style="width:90px"></span>
       </div>
 
       <div style="background:#fff;border:1px solid #e2e8f2;border-radius:14px;padding:18px">
@@ -51,7 +70,7 @@
         </tr>{% endfor %}</table>
         <h3>Verre</h3>
         <input type="checkbox" name="av_glass" {% if tab.av_glass %}checked{% endif %}> Sous verre dispo ,
-        <input type="number" step="0.01" name="glass_price" value="{{ tab.glass_price }}" style="width:90px"><br><br>
+        <span class="eur"><input type="number" step="0.01" name="glass_price" value="{{ tab.glass_price }}" style="width:90px"></span><br><br>
         <label>E-mail fournisseur impression</label><br>
         <input type="email" name="supplier_email" value="{{ tab.supplier_email }}" style="width:100%">
       </div>

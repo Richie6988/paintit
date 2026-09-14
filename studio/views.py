@@ -35,8 +35,18 @@ def _rate():
 
 
 def home(request):
+    import json as _json
     lib = list(DigitalCanvas.objects.filter(email="__library__").order_by("category", "title")[:6])
-    return render(request, "studio/home.html", {"library_preview": lib})
+    showdir = os.path.join(settings.BASE_DIR, "studio", "static", "studio", "showcase")
+    slugs = []
+    if os.path.isdir(showdir):
+        for f in sorted(os.listdir(showdir)):
+            if f.endswith("_pbn.png"):
+                sg = f[:-8]
+                if os.path.exists(os.path.join(showdir, sg + "_template.png")):
+                    slugs.append(sg)
+    return render(request, "studio/home.html",
+                  {"library_preview": lib, "showcase_slugs": _json.dumps(slugs)})
 
 
 # ---------------- Upload / preview ----------------
@@ -592,11 +602,11 @@ def my_models_email(request):
     return JsonResponse({"ok": True})
 
 
-def _run_game_generation(gameuid, src, colors, w, h, detail=1.0, source_name=None):
+def _run_game_generation(gameuid, src, colors, w, h, detail=1.0, source_name=None, max_zones=None, min_zone_mm=None, density=None):
     def cb(pct, label):
         jobs.update(gameuid, pct=int(pct), label=label)
     try:
-        result = generate(src, colors, w, h, uid=gameuid, progress=cb, focus=(0.5, 0.5), detail=detail, source_name=source_name)
+        result = generate(src, colors, w, h, uid=gameuid, progress=cb, focus=(0.5, 0.5), detail=detail, source_name=source_name, max_zones=max_zones, min_zone_mm=min_zone_mm, density=density)
         jobs.update(gameuid, pct=100, label="final", done=True,
                     order={"colors_list": result.get("colors_list", [])})
     except Exception as exc:                       # pragma: no cover
@@ -621,11 +631,21 @@ def digipaint_regen(request, uid):
     colors = max(2, min(99, colors))
     detail = {"facile": 1.5, "moyen": 1.0, "difficile": 0.7, "extreme": 0.5}.get(
         request.POST.get("difficulty", "moyen"), 1.0)
+    def _fopt(name, lo, hi):
+        try:
+            v = float(request.POST.get(name, "") or 0)
+        except (TypeError, ValueError):
+            return None
+        return max(lo, min(hi, v)) if v else None
+    max_zones = int(_fopt("max_zones", 2, 9999)) if _fopt("max_zones", 2, 9999) else None
+    min_zone_mm = _fopt("min_zone_mm", 0.5, 20)
+    density = _fopt("density", 0.02, 5)
     gameuid = uid + "-G"
     jobs.start(gameuid)
     threading.Thread(target=_run_game_generation, daemon=True,
                      args=(gameuid, src, colors, order["width_cm"], order["height_cm"], detail),
-                     kwargs={"source_name": os.path.basename(src)}).start()
+                     kwargs={"source_name": os.path.basename(src), "max_zones": max_zones,
+                             "min_zone_mm": min_zone_mm, "density": density}).start()
     request.session["game_uid"] = gameuid
     return JsonResponse({"job": gameuid})
 
@@ -912,9 +932,17 @@ def contact(request):
                 attach_error = "Total des pieces jointes trop lourd (20 Mo max)."
         if form.is_valid() and not attach_error:
             cd = form.cleaned_data
-            from .models import ContactMessage
-            ContactMessage.objects.create(name=cd["name"], email=cd["email"],
-                                          subject=cd["subject"], message=cd["message"])
+            from .models import ContactMessage, ContactAttachment
+            from django.core.files.base import ContentFile
+            msg = ContactMessage.objects.create(name=cd["name"], email=cd["email"],
+                                                subject=cd["subject"], message=cd["message"])
+            for (fname, data, ctype) in attachments:
+                try:
+                    ContactAttachment.objects.create(
+                        message=msg, original_name=fname, content_type=ctype or "",
+                        file=ContentFile(data, name=fname))
+                except Exception:
+                    pass
             emails.send_contact(attachments=attachments, **cd)
             sent = True
             form = ContactForm()

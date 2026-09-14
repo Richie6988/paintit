@@ -4,7 +4,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .models import Discount, Order, ContactMessage, Pricing, DigitalCanvas, EmailCode, PrintPricing
+from .models import Discount, Order, ContactMessage, ContactAttachment, Pricing, DigitalCanvas, EmailCode, PrintPricing
 from . import emails
 
 admin.site.site_header = "PaintIt Admin"
@@ -121,8 +121,31 @@ class DiscountAdmin(admin.ModelAdmin):
         return obj.remaining
 
 
+class ContactAttachmentInline(admin.TabularInline):
+    model = ContactAttachment
+    extra = 0
+    can_delete = False
+    readonly_fields = ("apercu", "original_name", "content_type", "uploaded_at")
+    fields = ("apercu", "original_name", "content_type", "uploaded_at")
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="Fichier")
+    def apercu(self, obj):
+        if not obj.file:
+            return "-"
+        url = obj.file.url
+        low = (obj.original_name or obj.file.name).lower()
+        if low.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif")):
+            return format_html('<a href="{}" target="_blank"><img src="{}" '
+                               'style="max-height:90px;border-radius:8px;border:1px solid #e2e8f2"></a>', url, url)
+        return format_html('<a class="button" href="{}" target="_blank">Ouvrir / telecharger</a>', url)
+
+
 @admin.register(ContactMessage)
 class ContactMessageAdmin(admin.ModelAdmin):
+    inlines = [ContactAttachmentInline]
     list_display = ("subject", "name", "email", "answered", "created_at", "answered_at")
     list_filter = ("answered",)
     search_fields = ("name", "email", "subject", "message")

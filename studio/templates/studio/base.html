@@ -21,7 +21,7 @@
   <header class="nav">
     <a class="brand-logo" href="{% url 'studio:home' %}">
       <img src="{% static 'studio/img/icon.svg' %}" alt="">
-      <span class="brand-word"><span class="p">Paint</span><span class="it">It</span></span>
+      <span class="brand-word" data-noi18n translate="no"><span class="p">Paint</span><span class="it">It</span></span>
     </a>
     <div class="nav-right">
       <form class="lang" id="langform" action="{% url 'set_language' %}" method="post" data-current="{{ LANGUAGE_CODE }}">
@@ -60,7 +60,9 @@
       window.PIT_I18N.forEach(function(e){var a=e[current],b=e[to];if(a&&b&&a!==b){exact[a.trim()]=b;if(a.length>=8)subs.push([a,b]);}});
       subs.sort(function(x,y){return y[0].length-x[0].length;});   // plus longues d'abord
       var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(n){
-        return (n.parentNode&&SKIP[n.parentNode.nodeName])?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;}});
+        if(n.parentNode&&SKIP[n.parentNode.nodeName])return NodeFilter.FILTER_REJECT;
+        if(n.parentNode&&n.parentNode.closest&&n.parentNode.closest('[data-noi18n]'))return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;}});
       var nodes=[],n;while(n=w.nextNode())nodes.push(n);
       nodes.forEach(function(t){var v=t.nodeValue,tr=v.trim();
         if(tr&&exact[tr]!==undefined){t.nodeValue=v.replace(tr,exact[tr]);}
