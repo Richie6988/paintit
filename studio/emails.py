@@ -20,6 +20,26 @@ def _safe_send(msg):
                          getattr(msg, "subject", ""), getattr(msg, "to", ""))
         return False
 
+def _brand(html):
+    """Ajoute un pied de page avec lien vers le site + rend le logo cliquable."""
+    site = settings.SITE_URL
+    logo = site + settings.STATIC_URL + "studio/img/logo.png"
+    # logo -> lien vers le site
+    html = html.replace('<img src="%s"' % logo,
+                        '</a>' and ('<a href="%s" target="_blank" style="text-decoration:none"><img src="%s"' % (site, logo)))
+    # (referme le <a> juste apres la balise img du header)
+    html = html.replace('border-radius:8px;padding:5px 8px"></td>',
+                        'border-radius:8px;padding:5px 8px"></a></td>', 1)
+    # pied de page
+    footer = ('<tr><td style="padding:16px 24px;background:#f4f6fb;text-align:center;'
+              'color:#5b647a;font-size:13px;font-family:Arial,Helvetica,sans-serif">'
+              'PaintIt , <a href="%s" target="_blank" style="color:#2f6bf2;font-weight:700;'
+              'text-decoration:none">%s</a></td></tr>' % (site, site.replace("https://", "").replace("http://", "")))
+    html = html.replace('</table>', footer + '</table>', 1)
+    return html
+
+
+
 
 from .fulfillment import lang_for_country
 
@@ -153,7 +173,7 @@ def send_order_confirmation(order, shipping):
 
     subject = T["subject"] % {"uid": uid}
     msg = EmailMultiAlternatives(subject, text, settings.DEFAULT_FROM_EMAIL, [to])
-    msg.attach_alternative(html, "text/html")
+    msg.attach_alternative(_brand(html), "text/html")
     _safe_send(msg)
 
 
@@ -215,7 +235,7 @@ def send_feedback_request(order_row):
         '</td></tr></table></div>') % (
         logo, T["hi"], o.customer_name, T["body"], cta, reply_line, T["thanks"], T["team"])
     msg = EmailMultiAlternatives(T["subject"], text, settings.DEFAULT_FROM_EMAIL, [o.customer_email])
-    msg.attach_alternative(html, "text/html")
+    msg.attach_alternative(_brand(html), "text/html")
     _safe_send(msg)
 
 
@@ -278,7 +298,7 @@ def send_gallery(email, models, lang="fr"):
         '<b style="color:#2f6bf2">%s</b></td></tr></table></div>'
     ) % (logo, T["hi"], T["intro"], "".join(rows_html), T["note"], T["team"])
     msg = EmailMultiAlternatives(T["subject"], text, st.DEFAULT_FROM_EMAIL, [email])
-    msg.attach_alternative(html, "text/html")
+    msg.attach_alternative(_brand(html), "text/html")
     _safe_send(msg)
 
 

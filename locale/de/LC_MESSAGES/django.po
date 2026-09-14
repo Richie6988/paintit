@@ -865,3 +865,9 @@ msgid ""
 "À partir de n'importe quelle photo, votre toile disponible en quelques "
 "secondes"
 msgstr "Aus jedem Foto, Ihre Leinwand in Sekunden bereit"
+
+msgid "Nombre max de zones"
+msgstr "Max. Anzahl Felder"
+
+msgid "La toile coloriée et sa version à peindre par numéros"
+msgstr "Die farbige Leinwand und ihre Malen-nach-Zahlen-Version"

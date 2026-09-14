@@ -16,7 +16,7 @@ def env_list(name, default=""):
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-insecure-change-me")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
-SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
+SITE_URL = os.environ.get("SITE_URL", "https://paintit.click").rstrip("/")
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS") or (["*"] if DEBUG else [])
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS") or (
     [SITE_URL] if SITE_URL.startswith("http") else [])

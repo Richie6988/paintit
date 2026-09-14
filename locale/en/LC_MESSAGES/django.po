@@ -846,3 +846,9 @@ msgid ""
 "À partir de n'importe quelle photo, votre toile disponible en quelques "
 "secondes"
 msgstr "From any photo, your canvas ready in seconds"
+
+msgid "Nombre max de zones"
+msgstr "Max number of zones"
+
+msgid "La toile coloriée et sa version à peindre par numéros"
+msgstr "The coloured canvas and its paint-by-numbers version"
