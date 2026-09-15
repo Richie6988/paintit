@@ -156,3 +156,52 @@ def compute_price(fmt_key, colors):
     """Prix = prix du format + supplement selon le nombre de couleurs."""
     p = pricing()
     return round(p.format_price(fmt_key) + p.color_price(colors), 2)
+
+
+def export_tiff(uid, media_root=None, dpi=300):
+    """Genere des .tiff HAUTE RESOLUTION (impression fournisseur) :
+    - rendu vectoriel des SVG (toile numerotee + coloriee) a `dpi` via cairosvg (net),
+    - repli sur les PNG si cairosvg indisponible,
+    - poster/palette si present.
+    Conserve les .svg/.png. Renvoie la liste des .tiff crees."""
+    import os
+    from io import BytesIO
+    from PIL import Image
+    from django.conf import settings as _st
+    root = media_root or _st.MEDIA_ROOT
+    d = os.path.join(root, "orders", uid)
+    made = {}
+
+    def _save(img, out_name):
+        op = os.path.join(d, out_name)
+        img.convert("RGB").save(op, format="TIFF", compression="tiff_lzw", dpi=(dpi, dpi))
+        made[out_name] = op
+
+    # 1) Rendu vectoriel haute def des SVG (net a l'impression)
+    try:
+        import cairosvg
+        for svg_name, out_name in [("%s_template.svg" % uid, "%s_template.tiff" % uid),
+                                   ("%s_preview.svg" % uid, "%s_preview.tiff" % uid)]:
+            sp = os.path.join(d, svg_name)
+            if os.path.exists(sp):
+                try:
+                    png = cairosvg.svg2png(url=sp, dpi=dpi, background_color="#ffffff")
+                    _save(Image.open(BytesIO(png)), out_name)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    # 2) Repli PNG -> TIFF pour ce qui manque + poster/palette
+    for src_png, out_name in [("%s_preview.png" % uid, "%s_preview.tiff" % uid),
+                              ("%s_template.png" % uid, "%s_template.tiff" % uid),
+                              ("%s_palette.png" % uid, "%s_poster.tiff" % uid)]:
+        if out_name in made:
+            continue
+        sp = os.path.join(d, src_png)
+        if os.path.exists(sp):
+            try:
+                _save(Image.open(sp), out_name)
+            except Exception:
+                pass
+    return list(made.values())

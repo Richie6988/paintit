@@ -3,6 +3,7 @@ from . import views
 
 app_name = "studio"
 urlpatterns = [
+    path("admin-hub/", views.admin_hub, name="admin_hub"),
     path("admin-tarifs/", views.shop_pricing, name="shop_pricing"),
     path("llm.txt", views.llm_txt, name="llm_txt"),
     path("llm.json", views.llm_json, name="llm_json"),

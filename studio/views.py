@@ -253,9 +253,25 @@ def preview(request):
     if not order:
         return redirect("studio:upload")
     p = Pricing.get()
+    from .models import KitFormat
+    colors = order.get("colors", 24)
+    formats = [{"id": kf.id, "label": kf.label, "w": kf.width_cm, "h": kf.height_cm,
+                "price": round(float(kf.price) + p.color_price(colors), 2)}
+               for kf in KitFormat.objects.filter(available=True)]
+    current_format = next((fm["id"] for fm in formats
+                           if fm["w"] == order.get("width_cm") and fm["h"] == order.get("height_cm")),
+                          (formats[0]["id"] if formats else None))
+    # aligne le prix affiche sur le format courant
+    if formats:
+        cf = next((fm for fm in formats if fm["id"] == current_format), formats[0])
+        order["canvas_price"] = cf["price"]
+        order["width_cm"], order["height_cm"], order["format_label"] = cf["w"], cf["h"], cf["label"]
+        order["price"] = round(cf["price"] + order.get("brushes_amount", 0.0), 2)
+        request.session["order"] = order
     digital_owned = DigitalCanvas.objects.filter(uid=order["uid"]).exists() or not request.session.get("free_used")
     return render(request, "studio/preview.html",
-                  {"order": order, "brushes_price": p.brushes_price,
+                  {"order": order, "brushes_price": p.brushes_price, "formats": formats,
+                   "current_format": current_format,
                    "brushes_available": p.av_brushes, "digital_owned": digital_owned})
 
 
@@ -266,6 +282,15 @@ def set_options(request):
         return redirect("studio:upload")
     if request.method == "POST":
         p = Pricing.get()
+        from .models import KitFormat
+        fmt_id = request.POST.get("kit_format")
+        if fmt_id:
+            kf = KitFormat.objects.filter(id=fmt_id, available=True).first()
+            if kf:
+                order["width_cm"] = kf.width_cm
+                order["height_cm"] = kf.height_cm
+                order["format_label"] = kf.label
+                order["canvas_price"] = round(float(kf.price) + p.color_price(order.get("colors", 24)), 2)
         brushes = bool(request.POST.get("brushes")) and p.av_brushes
         bp = p.brushes_price if brushes else 0.0
         order["brushes"] = brushes
@@ -788,6 +813,27 @@ def checkout(request):
 
 
 # ---------------- Fulfilment ----------------
+def _reformat_for_supplier(o):
+    """Apres paiement, avant l'envoi fournisseur : regenere la toile aux dimensions
+    du format commande, puis exporte les .tiff (sans perte). Conserve .svg/.png."""
+    from .pipeline import source_file, generate, export_tiff
+    uid = o.get("uid")
+    if not uid:
+        return
+    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    src = source_file(d, uid)
+    try:
+        if src and os.path.exists(src):
+            generate(src, o.get("colors", 24), o.get("width_cm", 40), o.get("height_cm", 50),
+                     uid=uid, source_name=os.path.basename(src))
+    except Exception:
+        logger.exception("Reformatage toile %s", uid)
+    try:
+        export_tiff(uid)
+    except Exception:
+        logger.exception("Export TIFF %s", uid)
+
+
 def _upsert_order(o, shipping, status, supplier_ref=None):
     d = o.get("discount")
     Order.objects.update_or_create(uid=o["uid"], defaults={
@@ -814,6 +860,7 @@ def _fulfill(order, shipping):
         discount, total = None, order["price"]
     o = dict(order); o["discount"] = discount; o["total"] = total
     o["cost"] = supplier.estimate_cost(o)
+    _reformat_for_supplier(o)
     manifest = fulfillment.build(o, shipping)
     supplier_result = supplier.place_order(o, shipping, manifest)
     discounts.issue(o["uid"])
@@ -1109,7 +1156,22 @@ def shop_pricing(request):
             try: return float(request.POST.get(name, d))
             except (TypeError, ValueError): return d
         def bb(name): return request.POST.get(name) == "on"
-        kit.p_40x50 = f("p_40x50", kit.p_40x50)
+        from .models import KitFormat
+        for kf in list(KitFormat.objects.all()):
+            if request.POST.get("del_fmt_%d" % kf.id):
+                kf.delete(); continue
+            kf.price = f("fmt_price_%d" % kf.id, float(kf.price))
+            kf.available = bb("fmt_av_%d" % kf.id)
+            kf.save()
+        nw = request.POST.get("new_w"); nh = request.POST.get("new_h")
+        if nw and nh:
+            try:
+                KitFormat.objects.get_or_create(
+                    width_cm=int(nw), height_cm=int(nh),
+                    defaults={"price": f("new_price", 34.9), "available": True,
+                              "sort": KitFormat.objects.count()})
+            except Exception:
+                pass
         kit.c_12 = f("c_12"); kit.c_24 = f("c_24"); kit.c_36 = f("c_36")
         kit.av_c12 = bb("av_c12"); kit.av_c24 = bb("av_c24"); kit.av_c36 = bb("av_c36")
         kit.brushes_price = f("brushes_price", kit.brushes_price); kit.av_brushes = bb("av_brushes")
@@ -1128,8 +1190,10 @@ def shop_pricing(request):
         tab.save()
         messages.success(request, "Tarifs enregistres.")
         return redirect("studio:shop_pricing")
+    from .models import KitFormat
     ctx = {
         "kit": kit,
+        "kit_formats": KitFormat.objects.all(),
         "kit_colors": [{"key":"12","price":kit.c_12,"av":kit.av_c12},
                        {"key":"24","price":kit.c_24,"av":kit.av_c24},
                        {"key":"36","price":kit.c_36,"av":kit.av_c36}],
@@ -1273,3 +1337,47 @@ def marketing_page(request):
                 logger.exception("Marketing build")
                 ctx["error"] = str(exc)
     return render(request, "marketing/index.html", ctx)
+
+
+# ---------------- Hub ERP (tableau de bord admin) ----------------
+@staff_member_required
+def admin_hub(request):
+    from django.db.models import Sum, Count
+    from django.utils import timezone
+    from .models import Order, DigitalCanvas, ContactMessage, KitFormat
+    import datetime
+    now = timezone.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    orders = Order.objects.all()
+    agg = orders.aggregate(ca=Sum("total"), cost=Sum("cost"), n=Count("id"))
+    ca = agg["ca"] or 0.0
+    cost = agg["cost"] or 0.0
+    month = orders.filter(created_at__gte=month_start).aggregate(ca=Sum("total"), n=Count("id"))
+    by_status = {s: c for s, c in orders.values_list("status").annotate(c=Count("id"))}
+    kpis = {
+        "orders": agg["n"] or 0,
+        "revenue": round(ca, 2),
+        "margin": round(ca - cost, 2),
+        "margin_pct": round((ca - cost) / ca * 100, 1) if ca else 0,
+        "month_revenue": round(month["ca"] or 0.0, 2),
+        "month_orders": month["n"] or 0,
+        "canvases": DigitalCanvas.objects.exclude(email="__library__").count(),
+        "gallery": DigitalCanvas.objects.filter(email="__library__").count(),
+        "messages": ContactMessage.objects.count(),
+        "formats": KitFormat.objects.filter(available=True).count(),
+    }
+    recent_orders = list(orders.order_by("-created_at")[:8])
+    recent_msgs = list(ContactMessage.objects.order_by("-created_at")[:6])
+    tools = [
+        {"name": "Grille tarifaire", "desc": "Formats kit & tableau, prix, options", "url": "/admin-tarifs/", "icon": "\U0001F4B6"},
+        {"name": "Marketing Corner", "desc": "Promos + GIF pub a partir d'une image", "url": "/marketing/", "icon": "\U0001F4E3"},
+        {"name": "PBN Lab", "desc": "Pipeline pas a pas (R&D)", "url": "/pbn/", "icon": "\U0001F9EA"},
+        {"name": "Commandes", "desc": "Suivi, fichiers fournisseur (.tiff)", "url": "/admin/studio/order/", "icon": "\U0001F4E6"},
+        {"name": "Galerie / modeles", "desc": "Toiles, prix, apercus", "url": "/admin/studio/digitalcanvas/", "icon": "\U0001F5BC"},
+        {"name": "Messages contact", "desc": "Demandes + pieces jointes", "url": "/admin/studio/contactmessage/", "icon": "\U0001F4E8"},
+        {"name": "Remises / parrainage", "desc": "Codes et taux", "url": "/admin/studio/discount/", "icon": "\U0001F3AB"},
+        {"name": "Admin Django", "desc": "Tous les modeles", "url": "/admin/", "icon": "\u2699\uFE0F"},
+    ]
+    return render(request, "admin/hub.html", {
+        "kpis": kpis, "recent_orders": recent_orders, "recent_msgs": recent_msgs,
+        "tools": tools, "by_status": by_status})

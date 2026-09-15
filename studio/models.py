@@ -266,3 +266,28 @@ class PrintPricing(models.Model):
                 "materials": {m["key"]: m["price"] for m in self.materials()},
                 "frames": {f["key"]: f["price"] for f in self.frames()},
                 "glass": self.glass_price if self.av_glass else None}
+
+
+class KitFormat(models.Model):
+    """Formats du kit (peinture par numeros) gerables depuis /admin-tarifs/ :
+    dimensions + prix de base + disponibilite. Ajout/suppression libre."""
+    width_cm = models.PositiveIntegerField("Largeur (cm)", default=40)
+    height_cm = models.PositiveIntegerField("Hauteur (cm)", default=50)
+    price = models.DecimalField("Prix (EUR)", max_digits=7, decimal_places=2, default=34.90)
+    available = models.BooleanField("Disponible", default=True)
+    sort = models.PositiveIntegerField("Ordre", default=0)
+
+    class Meta:
+        ordering = ["sort", "width_cm", "height_cm"]
+        unique_together = ("width_cm", "height_cm")
+
+    @property
+    def label(self):
+        return "%d x %d cm" % (self.width_cm, self.height_cm)
+
+    @property
+    def key(self):
+        return "%dx%d" % (self.width_cm, self.height_cm)
+
+    def __str__(self):
+        return self.label

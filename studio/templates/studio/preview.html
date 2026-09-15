@@ -27,6 +27,19 @@
 
   <form method="post" action="{% url 'studio:set_options' %}" class="options">
     {% csrf_token %}
+    {% if formats %}
+    <div class="fmt-select">
+      <span class="fmt-title">{% trans "Choisissez le format" %}</span>
+      <div class="fmt-opts">
+        {% for fm in formats %}
+        <label class="fmt-opt">
+          <input type="radio" name="kit_format" value="{{ fm.id }}" data-price="{{ fm.price|unlocalize }}" {% if fm.id == current_format %}checked{% endif %}>
+          <span class="fmt-card"><b>{{ fm.label }}</b><em>{{ fm.price|floatformat:2 }} &euro;</em></span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
     <div class="price-line">{% trans "Prix" %} : <b id="ptotal">{{ order.canvas_price|floatformat:2 }}</b> &euro;
       <small>{% trans "livraison offerte" %}</small></div>
     {% if brushes_available %}
@@ -81,6 +94,9 @@
     var base = {{ order.canvas_price|unlocalize }}, bp = {{ brushes_price|unlocalize }};
     var cb = document.getElementById('brushes'), t = document.getElementById('ptotal');
     function upd(){ if(!t) return; t.textContent = (base + (cb && cb.checked ? bp : 0)).toFixed(2).replace('.', ','); }
+    document.querySelectorAll('input[name=kit_format]').forEach(function(r){
+      r.addEventListener('change', function(){ if(r.checked){ base = parseFloat(r.dataset.price)||base; upd(); } });
+    });
     if (cb) cb.addEventListener('change', upd);
     upd();
   })();

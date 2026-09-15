@@ -14,6 +14,23 @@ admin.site.index_title = "Gestion PaintIt"
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
+    actions = ("fichiers_fournisseur",)
+
+    @admin.action(description="Generer les fichiers fournisseur (.tiff)")
+    def fichiers_fournisseur(self, request, queryset):
+        from .pipeline import export_tiff
+        n = 0
+        for o in queryset:
+            uid = getattr(o, "uid", None) or (o.session_uid if hasattr(o, "session_uid") else None)
+            if not uid:
+                continue
+            try:
+                made = export_tiff(uid)
+                n += len(made)
+            except Exception as exc:
+                self.message_user(request, "%s : %s" % (uid, exc), level="error")
+        self.message_user(request, "%d fichier(s) .tiff genere(s)." % n)
+
     list_display = ("uid", "status_badge", "product_col", "total", "benefit_col",
                     "tracking_col", "customer_email", "created_at")
     list_filter = ("status", "lang", "carrier", "orientation", "colors", "brushes")
@@ -167,40 +184,7 @@ class ContactMessageAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-@admin.register(Pricing)
-class PricingAdmin(admin.ModelAdmin):
-    def changelist_view(self, request, extra_context=None):
-        from django.shortcuts import redirect
-        from django.urls import reverse
-        obj = Pricing.get()
-        return redirect(reverse("admin:studio_pricing_change", args=[obj.pk]))
-
-    fieldsets = (
-        ("Prix par format (EUR)", {"fields": (("p_30x40", "p_40x50"),
-                                              ("p_50x70", "p_60x80"),
-                                              ("p_70x100", "p_80x120"))}),
-        ("Supplement selon le nombre de couleurs (EUR)", {"fields": (("c_12", "c_24", "c_36"),)}),
-        ("Options", {"fields": ("brushes_price",)}),
-        ("Remise, parrainage & livraison", {"fields": (("discount_rate", "free_shipping"),
-                                           ("referral_rate", "referral_physical_rate"),
-                                           ("delivery_days_min", "delivery_days_max"))}),
-        ("Disponibilite des offres", {"fields": (
-            ("av_30x40", "av_40x50", "av_50x70"),
-            ("av_60x80", "av_70x100", "av_80x120"),
-            ("av_c12", "av_c24", "av_c36"),
-            ("av_brushes",))}),
-        ("Couts dropshipping (marge)", {"fields": (("cost_base", "cost_per_cm2"),
-                                                   ("cost_per_color", "cost_shipping"))}),
-    )
-    list_display = ("__str__", "p_40x50", "p_60x80", "c_24", "brushes_price",
-                    "discount_rate", "free_shipping", "updated_at")
-
-    def has_add_permission(self, request):
-        return not Pricing.objects.exists()
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
+# Pricing retire du Django admin : tout se gere via /admin-tarifs/
 
 @admin.register(DigitalCanvas)
 class DigitalCanvasAdmin(admin.ModelAdmin):
