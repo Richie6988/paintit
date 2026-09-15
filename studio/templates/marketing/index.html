@@ -1,0 +1,104 @@
+{% load static %}
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marketing Corner · PaintIt</title>
+<style>
+:root{--bg:#0e1014;--bg2:#151922;--bg3:#1d2330;--line:#2a3242;--txt:#e8ecf4;--mut:#8b96ab;--acc:#6c8cff;--acc2:#9b6cff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:"Segoe UI",system-ui,sans-serif}
+.top{padding:16px 22px;background:linear-gradient(90deg,#171c26,#12151d);border-bottom:1px solid var(--line);font-weight:800;font-size:18px}
+.top span{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.top small{display:block;color:var(--mut);font-weight:400;font-size:12.5px;margin-top:2px}
+.wrap{max-width:1120px;margin:22px auto;padding:0 16px}
+.panel{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:20px}
+label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--mut);margin:12px 0 5px}
+input[type=text],input[type=number],textarea{width:100%;background:var(--bg3);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px;font-size:14px;font-family:inherit}
+.mline{font-size:16px;font-weight:700}
+textarea{resize:vertical;min-height:52px}
+.drop{margin-top:6px;border:2px dashed var(--line);border-radius:12px;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--mut);cursor:pointer;transition:.2s;overflow:hidden;position:relative}
+.drop:hover,.drop.over{border-color:var(--acc);color:var(--txt);background:#161b27}.drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.btn{margin-top:16px;width:100%;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;background:linear-gradient(90deg,var(--acc),var(--acc2));color:#0b0e14;box-shadow:0 6px 18px rgba(108,140,255,.35)}
+.btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+.content{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start;border-top:1px solid var(--line);padding:18px 0}
+.content:first-child{border-top:none;padding-top:4px}
+.view{background:var(--bg3);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.view iframe{width:100%;height:440px;border:0;background:#0b1226;display:block}.view img{width:100%;display:block}
+.content h4{margin:0 0 4px}.content .fmt{color:var(--mut);font-size:12px;margin-bottom:8px}
+.content .acts{display:flex;gap:12px;margin-top:10px}.content a{color:var(--acc);text-decoration:none;font-size:13px;font-weight:600}
+.err{color:#ffb4b4;background:#2a1416;border:1px solid #ff6c6c;padding:12px 14px;border-radius:10px;margin-bottom:16px}
+.empty{color:var(--mut);text-align:center;padding:50px 20px}.empty .ic{font-size:44px;margin-bottom:10px}
+.gifgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px}.gifgrid figure{margin:0}.gifgrid img{width:100%;border-radius:10px;border:1px solid var(--line)}.gifgrid figcaption{color:var(--mut);font-size:12px;margin-top:6px;text-align:center}
+#overlay{position:fixed;inset:0;background:rgba(8,10,16,.82);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:50}#overlay.show{display:flex}
+.spin{width:52px;height:52px;border:4px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}#overlay p{margin-top:16px;font-weight:600}
+.hint{color:var(--mut);font-size:12px;margin-top:4px}
+</style></head><body>
+<div class="top">Marketing <span>Corner</span><small>Un message punchy par contenu · promos web + GIF prêts Facebook / Instagram</small></div>
+<div class="wrap">
+<form method="post" enctype="multipart/form-data" id="mform">{% csrf_token %}
+  <div class="panel">
+    <div class="row2">
+      <div>
+        <label>Image du produit</label>
+        <label class="drop" id="drop"><input type="file" name="image" id="file" accept="image/*" hidden {% if not results %}required{% endif %}>
+          <img id="thumb" hidden alt=""><span id="dl">Glissez une image<br><em>ou cliquez</em></span></label>
+        {% if uid %}<input type="hidden" name="reuse_uid" value="{{ uid }}"><p class="hint">Image conservée — changez les messages puis régénérez.</p>{% endif %}
+      </div>
+      <div>
+        <label>Texte du bouton (CTA)</label><input type="text" name="cta" value="{{ cta }}">
+        <label>Lien du bouton (cliquable)</label><input type="text" name="link" value="{{ link }}">
+        <div class="row2"><div><label>Marque</label><input type="text" name="brand" value="{{ brand }}"></div>
+        <div><label>Couleurs</label><input type="number" name="colors" value="{{ colors }}" min="2" max="48"></div></div>
+        <label>Accroche du GIF (pub)</label><input type="text" name="msg_gif" class="mline" value="{{ gif_msg }}" placeholder="Votre plus belle toile, en 1 minute">
+      </div>
+    </div>
+  </div>
+
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+
+  <div class="panel">
+    <h3 style="margin-top:0">Message par promo <span style="color:var(--mut);font-weight:400;font-size:13px">— gros, punchy, animé</span></h3>
+    {% for pr in promos %}
+      <div class="content">
+        <div class="view">
+          {% if uid %}<iframe src="/marketing/file/{{ uid }}/promo_{{ pr.key }}.html/" loading="lazy"></iframe>
+          {% else %}<div class="empty" style="padding:120px 20px">Aperçu après génération</div>{% endif %}
+        </div>
+        <div>
+          <h4>{{ pr.label }}</h4>
+          <div class="fmt">Page web animée · CTA cliquable</div>
+          <label>Message (titre géant)</label>
+          <textarea name="msg_{{ pr.key }}" class="mline">{{ pr.msg }}</textarea>
+          <p class="hint">Les 2 derniers mots ressortent en couleur + animation.</p>
+          <label>Sous-titres (1 par ligne)</label>
+          <textarea name="sub_{{ pr.key }}" style="min-height:74px">{{ pr.sub }}</textarea>
+          {% if uid %}<div class="acts"><a href="/marketing/file/{{ uid }}/promo_{{ pr.key }}.html/" target="_blank">↗ Ouvrir</a><a href="/marketing/file/{{ uid }}/promo_{{ pr.key }}.html/?dl=1">⬇ Télécharger</a></div>{% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if uid %}
+    <div class="panel">
+      <h3 style="margin-top:0">GIF prêts à poster (Facebook / Instagram)</h3>
+      <div class="gifgrid">
+        <figure><img src="/marketing/file/{{ uid }}/promo_square.gif/"><figcaption>Carré 1:1 · feed <a href="/marketing/file/{{ uid }}/promo_square.gif/?dl=1">⬇</a></figcaption></figure>
+        <figure><img src="/marketing/file/{{ uid }}/promo_portrait.gif/"><figcaption>Portrait 4:5 · feed <a href="/marketing/file/{{ uid }}/promo_portrait.gif/?dl=1">⬇</a></figcaption></figure>
+        <figure><img src="/marketing/file/{{ uid }}/promo_story.gif/"><figcaption>Story 9:16 <a href="/marketing/file/{{ uid }}/promo_story.gif/?dl=1">⬇</a></figcaption></figure>
+      </div>
+    </div>
+  {% endif %}
+
+  <button class="btn" type="submit" id="go">▶ {% if uid %}Régénérer avec ces messages{% else %}Générer les contenus{% endif %}</button>
+</form>
+</div>
+<div id="overlay"><div class="spin"></div><p>Génération en cours… (~15–30 s)</p></div>
+<script>
+var file=document.getElementById('file'),drop=document.getElementById('drop'),thumb=document.getElementById('thumb'),dl=document.getElementById('dl');
+function show(f){if(!f||!/^image\//.test(f.type))return;thumb.src=URL.createObjectURL(f);thumb.hidden=false;dl.hidden=true;}
+if(file){file.addEventListener('change',function(e){show(e.target.files[0]);});
+['dragover','dragenter'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.add('over');});});
+['dragleave','dragend'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.remove('over');});});
+drop.addEventListener('drop',function(e){e.preventDefault();drop.classList.remove('over');var f=e.dataTransfer.files[0];if(!f)return;try{var dt=new DataTransfer();dt.items.add(f);file.files=dt.files;}catch(x){}show(f);});}
+document.getElementById('mform').addEventListener('submit',function(){document.getElementById('go').disabled=true;document.getElementById('overlay').classList.add('show');});
+</script>
+</body></html>

@@ -9,6 +9,7 @@ from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.utils.translation import get_language
 from django.contrib.admin.views.decorators import staff_member_required
 
@@ -1195,3 +1196,80 @@ def pbn_lab_step(request, key):
         logger.exception("PBN lab step %s", key)
         return JsonResponse({"error": str(exc)}, status=500)
     return JsonResponse({"step": step})
+
+
+# ---------------- Marketing Corner (staff-only) ----------------
+@staff_member_required
+@xframe_options_sameorigin
+def marketing_file(request, uid, name):
+    import re as _re
+    if not _re.match(r"^[A-Za-z0-9_.-]+$", uid or "") or not _re.match(r"^[A-Za-z0-9_.-]+$", name or ""):
+        raise Http404
+    path = os.path.join(settings.MEDIA_ROOT, "marketing", uid, name)
+    if not os.path.exists(path):
+        raise Http404
+    ctype = "image/gif" if name.endswith(".gif") else "text/html; charset=utf-8"
+    with open(path, "rb") as fh:
+        resp = HttpResponse(fh.read(), content_type=ctype)
+    if request.GET.get("dl"):
+        resp["Content-Disposition"] = 'attachment; filename="%s"' % name
+    return resp
+
+
+@staff_member_required
+def marketing_page(request):
+    from . import marketing
+    KEYS = ["slider", "shiny", "zoom"]
+    ctx = {"results": None, "error": None,
+           "cta": request.POST.get("cta", "Testez notre algorithme"),
+           "brand": request.POST.get("brand", "PaintIt"),
+           "link": request.POST.get("link", "https://paintit.click"),
+           "colors": request.POST.get("colors", "24"),
+           "gif_msg": request.POST.get("msg_gif", ""),
+           "labels": dict(marketing.TEMPLATES),
+           "defaults": marketing.DEFAULT_MSG,
+           "keys": KEYS}
+    # valeurs des messages par promo (pre-remplies avec les defauts)
+    labels = dict(marketing.TEMPLATES)
+    ctx["promos"] = [{"key": k, "label": labels.get(k, k),
+                      "msg": (request.POST.get("msg_" + k) if request.method == "POST"
+                              else marketing.DEFAULT_MSG.get(k, "")),
+                      "sub": (request.POST.get("sub_" + k) if request.method == "POST"
+                              else marketing.DEFAULT_SUB.get(k, ""))} for k in KEYS]
+    if request.method == "POST":
+        f = request.FILES.get("image")
+        cta = (request.POST.get("cta") or "Testez notre algorithme").strip()
+        brand = (request.POST.get("brand") or "PaintIt").strip()
+        link = (request.POST.get("link") or "").strip()
+        colors = int(request.POST.get("colors") or 24)
+        messages = {k: (request.POST.get("msg_" + k) or marketing.DEFAULT_MSG.get(k, "")).strip() for k in KEYS}
+        messages["gif"] = (request.POST.get("msg_gif") or "").strip()
+        messages["gif_sub"] = cta
+        subs = {k: (request.POST.get("sub_" + k) if request.POST.get("sub_" + k) is not None
+                    else marketing.DEFAULT_SUB.get(k, "")) for k in KEYS}
+        import re as _re, uuid as _uuid
+        reuse = (request.POST.get("reuse_uid") or "").strip()
+        reuse_ok = bool(reuse) and bool(_re.match(r"^mkt-[A-Za-z0-9]+$", reuse)) and             os.path.exists(os.path.join(settings.MEDIA_ROOT, "orders", reuse, "%s_preview.svg" % reuse))
+        if not f and not reuse_ok:
+            ctx["error"] = "Ajoutez une image."
+        else:
+            try:
+                if reuse_ok and not f:
+                    uid = reuse                 # regenere avec la meme image, textes modifies
+                else:
+                    uid = "mkt-" + _uuid.uuid4().hex[:10]
+                    tmp = os.path.join(settings.MEDIA_ROOT, "uploads", uid + "_in.jpg")
+                    os.makedirs(os.path.dirname(tmp), exist_ok=True)
+                    with open(tmp, "wb") as out:
+                        for chunk in f.chunks():
+                            out.write(chunk)
+                    generate(tmp, colors, 40, 50, uid=uid, source_name=f.name)
+                produced = marketing.build_all(uid, cta=cta, messages=messages, subs=subs, brand=brand, link=link)
+                ctx["uid"] = uid
+                ctx["results"] = [{"label": lbl,
+                                   "url": "/marketing/file/%s/%s/" % (uid, os.path.basename(path)),
+                                   "is_gif": (kind == "gif")} for lbl, path, kind in produced]
+            except Exception as exc:
+                logger.exception("Marketing build")
+                ctx["error"] = str(exc)
+    return render(request, "marketing/index.html", ctx)

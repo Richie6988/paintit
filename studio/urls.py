@@ -49,6 +49,8 @@ urlpatterns = [
     path("privacy/", views.privacy, name="privacy"),
     path("dashboard/", views.finance_dashboard, name="finance"),
     path(".well-known/appspecific/com.chrome.devtools.json", views.devtools),
+    path("marketing/", views.marketing_page, name="marketing"),
+    path("marketing/file/<str:uid>/<str:name>/", views.marketing_file, name="marketing_file"),
     path("pbn/", views.pbn_lab_page, name="pbn_lab"),
     path("pbn/api/upload/", views.pbn_lab_upload, name="pbn_lab_upload"),
     path("pbn/api/step/<str:key>/", views.pbn_lab_step, name="pbn_lab_step"),
