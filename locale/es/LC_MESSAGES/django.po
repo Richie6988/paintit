@@ -364,7 +364,7 @@ msgid "Ajouter un set de pinceaux"
 msgstr "Añadir un set de pinceles"
 
 msgid "Livraison estimée : %(delivery_min)s à %(delivery_max)s jours ouvrés"
-msgstr "Entrega estimada: %(delivery_min)s a %(delivery_max)s días hábiles"
+msgstr "Envío estimado: %(delivery_min)s a %(delivery_max)s días hábiles"
 
 msgid "Jouer en DigiPaint"
 msgstr "Jugar a DigiPaint"
@@ -934,3 +934,69 @@ msgstr "Buscar un lienzo…"
 
 msgid "Aucun résultat."
 msgstr "Sin resultados."
+
+msgid "Choisissez le format"
+msgstr "Elige el formato"
+
+msgid "livraison offerte"
+msgstr "envío gratis"
+
+msgid "Choisissez une couleur dans la palette de gauche."
+msgstr "Elige un color en la paleta de la izquierda."
+
+msgid "Glissez à 2 doigts pour déplacer, pincez pour zoomer."
+msgstr "Arrastra con 2 dedos para mover, pellizca para hacer zoom."
+
+msgid "Transformez vos souvenirs en chef-d'œuvre à peindre"
+msgstr "Convierte tus recuerdos en una obra maestra para pintar"
+
+msgid ""
+"Une simple photo devient une toile personnalisée, prête à peindre. Créez un "
+"tableau unique de vos propres mains, sans savoir dessiner."
+msgstr ""
+"Una simple foto se convierte en un lienzo personalizado, listo para pintar. "
+"Crea una obra única con tus propias manos, sin saber dibujar."
+
+msgid ""
+"Envie d'essayer ? Peignez un modèle en ligne, gratuitement, et ressentez la "
+"magie avant de créer le vôtre."
+msgstr ""
+"¿Quieres probar? Pinta un modelo en línea, gratis, y siente la magia antes "
+"de crear el tuyo."
+
+msgid "Créez de vos mains. Pour de vrai."
+msgstr "Crea con tus manos. De verdad."
+
+msgid ""
+"Nos amis 100% digitaux, on ne vous a pas oubliés. Une photo, une toile à "
+"peindre, et le plaisir bien réel de créer , pinceau à la main."
+msgstr ""
+"A nuestros amigos 100% digitales: no os hemos olvidado. Una foto, un lienzo "
+"para pintar y el placer muy real de crear , pincel en mano."
+
+msgid "Votre photo, une vraie toile à peindre, livrée chez vous"
+msgstr "Tu foto, un auténtico lienzo para pintar, entregado en tu casa"
+
+msgid ""
+"N'importe quelle photo devient une toile numérotée, livrée chez vous : le "
+"plaisir bien réel de peindre de vos mains. Et une surprise digitale vous "
+"attend, pour redécouvrir votre passion autrement."
+msgstr ""
+"Cualquier foto se convierte en un lienzo numerado, entregado en tu casa: el "
+"placer muy real de pintar con tus propias manos. Y te espera una sorpresa "
+"digital para redescubrir tu pasión de otra forma."
+
+msgid "La peinture par numéros réinventée."
+msgstr "La pintura por números, reinventada."
+
+msgid ""
+"Transformez n'importe quelle image en une toile personnalisée d'une "
+"précision époustouflante. Créez, explorez et jouez avec votre œuvre en "
+"digital. Commandez votre toile et donnez-lui vie, pinceau à la main."
+msgstr ""
+"Convierte cualquier imagen en un lienzo personalizado de una precisión "
+"asombrosa. Crea, explora y juega con tu obra en digital. Pide tu lienzo y "
+"dale vida, pincel en mano."
+
+msgid "Prêt à peindre ces numéros ?"
+msgstr "¿Listo para pintar por números?"

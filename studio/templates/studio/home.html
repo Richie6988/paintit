@@ -4,8 +4,8 @@
 <section class="hero">
   <div class="hero-text">
     <p class="eyebrow">{% trans "Votre souvenir, votre chef-d'œuvre" %}</p>
-    <h1>{% trans "Laissez-vous tenter par la peinture par numéros personnalisée" %}</h1>
-    <p class="sub">{% trans "À partir de n'importe quelle photo, votre toile disponible en quelques secondes" %}</p>
+    <h1>{% trans "La peinture par numéros réinventée." %}</h1>
+    <p class="sub">{% trans "Transformez n'importe quelle image en une toile personnalisée d'une précision époustouflante. Explorez et jouez avec votre œuvre en digital. Commandez votre toile et donnez-lui vie, pinceau à la main." %}</p>
     <a class="cta" href="{% url 'studio:upload' %}">{% trans "Tester notre algorithme" %}</a>
     <p class="reassure">{% trans "Aperçu gratuit en quelques secondes, sans engagement" %}</p>
   </div>
@@ -43,7 +43,7 @@
 {% if library_preview %}
 <section class="lib-showcase">
   <h2>{% trans "Des modèles prêts à peindre" %}</h2>
-  <p class="sub">{% trans "Choisissez un modèle PaintIt et jouez tout de suite, gratuitement." %}</p>
+  <p class="sub">{% trans "Envie d'essayer ? Peignez un modèle en ligne, gratuitement, et ressentez la magie avant de créer le vôtre." %}</p>
   <div class="lib-strip">
     {% for m in library_preview %}
     <a class="lib-tile" href="{% url 'studio:digipaint' m.uid %}">
@@ -56,7 +56,7 @@
 {% endif %}
 
 <section class="closing">
-  <h2>{% trans "Prêt à peindre votre histoire ?" %}</h2>
+  <h2>{% trans "Prêt à peindre ces numéros ?" %}</h2>
   <a class="cta big" href="{% url 'studio:upload' %}">{% trans "Commencer maintenant" %}</a>
 </section>
 

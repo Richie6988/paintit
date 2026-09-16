@@ -168,3 +168,42 @@ thead th{background:#f3f6fc}
 
 /* Etat vide */
 .dashboard .module table td,#changelist .results + .paginator{color:#5b647a}
+
+/* ===== Thème PaintIt homogène (listes, formulaires, filtres) ===== */
+:root{--pit:#12224f;--pit-acc:#2f6bf2;--pit-line:#e2e8f2;--pit-bg:#eef2f9}
+#content{background:transparent}
+/* Cartes / modules */
+.module,.results,#changelist-filter,fieldset.module,.inline-group{
+  background:#fff;border:1px solid var(--pit-line);border-radius:14px;box-shadow:0 4px 14px rgba(18,34,79,.05);overflow:hidden}
+.module h2,.module caption,.inline-group h2{background:#f5f8fd;color:var(--pit);font-weight:700;
+  border-bottom:1px solid var(--pit-line);text-transform:none;letter-spacing:0;padding:12px 16px}
+/* Tables */
+#changelist table{border-collapse:separate;border-spacing:0}
+#changelist thead th{background:#f5f8fd;color:#5b647a;border-bottom:1px solid var(--pit-line);text-transform:none;font-weight:700}
+#changelist tbody tr:hover{background:#f7faff}
+#changelist tbody td,#changelist tbody th{border-bottom:1px solid #f0f3fa}
+/* Champs */
+input[type=text],input[type=email],input[type=url],input[type=number],input[type=password],textarea,select,.vTextField{
+  border:1px solid #cdd8ea !important;border-radius:10px !important;padding:9px 11px !important}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--pit-acc) !important;border-color:var(--pit-acc) !important}
+/* Boutons */
+.button,input[type=submit],.submit-row input,a.button{background:var(--pit-acc);color:#fff;border:none;border-radius:10px;
+  padding:9px 16px;font-weight:700;box-shadow:0 4px 12px rgba(47,107,242,.25)}
+.button:hover,input[type=submit]:hover{filter:brightness(1.06)}
+.button.default,input[type=submit].default{background:linear-gradient(90deg,#2f6bf2,#7a3ff2)}
+.deletelink{background:#c0392b !important}
+.submit-row{background:#fff;border:1px solid var(--pit-line);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(18,34,79,.05)}
+/* Filtres */
+#changelist-filter h2{background:var(--pit);color:#fff}
+#changelist-filter h3{color:var(--pit)}
+#changelist-filter li.selected a{color:var(--pit-acc);font-weight:700}
+/* Barre d'actions liste */
+#changelist .actions{background:#fff;border:1px solid var(--pit-line);border-radius:12px;padding:10px 14px}
+/* Liens */
+a:link,a:visited{color:var(--pit-acc)}
+/* Object tools (Ajouter) */
+.object-tools a{background:var(--pit);border-radius:10px;font-weight:700}
+.object-tools a:hover{background:var(--pit-acc)}
+/* Fieldsets espacés */
+fieldset.module{margin-bottom:18px}
+.form-row{border-bottom:1px solid #f0f3fa}

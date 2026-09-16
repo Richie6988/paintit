@@ -107,3 +107,12 @@ input[type=file]{font-size:12px;color:var(--mut)}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
   background:#2a1416;border:1px solid #ff6c6c;color:#ffb4b4;padding:11px 18px;
   border-radius:10px;font-size:13px;z-index:99;max-width:70vw}
+
+
+/* Barre d'actions fixe en haut, pleine largeur */
+.actionbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;
+  padding:12px 18px;background:#12151d;border-bottom:1px solid var(--line);width:100%}
+.actionbar .btn{width:auto;margin:0;flex:0 0 auto;padding:11px 20px}
+.actionbar .btn.primary{min-width:220px}
+.actionbar .progress{flex:1;height:8px}
+@media(max-width:640px){.actionbar{flex-wrap:wrap}.actionbar .progress{flex-basis:100%}}

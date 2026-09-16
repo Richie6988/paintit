@@ -3,8 +3,9 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 from django.utils import timezone
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
-from .models import Discount, Order, ContactMessage, ContactAttachment, Pricing, DigitalCanvas, EmailCode, PrintPricing
+from .models import Discount, Order, ContactMessage, ContactAttachment, Pricing, DigitalCanvas, EmailCode, PrintPricing, Supplier
 from . import emails
 
 admin.site.site_header = "PaintIt Admin"
@@ -15,6 +16,48 @@ admin.site.index_title = "Gestion PaintIt"
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     actions = ("fichiers_fournisseur",)
+
+    def get_fieldsets(self, request, obj=None):
+        fs = super().get_fieldsets(request, obj)
+        try:
+            first_fields = [f for f in fs[0][1]["fields"] if f != "fichiers"]
+            rest = list(fs[1:])
+            return [("Fichiers associes", {"fields": ("fichiers",)}),
+                    (None, {"fields": first_fields})] + rest
+        except Exception:
+            return fs
+
+    @admin.display(description="Fichiers associes")
+    def fichiers(self, obj):
+        import os, glob
+        from django.conf import settings
+        if not obj or not obj.uid:
+            return "-"
+        d = os.path.join(settings.MEDIA_ROOT, "orders", obj.uid)
+        if not os.path.isdir(d):
+            return mark_safe('<span style="color:#8a97b4">Aucun fichier (uid %s)</span>' % obj.uid)
+        parts = ['<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">']
+        for kind, label in [("preview", "Toile coloriee"), ("template", "Toile numerotee"),
+                            ("digipaint", "Jouable"), ("source", "Photo originale")]:
+            u = "/preview/img/%s/%s/" % (obj.uid, kind)
+            parts.append('<div style="text-align:center"><div style="font-size:.78em;color:#5b647a;margin-bottom:4px">%s</div>'
+                         '<a href="%s" target="_blank"><img src="%s" style="max-height:150px;border:1px solid #e2e8f2;border-radius:8px" '
+                         'onerror="this.parentNode.style.display=\'none\'"></a></div>' % (label, u, u))
+        parts.append('</div>')
+        # Fichiers telechargeables (tiff, svg, poster, palette, colors.json)
+        dl = []
+        for f in sorted(glob.glob(os.path.join(d, "*.tiff")) + glob.glob(os.path.join(d, "*.svg"))
+                        + glob.glob(os.path.join(d, "*_palette.png")) + glob.glob(os.path.join(d, "*colors.json"))):
+            name = os.path.basename(f)
+            u = settings.MEDIA_URL + "orders/%s/%s" % (obj.uid, name)
+            kb = os.path.getsize(f) // 1024
+            tag = "TIFF" if name.endswith(".tiff") else ("SVG" if name.endswith(".svg") else name.split(".")[-1].upper())
+            dl.append('<a class="button" href="%s" download style="margin:3px 8px 3px 0;display:inline-block">%s , %s (%d ko)</a>'
+                      % (u, tag, name, kb))
+        if dl:
+            parts.append('<div style="margin-top:12px"><div style="font-size:.78em;color:#5b647a;margin-bottom:6px">'
+                         'Fichiers fournisseur / export</div>' + "".join(dl) + '</div>')
+        return mark_safe("".join(parts))
 
     @admin.action(description="Generer les fichiers fournisseur (.tiff)")
     def fichiers_fournisseur(self, request, queryset):
@@ -39,7 +82,7 @@ class OrderAdmin(admin.ModelAdmin):
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
     list_per_page = 25
-    readonly_fields = ("uid", "created_at", "cost", "benefit_col", "supplier_ref", "feedback_sent")
+    readonly_fields = ("uid", "created_at", "cost", "benefit_col", "supplier_ref", "feedback_sent", "fichiers")
     actions = ("mark_shipped", "mark_delivered", "send_feedback")
     fieldsets = (
         ("Commande", {"fields": (("uid", "status"), ("created_at", "lang"), "supplier_ref")}),
@@ -280,3 +323,28 @@ class PrintPricingAdmin(admin.ModelAdmin):
         from django.shortcuts import redirect
         obj = PrintPricing.get()
         return redirect("admin:studio_printpricing_change", obj.pk)
+
+
+@admin.register(Supplier)
+class SupplierAdmin(admin.ModelAdmin):
+    list_display = ("name", "active", "checkout", "integration", "email", "lead_time_days", "priority")
+    list_editable = ("active", "checkout", "priority")
+    list_filter = ("active", "checkout", "integration")
+    search_fields = ("name", "email", "contact_name")
+    save_on_top = True
+    fieldsets = (
+        ("Fournisseur", {"fields": (("name", "active", "priority"), "checkout")}),
+        ("Contact", {"fields": ("contact_name", ("contact_email", "phone"), "address")}),
+        ("Finance", {"fields": (("bank_name", "iban", "bic"), "pricing")}),
+        ("Process", {"fields": (("lead_time_days", "incoterms"), "production_notes", "terms")}),
+        ("Integration (plug & play)", {"fields": ("integration", "email", ("api_url", "api_key")),
+            "description": "E-mail : commande + liens fichiers par mail. API : POST JSON (Bearer cle)."}),
+        ("Fichiers a transmettre", {"fields": (
+            ("want_template_tiff", "want_template_svg"),
+            ("want_preview_tiff", "want_preview_svg"),
+            ("want_poster_tiff", "want_poster_svg"),
+            ("want_order_json", "want_colors_json")),
+            "description": "Toile numerotee, apercu colorie, poster, et order JSON "
+                           "(consignee / order information / color specifications)."}),
+        ("Notes", {"fields": ("notes",), "classes": ("collapse",)}),
+    )

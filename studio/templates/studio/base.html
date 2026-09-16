@@ -17,33 +17,39 @@
   <link rel="stylesheet" href="{% static 'studio/css/style.css' %}">
 </head>
 <body>
-  <div class="topbar">{% trans "Livraison offerte" %} &middot; {% trans "Toile digitale offerte" %} &middot; {% trans "Aperçu gratuit en quelques secondes" %}</div>
+  <div class="topbar">
+    <span class="tb-msg">{% trans "Livraison offerte" %} &middot; {% trans "Toile digitale offerte" %} &middot; {% trans "Aperçu gratuit en quelques secondes" %}</span>
+    <form class="lang tb-lang" id="langform" action="{% url 'set_language' %}" method="post" data-current="{{ LANGUAGE_CODE }}">
+      {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+      {% get_current_language as LANG %}
+      <button type="submit" name="language" value="fr" data-lang="fr" class="{% if LANG == 'fr' %}active{% endif %}">FR</button>
+      <button type="submit" name="language" value="en" data-lang="en" class="{% if LANG == 'en' %}active{% endif %}">EN</button>
+      <button type="submit" name="language" value="de" data-lang="de" class="{% if LANG == 'de' %}active{% endif %}">DE</button>
+      <button type="submit" name="language" value="es" data-lang="es" class="{% if LANG == 'es' %}active{% endif %}">ES</button>
+    </form>
+  </div>
   <header class="nav">
     <a class="brand-logo" href="{% url 'studio:home' %}">
       <img src="{% static 'studio/img/icon.svg' %}" alt="">
       <span class="brand-word" data-noi18n translate="no"><span class="p">Paint</span><span class="it">It</span></span>
     </a>
     <div class="nav-right">
-      <form class="lang" id="langform" action="{% url 'set_language' %}" method="post" data-current="{{ LANGUAGE_CODE }}">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.path }}">
-        {% get_current_language as LANG %}
-        <button type="submit" name="language" value="fr" data-lang="fr" class="{% if LANG == 'fr' %}active{% endif %}">FR</button>
-        <button type="submit" name="language" value="en" data-lang="en" class="{% if LANG == 'en' %}active{% endif %}">EN</button>
-        <button type="submit" name="language" value="de" data-lang="de" class="{% if LANG == 'de' %}active{% endif %}">DE</button>
-        <button type="submit" name="language" value="es" data-lang="es" class="{% if LANG == 'es' %}active{% endif %}">ES</button>
-      </form>
       <a class="nav-link" href="{% url 'studio:gallery' %}">Gallery</a>
-      <a class="nav-link" href="{% url 'studio:paint_portal' %}">DigiPaint&trade;</a>
-      <a class="nav-link" href="{% url 'studio:contact' %}">{% trans "Contact" %}</a>
+      <a class="nav-link" href="{% url 'studio:paint_portal' %}">{% trans "Mes Toiles" %}</a>
       <a class="nav-cta" href="{% url 'studio:upload' %}">{% trans "Créer mon tableau" %}</a>
     </div>
   </header>
   <main>{% block content %}{% endblock %}</main>
   <footer class="foot">
-    <span>&copy; PaintIt</span>
-    <span>{% trans "Peinture par numéros personnalisée, fabriquée à partir de vos photos" %}</span>
-    <a class="foot-link" href="{% url 'studio:privacy' %}">{% trans "Confidentialité" %}</a>
+    <div class="foot-in">
+      <a href="{% url 'studio:home' %}" class="foot-logo"><img src="{% static 'studio/img/icon.svg' %}" alt=""><span>PaintIt</span></a>
+      <p class="foot-motto">{% trans "Peinture par numéros personnalisée, fabriquée à partir de vos photos." %}</p>
+      <nav class="foot-nav">
+        <a href="{% url 'studio:contact' %}">{% trans "Contact" %}</a>
+        <a href="{% url 'studio:privacy' %}">{% trans "Confidentialité" %}</a>
+      </nav>
+    </div>
+    <div class="foot-bottom">&copy; {% now "Y" %} PaintIt. {% trans "Tous droits réservés." %}</div>
   </footer>
   <script src="{% static 'studio/i18n.js' %}?v={{ I18N_VERSION }}"></script>
   <script>

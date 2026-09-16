@@ -1,4 +1,5 @@
 {% extends "admin/base_site.html" %}
+{% load l10n %}
 {% block content %}
 <style>
  /* ERP lisible */
@@ -33,7 +34,7 @@
         <table><tr><th>Format</th><th>Prix (&euro;)</th><th>Dispo</th><th></th></tr>
         {% for kf in kit_formats %}<tr>
           <td><b>{{ kf.width_cm }} &times; {{ kf.height_cm }} cm</b></td>
-          <td><span class="eur"><input type="number" step="0.01" name="fmt_price_{{ kf.id }}" value="{{ kf.price }}" style="width:100px"></span></td>
+          <td><span class="eur"><input type="number" step="0.01" name="fmt_price_{{ kf.id }}" value="{{ kf.price|unlocalize }}" style="width:100px"></span></td>
           <td style="text-align:center"><input type="checkbox" name="fmt_av_{{ kf.id }}" {% if kf.available %}checked{% endif %}></td>
           <td style="text-align:center"><label style="color:#c0392b;font-weight:600;font-size:.78rem;margin:0"><input type="checkbox" name="del_fmt_{{ kf.id }}"> suppr.</label></td>
         </tr>{% endfor %}
@@ -47,16 +48,16 @@
         <table><tr><th>Couleurs</th><th>Prix (+)</th><th>Dispo</th></tr>
         {% for c in kit_colors %}<tr>
           <td>{{ c.key }}</td>
-          <td><input type="number" step="0.01" name="c_{{ c.key }}" value="{{ c.price }}" style="width:90px"></td>
+          <td><input type="number" step="0.01" name="c_{{ c.key }}" value="{{ c.price|unlocalize }}" style="width:90px"></td>
           <td style="text-align:center"><input type="checkbox" name="av_c{{ c.key }}" {% if c.av %}checked{% endif %}></td>
         </tr>{% endfor %}</table>
         <h3>Options</h3>
-        <label>Pinceaux (prix)</label> <span class="eur"><input type="number" step="0.01" name="brushes_price" value="{{ kit.brushes_price }}" style="width:90px"></span>
+        <label>Pinceaux (prix)</label> <span class="eur"><input type="number" step="0.01" name="brushes_price" value="{{ kit.brushes_price|unlocalize }}" style="width:90px"></span>
         <input type="checkbox" name="av_brushes" {% if kit.av_brushes %}checked{% endif %}> dispo<br><br>
         <label>Livraison (jours min / max)</label><br>
-        <input type="number" name="delivery_days_min" value="{{ kit.delivery_days_min }}" style="width:70px">
-        <input type="number" name="delivery_days_max" value="{{ kit.delivery_days_max }}" style="width:70px"><br><br>
-        <label>Remise fidelite (0.15 = 15%)</label> <span class="eur"><input type="number" step="0.01" name="discount_rate" value="{{ kit.discount_rate }}" style="width:90px"></span>
+        <input type="number" name="delivery_days_min" value="{{ kit.delivery_days_min|unlocalize }}" style="width:70px">
+        <input type="number" name="delivery_days_max" value="{{ kit.delivery_days_max|unlocalize }}" style="width:70px"><br><br>
+        <label>Remise fidelite (0.15 = 15%)</label> <span class="eur"><input type="number" step="0.01" name="discount_rate" value="{{ kit.discount_rate|unlocalize }}" style="width:90px"></span>
       </div>
 
       <div style="background:#fff;border:1px solid #e2e8f2;border-radius:14px;padding:18px">
@@ -65,24 +66,24 @@
         <table><tr><th>Dimension</th><th>Prix</th><th>Dispo</th></tr>
         {% for d in tab_dims %}<tr>
           <td>{{ d.key }} cm</td>
-          <td><input type="number" step="0.01" name="d_{{ d.key }}" value="{{ d.price }}" style="width:90px"></td>
+          <td><input type="number" step="0.01" name="d_{{ d.key }}" value="{{ d.price|unlocalize }}" style="width:90px"></td>
           <td style="text-align:center"><input type="checkbox" name="av_{{ d.key }}" {% if d.av %}checked{% endif %}></td>
         </tr>{% endfor %}</table>
         <h3>Matiere (supplement)</h3>
         <table>{% for m in tab_materials %}<tr>
           <td>{{ m.label }}</td>
-          <td><input type="number" step="0.01" name="m_{{ m.key }}" value="{{ m.price }}" style="width:90px"></td>
+          <td><input type="number" step="0.01" name="m_{{ m.key }}" value="{{ m.price|unlocalize }}" style="width:90px"></td>
           <td style="text-align:center"><input type="checkbox" name="av_m_{{ m.key }}" {% if m.av %}checked{% endif %}></td>
         </tr>{% endfor %}</table>
         <h3>Cadre (supplement)</h3>
         <table>{% for fr in tab_frames %}<tr>
           <td>{{ fr.label }}</td>
-          <td><input type="number" step="0.01" name="f_{{ fr.key }}" value="{{ fr.price }}" style="width:90px"></td>
+          <td><input type="number" step="0.01" name="f_{{ fr.key }}" value="{{ fr.price|unlocalize }}" style="width:90px"></td>
           <td style="text-align:center"><input type="checkbox" name="av_f_{{ fr.key }}" {% if fr.av %}checked{% endif %}></td>
         </tr>{% endfor %}</table>
         <h3>Verre</h3>
         <input type="checkbox" name="av_glass" {% if tab.av_glass %}checked{% endif %}> Sous verre dispo ,
-        <span class="eur"><input type="number" step="0.01" name="glass_price" value="{{ tab.glass_price }}" style="width:90px"></span><br><br>
+        <span class="eur"><input type="number" step="0.01" name="glass_price" value="{{ tab.glass_price|unlocalize }}" style="width:90px"></span><br><br>
         <label>E-mail fournisseur impression</label><br>
         <input type="email" name="supplier_email" value="{{ tab.supplier_email }}" style="width:100%">
       </div>

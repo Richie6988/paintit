@@ -36,7 +36,7 @@ class Command(BaseCommand):
         os.makedirs(showdir, exist_ok=True)
         default_colors = int(opts["colors"])
 
-        # samples/ = demos homepage (rotation + galerie gratuite) ; gallery/ = galerie seule (prix possible)
+        # samples/ = HOMEPAGE uniquement (prefixe lib-) ; gallery/ = GALERIE uniquement (prefixe gal-)
         items = self._scan(samples, "lib-", default_colors, showcase=True)
         items += self._scan(gallery, "gal-", default_colors, showcase=False)
         if not items:
@@ -66,7 +66,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR("Echec %s : %s" % (it["title"], e)))
 
         self.stdout.write(self.style.SUCCESS(
-            "Galerie + assets home generes : %d modeles. (Pense a collectstatic en prod.)" % n))
+            "Genere : %d modeles (samples->homepage, gallery->galerie). Pense a collectstatic." % n))
 
     def _scan(self, base, prefix, default_colors, showcase):
         """Scanne un dossier d'images -> liste d'items. Sous-dossier = categorie ;

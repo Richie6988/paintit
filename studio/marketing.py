@@ -41,14 +41,14 @@ TEMPLATES = [
 
 # Message (gros titre) par defaut, par promo -> editable individuellement
 DEFAULT_MSG = {
-    "slider": "Votre photo, transform\u00e9e en toile",
-    "shiny": "La magie op\u00e8re en un instant",
-    "zoom": "Un d\u00e9tail quasi fractal",
+    "slider": "Votre souvenir devient chef-d'\u0153uvre",
+    "shiny": "La magie prend vie, pinceau apr\u00e8s pinceau",
+    "zoom": "Chaque d\u00e9tail, une \u00e9motion",
 }
 DEFAULT_SUB = {
-    "slider": "Le meilleur algorithme du march\u00e9\nVotre toile en moins d'une minute\nAper\u00e7u gratuit",
-    "shiny": "Chaque zone, son num\u00e9ro\nPr\u00eat \u00e0 peindre\nAper\u00e7u gratuit",
-    "zoom": "Des zones jusqu'au moindre d\u00e9tail\nQualit\u00e9 mus\u00e9e\nAper\u00e7u gratuit",
+    "slider": "Cr\u00e9\u00e9 \u00e0 partir de VOTRE photo\nUn tableau unique \u00e0 offrir ou garder\nLe plaisir de peindre, sans savoir dessiner",
+    "shiny": "De la photo \u00e0 la toile en 1 minute\nPr\u00eat \u00e0 peindre, num\u00e9ro par num\u00e9ro\nAper\u00e7u gratuit",
+    "zoom": "Une pr\u00e9cision qui capture l'\u00e9motion\nQualit\u00e9 galerie\nAper\u00e7u gratuit",
 }
 
 _ANIM_CSS = ('<style>.magic{animation:mgin .8s cubic-bezier(.2,1.2,.3,1) both}'

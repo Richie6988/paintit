@@ -628,3 +628,32 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 .gcard .mc-img{position:relative}
 .g-price{position:absolute;top:8px;right:8px;background:#12224f;color:#fff;font-weight:800;font-size:.82rem;
   padding:4px 9px;border-radius:999px;box-shadow:0 3px 10px rgba(18,34,79,.35);z-index:2}
+
+/* Aperçu : sélecteur de format */
+.fmt-select{margin:6px 0 14px}
+.fmt-title{display:block;font-weight:700;color:var(--ink,#12224f);margin-bottom:8px}
+.fmt-opts{display:flex;flex-wrap:wrap;gap:10px}
+.fmt-opt{cursor:pointer}
+.fmt-opt input{position:absolute;opacity:0;pointer-events:none}
+.fmt-card{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 16px;border:2px solid #cdd8ea;border-radius:12px;background:#fff;min-width:96px;transition:.15s}
+.fmt-card b{color:#12224f;font-size:.95rem}
+.fmt-card em{color:#5b647a;font-style:normal;font-weight:700;font-size:.9rem}
+.fmt-opt input:checked + .fmt-card{border-color:var(--accent,#2f6bf2);box-shadow:0 4px 14px rgba(47,107,242,.22)}
+.fmt-opt:hover .fmt-card{border-color:var(--accent,#2f6bf2)}
+
+/* Gallery : CTA acheter / jouer sur la vignette */
+.gcard .mc-img{position:relative}
+.g-cta{position:absolute;left:8px;bottom:8px;z-index:2;font-weight:800;font-size:.8rem;padding:5px 12px;border-radius:999px;box-shadow:0 3px 10px rgba(10,18,40,.25)}
+.g-buy{background:linear-gradient(90deg,#2f6bf2,#7a3ff2);color:#fff}
+.g-free{background:rgba(255,255,255,.95);color:#12224f}
+.gcard:hover .g-cta{filter:brightness(1.05)}
+
+/* Langues dans le liseré bleu (topbar) */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.topbar .tb-msg{flex:1;text-align:center}
+.topbar .tb-lang{display:flex;gap:4px;flex:0 0 auto}
+.topbar .tb-lang button{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.28);
+  border-radius:6px;padding:2px 7px;font-size:.72rem;font-weight:800;cursor:pointer;line-height:1.3;transition:.15s}
+.topbar .tb-lang button:hover{background:rgba(255,255,255,.28)}
+.topbar .tb-lang button.active{background:#fff;color:#12224f;border-color:#fff}
+@media(max-width:560px){.topbar{font-size:.72rem;padding:5px 8px}.topbar .tb-lang button{padding:2px 5px;font-size:.66rem}}

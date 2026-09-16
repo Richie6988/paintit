@@ -39,7 +39,7 @@ def _rate():
 
 def home(request):
     import json as _json
-    lib = list(DigitalCanvas.objects.filter(email="__library__").order_by("category", "title")[:6])
+    lib = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="lib-").order_by("category", "title")[:6])
     showdir = os.path.join(settings.BASE_DIR, "studio", "static", "studio", "showcase")
     slugs = []
     if os.path.isdir(showdir):
@@ -243,6 +243,15 @@ def digipaint(request, uid):
                 palette = json.load(open(oj, encoding="utf-8")).get("colors", []) if os.path.exists(oj) else []
             except Exception:
                 palette = []
+    # Toile de la GALERIE : payante -> exiger l'achat ; gratuite -> l'ajouter a Mes Toiles
+    lib = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
+    if lib:
+        verified = request.session.get("verified_email")
+        owns = bool(verified) and DigitalCanvas.objects.filter(email=verified, uid=uid).exists()
+        if float(lib.price or 0) > 0 and not owns:
+            return redirect("studio:gallery_buy", uid=uid)
+        if verified and not owns:
+            _grant_gallery(request, lib, verified)   # gratuite -> arrive dans Mes Toiles
     owned = DigitalCanvas.objects.filter(uid=uid).exists()
     return render(request, "studio/digipaint.html",
                   {"uid": uid, "palette": palette, "owned": owned})
@@ -362,7 +371,7 @@ def paint_portal(request):
 
 def gallery(request):
     """Onglet Gallery : toutes les toiles PaintIt en vrac, filtrables par recherche."""
-    models = list(DigitalCanvas.objects.filter(email="__library__").order_by("category", "title"))
+    models = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-").order_by("category", "title"))
     return render(request, "studio/gallery.html", {"models": models})
 
 
@@ -395,7 +404,8 @@ def paint_verify_code(request):
     if not ok:
         return JsonResponse({"error": "code"}, status=400)
     request.session["verified_email"] = email
-    return JsonResponse({"ok": True, "redirect": "/paint/"})
+    _bp = request.session.pop("buy_pending", None)
+    return JsonResponse({"ok": True, "redirect": ("/gallery/buy/%s/" % _bp) if _bp else "/paint/"})
 
 
 def paint_logout(request):
@@ -813,6 +823,124 @@ def checkout(request):
 
 
 # ---------------- Fulfilment ----------------
+def _poster_svg(colors):
+    """SVG legende palette (swatches numerotes + hex) pour le fournisseur."""
+    cols = colors or []
+    cw, ch, per = 60, 60, 6
+    rows = (len(cols) + per - 1) // per or 1
+    W, H = per * cw + 20, rows * (ch + 22) + 40
+    out = ['<svg xmlns="http://www.w3.org/2000/svg" width="%dmm" height="%dmm" viewBox="0 0 %d %d">' % (W, H, W, H)]
+    out.append('<rect width="%d" height="%d" fill="#ffffff"/>' % (W, H))
+    out.append('<text x="10" y="24" font-family="Arial" font-size="18" font-weight="bold" fill="#12224f">PaintIt , Palette</text>')
+    for i, c in enumerate(cols):
+        r, col = divmod(i, per)
+        x, y = 10 + col * cw, 36 + r * (ch + 22)
+        hexv = c.get("hex", "#cccccc")
+        out.append('<rect x="%d" y="%d" width="%d" height="%d" rx="6" fill="%s" stroke="#e2e8f2"/>' % (x, y, cw - 8, ch - 8, hexv))
+        out.append('<text x="%d" y="%d" font-family="Arial" font-size="16" font-weight="bold" fill="#12224f">%s</text>' % (x + 4, y + 20, c.get("number", "")))
+        out.append('<text x="%d" y="%d" font-family="Arial" font-size="9" fill="#5b647a">%s</text>' % (x, y + ch + 6, hexv))
+    out.append('</svg>')
+    return "\n".join(out)
+
+
+def _build_supplier_assets(o, shipping):
+    """Genere order.json (consignee/order/couleurs) + poster.svg/.tiff pour le fournisseur."""
+    import json as _json
+    from django.utils import timezone
+    uid = o.get("uid")
+    if not uid:
+        return
+    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    if not os.path.isdir(d):
+        return
+    colors = []
+    cj = os.path.join(d, "%s_colors.json" % uid)
+    if os.path.exists(cj):
+        try:
+            colors = _json.load(open(cj, encoding="utf-8"))
+        except Exception:
+            colors = []
+    # order.json decompose
+    doc = {
+        "consignee_information": {k: shipping.get(k, "") for k in
+            ["full_name", "email", "phone_code", "phone", "address1", "address2",
+             "postal_code", "city", "country"]},
+        "order_information": {
+            "uid": uid, "format": o.get("format_label"),
+            "width_cm": o.get("width_cm"), "height_cm": o.get("height_cm"),
+            "orientation": o.get("orientation"), "colors_count": len(colors) or o.get("colors"),
+            "brushes": bool(o.get("brushes")), "total_eur": o.get("total"),
+            "order_date": timezone.now().isoformat()},
+        "color_specifications": [
+            {"number": c.get("number"), "hex": c.get("hex"), "rgb": c.get("rgb")} for c in colors],
+    }
+    try:
+        with open(os.path.join(d, "%s_order.json" % uid), "w", encoding="utf-8") as f:
+            _json.dump(doc, f, ensure_ascii=False, indent=2)
+    except Exception:
+        logger.exception("order.json %s", uid)
+    # poster.svg + poster.tiff
+    try:
+        svg = _poster_svg(colors)
+        with open(os.path.join(d, "%s_poster.svg" % uid), "w", encoding="utf-8") as f:
+            f.write(svg)
+        try:
+            import cairosvg
+            from PIL import Image
+            from io import BytesIO
+            png = cairosvg.svg2png(bytestring=svg.encode("utf-8"), dpi=300, background_color="#ffffff")
+            Image.open(BytesIO(png)).convert("RGB").save(
+                os.path.join(d, "%s_poster.tiff" % uid), format="TIFF", compression="tiff_lzw", dpi=(300, 300))
+        except Exception:
+            pass
+    except Exception:
+        logger.exception("poster %s", uid)
+
+
+def _notify_supplier(o, shipping):
+    """Plug & play : route la commande vers le fournisseur connecte au checkout
+    (e-mail avec liens fichiers, ou POST JSON API). Ne casse jamais la commande."""
+    try:
+        from .models import Supplier
+        sup = Supplier.for_checkout("kit")
+    except Exception:
+        logger.exception("Lecture fournisseur (migration manquante ?)")
+        return
+    if not sup:
+        return
+    uid = o.get("uid")
+    base = settings.SITE_URL + settings.MEDIA_URL + "orders/%s/" % uid
+    files = {name: base + name for name in sup.wanted_files(uid)}
+    if sup.integration == "api" and sup.api_url:
+        try:
+            import json as _json, urllib.request
+            payload = _json.dumps({
+                "order": {"uid": uid, "format": o.get("format_label"), "colors": o.get("colors"),
+                          "width_cm": o.get("width_cm"), "height_cm": o.get("height_cm"),
+                          "total": o.get("total")},
+                "shipping": shipping, "files": files}).encode("utf-8")
+            req = urllib.request.Request(sup.api_url, data=payload, headers={
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + (sup.api_key or "")})
+            urllib.request.urlopen(req, timeout=15)
+        except Exception:
+            logger.exception("API fournisseur %s (%s)", sup.name, uid)
+    elif sup.email:
+        try:
+            from django.core.mail import EmailMessage
+            body = ("Nouvelle commande %s\n\nFormat : %s (%sx%s cm), %s couleurs\n\n"
+                    "Fichiers a imprimer :\n%s\n\nLivraison :\n%s\n%s\n%s %s (%s)\nTel : %s"
+                    % (uid, o.get("format_label"), o.get("width_cm"), o.get("height_cm"), o.get("colors"),
+                       "\n".join(files.values()),
+                       shipping.get("full_name", ""), shipping.get("address1", ""),
+                       shipping.get("postal_code", ""), shipping.get("city", ""),
+                       shipping.get("country", ""), shipping.get("phone", "")))
+            EmailMessage("PaintIt , commande %s" % uid, body,
+                         settings.DEFAULT_FROM_EMAIL, [sup.email]).send(fail_silently=True)
+        except Exception:
+            logger.exception("Mail fournisseur %s (%s)", sup.name, uid)
+
+
 def _reformat_for_supplier(o):
     """Apres paiement, avant l'envoi fournisseur : regenere la toile aux dimensions
     du format commande, puis exporte les .tiff (sans perte). Conserve .svg/.png."""
@@ -860,17 +988,35 @@ def _fulfill(order, shipping):
         discount, total = None, order["price"]
     o = dict(order); o["discount"] = discount; o["total"] = total
     o["cost"] = supplier.estimate_cost(o)
-    _reformat_for_supplier(o)
     manifest = fulfillment.build(o, shipping)
     supplier_result = supplier.place_order(o, shipping, manifest)
     discounts.issue(o["uid"])
     discounts.issue_referral(o["uid"] + "-R")
     _upsert_order(o, shipping, status=Order.FULFILLED, supplier_ref=supplier_result.get("supplier_ref"))
+    # Lourd (regen toile au bon format + TIFF + notif fournisseur + email) -> tache de fond,
+    # APRES paiement, pour repondre tout de suite (pas de lag au checkout).
+    threading.Thread(target=_post_order_async, args=(dict(o), dict(shipping)), daemon=True).start()
+    return o, manifest, supplier_result
+
+
+def _post_order_async(o, shipping):
+    """Traitement post-paiement en arriere-plan : regen aux dimensions, TIFF, fournisseur, email."""
+    try:
+        _reformat_for_supplier(o)
+    except Exception:
+        logger.exception("Reformat async %s", o.get("uid"))
+    try:
+        _build_supplier_assets(o, shipping)
+    except Exception:
+        logger.exception("Assets fournisseur async %s", o.get("uid"))
+    try:
+        _notify_supplier(o, shipping)
+    except Exception:
+        logger.exception("Notify async %s", o.get("uid"))
     try:
         emails.send_order_confirmation(o, shipping)
     except Exception:
-        pass
-    return o, manifest, supplier_result
+        logger.exception("Email async %s", o.get("uid"))
 
 
 def place_order(request):
@@ -1372,12 +1518,61 @@ def admin_hub(request):
         {"name": "Grille tarifaire", "desc": "Formats kit & tableau, prix, options", "url": "/admin-tarifs/", "icon": "\U0001F4B6"},
         {"name": "Marketing Corner", "desc": "Promos + GIF pub a partir d'une image", "url": "/marketing/", "icon": "\U0001F4E3"},
         {"name": "PBN Lab", "desc": "Pipeline pas a pas (R&D)", "url": "/pbn/", "icon": "\U0001F9EA"},
+        {"name": "Suivi financier", "desc": "CA, marge, graphiques", "url": "/dashboard/", "icon": "\U0001F4C8"},
         {"name": "Commandes", "desc": "Suivi, fichiers fournisseur (.tiff)", "url": "/admin/studio/order/", "icon": "\U0001F4E6"},
         {"name": "Galerie / modeles", "desc": "Toiles, prix, apercus", "url": "/admin/studio/digitalcanvas/", "icon": "\U0001F5BC"},
         {"name": "Messages contact", "desc": "Demandes + pieces jointes", "url": "/admin/studio/contactmessage/", "icon": "\U0001F4E8"},
+        {"name": "Fournisseurs", "desc": "Connexion checkout, tarifs, API/mail", "url": "/admin/studio/supplier/", "icon": "\U0001F3ED"},
         {"name": "Remises / parrainage", "desc": "Codes et taux", "url": "/admin/studio/discount/", "icon": "\U0001F3AB"},
         {"name": "Admin Django", "desc": "Tous les modeles", "url": "/admin/", "icon": "\u2699\uFE0F"},
     ]
     return render(request, "admin/hub.html", {
         "kpis": kpis, "recent_orders": recent_orders, "recent_msgs": recent_msgs,
         "tools": tools, "by_status": by_status})
+
+
+def _grant_gallery(request, m, email):
+    """Ajoute le modele achete aux digipaints de l'utilisateur."""
+    DigitalCanvas.objects.get_or_create(
+        email=email, uid=m.uid,
+        defaults=dict(title=m.title, category=m.category, colors=m.colors,
+                      orientation=m.orientation, width_cm=m.width_cm, height_cm=m.height_cm,
+                      source="library", price=0))
+    uids = request.session.get("my_uids", [])
+    if m.uid not in uids:
+        uids.append(m.uid); request.session["my_uids"] = uids[-60:]
+
+
+def gallery_buy(request, uid):
+    m = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
+    if not m:
+        raise Http404
+    price = float(m.price or 0)
+    if price <= 0:
+        return redirect("studio:digipaint", uid=uid)
+    verified = request.session.get("verified_email")
+    if not verified:
+        request.session["buy_pending"] = uid          # on l'achete apres identification
+        return redirect("studio:paint_portal")
+    if DigitalCanvas.objects.filter(email=verified, uid=uid).exists():
+        return redirect("studio:digipaint", uid=uid)   # deja possede
+    if payments.stripe_live():
+        try:
+            return redirect(payments.create_gallery_session(uid, request, price, verified))
+        except Exception:
+            logger.exception("Stripe galerie %s", uid)
+            return JsonResponse({"error": "paiement indisponible"}, status=502)
+    _grant_gallery(request, m, verified)               # demo : credit immediat
+    return redirect("studio:digipaint", uid=uid)
+
+
+def gallery_buy_success(request):
+    uid = request.GET.get("uid", ""); sid = request.GET.get("sid", "")
+    verified = request.session.get("verified_email")
+    if uid and sid and verified and payments.stripe_live():
+        paid, _mu = payments.session_is_paid(sid)
+        if paid:
+            m = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
+            if m:
+                _grant_gallery(request, m, verified)
+    return redirect("studio:digipaint", uid=uid)

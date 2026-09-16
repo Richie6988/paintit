@@ -949,3 +949,72 @@ msgstr "Bild suchen…"
 
 msgid "Aucun résultat."
 msgstr "Keine Ergebnisse."
+
+msgid "Choisissez le format"
+msgstr "Format wählen"
+
+msgid "livraison offerte"
+msgstr "kostenloser Versand"
+
+msgid "Choisissez une couleur dans la palette de gauche."
+msgstr "Wähle eine Farbe aus der linken Palette."
+
+msgid "Glissez à 2 doigts pour déplacer, pincez pour zoomer."
+msgstr "Mit 2 Fingern ziehen zum Bewegen, zum Zoomen kneifen."
+
+msgid "Transformez vos souvenirs en chef-d'œuvre à peindre"
+msgstr "Verwandeln Sie Ihre Erinnerungen in ein Meisterwerk zum Malen"
+
+msgid ""
+"Une simple photo devient une toile personnalisée, prête à peindre. Créez un "
+"tableau unique de vos propres mains, sans savoir dessiner."
+msgstr ""
+"Ein einziges Foto wird zur personalisierten Leinwand, malfertig. Erschaffen "
+"Sie ein einzigartiges Bild mit eigenen Händen , ganz ohne Zeichenkenntnisse."
+
+msgid ""
+"Envie d'essayer ? Peignez un modèle en ligne, gratuitement, et ressentez la "
+"magie avant de créer le vôtre."
+msgstr ""
+"Lust auszuprobieren? Malen Sie ein Modell online, kostenlos, und spüren Sie "
+"die Magie, bevor Sie Ihr eigenes erstellen."
+
+msgid "Créez de vos mains. Pour de vrai."
+msgstr "Erschaffen mit den Händen. Ganz echt."
+
+msgid ""
+"Nos amis 100% digitaux, on ne vous a pas oubliés. Une photo, une toile à "
+"peindre, et le plaisir bien réel de créer , pinceau à la main."
+msgstr ""
+"Für unsere 100% digitalen Freunde: euch haben wir nicht vergessen. Ein Foto,"
+" eine Leinwand zum Malen und die ganz reale Freude am Erschaffen , Pinsel in"
+" der Hand."
+
+msgid "Votre photo, une vraie toile à peindre, livrée chez vous"
+msgstr ""
+"Ihr Foto, eine echte Malen-nach-Zahlen-Leinwand, direkt zu Ihnen geliefert"
+
+msgid ""
+"N'importe quelle photo devient une toile numérotée, livrée chez vous : le "
+"plaisir bien réel de peindre de vos mains. Et une surprise digitale vous "
+"attend, pour redécouvrir votre passion autrement."
+msgstr ""
+"Jedes Foto wird zur nummerierten Leinwand, zu Ihnen geliefert: die ganz "
+"reale Freude, mit eigenen Händen zu malen. Und eine digitale Überraschung "
+"wartet, um Ihre Leidenschaft neu zu entdecken."
+
+msgid "La peinture par numéros réinventée."
+msgstr "Malen nach Zahlen, neu erfunden."
+
+msgid ""
+"Transformez n'importe quelle image en une toile personnalisée d'une "
+"précision époustouflante. Créez, explorez et jouez avec votre œuvre en "
+"digital. Commandez votre toile et donnez-lui vie, pinceau à la main."
+msgstr ""
+"Verwandeln Sie jedes Bild in eine personalisierte Leinwand von verblüffender"
+" Präzision. Erstellen, erkunden und spielen Sie digital mit Ihrem Werk. "
+"Bestellen Sie Ihre Leinwand und erwecken Sie sie zum Leben, Pinsel in der "
+"Hand."
+
+msgid "Prêt à peindre ces numéros ?"
+msgstr "Bereit, nach Zahlen zu malen?"

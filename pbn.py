@@ -418,7 +418,7 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
            f'text-rendering="geometricPrecision">',
            f'<rect x="0" y="0" width="{w_mm:.2f}" height="{h_mm:.2f}" fill="#ffffff"/>']
     ap = max(0.5, eps * 0.5)
-    LABEL_MIN_R_MM = 1.0
+    LABEL_MIN_R_MM = 0.55
     FS_CAP = 7.0
     for c in range(len(palette_bgr)):
         m = (labels == c).astype(np.uint8)
@@ -428,7 +428,9 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
         for lb in range(1, ncc):
             comp = (cc == lb).astype(np.uint8)
             area = int(comp.sum())
-            cnts, _ = cv2.findContours(comp, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+            # dilate d'1px : le remplissage rejoint le trait inter-zone (pas de halo blanc)
+            comp_fill = cv2.dilate(comp, np.ones((3, 3), np.uint8), iterations=1)
+            cnts, _ = cv2.findContours(comp_fill, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
             segs = []
             for cnt in cnts:
                 cnt = cv2.approxPolyDP(cnt, ap, True)
@@ -445,14 +447,15 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
             if r_mm >= LABEL_MIN_R_MM:
                 n = len(str(num))
                 fs = float(min(FS_CAP, 2.05 * r_mm / float(np.hypot(0.58 * n, 0.60))))
-                if fs >= 1.2:
+                if fs >= 0.7:
                     hw = 0.32 * n * fs
                     cx = min(max(x * mmx, hw + 0.5), w_mm - hw - 0.5)
                     cy = min(max(y * mmy + fs * 0.34, fs * 0.9), h_mm - fs * 0.25)
                     txt = f'<text class="zn" x="{cx:.2f}" y="{cy:.2f}" font-size="{fs:.2f}">{num}</text>'
             out.append('<g class="cell"><path class="z" fill="#eef1f6" '
-                       f'fill-rule="evenodd" data-n="{num}" data-a="{area}" d="{" ".join(segs)}"/>{txt}</g>')
-    # UN SEUL calque de contours (chaque bord trace une fois) -> pas de double ligne
+                       f'fill-rule="evenodd" data-n="{num}" data-a="{area}" '
+                       f'd="{" ".join(segs)}"/>{txt}</g>')
+    # UN SEUL trait (frontieres tracees une fois), lisse et assez epais pour couvrir le joint
     eps_px = max(0.8, eps)
     lines = []
     for poly in _trace_boundaries(labels):
@@ -462,7 +465,7 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
             continue
         arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
         approx = cv2.approxPolyDP(arr, eps_px, closed)
-        base = [(float(p[0][0]), float(p[0][1])) for p in approx]
+        base = [(float(pp[0][0]), float(pp[0][1])) for pp in approx]
         if len(base) < 2:
             continue
         sm = _chaikin(base, closed, iters=3) if len(base) >= 3 else base
@@ -471,8 +474,8 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
             d += " Z"
         lines.append(d)
     if lines:
-        out.append('<g class="lines" fill="none" stroke="#141414" stroke-width="0.18" '
-                   'stroke-linejoin="round" stroke-linecap="round">')
+        out.append('<g class="lines" fill="none" stroke="#141414" stroke-width="0.34" '
+                   'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke">')
         out += [f'<path d="{d}"/>' for d in lines]
         out.append('</g>')
     out.append("</svg>")
@@ -507,7 +510,7 @@ def build_preview_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
             b = palette_bgr[c]
             hexc = "#%02X%02X%02X" % (int(b[2]), int(b[1]), int(b[0]))
             out.append(f'<path fill="{hexc}" fill-rule="evenodd" d="{" ".join(segs)}"/>')
-    # UN SEUL calque de contours (chaque bord trace une fois) -> pas de double ligne
+    # UN SEUL trait (frontieres tracees une fois), lisse et assez epais pour couvrir le joint
     eps_px = max(0.8, eps)
     lines = []
     for poly in _trace_boundaries(labels):
@@ -517,7 +520,7 @@ def build_preview_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
             continue
         arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
         approx = cv2.approxPolyDP(arr, eps_px, closed)
-        base = [(float(p[0][0]), float(p[0][1])) for p in approx]
+        base = [(float(pp[0][0]), float(pp[0][1])) for pp in approx]
         if len(base) < 2:
             continue
         sm = _chaikin(base, closed, iters=3) if len(base) >= 3 else base
@@ -526,8 +529,8 @@ def build_preview_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
             d += " Z"
         lines.append(d)
     if lines:
-        out.append('<g class="lines" fill="none" stroke="#141414" stroke-width="0.18" '
-                   'stroke-linejoin="round" stroke-linecap="round">')
+        out.append('<g class="lines" fill="none" stroke="#141414" stroke-width="0.34" '
+                   'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke">')
         out += [f'<path d="{d}"/>' for d in lines]
         out.append('</g>')
     out.append("</svg>")

@@ -8,12 +8,17 @@
   {% if models %}
     <div class="models-grid" id="ggrid">
       {% for m in models %}
-        <a class="model-card gcard" href="{% url 'studio:digipaint' m.uid %}"
+        <a class="model-card gcard" href="{% if m.price and m.price > 0 %}{% url 'studio:gallery_buy' m.uid %}{% else %}{% url 'studio:digipaint' m.uid %}{% endif %}"
            data-name="{{ m.title|lower }}" data-cat="{{ m.category|lower }}">
           <div class="mc-thumb"><div class="mc-img" style="aspect-ratio:40/50">
             <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="" loading="lazy">
-            {% if m.price and m.price > 0 %}<span class="g-price">{{ m.price|floatformat:2 }}&nbsp;&euro;</span>{% endif %}
-            <span class="mc-play"><svg class="icplay" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span>
+            {% if m.price and m.price > 0 %}
+              <span class="g-price">{{ m.price|floatformat:2 }}&nbsp;&euro;</span>
+              <span class="g-cta g-buy">{% trans "Acheter" %}</span>
+            {% else %}
+              <span class="g-cta g-free">Free</span>
+              <span class="mc-play"><svg class="icplay" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span>
+            {% endif %}
           </div></div>
         </a>
       {% endfor %}

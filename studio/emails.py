@@ -135,6 +135,8 @@ def send_order_confirmation(order, shipping):
         '<tr><td style="background:#12224f;padding:18px 24px">'
         '<img src="%(logo)s" alt="PaintIt" height="26" style="height:26px;background:#fff;'
         'border-radius:8px;padding:5px 8px"></td></tr>'
+        '<tr><td style="padding:0"><a href="%(play)s"><img src="%(hero)s" alt="" '
+        'style="width:100%%;max-height:320px;object-fit:cover;display:block"></a></td></tr>'
         '<tr><td style="padding:26px 28px 8px">'
         '<h1 style="margin:0 0 6px;color:#12224f;font-size:20px">%(thanks)s</h1>'
         '<p style="margin:0 0 2px;color:#12224f">%(hi)s %(name)s,</p>'
@@ -154,11 +156,24 @@ def send_order_confirmation(order, shipping):
         '<tr><td style="padding:8px 28px 4px;color:#5b647a;font-size:13px;line-height:1.5">'
         '<b style="color:#12224f">%(deliver_to)s</b><br>%(name)s<br>%(addr1)s%(addr2)s<br>'
         '%(postal)s %(city)s (%(country)s)<br>%(phone_l)s : %(phone)s</td></tr>'
+        '<tr><td style="padding:16px 28px 4px" align="center">'
+        '<a href="%(play)s" style="display:inline-block;background:linear-gradient(90deg,#2f6bf2,#7a3ff2);'
+        'color:#fff;font-weight:bold;text-decoration:none;padding:13px 26px;border-radius:999px;'
+        'box-shadow:0 6px 16px rgba(47,107,242,.35);font-size:15px">%(play_l)s</a></td></tr>'
+        '<tr><td style="padding:8px 28px 4px" align="center">'
+        '<a href="%(gallery)s" style="color:#2f6bf2;text-decoration:none;font-weight:bold;font-size:13px">%(gallery_l)s</a></td></tr>'
         '<tr><td style="padding:14px 28px 4px;color:#12224f;font-size:14px">%(prep)s</td></tr>'
         '<tr><td style="padding:6px 28px 24px"><b style="color:#2f6bf2">%(team)s</b></td></tr>'
         '</table></div>'
     ) % {
         "logo": settings.SITE_URL + settings.STATIC_URL + "studio/img/logo.png",
+        "hero": settings.SITE_URL + "/preview/img/" + uid + "/preview/",
+        "play": settings.SITE_URL + "/paint/" + uid + "/",
+        "gallery": settings.SITE_URL + "/paint/",
+        "play_l": {"fr": "\u25B6 Jouer en digital maintenant", "en": "\u25B6 Play the digital version",
+                   "de": "\u25B6 Jetzt digital spielen", "es": "\u25B6 Jugar la versi\u00f3n digital"}.get((order.get("lang") or "en")[:2], "\u25B6 Play"),
+        "gallery_l": {"fr": "Retrouver toutes mes toiles \u2192", "en": "See all my canvases \u2192",
+                      "de": "Alle meine Bilder ansehen \u2192", "es": "Ver todos mis lienzos \u2192"}.get((order.get("lang") or "en")[:2], "My canvases \u2192"),
         "thanks": T["thanks"], "hi": T["hi"], "name": shipping.get("full_name", ""),
         "confirmed": T["confirmed"] % {"uid": uid},
         "product": T["product"], "fmt": order["format_label"], "orient": orient,

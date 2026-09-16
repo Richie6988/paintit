@@ -70,6 +70,21 @@ def create_digital_session(uid, request, amount_eur=0.99, email=None):
     return session.url
 
 
+def create_gallery_session(uid, request, amount_eur, email=None):
+    """Checkout Stripe pour acheter un modele de la galerie."""
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    session = stripe.checkout.Session.create(
+        mode="payment", client_reference_id=uid, customer_email=email or None,
+        metadata={"uid": uid, "kind": "gallery"},
+        line_items=[{"quantity": 1, "price_data": {"currency": "eur",
+            "unit_amount": int(round(float(amount_eur) * 100)),
+            "product_data": {"name": "Modele PaintIt (%s)" % uid}}}],
+        success_url=request.build_absolute_uri(reverse("studio:gallery_buy_success"))
+                    + "?uid=" + uid + "&sid={CHECKOUT_SESSION_ID}",
+        cancel_url=request.build_absolute_uri(reverse("studio:gallery")))
+    return session.url
+
+
 def session_is_paid(session_id):
     """Verifie qu'une session Checkout est bien payee."""
     stripe.api_key = settings.STRIPE_SECRET_KEY

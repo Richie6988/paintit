@@ -930,3 +930,69 @@ msgstr "Search a canvas…"
 
 msgid "Aucun résultat."
 msgstr "No results."
+
+msgid "Choisissez le format"
+msgstr "Choose the size"
+
+msgid "livraison offerte"
+msgstr "free shipping"
+
+msgid "Choisissez une couleur dans la palette de gauche."
+msgstr "Pick a colour from the left palette."
+
+msgid "Glissez à 2 doigts pour déplacer, pincez pour zoomer."
+msgstr "Drag with 2 fingers to move, pinch to zoom."
+
+msgid "Transformez vos souvenirs en chef-d'œuvre à peindre"
+msgstr "Turn your memories into a masterpiece to paint"
+
+msgid ""
+"Une simple photo devient une toile personnalisée, prête à peindre. Créez un "
+"tableau unique de vos propres mains, sans savoir dessiner."
+msgstr ""
+"A single photo becomes a personalised canvas, ready to paint. Create a "
+"unique artwork with your own hands , no drawing skills needed."
+
+msgid ""
+"Envie d'essayer ? Peignez un modèle en ligne, gratuitement, et ressentez la "
+"magie avant de créer le vôtre."
+msgstr ""
+"Want to try? Paint a model online, for free, and feel the magic before "
+"creating your own."
+
+msgid "Créez de vos mains. Pour de vrai."
+msgstr "Create with your hands. For real."
+
+msgid ""
+"Nos amis 100% digitaux, on ne vous a pas oubliés. Une photo, une toile à "
+"peindre, et le plaisir bien réel de créer , pinceau à la main."
+msgstr ""
+"To our 100% digital friends: we haven't forgotten you. One photo, a canvas "
+"to paint, and the very real joy of creating , brush in hand."
+
+msgid "Votre photo, une vraie toile à peindre, livrée chez vous"
+msgstr "Your photo, a real paint-by-numbers canvas, delivered to your door"
+
+msgid ""
+"N'importe quelle photo devient une toile numérotée, livrée chez vous : le "
+"plaisir bien réel de peindre de vos mains. Et une surprise digitale vous "
+"attend, pour redécouvrir votre passion autrement."
+msgstr ""
+"Any photo becomes a numbered canvas, delivered to your home: the very real "
+"joy of painting with your own hands. And a digital surprise awaits, to "
+"rediscover your passion in a new way."
+
+msgid "La peinture par numéros réinventée."
+msgstr "Paint by numbers, reinvented."
+
+msgid ""
+"Transformez n'importe quelle image en une toile personnalisée d'une "
+"précision époustouflante. Créez, explorez et jouez avec votre œuvre en "
+"digital. Commandez votre toile et donnez-lui vie, pinceau à la main."
+msgstr ""
+"Turn any image into a personalised canvas of stunning precision. Create, "
+"explore and play with your artwork digitally. Order your canvas and bring it"
+" to life, brush in hand."
+
+msgid "Prêt à peindre ces numéros ?"
+msgstr "Ready to paint by numbers?"

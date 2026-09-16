@@ -13,6 +13,11 @@
   <div class="topbar-sub">Pipeline d'apprentissage — vectorisation image & couleurs</div>
   <div class="job-badge" id="jobBadge" hidden>job <code id="jobId"></code></div>
 </header>
+<div class="actionbar">
+  <button class="btn primary" id="runBtn" disabled>▶ Lancer le pipeline</button>
+  <button class="btn" id="rerunBtn" hidden>↺ Recharger l'image (mêmes params)</button>
+  <div class="progress"><div class="bar" id="progressBar"></div></div>
+</div>
 
 <main class="layout">
   <!-- ===================== PANNEAU PARAMÈTRES ===================== -->
@@ -151,11 +156,7 @@
         <input type="file" id="logoInput" accept="image/*"></div>
     </section>
 
-    <div class="actions">
-      <button class="btn primary" id="runBtn" disabled>▶ Lancer le pipeline</button>
-      <button class="btn" id="rerunBtn" hidden>↺ Recharger l'image (mêmes params)</button>
-      <div class="progress"><div class="bar" id="progressBar"></div></div>
-    </div>
+
   </aside>
 
   <!-- ===================== TIMELINE DES ÉTAPES ===================== -->

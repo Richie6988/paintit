@@ -291,3 +291,65 @@ class KitFormat(models.Model):
 
     def __str__(self):
         return self.label
+
+
+class Supplier(models.Model):
+    """Fournisseur plug-and-play : connecte a un checkout, avec grille tarifaire,
+    conditions de partenariat et integration (e-mail ou API)."""
+    CHECKOUTS = [("kit", "Kit a peindre"), ("print", "Tableau fini"), ("all", "Tous les checkouts")]
+    INTEGRATIONS = [("email", "E-mail"), ("api", "API (webhook)")]
+    name = models.CharField("Nom", max_length=120)
+    active = models.BooleanField("Actif", default=True)
+    checkout = models.CharField("Checkout connecte", max_length=10, choices=CHECKOUTS, default="kit")
+    integration = models.CharField("Integration", max_length=10, choices=INTEGRATIONS, default="email")
+    email = models.EmailField("E-mail commande", blank=True, default="")
+    api_url = models.URLField("URL API / webhook", blank=True, default="")
+    api_key = models.CharField("Cle API", max_length=200, blank=True, default="")
+    pricing = models.TextField("Grille tarifaire", blank=True, default="")
+    terms = models.TextField("Conditions de partenariat", blank=True, default="")
+    priority = models.PositiveIntegerField("Priorite (0 = premier)", default=0)
+    # Coordonnees
+    contact_name = models.CharField("Contact", max_length=120, blank=True, default="")
+    contact_email = models.EmailField("E-mail contact", blank=True, default="")
+    phone = models.CharField("Telephone", max_length=40, blank=True, default="")
+    address = models.TextField("Adresse", blank=True, default="")
+    # Banque
+    bank_name = models.CharField("Banque", max_length=120, blank=True, default="")
+    iban = models.CharField("IBAN", max_length=40, blank=True, default="")
+    bic = models.CharField("BIC", max_length=20, blank=True, default="")
+    notes = models.TextField("Notes internes", blank=True, default="")
+    # Fichiers a envoyer a ce fournisseur (consensus)
+    want_template_tiff = models.BooleanField("TIFF numerotee", default=True)
+    want_preview_tiff = models.BooleanField("TIFF coloriee", default=True)
+    want_template_svg = models.BooleanField("SVG numerotee", default=False)
+    want_preview_svg = models.BooleanField("SVG coloriee", default=False)
+    want_poster_tiff = models.BooleanField("Poster .tiff", default=False)
+    want_poster_svg = models.BooleanField("Poster .svg", default=False)
+    want_order_json = models.BooleanField("Order JSON (consignee/order/couleurs)", default=True)
+    want_colors_json = models.BooleanField("Couleurs brutes (JSON)", default=False)
+    # Process
+    lead_time_days = models.PositiveIntegerField("Delai production (jours)", default=5)
+    incoterms = models.CharField("Incoterms / livraison", max_length=60, blank=True, default="")
+    production_notes = models.TextField("Process / consignes de production", blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def wanted_files(self, uid):
+        """Noms de fichiers coches pour ce fournisseur (dans media/orders/<uid>/)."""
+        m = [("want_template_tiff", "%s_template.tiff"), ("want_template_svg", "%s_template.svg"),
+             ("want_preview_tiff", "%s_preview.tiff"), ("want_preview_svg", "%s_preview.svg"),
+             ("want_poster_tiff", "%s_poster.tiff"), ("want_poster_svg", "%s_poster.svg"),
+             ("want_order_json", "%s_order.json"), ("want_colors_json", "%s_colors.json")]
+        return [(pat % uid) for flag, pat in m if getattr(self, flag, False)]
+
+    class Meta:
+        ordering = ["priority", "name"]
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def for_checkout(cls, checkout):
+        """Fournisseur actif connecte a ce checkout (ou 'all'), par priorite."""
+        return (cls.objects.filter(active=True)
+                .filter(models.Q(checkout=checkout) | models.Q(checkout="all"))
+                .order_by("priority", "id").first())
