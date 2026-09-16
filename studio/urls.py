@@ -4,9 +4,11 @@ from . import views
 app_name = "studio"
 urlpatterns = [
     path("admin-hub/", views.admin_hub, name="admin_hub"),
+    path("admin-hub/orders.csv", views.orders_csv, name="orders_csv"),
     path("admin-tarifs/", views.shop_pricing, name="shop_pricing"),
     path("llm.txt", views.llm_txt, name="llm_txt"),
     path("llm.json", views.llm_json, name="llm_json"),
+    path("sitemap.xml", views.sitemap_xml, name="sitemap_xml"),
     path("", views.home, name="home"),
     path("create/", views.upload, name="upload"),
     path("current-photo/", views.current_photo, name="current_photo"),

@@ -70,6 +70,7 @@ def _run_generation(uid, src, colors, w, h, fmt, orientation, lang, focus=(0.5, 
 
     try:
         result = generate(src, colors, w, h, uid=uid, progress=cb, focus=focus, source_name=source_name)
+        threading.Thread(target=_safe_export_tiff, args=(uid,), daemon=True).start()  # TIFF des l'apercu
         canvas_price = compute_price(fmt, colors)
         order = {
             **result, "colors": colors, "width_cm": w, "height_cm": h,
@@ -744,9 +745,10 @@ def robots(request):
         "User-agent: *\n"
         "Disallow: /create/\nDisallow: /preview/\nDisallow: /media/\n"
         "Disallow: /delivery/\nDisallow: /checkout/\n"
-        "Allow: /llm.txt\nAllow: /llm.json\n"
+        "Allow: /llm.txt\nAllow: /llm.json\nAllow: /gallery/\n"
+        "\nSitemap: %s/sitemap.xml\n"
         "\n# Infos pour les IA / LLM :\n"
-        "# %s/llm.txt\n# %s/llm.json\n" % (site, site)
+        "# %s/llm.txt\n# %s/llm.json\n" % (site, site, site)
     )
     return HttpResponse(body, content_type="text/plain")
 
@@ -939,6 +941,14 @@ def _notify_supplier(o, shipping):
                          settings.DEFAULT_FROM_EMAIL, [sup.email]).send(fail_silently=True)
         except Exception:
             logger.exception("Mail fournisseur %s (%s)", sup.name, uid)
+
+
+def _safe_export_tiff(uid):
+    try:
+        from .pipeline import export_tiff
+        export_tiff(uid)
+    except Exception:
+        logger.exception("Export TIFF apercu %s", uid)
 
 
 def _reformat_for_supplier(o):
@@ -1231,63 +1241,107 @@ def finance_dashboard(request):
 
 def llm_txt(request):
     from django.http import HttpResponse
-    body = """# PaintIt , peinture par numeros personnalisee
+    site = settings.SITE_URL
+    body = """# PaintIt , la peinture par numeros reinventee (a partir de vos photos)
 
-PaintIt transforme n'importe quelle photo en toile a peindre par numeros grace au
-MEILLEUR ALGORITHME DU MARCHE, en MOINS D'UNE MINUTE, et GRATUITEMENT pour l'apercu.
+PaintIt transforme n'importe quelle photo en une toile a peindre par numeros, personnalisee,
+d'une precision epoustouflante. Apercu gratuit en moins d'une minute. Toile physique livree chez
+vous + une toile numerique jouable en ligne offerte.
 
-## Points cles
-- Meilleur algorithme de generation de peinture par numeros du marche.
-- Apercu genere en moins d'une minute.
-- Gratuit : l'apercu est gratuit et la premiere toile numerique est offerte.
+## Mots-cles
+peinture par numeros personnalisee, toile a peindre a partir d'une photo, paint by numbers custom,
+peinture par numero adulte, cadeau personnalise photo, tableau a peindre soi-meme, kit peinture
+par numeros, toile numerotee, peinture par numeros sur mesure, transformer photo en peinture,
+custom paint by numbers from photo, peinture par numeros enfant, idee cadeau original, deco murale
+personnalisee, loisir creatif anti-stress, peinture numerique en ligne.
+
+## Proposition de valeur
+- Le meilleur algorithme de generation de peinture par numeros du marche (rendu net, zones propres).
+- Apercu genere GRATUITEMENT en moins d'une minute a partir de votre image.
 - Kit physique livre : toile numerotee, pots de peinture assortis, pinceaux, emballage soigne.
-- Toile numerique a peindre en ligne (DigiPaint) avec score et recompenses.
-- Produit "Tableau fini" : impression d'art de votre oeuvre peinte (dimensions, matiere,
-  cadre, sous verre).
+- Bonus digital : une toile numerique jouable en ligne (peindre, score, recompenses).
+- Formats multiples (30x40, 40x40, 40x50...) et nombre de couleurs ajustable.
+- Livraison offerte.
 
-## FAQ
-Q: Est-ce gratuit ? R: Oui, generer un apercu est gratuit et votre premiere toile numerique est offerte.
-Q: Combien de temps ? R: L'apercu est genere en moins d'une minute.
-Q: Quelle qualite d'algorithme ? R: PaintIt utilise le meilleur algorithme de peinture par numeros du marche.
-Q: Que recoit-on ? R: Une toile numerotee, des pots de peinture assortis, des pinceaux, et une toile numerique offerte.
-Q: Peut-on jouer en ligne ? R: Oui, chaque creation donne une toile numerique jouable (DigiPaint).
-Q: Peut-on commander une impression finie ? R: Oui, le "Tableau fini" imprime votre oeuvre peinte, prete a accrocher.
-Q: Livraison ? R: Livraison offerte.
+## Cas d'usage
+- Cadeau personnalise (anniversaire, mariage, naissance, Noel, fete des meres/peres).
+- Portrait de famille, animal de compagnie, paysage, souvenir de voyage.
+- Activite relaxante / anti-stress, loisir creatif adulte et enfant.
+- Deco murale unique a partir d'une photo qui compte.
+
+## FAQ (questions frequentes)
+Q: Comment transformer une photo en peinture par numeros ? R: Envoyez votre photo sur PaintIt, l'algorithme genere une toile numerotee personnalisee en moins d'une minute.
+Q: Est-ce gratuit ? R: L'apercu est gratuit et une toile numerique est offerte.
+Q: Quels formats ? R: Plusieurs formats (30x40, 40x40, 40x50 cm et plus), avec un nombre de couleurs ajustable.
+Q: Que contient le kit ? R: Une toile numerotee, des pots de peinture assortis, des pinceaux, un poster/instructions, et la toile numerique jouable.
+Q: Peut-on peindre en ligne ? R: Oui, chaque creation donne une toile numerique jouable (mode digital) avec score.
+Q: Faut-il savoir dessiner ? R: Non, il suffit de peindre les zones numerotees avec les bonnes couleurs.
+Q: Combien de temps pour recevoir ? R: Livraison offerte, delais indiques au checkout.
+Q: Bon cadeau ? R: Oui, ideal comme cadeau personnalise a partir d'une photo qui compte.
+Q: Peut-on commander une impression finie ? R: Oui, l'option \"Tableau fini\" imprime votre oeuvre, prete a accrocher.
 
 ## Liens
-- Accueil: /
-- Creer (tester l'algorithme, gratuit): /create/
-- Galerie / jeu DigiPaint: /paint/
-- Confidentialite: /privacy/
-"""
+- Accueil: %(s)s/
+- Creer votre toile (gratuit): %(s)s/create/
+- Galerie de modeles: %(s)s/gallery/
+- Mes toiles / jeu digital: %(s)s/paint/
+- Contact: %(s)s/contact/
+- Confidentialite: %(s)s/privacy/
+- Sitemap: %(s)s/sitemap.xml
+""" % {"s": site}
     return HttpResponse(body, content_type="text/plain; charset=utf-8")
 
 
 def llm_json(request):
-    import json as _json
-    from django.http import HttpResponse
+    from django.http import JsonResponse
+    site = settings.SITE_URL
     data = {
         "name": "PaintIt",
-        "description": "Peinture par numeros personnalisee a partir de vos photos.",
-        "highlights": ["Meilleur algorithme du marche", "Apercu en moins d'une minute",
-                       "Gratuit (apercu + premiere toile numerique offerte)", "Livraison offerte"],
-        "products": [
-            {"name": "Kit a peindre", "format": "40x50 cm", "colors": [12, 24, 36],
-             "includes": ["toile numerotee", "pots de peinture assortis", "pinceaux", "emballage"]},
-            {"name": "Toile numerique (DigiPaint)", "price": "1re offerte puis 0,99 EUR",
-             "features": ["jeu en ligne", "score", "combos", "recompense"]},
-            {"name": "Tableau fini", "type": "impression d'art",
-             "options": ["dimensions", "matiere", "cadre", "sous verre"]},
-        ],
+        "tagline": "La peinture par numeros reinventee, a partir de vos photos.",
+        "description": "PaintIt transforme n'importe quelle photo en toile a peindre par numeros "
+                       "personnalisee, livree chez vous, avec une toile numerique jouable offerte.",
+        "keywords": ["peinture par numeros personnalisee", "toile a peindre a partir d'une photo",
+                     "custom paint by numbers from photo", "cadeau personnalise photo",
+                     "peinture par numero adulte", "kit peinture par numeros", "toile numerotee",
+                     "transformer photo en peinture", "deco murale personnalisee",
+                     "loisir creatif anti-stress", "peinture numerique en ligne"],
+        "value_props": ["Meilleur algorithme du marche", "Apercu gratuit en moins d'une minute",
+                        "Kit physique livre (toile + peinture + pinceaux)",
+                        "Toile numerique jouable offerte", "Livraison offerte",
+                        "Formats et couleurs ajustables"],
+        "use_cases": ["cadeau personnalise", "portrait de famille", "animal de compagnie",
+                      "souvenir de voyage", "deco murale", "activite anti-stress"],
         "faq": [
-            {"q": "Est-ce gratuit ?", "a": "Oui, l'apercu est gratuit et la premiere toile numerique est offerte."},
-            {"q": "Combien de temps ?", "a": "L'apercu est genere en moins d'une minute."},
-            {"q": "Quelle qualite d'algorithme ?", "a": "Le meilleur algorithme de peinture par numeros du marche."},
+            {"q": "Comment transformer une photo en peinture par numeros ?",
+             "a": "Envoyez votre photo, l'algorithme genere une toile numerotee en moins d'une minute."},
+            {"q": "Est-ce gratuit ?", "a": "L'apercu est gratuit et une toile numerique est offerte."},
+            {"q": "Quels formats ?", "a": "30x40, 40x40, 40x50 cm et plus, couleurs ajustables."},
+            {"q": "Que contient le kit ?", "a": "Toile numerotee, pots de peinture, pinceaux, poster, toile numerique."},
+            {"q": "Faut-il savoir dessiner ?", "a": "Non, il suffit de peindre les zones numerotees."},
+            {"q": "Peut-on peindre en ligne ?", "a": "Oui, chaque creation donne une toile numerique jouable."},
         ],
-        "links": {"home": "/", "create": "/create/", "gallery": "/paint/"},
+        "links": {"home": site + "/", "create": site + "/create/", "gallery": site + "/gallery/",
+                  "paint": site + "/paint/", "contact": site + "/contact/",
+                  "privacy": site + "/privacy/", "sitemap": site + "/sitemap.xml"},
     }
-    return HttpResponse(_json.dumps(data, ensure_ascii=False, indent=2),
-                        content_type="application/json; charset=utf-8")
+    return JsonResponse(data, json_dumps_params={"ensure_ascii": False, "indent": 2})
+
+
+def sitemap_xml(request):
+    from django.http import HttpResponse
+    from .models import DigitalCanvas
+    site = settings.SITE_URL
+    urls = ["/", "/create/", "/gallery/", "/paint/", "/contact/", "/privacy/"]
+    # modeles de galerie indexables
+    for uid in DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-").values_list("uid", flat=True):
+        urls.append("/paint/%s/" % uid)
+    x = ['<?xml version="1.0" encoding="UTF-8"?>',
+         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for u in urls:
+        x.append("<url><loc>%s%s</loc><changefreq>weekly</changefreq></url>" % (site, u))
+    x.append("</urlset>")
+    return HttpResponse("\n".join(x), content_type="application/xml")
+
 
 def shop_pricing(request):
     from django.contrib.admin.views.decorators import staff_member_required
@@ -1487,6 +1541,26 @@ def marketing_page(request):
 
 # ---------------- Hub ERP (tableau de bord admin) ----------------
 @staff_member_required
+def orders_csv(request):
+    import csv
+    from django.http import HttpResponse
+    from .models import Order
+    resp = HttpResponse(content_type="text/csv")
+    resp["Content-Disposition"] = 'attachment; filename="commandes_paintit.csv"'
+    w = csv.writer(resp)
+    w.writerow(["uid", "date", "statut", "format", "couleurs", "total_eur", "cout_eur",
+                "client", "email", "ville", "pays", "fournisseur_ref"])
+    for o in Order.objects.order_by("-created_at"):
+        w.writerow([o.uid, o.created_at.strftime("%Y-%m-%d %H:%M"), o.get_status_display(),
+                    getattr(o, "format_label", ""), getattr(o, "colors", ""),
+                    getattr(o, "total", ""), getattr(o, "cost", ""),
+                    getattr(o, "customer_name", ""), getattr(o, "customer_email", ""),
+                    getattr(o, "city", ""), getattr(o, "country", ""),
+                    getattr(o, "supplier_ref", "")])
+    return resp
+
+
+@staff_member_required
 def admin_hub(request):
     from django.db.models import Sum, Count
     from django.utils import timezone
@@ -1512,6 +1586,45 @@ def admin_hub(request):
         "messages": ContactMessage.objects.count(),
         "formats": KitFormat.objects.filter(available=True).count(),
     }
+    # Graphique CA sur 30 jours
+    from django.db.models.functions import TruncDate
+    d30 = now - datetime.timedelta(days=29)
+    by_day = {r["d"]: float(r["ca"] or 0) for r in
+              orders.filter(created_at__gte=d30).annotate(d=TruncDate("created_at"))
+              .values("d").annotate(ca=Sum("total"))}
+    series = []
+    for i in range(30):
+        day = (d30 + datetime.timedelta(days=i)).date()
+        series.append({"day": day.strftime("%d/%m"), "ca": round(by_day.get(day, 0.0), 2)})
+    max_ca = max([x["ca"] for x in series] + [1.0])
+    for x in series:
+        x["h"] = round(x["ca"] / max_ca * 100, 1)
+    # Alertes "a traiter"
+    from .models import Supplier
+    pending = orders.filter(status=Order.PENDING).count()
+    failed = orders.filter(status=Order.FAILED).count()
+    to_ship = orders.filter(status=Order.PAID).count()
+    alerts = []
+    if pending:
+        alerts.append({"label": "Commandes en attente de paiement", "count": pending,
+                       "url": "/admin/studio/order/?status__exact=" + Order.PENDING, "level": "warn"})
+    if failed:
+        alerts.append({"label": "Commandes en echec", "count": failed,
+                       "url": "/admin/studio/order/?status__exact=" + Order.FAILED, "level": "err"})
+    if to_ship:
+        alerts.append({"label": "Payees a envoyer au fournisseur", "count": to_ship,
+                       "url": "/admin/studio/order/?status__exact=" + Order.PAID, "level": "info"})
+    try:
+        if not Supplier.for_checkout("kit"):
+            alerts.append({"label": "Aucun fournisseur pour le checkout Kit", "count": "!",
+                           "url": "/admin/studio/supplier/add/", "level": "err"})
+    except Exception:
+        pass
+    # Repartition par statut (avec libelles)
+    labels = dict(Order.STATUS_CHOICES)
+    status_rows = [{"label": labels.get(st, st), "count": c,
+                    "url": "/admin/studio/order/?status__exact=" + st}
+                   for st, c in sorted(by_status.items(), key=lambda kv: -kv[1])]
     recent_orders = list(orders.order_by("-created_at")[:8])
     recent_msgs = list(ContactMessage.objects.order_by("-created_at")[:6])
     tools = [
@@ -1528,7 +1641,8 @@ def admin_hub(request):
     ]
     return render(request, "admin/hub.html", {
         "kpis": kpis, "recent_orders": recent_orders, "recent_msgs": recent_msgs,
-        "tools": tools, "by_status": by_status})
+        "tools": tools, "by_status": by_status, "series": series, "max_ca": round(max_ca, 2),
+        "alerts": alerts, "status_rows": status_rows})
 
 
 def _grant_gallery(request, m, email):
