@@ -183,52 +183,46 @@ def build(order, shipping):
 
     disc = order.get("discount")
     order_json = {
-        "uid": uid,
-        "created_at": datetime.datetime.now().isoformat(timespec="seconds"),
-        "status": "paid",
-        "poster_lang": poster_lang,
-        "supplier": settings.SUPPLIER_NAME,
-        "product": {
-            "type": "peinture_par_numeros",
-            "format": order["format_label"], "orientation": order["orientation"],
-            "width_cm": order["width_cm"], "height_cm": order["height_cm"],
-            "colors": order["colors"],
-            "mode": "dynamique, zone mini %.1f mm (~%.0f mm2)" % (
-                (order.get("min_zone_mm") or 2.6), (order.get("min_zone_mm") or 2.6) ** 2),
-            "brushes": bool(order.get("brushes")),
-        },
-        "pricing": {
-            "currency": "EUR",
-            "subtotal": round(order.get("canvas_price", order["price"] - order.get("brushes_amount", 0.0)), 2),
-            "brushes_amount": order.get("brushes_amount", 0.0),
-            "discount": ({"code": disc["code"], "percent": disc["percent"],
-                          "amount": disc["amount"]} if disc else None),
-            "total": order.get("total", order["price"]),
-            "cost_estimate": order.get("cost", 0.0),
-        },
-        "customer": {
+        "consignee_information": {
             "full_name": shipping["full_name"], "email": shipping["email"],
-            "phone": f"{shipping.get('phone_code','')} {shipping.get('phone','')}".strip(),
+            "phone": ("%s %s" % (shipping.get("phone_code", ""), shipping.get("phone", ""))).strip(),
             "address1": shipping["address1"], "address2": shipping.get("address2", ""),
             "postal_code": shipping["postal_code"], "city": shipping["city"],
             "country": shipping["country"],
         },
-        "print": {
-            "template_svg": {"file": f"{uid}_template.svg", "vector": True,
-                             "width_mm": round(order["width_cm"] * 10, 1),
-                             "height_mm": round(order["height_cm"] * 10, 1)},
-            "poster": {"file": f"{uid}_poster.png", "paper": "A4",
-                       "pixels": [A4_W, A4_H], "dpi": DPI},
+        "order_information": {
+            "uid": uid,
+            "created_at": datetime.datetime.now().isoformat(timespec="seconds"),
+            "status": "paid", "poster_lang": poster_lang, "supplier": settings.SUPPLIER_NAME,
+            "product_type": "peinture_par_numeros",
+            "format": order["format_label"], "orientation": order["orientation"],
+            "width_cm": order["width_cm"], "height_cm": order["height_cm"],
+            "colors_count": order["colors"], "brushes": bool(order.get("brushes")),
+            "files": {
+                "template_svg": "%s_template.svg" % uid,
+                "template_tiff": "%s_template.tiff" % uid,
+                "preview_svg": "%s_preview.svg" % uid,
+                "poster_png": "%s_poster.png" % uid,
+            },
+            "pricing": {
+                "currency": "EUR",
+                "subtotal": round(order.get("canvas_price", order["price"] - order.get("brushes_amount", 0.0)), 2),
+                "brushes_amount": order.get("brushes_amount", 0.0),
+                "discount": ({"code": disc["code"], "percent": disc["percent"], "amount": disc["amount"]} if disc else None),
+                "total": order.get("total", order["price"]),
+            },
         },
-        "colors": colors,
+        "color_specifications": [
+            {"number": c.get("number"), "hex": c.get("hex"), "rgb": c.get("rgb")} for c in colors],
     }
-    with open(os.path.join(d, "order.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(d, "%s_order.json" % uid), "w", encoding="utf-8") as f:
         json.dump(order_json, f, ensure_ascii=False, indent=2)
 
-    # Nettoyage : un seul JSON, pas de doublons.
-    for junk in (f"{uid}_colors.json", f"{uid}_palette.png"):
+    # Nettoyage : un seul JSON, pas de doublons, pas d'intermediaires.
+    for junk in (f"{uid}_colors.json", f"{uid}_palette.png", "order.json",
+                 f"{uid}_poster.svg", f"{uid}_poster.tiff", f"{uid}_preview.tiff"):
         pth = os.path.join(d, junk)
         if os.path.exists(pth):
             os.remove(pth)
 
-    return {"dir": d, "files": [f"{uid}_template.svg", f"{uid}_poster.png", "order.json"]}
+    return {"dir": d, "files": [f"{uid}_template.svg", f"{uid}_poster.png", f"{uid}_order.json"]}

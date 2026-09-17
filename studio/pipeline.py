@@ -89,6 +89,12 @@ def generate(image_path, colors, width_cm, height_cm, uid=None, dpi=None, progre
     outdir = os.path.join(settings.MEDIA_ROOT, "orders", uid)
     os.makedirs(outdir, exist_ok=True)
 
+    import glob as _glob
+    for _old in _glob.glob(os.path.join(outdir, "%s_source_*" % uid)) + [os.path.join(outdir, "source.jpg")]:
+        try:
+            os.remove(_old)
+        except OSError:
+            pass
     cropped = os.path.join(outdir, _source_slug(uid, source_name or image_path))
     _center_crop_to_ratio(image_path, cropped, float(width_cm) / float(height_cm),
                           fx=focus[0], fy=focus[1])
@@ -158,7 +164,7 @@ def compute_price(fmt_key, colors):
     return round(p.format_price(fmt_key) + p.color_price(colors), 2)
 
 
-def export_tiff(uid, media_root=None, dpi=300):
+def export_tiff(uid, media_root=None, dpi=600):
     """Genere des .tiff HAUTE RESOLUTION (impression fournisseur) :
     - rendu vectoriel des SVG (toile numerotee + coloriee) a `dpi` via cairosvg (net),
     - repli sur les PNG si cairosvg indisponible,
@@ -180,8 +186,7 @@ def export_tiff(uid, media_root=None, dpi=300):
     # 1) Rendu vectoriel haute def des SVG (net a l'impression)
     try:
         import cairosvg
-        for svg_name, out_name in [("%s_template.svg" % uid, "%s_template.tiff" % uid),
-                                   ("%s_preview.svg" % uid, "%s_preview.tiff" % uid)]:
+        for svg_name, out_name in [("%s_template.svg" % uid, "%s_template.tiff" % uid)]:
             sp = os.path.join(d, svg_name)
             if os.path.exists(sp):
                 try:
@@ -193,9 +198,7 @@ def export_tiff(uid, media_root=None, dpi=300):
         pass
 
     # 2) Repli PNG -> TIFF pour ce qui manque + poster/palette
-    for src_png, out_name in [("%s_preview.png" % uid, "%s_preview.tiff" % uid),
-                              ("%s_template.png" % uid, "%s_template.tiff" % uid),
-                              ("%s_palette.png" % uid, "%s_poster.tiff" % uid)]:
+    for src_png, out_name in [("%s_template.png" % uid, "%s_template.tiff" % uid)]:
         if out_name in made:
             continue
         sp = os.path.join(d, src_png)

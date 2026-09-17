@@ -340,10 +340,9 @@ class SupplierAdmin(admin.ModelAdmin):
         ("Integration (plug & play)", {"fields": ("integration", "email", ("api_url", "api_key")),
             "description": "E-mail : commande + liens fichiers par mail. API : POST JSON (Bearer cle)."}),
         ("Fichiers a transmettre", {"fields": (
-            ("want_template_tiff", "want_template_svg"),
-            ("want_preview_tiff", "want_preview_svg"),
-            ("want_poster_tiff", "want_poster_svg"),
-            ("want_order_json", "want_colors_json")),
+            ("want_source", "want_order_json"),
+            ("want_template_svg", "want_template_tiff"),
+            ("want_preview_svg", "want_poster")),
             "description": "Toile numerotee, apercu colorie, poster, et order JSON "
                            "(consignee / order information / color specifications)."}),
         ("Notes", {"fields": ("notes",), "classes": ("collapse",)}),

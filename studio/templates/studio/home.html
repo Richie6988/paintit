@@ -44,13 +44,20 @@
 <section class="lib-showcase">
   <h2>{% trans "Des modèles prêts à peindre" %}</h2>
   <p class="sub">{% trans "Envie d'essayer ? Peignez un modèle en ligne, gratuitement, et ressentez la magie avant de créer le vôtre." %}</p>
-  <div class="lib-strip">
+  <div class="lib-carousel"><div class="lib-track">
     {% for m in library_preview %}
     <a class="lib-tile" href="{% url 'studio:digipaint' m.uid %}">
       <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="" loading="lazy">
+      {% if m.price and m.price > 0 %}<span class="g-price">{{ m.price|floatformat:2 }}&nbsp;&euro;</span>{% endif %}
     </a>
     {% endfor %}
-  </div>
+    {% for m in library_preview %}
+    <a class="lib-tile" href="{% url 'studio:digipaint' m.uid %}" aria-hidden="true">
+      <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="" loading="lazy">
+      {% if m.price and m.price > 0 %}<span class="g-price">{{ m.price|floatformat:2 }}&nbsp;&euro;</span>{% endif %}
+    </a>
+    {% endfor %}
+  </div></div>
   <a class="cta" href="{% url 'studio:gallery' %}">{% trans "Voir tous les modèles" %}</a>
 </section>
 {% endif %}

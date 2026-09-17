@@ -39,7 +39,7 @@ def _rate():
 
 def home(request):
     import json as _json
-    lib = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="lib-").order_by("category", "title")[:6])
+    lib = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-").order_by("?")[:12])
     showdir = os.path.join(settings.BASE_DIR, "studio", "static", "studio", "showcase")
     slugs = []
     if os.path.isdir(showdir):
@@ -70,7 +70,6 @@ def _run_generation(uid, src, colors, w, h, fmt, orientation, lang, focus=(0.5, 
 
     try:
         result = generate(src, colors, w, h, uid=uid, progress=cb, focus=focus, source_name=source_name)
-        threading.Thread(target=_safe_export_tiff, args=(uid,), daemon=True).start()  # TIFF des l'apercu
         canvas_price = compute_price(fmt, colors)
         order = {
             **result, "colors": colors, "width_cm": w, "height_cm": h,
@@ -913,6 +912,11 @@ def _notify_supplier(o, shipping):
     uid = o.get("uid")
     base = settings.SITE_URL + settings.MEDIA_URL + "orders/%s/" % uid
     files = {name: base + name for name in sup.wanted_files(uid)}
+    if getattr(sup, "want_source", False):
+        import glob as _glob
+        d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+        for sp in _glob.glob(os.path.join(d, "%s_source_*" % uid)):
+            fn = os.path.basename(sp); files[fn] = base + fn; break
     if sup.integration == "api" and sup.api_url:
         try:
             import json as _json, urllib.request
@@ -1015,10 +1019,6 @@ def _post_order_async(o, shipping):
         _reformat_for_supplier(o)
     except Exception:
         logger.exception("Reformat async %s", o.get("uid"))
-    try:
-        _build_supplier_assets(o, shipping)
-    except Exception:
-        logger.exception("Assets fournisseur async %s", o.get("uid"))
     try:
         _notify_supplier(o, shipping)
     except Exception:

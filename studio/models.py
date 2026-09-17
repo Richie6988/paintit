@@ -319,14 +319,12 @@ class Supplier(models.Model):
     bic = models.CharField("BIC", max_length=20, blank=True, default="")
     notes = models.TextField("Notes internes", blank=True, default="")
     # Fichiers a envoyer a ce fournisseur (consensus)
-    want_template_tiff = models.BooleanField("TIFF numerotee", default=True)
-    want_preview_tiff = models.BooleanField("TIFF coloriee", default=True)
-    want_template_svg = models.BooleanField("SVG numerotee", default=False)
-    want_preview_svg = models.BooleanField("SVG coloriee", default=False)
-    want_poster_tiff = models.BooleanField("Poster .tiff", default=False)
-    want_poster_svg = models.BooleanField("Poster .svg", default=False)
+    want_source = models.BooleanField("Photo source", default=True)
+    want_template_svg = models.BooleanField("Toile numerotee .svg", default=True)
+    want_template_tiff = models.BooleanField("Toile numerotee .tiff", default=True)
+    want_preview_svg = models.BooleanField("Apercu colorie .svg", default=True)
+    want_poster = models.BooleanField("Poster (PNG)", default=True)
     want_order_json = models.BooleanField("Order JSON (consignee/order/couleurs)", default=True)
-    want_colors_json = models.BooleanField("Couleurs brutes (JSON)", default=False)
     # Process
     lead_time_days = models.PositiveIntegerField("Delai production (jours)", default=5)
     incoterms = models.CharField("Incoterms / livraison", max_length=60, blank=True, default="")
@@ -334,11 +332,11 @@ class Supplier(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def wanted_files(self, uid):
-        """Noms de fichiers coches pour ce fournisseur (dans media/orders/<uid>/)."""
-        m = [("want_template_tiff", "%s_template.tiff"), ("want_template_svg", "%s_template.svg"),
-             ("want_preview_tiff", "%s_preview.tiff"), ("want_preview_svg", "%s_preview.svg"),
-             ("want_poster_tiff", "%s_poster.tiff"), ("want_poster_svg", "%s_poster.svg"),
-             ("want_order_json", "%s_order.json"), ("want_colors_json", "%s_colors.json")]
+        """Noms de fichiers coches (fixes). La photo source (nom variable) est ajoutee a part."""
+        m = [("want_template_svg", "%s_template.svg"), ("want_template_tiff", "%s_template.tiff"),
+             ("want_preview_svg", "%s_preview.svg"),
+             ("want_poster", "%s_poster.png"),
+             ("want_order_json", "%s_order.json")]
         return [(pat % uid) for flag, pat in m if getattr(self, flag, False)]
 
     class Meta:
