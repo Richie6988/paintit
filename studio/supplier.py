@@ -26,7 +26,7 @@ def estimate_cost(order):
 
 def _order_json(uid):
     d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
-    with open(os.path.join(d, "order.json"), encoding="utf-8") as f:
+    with open(os.path.join(d, "%s_order.json" % uid), encoding="utf-8") as f:
         return json.load(f), d
 
 
@@ -36,7 +36,7 @@ def _email_po(order_data, d, uid):
                          ensure_ascii=False, indent=2))
     msg = EmailMessage(subject=f"[PaintIt] Commande {uid}", body=body,
                        from_email=settings.DEFAULT_FROM_EMAIL, to=[settings.SUPPLIER_ORDER_EMAIL])
-    for fn in ("order.json", f"{uid}_template.svg", f"{uid}_poster.png"):
+    for fn in (f"{uid}_order.json", f"{uid}_template.svg", f"{uid}_poster.png"):
         p = os.path.join(d, fn)
         if os.path.exists(p):
             msg.attach_file(p)
