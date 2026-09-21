@@ -509,7 +509,7 @@ def build_preview_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
         if segs:
             b = palette_bgr[c]
             hexc = "#%02X%02X%02X" % (int(b[2]), int(b[1]), int(b[0]))
-            out.append(f'<path fill="{hexc}" fill-rule="evenodd" d="{" ".join(segs)}"/>')
+            out.append(f'<path fill="{hexc}" stroke="{hexc}" stroke-width="0.5" stroke-linejoin="round" fill-rule="evenodd" d="{" ".join(segs)}"/>')
     # UN SEUL trait (frontieres tracees une fois), lisse et assez epais pour couvrir le joint
     eps_px = max(0.8, eps)
     lines = []
