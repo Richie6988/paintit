@@ -1329,16 +1329,29 @@ def llm_json(request):
 
 def sitemap_xml(request):
     from django.http import HttpResponse
+    from django.urls import translate_url
     from .models import DigitalCanvas
     site = settings.SITE_URL
-    urls = ["/", "/create/", "/gallery/", "/paint/", "/contact/", "/privacy/"]
+    paths = ["/", "/create/", "/gallery/", "/paint/", "/contact/", "/privacy/"]
     # modeles de galerie indexables
     for uid in DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-").values_list("uid", flat=True):
-        urls.append("/paint/%s/" % uid)
+        paths.append("/paint/%s/" % uid)
+    langs = [c for c, _ in settings.LANGUAGES]
     x = ['<?xml version="1.0" encoding="UTF-8"?>',
-         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-    for u in urls:
-        x.append("<url><loc>%s%s</loc><changefreq>weekly</changefreq></url>" % (site, u))
+         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+         'xmlns:xhtml="http://www.w3.org/1999/xhtml">']
+    for p in paths:
+        variants = {}
+        for c in langs:
+            try:
+                variants[c] = site + translate_url(p, c)
+            except Exception:
+                variants[c] = site + p
+        alts = "".join(
+            '<xhtml:link rel="alternate" hreflang="%s" href="%s"/>' % (c, variants[c]) for c in langs)
+        alts += '<xhtml:link rel="alternate" hreflang="x-default" href="%s"/>' % (site + p)
+        for c in langs:
+            x.append("<url><loc>%s</loc>%s<changefreq>weekly</changefreq></url>" % (variants[c], alts))
     x.append("</urlset>")
     return HttpResponse("\n".join(x), content_type="application/xml")
 

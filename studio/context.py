@@ -13,4 +13,13 @@ def assets(request):
             st = os.stat(p)
             v = "%x%x" % (int(st.st_mtime), st.st_size)
             break
-    return {"I18N_VERSION": v, "SITE_URL": settings.SITE_URL}
+    site = settings.SITE_URL
+    alts = []
+    try:
+        from django.urls import translate_url
+        for code, _lbl in settings.LANGUAGES:
+            alts.append({"lang": code, "href": site + translate_url(request.path, code)})
+        alts.append({"lang": "x-default", "href": site + translate_url(request.path, settings.LANGUAGE_CODE)})
+    except Exception:
+        alts = []
+    return {"I18N_VERSION": v, "SITE_URL": site, "HREFLANGS": alts}
