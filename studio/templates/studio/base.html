@@ -22,14 +22,13 @@
 <body>
   <div class="topbar">
     <span class="tb-msg">{% trans "Livraison offerte" %} &middot; {% trans "Toile digitale offerte" %} &middot; {% trans "Aperçu gratuit en quelques secondes" %}</span>
-    <form class="lang tb-lang" id="langform" action="{% url 'set_language' %}" method="post" data-current="{{ LANGUAGE_CODE }}">
-      {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+    <div class="lang tb-lang" id="langform" data-current="{{ LANGUAGE_CODE }}">
       {% get_current_language as LANG %}
-      <button type="submit" name="language" value="fr" data-lang="fr" class="{% if LANG == 'fr' %}active{% endif %}">FR</button>
-      <button type="submit" name="language" value="en" data-lang="en" class="{% if LANG == 'en' %}active{% endif %}">EN</button>
-      <button type="submit" name="language" value="de" data-lang="de" class="{% if LANG == 'de' %}active{% endif %}">DE</button>
-      <button type="submit" name="language" value="es" data-lang="es" class="{% if LANG == 'es' %}active{% endif %}">ES</button>
-    </form>
+      <a href="{{ LANG_URLS.fr }}" data-lang="fr" class="{% if LANG == 'fr' %}active{% endif %}">FR</a>
+      <a href="{{ LANG_URLS.en }}" data-lang="en" class="{% if LANG == 'en' %}active{% endif %}">EN</a>
+      <a href="{{ LANG_URLS.de }}" data-lang="de" class="{% if LANG == 'de' %}active{% endif %}">DE</a>
+      <a href="{{ LANG_URLS.es }}" data-lang="es" class="{% if LANG == 'es' %}active{% endif %}">ES</a>
+    </div>
   </div>
   <header class="nav">
     <a class="brand-logo" href="{% url 'studio:home' %}">
@@ -37,7 +36,7 @@
       <span class="brand-word" data-noi18n translate="no"><span class="p">Paint</span><span class="it">It</span></span>
     </a>
     <div class="nav-right">
-      <a class="nav-link" href="{% url 'studio:gallery' %}">Gallery</a>
+      <a class="nav-link" href="{% url 'studio:gallery' %}">{% trans "Galerie" %}</a>
       <a class="nav-link" href="{% url 'studio:paint_portal' %}">{% trans "Mes Toiles" %}</a>
       <a class="nav-cta" href="{% url 'studio:upload' %}">{% trans "Créer mon tableau" %}</a>
     </div>

@@ -15,11 +15,15 @@ def assets(request):
             break
     site = settings.SITE_URL
     alts = []
+    lang_urls = {}
     try:
         from django.urls import translate_url
         for code, _lbl in settings.LANGUAGES:
-            alts.append({"lang": code, "href": site + translate_url(request.path, code)})
+            rel = translate_url(request.path, code)
+            lang_urls[code] = rel
+            alts.append({"lang": code, "href": site + rel})
         alts.append({"lang": "x-default", "href": site + translate_url(request.path, settings.LANGUAGE_CODE)})
     except Exception:
         alts = []
-    return {"I18N_VERSION": v, "SITE_URL": site, "HREFLANGS": alts}
+        lang_urls = {}
+    return {"I18N_VERSION": v, "SITE_URL": site, "HREFLANGS": alts, "LANG_URLS": lang_urls}

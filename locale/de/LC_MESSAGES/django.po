@@ -1034,3 +1034,6 @@ msgid ""
 msgstr ""
 "Lust zu testen? Malen Sie kostenlos online eine Vorlage, bevor Sie Ihre "
 "eigene erstellen."
+
+msgid "Mes Toiles"
+msgstr "Meine Bilder"

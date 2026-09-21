@@ -1015,3 +1015,6 @@ msgid ""
 "le vôtre."
 msgstr ""
 "¿Quieres probar? Pinta un modelo en línea, gratis, antes de crear el tuyo."
+
+msgid "Mes Toiles"
+msgstr "Mis lienzos"

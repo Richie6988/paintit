@@ -108,9 +108,9 @@ main{min-height:70vh}
 .brand-word .it{color:var(--accent,#2f6bf2)}
 .nav-right{display:flex;align-items:center;gap:14px}
 .lang{display:flex;gap:4px;align-items:center}
-.lang button{border:1px solid var(--ring);background:#fff;color:var(--muted);
-  font:inherit;font-size:.8rem;font-weight:600;padding:5px 9px;border-radius:8px;cursor:pointer}
-.lang button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.lang button,.lang a{border:1px solid var(--ring);background:#fff;color:var(--muted);
+  font:inherit;font-size:.8rem;font-weight:600;padding:5px 9px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-block}
+.lang button.active,.lang a.active{background:var(--ink);color:#fff;border-color:var(--ink)}
 
 .foot{margin-top:60px;background:#0f1836;color:#c7d0e6}
 
@@ -533,7 +533,7 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 @media (max-width: 860px){
   .nav{flex-wrap:wrap;gap:8px;padding:10px 14px}
   .nav-right{gap:10px;flex-wrap:wrap;justify-content:flex-end}
-  .nav-right .lang button{padding:4px 7px;font-size:.8rem}
+  .nav-right .lang button,.nav-right .lang a{padding:4px 7px;font-size:.8rem}
   .preview-grid{grid-template-columns:1fr}
   .models-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
   .panel{padding:18px}
@@ -651,11 +651,11 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 .topbar{position:relative;display:flex;align-items:center;justify-content:flex-end;gap:12px}
 .topbar .tb-msg{position:absolute;left:0;right:0;text-align:center;pointer-events:none}
 .topbar .tb-lang{display:flex;gap:4px;flex:0 0 auto;position:relative;z-index:1}
-.topbar .tb-lang button{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.28);
-  border-radius:6px;padding:2px 7px;font-size:.72rem;font-weight:800;cursor:pointer;line-height:1.3;transition:.15s}
-.topbar .tb-lang button:hover{background:rgba(255,255,255,.28)}
-.topbar .tb-lang button.active{background:#fff;color:#12224f;border-color:#fff}
-@media(max-width:560px){.topbar{font-size:.72rem;padding:5px 8px}.topbar .tb-lang button{padding:2px 5px;font-size:.66rem}}
+.topbar .tb-lang button,.topbar .tb-lang a{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.28);
+  border-radius:6px;padding:2px 7px;font-size:.72rem;font-weight:800;cursor:pointer;line-height:1.3;transition:.15s;text-decoration:none;display:inline-block}
+.topbar .tb-lang button:hover,.topbar .tb-lang a:hover{background:rgba(255,255,255,.28)}
+.topbar .tb-lang button.active,.topbar .tb-lang a.active{background:#fff;color:#12224f;border-color:#fff}
+@media(max-width:560px){.topbar{font-size:.72rem;padding:5px 8px}.topbar .tb-lang button,.topbar .tb-lang a{padding:2px 5px;font-size:.66rem}}
 
 
 /* Footer PaintIt */

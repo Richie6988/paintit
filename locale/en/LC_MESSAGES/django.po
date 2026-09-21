@@ -1010,3 +1010,6 @@ msgid ""
 "le vôtre."
 msgstr ""
 "Want to try? Paint a model online, for free, before creating your own."
+
+msgid "Mes Toiles"
+msgstr "My Canvases"
