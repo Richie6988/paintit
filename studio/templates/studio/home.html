@@ -5,7 +5,7 @@
   <div class="hero-text">
     <p class="eyebrow">{% trans "Votre souvenir, votre chef-d'œuvre" %}</p>
     <h1>{% trans "La peinture par numéros réinventée." %}</h1>
-    <p class="sub">{% trans "Transformez n'importe quelle image en une toile personnalisée d'une précision époustouflante. Explorez et jouez avec votre œuvre en digital. Commandez votre toile et donnez-lui vie, pinceau à la main." %}</p>
+    <p class="sub">{% trans "Envoyez une photo, recevez votre toile à peindre par numéros en moins d'une minute. Peignez-la en ligne gratuitement, ou faites-vous livrer le kit complet à domicile." %}</p>
     <a class="cta" href="{% url 'studio:upload' %}">{% trans "Tester notre algorithme" %}</a>
     <p class="reassure">{% trans "Aperçu gratuit en quelques secondes, sans engagement" %}</p>
   </div>
@@ -43,7 +43,7 @@
 {% if library_preview %}
 <section class="lib-showcase">
   <h2>{% trans "Des modèles prêts à peindre" %}</h2>
-  <p class="sub">{% trans "Envie d'essayer ? Peignez un modèle en ligne, gratuitement, et ressentez la magie avant de créer le vôtre." %}</p>
+  <p class="sub">{% trans "Envie d'essayer ? Peignez un modèle en ligne, gratuitement, avant de créer le vôtre." %}</p>
   <div class="lib-carousel"><div class="lib-track">
     {% for m in library_preview %}
     <a class="lib-tile" href="{% url 'studio:digipaint' m.uid %}">
@@ -58,14 +58,9 @@
     </a>
     {% endfor %}
   </div></div>
-  <a class="cta" href="{% url 'studio:gallery' %}">{% trans "Voir tous les modèles" %}</a>
+  <a class="cta" style="margin-top:34px" href="{% url 'studio:gallery' %}">{% trans "Voir tous les modèles" %}</a>
 </section>
 {% endif %}
-
-<section class="closing">
-  <h2>{% trans "Prêt à peindre ces numéros ?" %}</h2>
-  <a class="cta big" href="{% url 'studio:upload' %}">{% trans "Commencer maintenant" %}</a>
-</section>
 
 <script>
   (function () {

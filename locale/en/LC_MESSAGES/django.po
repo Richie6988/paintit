@@ -996,3 +996,17 @@ msgstr ""
 
 msgid "Prêt à peindre ces numéros ?"
 msgstr "Ready to paint by numbers?"
+
+msgid ""
+"Envoyez une photo, recevez votre toile à peindre par numéros en moins d'une "
+"minute. Peignez-la en ligne gratuitement, ou faites-vous livrer le kit "
+"complet à domicile."
+msgstr ""
+"Send a photo and get your paint-by-numbers canvas in under a minute. Paint "
+"it online for free, or have the complete kit delivered to your door."
+
+msgid ""
+"Envie d'essayer ? Peignez un modèle en ligne, gratuitement, avant de créer "
+"le vôtre."
+msgstr ""
+"Want to try? Paint a model online, for free, before creating your own."

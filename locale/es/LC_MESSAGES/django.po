@@ -1000,3 +1000,18 @@ msgstr ""
 
 msgid "Prêt à peindre ces numéros ?"
 msgstr "¿Listo para pintar por números?"
+
+msgid ""
+"Envoyez une photo, recevez votre toile à peindre par numéros en moins d'une "
+"minute. Peignez-la en ligne gratuitement, ou faites-vous livrer le kit "
+"complet à domicile."
+msgstr ""
+"Envía una foto y recibe tu lienzo para pintar por números en menos de un "
+"minuto. Píntalo en línea gratis o pide que te enviemos el kit completo a "
+"casa."
+
+msgid ""
+"Envie d'essayer ? Peignez un modèle en ligne, gratuitement, avant de créer "
+"le vôtre."
+msgstr ""
+"¿Quieres probar? Pinta un modelo en línea, gratis, antes de crear el tuyo."
