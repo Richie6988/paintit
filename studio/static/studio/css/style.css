@@ -659,17 +659,17 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 
 
 /* Footer PaintIt */
-.foot{margin-top:48px;background:#0f1836;color:#c8d2ea}
-.foot-in{max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:20px}
-.foot-motto{flex:1;text-align:center;margin:0;color:#93a1c4;font-size:.9rem}
-.foot-logo{display:inline-flex;align-items:center;gap:9px;text-decoration:none}
-.foot-logo img{height:28px}
-.foot-logo span{color:#fff;font-weight:800;font-size:1.1rem;letter-spacing:.3px}
+.foot{margin-top:28px;background:#0f1836;color:#c8d2ea}
+.foot-in{max-width:1180px;margin:0 auto;padding:7px 20px;display:flex;align-items:center;gap:16px}
+.foot-motto{flex:1;text-align:center;margin:0;color:#93a1c4;font-size:.8rem}
+.foot-logo{display:inline-flex;align-items:center;gap:7px;text-decoration:none}
+.foot-logo img{height:20px}
+.foot-logo span{color:#fff;font-weight:800;font-size:.95rem;letter-spacing:.3px}
 
 .foot-nav{display:flex;gap:20px;align-items:center;flex:0 0 auto}
-.foot-nav a{color:#c8d2ea;text-decoration:none;font-weight:600;font-size:.95rem;transition:.15s}
+.foot-nav a{color:#c8d2ea;text-decoration:none;font-weight:600;font-size:.86rem;transition:.15s}
 .foot-nav a:hover{color:#fff}
-.foot-bottom{border-top:1px solid rgba(255,255,255,.1);text-align:center;padding:9px 20px;color:#7e8bb0;font-size:.8rem}
+.foot-bottom{border-top:1px solid rgba(255,255,255,.1);text-align:center;padding:5px 20px;color:#7e8bb0;font-size:.72rem}
 @media(max-width:640px){.foot-in{flex-direction:column;gap:14px;text-align:center;padding:20px}.foot-nav{gap:16px}}
 .foot-link{display:none}
 
