@@ -1021,3 +1021,9 @@ msgstr "Mis lienzos"
 
 msgid "Tous droits réservés."
 msgstr "Todos los derechos reservados."
+
+msgid "Commencer sans compte"
+msgstr "Empezar sin cuenta"
+
+msgid "Gratuit, sans inscription. Aperçu en quelques secondes."
+msgstr "Gratis, sin registro. Vista previa en segundos."

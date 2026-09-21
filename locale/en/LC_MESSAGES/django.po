@@ -1016,3 +1016,9 @@ msgstr "My Canvases"
 
 msgid "Tous droits réservés."
 msgstr "All rights reserved."
+
+msgid "Commencer sans compte"
+msgstr "Start without an account"
+
+msgid "Gratuit, sans inscription. Aperçu en quelques secondes."
+msgstr "Free, no sign-up. Preview in seconds."

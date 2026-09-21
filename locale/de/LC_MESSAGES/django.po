@@ -1040,3 +1040,9 @@ msgstr "Meine Bilder"
 
 msgid "Tous droits réservés."
 msgstr "Alle Rechte vorbehalten."
+
+msgid "Commencer sans compte"
+msgstr "Ohne Konto starten"
+
+msgid "Gratuit, sans inscription. Aperçu en quelques secondes."
+msgstr "Kostenlos, ohne Anmeldung. Vorschau in Sekunden."
