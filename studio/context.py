@@ -13,4 +13,4 @@ def assets(request):
             st = os.stat(p)
             v = "%x%x" % (int(st.st_mtime), st.st_size)
             break
-    return {"I18N_VERSION": v}
+    return {"I18N_VERSION": v, "SITE_URL": settings.SITE_URL}
