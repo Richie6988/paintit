@@ -1013,3 +1013,6 @@ msgstr ""
 
 msgid "Mes Toiles"
 msgstr "My Canvases"
+
+msgid "Tous droits réservés."
+msgstr "All rights reserved."

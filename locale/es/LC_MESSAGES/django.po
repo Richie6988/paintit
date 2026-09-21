@@ -1018,3 +1018,6 @@ msgstr ""
 
 msgid "Mes Toiles"
 msgstr "Mis lienzos"
+
+msgid "Tous droits réservés."
+msgstr "Todos los derechos reservados."

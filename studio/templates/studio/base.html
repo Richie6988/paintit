@@ -53,38 +53,5 @@
     </div>
     <div class="foot-bottom">&copy; {% now "Y" %} PaintIt. {% trans "Tous droits réservés." %}</div>
   </footer>
-  <script src="{% static 'studio/i18n.js' %}?v={{ I18N_VERSION }}"></script>
-  <script>
-  (function(){
-    var form=document.getElementById('langform');
-    if(!form||!window.PIT_I18N)return;
-    var current=form.dataset.current||'fr';
-    var SKIP={SCRIPT:1,STYLE:1,NOSCRIPT:1};
-    function setCookie(l){document.cookie='django_language='+l+';path=/;max-age=31536000;samesite=Lax';}
-    function replaceAll(v,pairs){pairs.forEach(function(p){if(v.indexOf(p[0])!==-1)v=v.split(p[0]).join(p[1]);});return v;}
-    function translate(to){
-      if(to===current)return;
-      var exact={}, subs=[];
-      window.PIT_I18N.forEach(function(e){var a=e[current],b=e[to];if(a&&b&&a!==b){exact[a.trim()]=b;if(a.length>=8)subs.push([a,b]);}});
-      subs.sort(function(x,y){return y[0].length-x[0].length;});   // plus longues d'abord
-      var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(n){
-        if(n.parentNode&&SKIP[n.parentNode.nodeName])return NodeFilter.FILTER_REJECT;
-        if(n.parentNode&&n.parentNode.closest&&n.parentNode.closest('[data-noi18n]'))return NodeFilter.FILTER_REJECT;
-        return NodeFilter.FILTER_ACCEPT;}});
-      var nodes=[],n;while(n=w.nextNode())nodes.push(n);
-      nodes.forEach(function(t){var v=t.nodeValue,tr=v.trim();
-        if(tr&&exact[tr]!==undefined){t.nodeValue=v.replace(tr,exact[tr]);}
-        else{var nv=replaceAll(v,subs);if(nv!==v)t.nodeValue=nv;}});
-      document.querySelectorAll('[placeholder]').forEach(function(el){var k=(el.getAttribute('placeholder')||'').trim();
-        if(exact[k]!==undefined)el.setAttribute('placeholder',exact[k]);
-        else el.setAttribute('placeholder',replaceAll(el.getAttribute('placeholder')||'',subs));});
-      current=to;document.documentElement.lang=to;setCookie(to);
-      form.querySelectorAll('[data-lang]').forEach(function(b){b.classList.toggle('active',b.dataset.lang===to);});
-    }
-    form.querySelectorAll('[data-lang]').forEach(function(b){
-      b.addEventListener('click',function(e){e.preventDefault();translate(b.dataset.lang);});
-    });
-  })();
-  </script>
 </body>
 </html>

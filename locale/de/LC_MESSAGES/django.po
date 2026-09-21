@@ -1037,3 +1037,6 @@ msgstr ""
 
 msgid "Mes Toiles"
 msgstr "Meine Bilder"
+
+msgid "Tous droits réservés."
+msgstr "Alle Rechte vorbehalten."
