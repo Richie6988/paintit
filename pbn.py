@@ -410,11 +410,12 @@ def build_svg(labels, k, mmx, mmy, w_mm, h_mm, eps, min_label_area,
 # Sorties bitmap : aperçu colorié + légende palette
 # --------------------------------------------------------------------------- #
 def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
-    """SVG jouable AUTONOME. Zones remplissables tracees sur leur contour REEL (non
-    dilate, lisse) -> la peinture ne deborde JAMAIS du trait. Par-dessus, UN SEUL calque
-    de traits noirs, trace une seule fois entre les zones (pas de doublons ni de bug de
-    coins), assez large et mis a l'echelle pour couvrir le joint inter-zones (pas de
-    trou). Le numero (taille prudente) reste dans sa cellule. data-n, data-a."""
+    """SVG jouable AUTONOME. Les remplissages sont DILATES de 1px et lisses : les zones
+    voisines se CHEVAUCHENT, donc aucun trou entre elles ni aux jonctions. Par-dessus,
+    UN SEUL calque de traits noirs (frontieres tracees une seule fois -> pas de doublons
+    ni de bug de coins), assez large (~2px, mis a l'echelle) pour couvrir tout le
+    chevauchement -> aucun debordement visible de peinture. Le numero (taille prudente)
+    reste dans sa cellule. data-n, data-a."""
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{w_mm:.1f}mm" height="{h_mm:.1f}mm" '
            f'viewBox="0 0 {w_mm:.2f} {h_mm:.2f}" shape-rendering="geometricPrecision" '
            f'text-rendering="geometricPrecision">',
@@ -422,6 +423,7 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
     eps_px = max(0.8, eps)
     LABEL_MIN_R_MM = 0.55
     FS_CAP = 7.0
+    k3 = np.ones((3, 3), np.uint8)
     for c in range(len(palette_bgr)):
         m = (labels == c).astype(np.uint8)
         if not m.any():
@@ -430,7 +432,8 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
         for lb in range(1, ncc):
             comp = (cc == lb).astype(np.uint8)
             area = int(comp.sum())
-            cnts, _hier = cv2.findContours(comp, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+            comp_fill = cv2.dilate(comp, k3, iterations=1)   # chevauchement -> pas de trou
+            cnts, _hier = cv2.findContours(comp_fill, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
             segs = []
             for cnt in cnts:
                 if len(cnt) < 3:
@@ -458,9 +461,9 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
             out.append('<g class="cell"><path class="z" fill="#eef1f6" '
                        f'fill-rule="evenodd" data-n="{num}" data-a="{area}" '
                        f'd="{" ".join(segs)}"/>{txt}</g>')
-    # Un seul calque de traits (frontieres tracees une seule fois), lisse, PAR-DESSUS,
-    # largeur ~1.4 px (mise a l'echelle) : couvre le joint entre remplissages non dilates.
-    lw = max(0.34, 1.4 * (mmx + mmy) * 0.5)
+    # Un seul calque de traits, lisse, PAR-DESSUS, ~2px (mis a l'echelle) : couvre le
+    # chevauchement des remplissages -> pas de debordement, et bouche tout joint -> pas de trou.
+    lw = max(0.4, 1.9 * (mmx + mmy) * 0.5)
     eps_b = max(0.8, eps)
     lines = []
     for poly in _trace_boundaries(labels):
