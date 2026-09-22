@@ -410,14 +410,17 @@ def build_svg(labels, k, mmx, mmy, w_mm, h_mm, eps, min_label_area,
 # Sorties bitmap : aperçu colorié + légende palette
 # --------------------------------------------------------------------------- #
 def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
-    """SVG jouable AUTONOME : chaque zone = un <path> remplissable AVEC son propre trait
-    noir fin (meme geometrie que le remplissage -> alignement parfait) + son numero.
+    """SVG jouable AUTONOME : chaque zone = un <path> remplissable AVEC son propre
+    trait noir fin, trace sur EXACTEMENT la meme geometrie lissee que le remplissage
+    -> superposition peinture/contour parfaite (pas de halo, pas de debordement).
+    Le numero est place dans la cellule (masque quand la zone est peinte) et,
+    comme il n'y a plus de calque de traits par-dessus, il n'est plus recouvert.
     data-n = numero cible, data-a = surface (score)."""
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{w_mm:.1f}mm" height="{h_mm:.1f}mm" '
            f'viewBox="0 0 {w_mm:.2f} {h_mm:.2f}" shape-rendering="geometricPrecision" '
            f'text-rendering="geometricPrecision">',
            f'<rect x="0" y="0" width="{w_mm:.2f}" height="{h_mm:.2f}" fill="#ffffff"/>']
-    ap = max(0.5, eps * 0.5)
+    eps_px = max(0.8, eps)
     LABEL_MIN_R_MM = 0.55
     FS_CAP = 7.0
     for c in range(len(palette_bgr)):
@@ -428,16 +431,19 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
         for lb in range(1, ncc):
             comp = (cc == lb).astype(np.uint8)
             area = int(comp.sum())
-            # dilate d'1px : le remplissage rejoint le trait inter-zone (pas de halo blanc)
-            comp_fill = cv2.dilate(comp, np.ones((3, 3), np.uint8), iterations=1)
-            cnts, _ = cv2.findContours(comp_fill, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+            # Contour REEL (non dilate) + meme lissage que le trait : le remplissage
+            # et son propre trait noir partagent la meme geometrie -> alignement parfait.
+            cnts, _hier = cv2.findContours(comp, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
             segs = []
             for cnt in cnts:
-                cnt = cv2.approxPolyDP(cnt, ap, True)
                 if len(cnt) < 3:
                     continue
-                pts = cnt.reshape(-1, 2)
-                segs.append("M " + " L ".join(f"{x*mmx:.2f} {y*mmy:.2f}" for x, y in pts) + " Z")
+                approx = cv2.approxPolyDP(cnt, eps_px, True)
+                base = [(float(p[0][0]), float(p[0][1])) for p in approx]
+                if len(base) < 3:
+                    continue
+                sm = _chaikin(base, True, iters=3)
+                segs.append("M " + " L ".join(f"{x*mmx:.2f} {y*mmy:.2f}" for x, y in sm) + " Z")
             if not segs:
                 continue
             num = c + 1
@@ -446,41 +452,20 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
             r_mm = r * (mmx + mmy) * 0.5
             if r_mm >= LABEL_MIN_R_MM:
                 n = len(str(num))
-                fs = float(min(FS_CAP, 2.05 * r_mm / float(np.hypot(0.58 * n, 0.60))))
-                if fs >= 0.7:
+                # marge 0.86 : le numero reste bien a l'interieur de la zone (jamais coupe)
+                fs = float(min(FS_CAP, 0.86 * 2.05 * r_mm / float(np.hypot(0.58 * n, 0.60))))
+                if fs >= 0.55:
                     hw = 0.32 * n * fs
                     cx = min(max(x * mmx, hw + 0.5), w_mm - hw - 0.5)
                     cy = min(max(y * mmy + fs * 0.34, fs * 0.9), h_mm - fs * 0.25)
                     txt = f'<text class="zn" x="{cx:.2f}" y="{cy:.2f}" font-size="{fs:.2f}">{num}</text>'
             out.append('<g class="cell"><path class="z" fill="#eef1f6" '
+                       'stroke="#141414" stroke-width="0.34" stroke-linejoin="round" '
+                       'stroke-linecap="round" vector-effect="non-scaling-stroke" '
                        f'fill-rule="evenodd" data-n="{num}" data-a="{area}" '
                        f'd="{" ".join(segs)}"/>{txt}</g>')
-    # UN SEUL trait (frontieres tracees une fois), lisse et assez epais pour couvrir le joint
-    eps_px = max(0.8, eps)
-    lines = []
-    for poly in _trace_boundaries(labels):
-        closed = len(poly) > 2 and poly[0] == poly[-1]
-        pts = poly[:-1] if closed else poly
-        if len(pts) < 2:
-            continue
-        arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
-        approx = cv2.approxPolyDP(arr, eps_px, closed)
-        base = [(float(pp[0][0]), float(pp[0][1])) for pp in approx]
-        if len(base) < 2:
-            continue
-        sm = _chaikin(base, closed, iters=3) if len(base) >= 3 else base
-        d = "M " + " L ".join(f"{x*mmx:.2f} {y*mmy:.2f}" for x, y in sm)
-        if closed:
-            d += " Z"
-        lines.append(d)
-    if lines:
-        out.append('<g class="lines" fill="none" stroke="#141414" stroke-width="0.34" '
-                   'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke">')
-        out += [f'<path d="{d}"/>' for d in lines]
-        out.append('</g>')
     out.append("</svg>")
     return "\n".join(out)
-
 
 def render_preview(labels, palette_bgr):
     return palette_bgr[labels]
