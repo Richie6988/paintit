@@ -10,10 +10,10 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.clickjacking import xframe_options_sameorigin
-from django.utils.translation import get_language
+from django.utils.translation import get_language, gettext as _
 from django.contrib.admin.views.decorators import staff_member_required
 
-from . import fulfillment, supplier, discounts, address, emails, payments, receipts, jobs
+from . import fulfillment, supplier, discounts, address, emails, payments, receipts, jobs, genqueue
 from .forms import UploadForm, DeliveryForm, ContactForm, FORMATS, dimensions
 from .models import Order, Pricing, DigitalCanvas, EmailCode
 from .pipeline import generate, compute_price, price_cfg
@@ -116,11 +116,16 @@ def upload(request):
                 uid = f"{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:4].upper()}"
                 jobs.start(uid)
                 sname = request.session.get("last_photo_name") or os.path.basename(src)
-                threading.Thread(target=_run_generation, daemon=True,
-                                 args=(uid, src, colors, w, h, fmt, orientation,
-                                       get_language() or "fr", (fx, fy)),
-                                 kwargs={"source_name": sname}).start()
-                return redirect("%s?uid=%s" % (reverse("studio:processing"), uid))
+                try:
+                    genqueue.submit(_run_generation, uid, src, colors, w, h, fmt,
+                                    orientation, get_language() or "fr", (fx, fy),
+                                    source_name=sname)
+                except genqueue.QueueFull:
+                    jobs.pop(uid)
+                    form.add_error(None, _("Nos serveurs sont très sollicités en ce moment. "
+                                           "Merci de réessayer dans quelques secondes."))
+                else:
+                    return redirect("%s?uid=%s" % (reverse("studio:processing"), uid))
     else:
         initial = {}
         if order:
@@ -718,10 +723,13 @@ def digipaint_regen(request, uid):
     density = _fopt("density", 0.02, 5)
     gameuid = uid + "-G"
     jobs.start(gameuid)
-    threading.Thread(target=_run_game_generation, daemon=True,
-                     args=(gameuid, src, colors, w_cm, h_cm, detail),
-                     kwargs={"source_name": os.path.basename(src), "max_zones": max_zones,
-                             "min_zone_mm": min_zone_mm, "density": density}).start()
+    try:
+        genqueue.submit(_run_game_generation, gameuid, src, colors, w_cm, h_cm, detail,
+                        source_name=os.path.basename(src), max_zones=max_zones,
+                        min_zone_mm=min_zone_mm, density=density)
+    except genqueue.QueueFull:
+        jobs.pop(gameuid)
+        return JsonResponse({"error": "busy"}, status=429)
     request.session["game_uid"] = gameuid
     return JsonResponse({"job": gameuid})
 

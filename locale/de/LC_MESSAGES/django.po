@@ -1046,3 +1046,10 @@ msgstr "Ohne Konto starten"
 
 msgid "Gratuit, sans inscription. Aperçu en quelques secondes."
 msgstr "Kostenlos, ohne Anmeldung. Vorschau in Sekunden."
+
+msgid ""
+"Nos serveurs sont très sollicités en ce moment. Merci de réessayer dans "
+"quelques secondes."
+msgstr ""
+"Unsere Server sind gerade stark ausgelastet. Bitte versuchen Sie es in ein "
+"paar Sekunden erneut."

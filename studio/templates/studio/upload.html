@@ -9,6 +9,7 @@
 
   <form method="post" enctype="multipart/form-data" class="form" id="pbn-form">
     {% csrf_token %}
+    {% if form.non_field_errors %}<div class="err" style="background:#fdecef;border:1px solid #f5c2cf;color:#c0392b;border-radius:10px;padding:10px 14px;margin-bottom:12px">{{ form.non_field_errors|striptags }}</div>{% endif %}
     <input type="hidden" name="focus_x" id="focus_x" value="0.5">
     <input type="hidden" name="focus_y" id="focus_y" value="0.5">
     <label class="field">
