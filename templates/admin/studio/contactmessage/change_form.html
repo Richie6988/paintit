@@ -1,0 +1,8 @@
+{% extends "admin/change_form.html" %}
+{% block extrahead %}{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('input[name="_save"]').forEach(function (b) { b.value = "Envoyer"; });
+});
+</script>
+{% endblock %}
