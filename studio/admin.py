@@ -15,8 +15,6 @@ admin.site.index_title = "Gestion PaintIt"
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    actions = ("fichiers_fournisseur",)
-
     def get_fieldsets(self, request, obj=None):
         fs = super().get_fieldsets(request, obj)
         try:
@@ -83,7 +81,7 @@ class OrderAdmin(admin.ModelAdmin):
     date_hierarchy = "created_at"
     list_per_page = 25
     readonly_fields = ("uid", "created_at", "cost", "benefit_col", "supplier_ref", "feedback_sent", "fichiers")
-    actions = ("mark_shipped", "mark_delivered", "send_feedback")
+    actions = ("fichiers_fournisseur", "mark_shipped", "mark_delivered", "send_feedback")
     fieldsets = (
         ("Commande", {"fields": (("uid", "status"), ("created_at", "lang"), "supplier_ref")}),
         ("Suivi & expedition", {"fields": ("carrier", ("tracking_number", "tracking_url"),

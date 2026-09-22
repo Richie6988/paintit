@@ -1627,6 +1627,10 @@ def admin_hub(request):
     if to_ship:
         alerts.append({"label": "Payees a envoyer au fournisseur", "count": to_ship,
                        "url": "/admin/studio/order/?status__exact=" + Order.PAID, "level": "info"})
+    unanswered = ContactMessage.objects.filter(answered=False).count()
+    if unanswered:
+        alerts.append({"label": "Messages non repondus", "count": unanswered,
+                       "url": "/admin/studio/contactmessage/?answered__exact=0", "level": "warn"})
     try:
         if not Supplier.for_checkout("kit"):
             alerts.append({"label": "Aucun fournisseur pour le checkout Kit", "count": "!",
