@@ -131,21 +131,6 @@
  .spin{width:42px;height:42px;border:4px solid #2a3c6b;border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
  .overlaym{position:fixed;inset:0;background:rgba(6,10,24,.9);display:none;align-items:center;justify-content:center;z-index:30;padding:20px}.overlaym.show{display:flex}
  .overlaym img{max-width:94vw;max-height:90vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6);cursor:crosshair}
- .pop{position:fixed;inset:0;background:rgba(10,18,40,.5);display:none;z-index:40;align-items:center;justify-content:center;padding:16px}
- .pop-card{background:#fff;color:#12224f;border-radius:20px;width:min(600px,96vw);max-height:92vh;overflow:auto;padding:22px 22px 26px;box-shadow:0 30px 80px rgba(10,18,40,.4);position:relative}
- .pop-card h2{font-size:1.25rem;margin:0 0 4px;color:#12224f}
- .pop-card .sub{color:#5b647a;font-size:.86rem;margin-bottom:14px}
- .pop-close{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;border:1px solid #e2e8f2;background:#fff;color:#12224f;font-size:1.4rem;line-height:1;cursor:pointer}
- .pop-close:hover{background:#f4f6fb}
- .pop-sec{border-top:1px solid #eef1f6;padding-top:14px;margin-top:16px}
- .pop-sec:first-of-type{border-top:none;padding-top:0;margin-top:0}
- .pop-sec h3{font-size:.78rem;text-transform:uppercase;letter-spacing:1px;color:#8a97b4;margin:0 0 8px}
- .pop .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
- .pop.show{display:flex}.pop label{display:block;font-size:.85rem;color:#33415c;font-weight:600;margin-top:10px}
- .pop input,.pop select{width:100%;margin:5px 0 4px;border-radius:11px;border:1px solid #cdd8ea;background:#fff;color:#12224f;padding:11px 12px;font-size:1rem;font-weight:600}
- .pop input[type=range]{padding:0;accent-color:var(--accent)}
- .pop .btn.big{width:100%;padding:14px;font-size:1.02rem;font-weight:800;margin-top:14px}
- .pop .hint{font-size:.8rem;color:#5b647a;margin:6px 0 0}
  .win{position:fixed;inset:0;background:rgba(6,10,24,.88);display:none;align-items:center;justify-content:center;z-index:32}.win.show{display:flex}
  .wincard{position:relative;background:var(--panel);border:1px solid #2a3c6b;border-radius:20px;padding:30px 34px;text-align:center;max-width:380px;overflow:hidden}
  .wincard h2{margin:0 0 4px}.wincard .big{font-size:2.6rem;font-weight:800;color:var(--good)}
@@ -214,7 +199,6 @@
   <div class="stat stat-score"><small>{% trans "Score" %}</small><span id="score">0</span></div>
   <div class="stat stat-zones"><small>{% trans "Zones" %}</small><span id="zones">0/0</span></div>
   <div class="sp"></div>
-  <button class="btn iconbtn" id="menuBtn" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
   <button class="btn iconbtn" id="helpBtn" title="Help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.4 1.9-2.4 3.5"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
   <button class="btn iconbtn" id="full" title="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
   <button class="btn iconbtn" id="reset" title="Restart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7M21 3v5h-5"/></svg></button>
@@ -248,42 +232,6 @@
     </div>
   </div>
 </div>
-
-<div class="pop" id="pop">
-  <div class="pop-card">
-    <button class="pop-close" id="popClose" title="{% trans 'Fermer' %}">&times;</button>
-    <h2>{% trans "Réglages du tableau" %}</h2>
-    <p class="sub">{% trans "Ajustez le rendu puis régénérez, ou retrouvez vos toiles par e-mail." %}</p>
-
-    <div class="pop-sec">
-      <h3>{% trans "Régénérer le tableau" %}</h3>
-      <label>{% trans "Détail (couleurs)" %} : <b id="cval">24</b></label>
-      <input type="range" id="crange" min="2" max="99" value="24" step="1">
-      <label>{% trans "Difficulté" %}</label>
-      <select id="diff"><option value="facile">{% trans "Facile" %}</option><option value="moyen" selected>{% trans "Moyen" %}</option><option value="difficile">{% trans "Difficile" %}</option><option value="extreme">{% trans "Extrême" %}</option></select>
-      <div class="grid2">
-        <div><label>{% trans "Taille min" %} (mm)</label><input type="number" id="zmin" min="0.5" max="20" step="0.1" placeholder="auto"></div>
-        <div><label>{% trans "Densité" %} (z/cm&sup2;)</label><input type="number" id="zdens" min="0.02" max="5" step="0.01" placeholder="auto"></div>
-      </div>
-      <label>{% trans "Plafond de zones" %} (2&ndash;9999)</label>
-      <input type="number" id="zmax" min="2" max="9999" step="1" placeholder="auto">
-      <button class="btn pri big" id="regen">{% trans "Régénérer le tableau" %}</button>
-      <div class="hint" id="genstatus"></div>
-    </div>
-
-    <div class="pop-sec">
-      <h3>{% trans "Mes toiles" %}</h3>
-      <label>{% trans "Sauvegarder pour plus tard" %}</label>
-      <input id="slEmail" type="email" placeholder="votre@email.com">
-      <button class="btn big" id="slSave">{% trans "Recevoir mon code par e-mail" %}</button>
-      <div class="hint" id="slMsg">{% trans "Vous recevrez un code par e-mail." %}</div>
-      <label>{% trans "Ouvrir un autre code" %}</label>
-      <input id="codein" placeholder="Code">
-      <button class="btn big" id="codego">{% trans "Ouvrir" %}</button>
-    </div>
-  </div>
-</div>
-
 
 <div class="overlaym" id="modal"><img id="modalimg" alt="aperçu final"></div>
 
@@ -350,7 +298,7 @@
   function markSel(){document.querySelectorAll('.reel-pot').forEach(function(s){
     if(s.dataset.pot!==undefined){s.classList.toggle('sel', mode==='free' && selectedPot===parseInt(s.dataset.pot,10));}
     else{s.classList.toggle('sel', mode==='match' && s.dataset.n==selectedN);}});updateHandle();}
-  function openPot(i){potPickIdx=i;var fc=document.getElementById('freecolor');fc.value=customPots[i]||'#ff5252';fc.click();}
+  function openPot(i){potPickIdx=i;var fc=document.getElementById('freecolor');fc.value=customPots[i]||'#ff5252';try{if(fc.showPicker){fc.showPicker();return;}}catch(e){}fc.click();}
   function selectPot(i){if(!customPots[i])return;selectedPot=i;freeColor=customPots[i];mode='free';setMode();markSel();}
   var tx=0,ty=0,sc=1, combo=0,lastN=null, comboTimer=null, shown=0, countRaf=null;
   function imgURL(u,k){return "/preview/img/"+u+"/"+k+"/";}
@@ -377,7 +325,7 @@
       d.addEventListener('click',function(){selectedN=c.number;mode='match';setMode();markSel();});track.appendChild(d);});
     for(var i=0;i<3;i++){(function(i){var d=document.createElement('button');d.className='reel-pot custom';d.dataset.pot=i;
       d.innerHTML=customHTML(i);
-      d.addEventListener('click',function(){if(!customPots[i]||selectedPot===i){openPot(i);}else{selectPot(i);}});track.appendChild(d);})(i);}
+      d.addEventListener('click',function(){if(customPots[i])selectPot(i);openPot(i);});track.appendChild(d);})(i);}
     markSel();}
   function fitView(){var svg=host.querySelector('svg');if(!svg)return;wrap.style.transform='';var s=svg.getBoundingClientRect(),b=boardEl.getBoundingClientRect(),pad=24;
     var fit=Math.min((b.width-pad*2)/s.width,(b.height-pad*2)/s.height);sc=fit>0?fit:1;tx=(b.width-s.width*sc)/2;ty=(b.height-s.height*sc)/2;apply();}
@@ -502,29 +450,9 @@
   modalimg.addEventListener('click',function(e){e.stopPropagation();var ir=this.getBoundingClientRect();
     teleport((e.clientX-ir.left)/ir.width,(e.clientY-ir.top)/ir.height);modal.classList.remove('show');});
   modal.addEventListener('click',function(){modal.classList.remove('show');});
-  var pop=document.getElementById('pop');
-  document.getElementById('menuBtn').addEventListener('click',function(e){e.stopPropagation();pop.classList.toggle('show');});
   document.getElementById('helpBtn').addEventListener('click',function(e){e.stopPropagation();document.getElementById('boardhelp').classList.toggle('show');});
   document.addEventListener('click',function(e){var h=document.getElementById('boardhelp');
     if(h&&h.classList.contains('show')&&!h.contains(e.target)&&!(e.target.closest&&e.target.closest('#helpBtn')))h.classList.remove('show');});
-  document.getElementById('popClose').addEventListener('click',function(){pop.classList.remove('show');});
-  pop.addEventListener('click',function(e){if(e.target===pop)pop.classList.remove('show');});
-  document.getElementById('codego').addEventListener('click',function(){var v=(document.getElementById('codein').value||'').trim();if(v)location.href='/paint/'+encodeURIComponent(v)+'/';});
-  document.getElementById('slSave').addEventListener('click',function(){var email=(document.getElementById('slEmail').value||'').trim(),msg=document.getElementById('slMsg');if(!email){msg.textContent='Enter your email.';return;}
-    fetch("/my-models/email/",{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':CSRF},body:'email='+encodeURIComponent(email)+'&models='+encodeURIComponent(JSON.stringify([MODEL]))})
-      .then(function(r){return r.json();}).then(function(d){msg.textContent=d.ok?'Sent! Check your inbox.':'Invalid email.';}).catch(function(){msg.textContent='Erreur.';});});
-  var crange=document.getElementById('crange'),cval=document.getElementById('cval'),gs=document.getElementById('genstatus');
-  crange.addEventListener('input',function(){cval.textContent=crange.value;});
-  document.getElementById('regen').addEventListener('click',function(){var n=crange.value,diff=document.getElementById('diff').value;loading.classList.add('show');loadtxt.textContent='Generating ('+n+' colours)…';gs.textContent='';pop.classList.remove('show');
-    fetch("/paint/"+UID+"/regen/",{method:'POST',headers:{'X-CSRFToken':CSRF,'Content-Type':'application/x-www-form-urlencoded'},body:(function(){var b='colors='+n+'&difficulty='+diff;var z1=document.getElementById('zmin'),z2=document.getElementById('zdens'),z3=document.getElementById('zmax');
-      if(z1&&z1.value)b+='&min_zone_mm='+z1.value; if(z2&&z2.value)b+='&density='+z2.value; if(z3&&z3.value)b+='&max_zones='+z3.value; return b;})()})
-      .then(function(r){return r.json();}).then(function(d){if(d.error){loading.classList.remove('show');gs.textContent='Error.';return;}poll(d.job);}).catch(function(){loading.classList.remove('show');});});
-  function poll(g){fetch("/create/progress/?uid="+encodeURIComponent(g),{cache:'no-store'}).then(function(r){return r.json();}).then(function(p){if(p.pct)loadtxt.textContent='Generating… '+p.pct+'%';
-    if(p.done){fetch("/paint/"+UID+"/game-palette/",{cache:'no-store'}).then(function(r){return r.json();}).then(function(pp){if(pp.palette){
-      try{var gm=JSON.parse(localStorage.getItem('PIT_GAME')||'{}');gm[UID]={g:g,pal:pp.palette};localStorage.setItem('PIT_GAME',JSON.stringify(gm));}catch(e){}
-      loadBoard(g,pp.palette).then(function(){loading.classList.remove('show');});}else loading.classList.remove('show');});return;}
-    setTimeout(function(){poll(g);},500);}).catch(function(){setTimeout(function(){poll(g);},800);});}
-
   document.getElementById('full').addEventListener('click',function(){var el=document.documentElement;if(!document.fullscreenElement){(el.requestFullscreen||el.webkitRequestFullscreen).call(el);}else document.exitFullscreen();});
   document.getElementById('reset').addEventListener('click',function(){PitDialog.confirm('{% filter escapejs %}{% trans "Recommencer cette toile ?" %}{% endfilter %}',{danger:true,ok:'{% filter escapejs %}{% trans "Recommencer" %}{% endfilter %}',text:'{% filter escapejs %}{% trans "Toute la peinture et le score de cette toile seront effacés." %}{% endfilter %}'}).then(function(ok){if(!ok)return;localStorage.removeItem(key());zones.forEach(function(z){z.style.fill='';z.dataset.done='0';if(z.parentNode)z.parentNode.classList.remove('done');});score=0;done=0;combo=0;lastN=null;updateHUD();});});
   document.getElementById('winok').addEventListener('click',function(){document.getElementById('win').classList.remove('show');});
@@ -537,7 +465,6 @@
   var startG=UID, startPAL=PAL;
   try{var gm=JSON.parse(localStorage.getItem('PIT_GAME')||'{}');if(gm[UID]&&gm[UID].g&&gm[UID].pal&&gm[UID].pal.length){startG=gm[UID].g;startPAL=gm[UID].pal;}}catch(e){}
   var MODEL={uid:UID,w:40,h:50,colors:startPAL.length||24,orientation:'portrait',format_label:'40 x 50 cm',date:Date.now()};
-  crange.value=Math.min(99,Math.max(12,startPAL.length||24));cval.textContent=crange.value;
   loadBoard(startG,startPAL).then(function(){var svg=host.querySelector('svg');if(!svg)return;var vb=(svg.getAttribute('viewBox')||'0 0 400 500').split(/\s+/);var wmm=parseFloat(vb[2])||400,hmm=parseFloat(vb[3])||500;
     MODEL.w=wmm/10;MODEL.h=hmm/10;MODEL.orientation=(hmm>=wmm)?'portrait':'paysage';MODEL.colors=startPAL.length||24;
     try{var l=JSON.parse(localStorage.getItem('PIT_MODELS')||'[]').filter(function(x){return x.uid!==UID;});l.unshift(MODEL);localStorage.setItem('PIT_MODELS',JSON.stringify(l.slice(0,60)));}catch(e){}});
