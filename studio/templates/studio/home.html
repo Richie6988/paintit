@@ -12,9 +12,9 @@
 
   <div class="hero-visual">
     <div class="reveal" id="reveal" style="--pos:50%">
-      <img class="reveal-img" id="revealBase" src="{% if first_slide %}{{ first_slide.t }}{% else %}{% static 'studio/showcase/moto_template.png' %}{% endif %}" alt="" draggable="false" onerror="this.dataset.bad=1">
+      <img class="reveal-img" id="revealBase" src="{% if first_slide %}{{ first_slide.t }}{% else %}{% static 'studio/img/demo_template.svg' %}{% endif %}" alt="" draggable="false" onerror="this.dataset.bad=1">
       <div class="reveal-top" id="revealTop">
-        <img class="reveal-img" id="revealPhoto" src="{% if first_slide %}{{ first_slide.p }}{% else %}{% static 'studio/showcase/moto_pbn.png' %}{% endif %}" alt="" draggable="false">
+        <img class="reveal-img" id="revealPhoto" src="{% if first_slide %}{{ first_slide.p }}{% else %}{% static 'studio/img/demo_photo.jpg' %}{% endif %}" alt="" draggable="false">
       </div>
       <div class="reveal-handle" id="revealHandle"><span class="knob"></span></div>
     </div>

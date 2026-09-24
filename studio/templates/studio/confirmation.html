@@ -78,4 +78,5 @@
   l.unshift(m); localStorage.setItem('PIT_MODELS',JSON.stringify(l.slice(0,60)));
 }catch(e){} })();
 </script>
+<script>window.plausible&&plausible('Commande',{revenue:{currency:'EUR',amount:{{ total|default:0|stringformat:".2f" }}}});</script>
 {% endblock %}

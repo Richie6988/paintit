@@ -1,0 +1,28 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Double authentification · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block nav-global %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<div class="erp" style="max-width:460px;margin:30px auto">
+  <div class="card" style="text-align:center;padding:26px">
+    <h1 style="margin:0 0 6px">🔐 Double authentification</h1>
+    {% if mode == "setup" %}
+      <p class="muted">1. Scannez ce QR code avec Google Authenticator, 1Password, Authy…<br>2. Saisissez le code à 6 chiffres affiché.</p>
+      <div style="margin:14px auto;display:inline-block">{{ qr|safe }}</div>
+      <p class="muted" style="font-size:.78rem">Saisie manuelle : <code style="user-select:all">{{ secret }}</code></p>
+    {% else %}
+      <p class="muted">Saisissez le code à 6 chiffres de votre application d'authentification.</p>
+    {% endif %}
+    {% if error %}<div class="banner err" style="margin:10px 0"><span>{{ error }}</span></div>{% endif %}
+    <form method="post" style="display:flex;gap:8px;justify-content:center;margin-top:12px">{% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus
+             placeholder="123 456" style="font-size:1.3rem;letter-spacing:.2em;text-align:center;width:160px">
+      <button class="pbtn pri">{% if mode == "setup" %}Activer{% else %}Valider{% endif %}</button>
+    </form>
+    <form method="post" action="/admin/logout/" style="margin-top:16px">{% csrf_token %}<button class="pbtn sm" style="font-size:.78rem">Se déconnecter</button></form>
+  </div>
+</div>
+{% endblock %}

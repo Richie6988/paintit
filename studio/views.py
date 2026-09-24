@@ -76,6 +76,15 @@ def _save_upload(f):
     with open(path, "wb") as out:
         for chunk in f.chunks():
             out.write(chunk)
+    if ext in (".heic", ".heif"):   # OpenCV ne lit pas le HEIC (iPhone) -> JPEG
+        try:
+            from PIL import Image, ImageOps
+            jpg = path.rsplit(".", 1)[0] + ".jpg"
+            ImageOps.exif_transpose(Image.open(path)).convert("RGB").save(jpg, "JPEG", quality=95)
+            os.remove(path)
+            path = jpg
+        except Exception:
+            logger.exception("Conversion HEIC")
     return path
 
 
@@ -375,34 +384,6 @@ def order_file(request, uid, name):
     resp["X-Robots-Tag"] = "noindex, nofollow"
     resp["Cache-Control"] = "private, no-store"
     return resp
-
-
-def restore_model(request):
-    """Reprise d'un modele sauvegarde (Mes creations) : reconstitue la commande en session."""
-    if request.method != "POST":
-        return redirect("studio:home")
-    uid = request.POST.get("uid", "")
-    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
-    if not uid or not os.path.isdir(d):
-        return redirect("studio:my_models")
-    import json
-    cj = os.path.join(d, f"{uid}_colors.json")
-    colors_list = json.load(open(cj, encoding="utf-8")) if os.path.exists(cj) else []
-    try:
-        w = float(request.POST["width_cm"]); h = float(request.POST["height_cm"])
-        colors = int(request.POST["colors"])
-    except (KeyError, TypeError, ValueError):
-        return redirect("studio:my_models")
-    canvas = compute_price("40x50", colors)
-    request.session["order"] = {
-        "uid": uid, "colors": colors, "width_cm": w, "height_cm": h,
-        "orientation": request.POST.get("orientation", "portrait"),
-        "format_label": request.POST.get("format_label", "40 x 50 cm"),
-        "difficulty": "auto", "lang": get_language() or "fr",
-        "canvas_price": canvas, "brushes": False, "brushes_amount": 0.0,
-        "price": canvas, "colors_list": colors_list,
-    }
-    return redirect("studio:preview")
 
 
 def my_models(request):
@@ -705,25 +686,6 @@ def digipaint_order(request, uid):
                                 "colors": colors if colors in (12, 24, 36) else 24}
     request.session["buy_mode"] = True
     return redirect("studio:upload")
-
-
-def my_models_email(request):
-    if request.method != "POST":
-        return redirect("studio:my_models")
-    import json
-    from django.core.validators import validate_email
-    from django.core.exceptions import ValidationError
-    email = (request.POST.get("email") or "").strip()
-    try:
-        validate_email(email)
-    except ValidationError:
-        return JsonResponse({"error": "email"}, status=400)
-    try:
-        models = json.loads(request.POST.get("models", "[]"))[:60]
-    except Exception:
-        models = []
-    emails.send_gallery(email, models, get_language() or "fr")
-    return JsonResponse({"ok": True})
 
 
 def _run_game_generation(gameuid, src, colors, w, h, detail=1.0, source_name=None, max_zones=None, min_zone_mm=None, density=None):
@@ -2810,3 +2772,51 @@ def erp_inbox(request, pk=None):
                                                " : " + last.tracking_url if last.tracking_url else "")).replace("  ", " ")
                                      if last and last.tracking_number else ""}))
     return render(request, "admin/erp_inbox.html", ctx)
+
+
+# ---------------- Double authentification des comptes admin ----------------
+def _safe_next(request):
+    from django.utils.http import url_has_allowed_host_and_scheme
+    nxt = request.GET.get("next") or request.POST.get("next") or "/admin-hub/"
+    return nxt if url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}) else "/admin-hub/"
+
+
+@staff_member_required
+def two_factor(request):
+    from .models import StaffTOTP
+    dev = StaffTOTP.objects.filter(user=request.user).first()
+    if not dev:
+        return redirect("studio:two_factor_setup")
+    error = ""
+    if request.method == "POST":
+        if security.rate_limited("otp:%s" % request.user.pk, 5, 300):
+            error = "Trop d'essais : patientez 5 minutes."
+        elif security.totp_verify(dev.secret, request.POST.get("code")):
+            request.session["otp_ok"] = request.user.pk
+            return redirect(_safe_next(request))
+        else:
+            error = "Code incorrect."
+    return render(request, "admin/two_factor.html", {"mode": "verify", "error": error, "next": _safe_next(request)})
+
+
+@staff_member_required
+def two_factor_setup(request):
+    from .models import StaffTOTP
+    if StaffTOTP.objects.filter(user=request.user).exists():
+        return redirect("studio:two_factor")
+    secret = request.session.get("otp_pending") or security.totp_secret()
+    request.session["otp_pending"] = secret
+    error = ""
+    if request.method == "POST":
+        if security.totp_verify(secret, request.POST.get("code")):
+            StaffTOTP.objects.create(user=request.user, secret=secret)
+            request.session.pop("otp_pending", None)
+            request.session["otp_ok"] = request.user.pk
+            from django.contrib import messages
+            messages.success(request, "Double authentification activée.")
+            return redirect("/admin-hub/")
+        error = "Code incorrect : vérifiez l'heure de votre téléphone et réessayez."
+    uri = security.totp_uri(secret, request.user.get_username())
+    import segno
+    qr = segno.make(uri, error="m").svg_inline(scale=5, dark="#12224f")
+    return render(request, "admin/two_factor.html", {"mode": "setup", "qr": qr, "secret": secret, "error": error})

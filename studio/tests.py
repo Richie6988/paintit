@@ -232,5 +232,41 @@ class BackupTests(TestCase):
         shutil.rmtree(out, ignore_errors=True)
 
 
+class AdminSecurityTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        cache.clear()
+        self.u = User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
+
+    def test_login_bruteforce_blocked(self):
+        for _ in range(5):
+            self.client.post("/admin/login/", {"username": "boss", "password": "bad"})
+        r = self.client.post("/admin/login/", {"username": "boss", "password": "pw-Secret-123"})
+        self.assertEqual(r.status_code, 429)
+
+    def test_totp_setup_then_required(self):
+        from studio.models import StaffTOTP
+        self.client.login(username="boss", password="pw-Secret-123")
+        self.assertEqual(self.client.get("/admin-hub/").status_code, 200)          # pas encore active
+        self.client.get("/admin-hub/2fa/setup/")
+        secret = self.client.session["otp_pending"]
+        self.client.post("/admin-hub/2fa/setup/", {"code": security.totp_code(secret)})
+        self.assertTrue(StaffTOTP.objects.filter(user=self.u).exists())
+        self.client.logout()
+        self.client.login(username="boss", password="pw-Secret-123")
+        r = self.client.get("/admin-hub/orders/")
+        self.assertTrue(r.status_code == 302 and "/admin-hub/2fa/" in r["Location"])
+        self.assertEqual(self.client.post("/admin-hub/2fa/", {"code": "000000", "next": "/admin-hub/orders/"}).status_code, 200)
+        r = self.client.post("/admin-hub/2fa/", {"code": security.totp_code(secret), "next": "/admin-hub/orders/"})
+        self.assertEqual(r["Location"], "/admin-hub/orders/")
+        self.assertEqual(self.client.get("/admin-hub/orders/").status_code, 200)
+
+    def test_branded_404(self):
+        with override_settings(DEBUG=False):
+            r = self.client.get("/nope-%s/" % "x")
+        self.assertEqual(r.status_code, 404)
+        self.assertContains(r, "404", status_code=404)
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)

@@ -1,0 +1,14 @@
+{% extends "studio/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Page introuvable" %} · PaintIt{% endblock %}
+{% block content %}
+<section class="panel" style="text-align:center;max-width:640px;margin:40px auto;padding:48px 24px">
+  <div style="font-size:4.5rem;font-weight:800;line-height:1;color:#2f6bf2">404</div>
+  <h1 style="margin:14px 0 8px">{% trans "Cette page s'est effacée de la toile." %}</h1>
+  <p class="sub">{% trans "Le lien est peut-être incorrect ou la page a été déplacée." %}</p>
+  <p style="margin-top:22px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+    <a class="cta" href="{% url 'studio:home' %}">{% trans "Retour à l'accueil" %}</a>
+    <a class="ghost" href="{% url 'studio:gallery' %}">{% trans "Voir la galerie" %}</a>
+  </p>
+</section>
+{% endblock %}

@@ -216,6 +216,17 @@ class CompanyInfo(models.Model):
         return bool(self.legal_name and self.address and self.siret and self.host)
 
 
+class StaffTOTP(models.Model):
+    """Double authentification (application TOTP) d'un compte admin."""
+    user = models.OneToOneField("auth.User", on_delete=models.CASCADE, related_name="totp")
+    secret = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Double authentification"
+        verbose_name_plural = "Double authentification"
+
+
 class OrderEvent(models.Model):
     """Historique d'une commande (journal ERP) : changements de statut (auto) + notes/actions."""
     order = models.ForeignKey(Order, related_name="events", on_delete=models.CASCADE)

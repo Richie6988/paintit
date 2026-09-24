@@ -26,7 +26,10 @@ def assets(request):
     except Exception:
         alts = []
         lang_urls = {}
-    return {"I18N_VERSION": v, "SITE_URL": site, "HREFLANGS": alts, "LANG_URLS": lang_urls}
+    return {"I18N_VERSION": v, "SITE_URL": site, "HREFLANGS": alts, "LANG_URLS": lang_urls,
+            # Mesure d'audience sans cookie (Plausible / compatible) : pas de bandeau cookies requis
+            "ANALYTICS_SRC": getattr(settings, "ANALYTICS_SRC", ""),
+            "ANALYTICS_DOMAIN": getattr(settings, "ANALYTICS_DOMAIN", "")}
 
 
 def erp_nav(request):
@@ -42,7 +45,8 @@ def erp_nav(request):
         from .models import ContactMessage, CompanyInfo
         return {"erp_badges": {"actions": erp.action_count(),
                                "messages": ContactMessage.objects.filter(answered=False).count(),
-                               "legal": not CompanyInfo.get().complete},
+                               "legal": not CompanyInfo.get().complete,
+                               "has_2fa": hasattr(request.user, "totp")},
                 "erp_path": path}
     except Exception:
         return {}

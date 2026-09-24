@@ -25,6 +25,7 @@
   <span class="sp"></span>
   <a href="/admin-hub/orders.csv" title="Export des commandes (CSV)">&#8681; CSV</a>
   <a href="/admin/auth/user/" class="{% if '/admin/auth/' in erp_path %}on{% endif %}">Utilisateurs</a>
+  {% if not erp_badges.has_2fa %}<a href="/admin-hub/2fa/setup/" title="Activer la double authentification">🔐 2FA<b class="bdg err">!</b></a>{% endif %}
 </nav>
 {% endif %}
 {% endblock %}

@@ -1200,3 +1200,15 @@ msgid ""
 msgstr ""
 "Data controller: %(name)s, %(email)s. You may also lodge a complaint with "
 "the CNIL (cnil.fr)."
+
+msgid "Page introuvable"
+msgstr "Page not found"
+
+msgid "Cette page s'est effacée de la toile."
+msgstr "This page has faded from the canvas."
+
+msgid "Le lien est peut-être incorrect ou la page a été déplacée."
+msgstr "The link may be wrong or the page may have moved."
+
+msgid "Voir la galerie"
+msgstr "See the gallery"

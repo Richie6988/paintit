@@ -179,7 +179,7 @@
    .bh-mobile{display:block}
    .pw-card{margin:16px;padding:22px}
  }
-</style></head>
+</style>{% if ANALYTICS_SRC %}<script defer data-domain="{{ ANALYTICS_DOMAIN }}" src="{{ ANALYTICS_SRC }}"></script>{% endif %}</head>
 <body>
 <div class="top">
   <button class="btn iconbtn" id="lockBtn" title="Lock colours to numbers">

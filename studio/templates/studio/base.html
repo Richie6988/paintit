@@ -8,10 +8,20 @@
   <link rel="icon" type="image/svg+xml" href="{% static 'studio/img/icon.svg' %}">
   <link rel="icon" type="image/png" href="{% static 'studio/img/favicon.png' %}">
   <link rel="apple-touch-icon" href="{% static 'studio/img/favicon.png' %}">
-  <meta property="og:title" content="PaintIt">
-  <meta property="og:description" content="{% trans 'Peinture par numéros personnalisée, fabriquée à partir de vos photos' %}">
-  <meta property="og:image" content="{% static 'studio/img/logo.png' %}">
+  <meta name="description" content="{% block meta_description %}{% trans "Transformez n'importe quelle photo en peinture par numéros." %} {% trans "Envoyez votre photo et créez votre peinture personnalisée en moins d'une minute. Essayez-la gratuitement en ligne, puis commandez votre kit complet à peindre chez vous." %}{% endblock %}">
+  <meta property="og:site_name" content="PaintIt">
+  <meta property="og:title" content="PaintIt · {% trans "Votre souvenir. Votre chef-d’œuvre." %}">
+  <meta property="og:description" content="{% trans "Transformez n'importe quelle photo en peinture par numéros." %}">
+  <meta property="og:image" content="{{ SITE_URL }}{% static 'studio/img/og.jpg' %}">
+  <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+  <meta property="og:url" content="{{ SITE_URL }}{{ request.path }}">
+  <meta property="og:locale" content="{{ LANGUAGE_CODE }}">
   <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+    {"@type":"Organization","@id":"{{ SITE_URL }}/#org","name":"PaintIt","url":"{{ SITE_URL }}/","logo":"{{ SITE_URL }}{% static 'studio/img/logo.png' %}"},
+    {"@type":"WebSite","@id":"{{ SITE_URL }}/#site","url":"{{ SITE_URL }}/","name":"PaintIt","publisher":{"@id":"{{ SITE_URL }}/#org"},"inLanguage":"{{ LANGUAGE_CODE }}"}]}</script>
+  {% if ANALYTICS_SRC %}<script defer data-domain="{{ ANALYTICS_DOMAIN }}" src="{{ ANALYTICS_SRC }}"></script>{% endif %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'studio/css/style.css' %}">

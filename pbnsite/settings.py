@@ -54,6 +54,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "studio.middleware.StaffTwoFactorMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -170,3 +171,8 @@ SUPPORT_EMAIL = os.environ.get("SUPPORT_EMAIL", "contact@paintit.click")
 
 # Lien d'avis client (Trustpilot/Judge.me/Google...) pour l'e-mail de feedback.
 REVIEW_URL = os.environ.get("REVIEW_URL", "")
+# Mesure d'audience sans cookie. Plausible : ANALYTICS_SRC=https://plausible.io/js/script.js
+ANALYTICS_SRC = os.environ.get("ANALYTICS_SRC", "")
+# 1 = double authentification obligatoire pour tout compte admin (sinon : active compte par compte)
+REQUIRE_2FA = env_bool("REQUIRE_2FA", "0")
+ANALYTICS_DOMAIN = os.environ.get("ANALYTICS_DOMAIN", "paintit.click")

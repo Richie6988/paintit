@@ -191,7 +191,7 @@ msgid "Dossier de production"
 msgstr "Produktionsordner"
 
 msgid "Retour à l'accueil"
-msgstr "Zurück zur Startseite"
+msgstr "Zur Startseite"
 
 msgid "Portrait"
 msgstr "Hochformat"
@@ -1231,3 +1231,15 @@ msgid ""
 msgstr ""
 "Verantwortlicher: %(name)s, %(email)s. Sie können auch Beschwerde bei der "
 "CNIL (cnil.fr) einlegen."
+
+msgid "Page introuvable"
+msgstr "Seite nicht gefunden"
+
+msgid "Cette page s'est effacée de la toile."
+msgstr "Diese Seite ist von der Leinwand verschwunden."
+
+msgid "Le lien est peut-être incorrect ou la page a été déplacée."
+msgstr "Der Link ist möglicherweise falsch oder die Seite wurde verschoben."
+
+msgid "Voir la galerie"
+msgstr "Zur Galerie"

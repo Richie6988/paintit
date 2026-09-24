@@ -1209,3 +1209,15 @@ msgid ""
 msgstr ""
 "Responsable del tratamiento: %(name)s, %(email)s. También puedes presentar "
 "una reclamación ante la CNIL (cnil.fr)."
+
+msgid "Page introuvable"
+msgstr "Página no encontrada"
+
+msgid "Cette page s'est effacée de la toile."
+msgstr "Esta página se ha borrado del lienzo."
+
+msgid "Le lien est peut-être incorrect ou la page a été déplacée."
+msgstr "Puede que el enlace sea incorrecto o que la página se haya movido."
+
+msgid "Voir la galerie"
+msgstr "Ver la galería"
