@@ -10,6 +10,8 @@ EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp")
 
 
 def _slugify(text):
+    import unicodedata
+    text = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode()   # é -> e
     s = re.sub(r"[^A-Za-z0-9]+", "-", text.strip().lower()).strip("-")
     return s or "img"
 
@@ -19,10 +21,108 @@ def _humanize(stem):
     return t[:1].upper() + t[1:] if t else stem
 
 
+def gallery_dir():
+    return os.path.join(settings.BASE_DIR, "studio", "static", "studio", "gallery")
+
+
+def showcase_dir():
+    return os.path.join(settings.BASE_DIR, "studio", "static", "studio", "showcase")
+
+
+def item_for(full, base, prefix="gal-", default_colors=24):
+    """Un fichier de la galerie -> item. Sous-dossier = categorie ; nom = titre ;
+    suffixes : _cNN = couleurs, _pNNN = prix en centimes, _land = paysage (50x40)."""
+    rel = os.path.relpath(full, base)
+    parts = rel.replace("\\", "/").split("/")
+    category = _humanize(parts[0]) if len(parts) >= 2 else "Galerie"
+    stem = os.path.splitext(os.path.basename(full))[0]
+    colors = default_colors
+    m = re.search(r"_c(\d+)", stem)
+    if m:
+        colors = max(2, min(99, int(m.group(1)))); stem = stem.replace(m.group(0), "")
+    price = 0.0
+    pm = re.search(r"_p(\d+)", stem)
+    if pm:
+        price = round(int(pm.group(1)) / 100.0, 2); stem = stem.replace(pm.group(0), "")
+    landscape = bool(re.search(r"_land\b", stem))
+    stem = re.sub(r"_land\b", "", stem)
+    if stem.lower().startswith(prefix):   # 'gal-rose.jpg' -> uid 'gal-rose' (pas 'gal-gal-rose')
+        stem = stem[len(prefix):]
+    stem = stem.strip("_-") or "modele"
+    clean_rel = "/".join(parts[:-1] + [stem])   # chemin sans suffixes
+    return dict(path=full, title=_humanize(stem), category=category, uid=prefix + _slugify(clean_rel),
+                colors=colors, slug=_slugify(stem), price=price, landscape=landscape)
+
+
+def seed_item(it, showdir=None, log=None):
+    """Genere le modele + fiche bibliotheque + assets du home. Titre, categorie et prix ne sont
+    fixes qu'a la creation : les modifications faites dans l'admin survivent a un nouveau seed."""
+    w, h = (50, 40) if it.get("landscape") else (40, 50)
+    generate(it["path"], it["colors"], w, h, uid=it["uid"])
+    m, _ = DigitalCanvas.objects.update_or_create(
+        email=LIB, uid=it["uid"],
+        defaults=dict(colors=it["colors"], orientation="paysage" if it.get("landscape") else "portrait",
+                      width_cm=w, height_cm=h, source="library"),
+        create_defaults=dict(title=it["title"], category=it["category"], price=it["price"], colors=it["colors"],
+                             orientation="paysage" if it.get("landscape") else "portrait",
+                             width_cm=w, height_cm=h, source="library"))
+    try:
+        sd = showdir or showcase_dir()
+        os.makedirs(sd, exist_ok=True)
+        Command()._render_showcase(it["uid"], it["slug"], sd)
+    except Exception as e:
+        if log:
+            log("Assets home ignores pour %s : %s" % (it["slug"], e))
+    return m
+
+
+def seed_image(src_path, title, category="", price=0, colors=24, landscape=False):
+    """Admin -> galerie : range l'image dans gallery/<Categorie>/ selon la convention de nommage
+    (comme si on l'avait deposee a la main) puis la seed. -> fiche DigitalCanvas."""
+    import shutil
+    base = gallery_dir()
+    folder = os.path.join(base, _slugify(category).replace("-", " ").title().replace(" ", "-")) if category else base
+    os.makedirs(folder, exist_ok=True)
+    ext = os.path.splitext(src_path)[1].lower()
+    ext = ext if ext in EXTS else ".jpg"
+    stem = "gal-" + _slugify(title)
+    suffix = ("_c%d" % int(colors) if int(colors) != 24 else "") + ("_land" if landscape else "") + \
+        "_p%03d" % int(round(float(price or 0) * 100))
+    dst, n = os.path.join(folder, stem + suffix + ext), 2
+    while os.path.exists(dst) or DigitalCanvas.objects.filter(
+            uid=item_for(dst, base)["uid"]).exists():
+        dst = os.path.join(folder, "%s-%d%s%s" % (stem, n, suffix, ext)); n += 1
+    shutil.copyfile(src_path, dst)
+    m = seed_item(item_for(dst, base, "gal-", int(colors)))
+    DigitalCanvas.objects.filter(pk=m.pk).update(title=title[:80], category=(category or "Galerie")[:40],
+                                                 price=price or 0)   # libelles exacts (accents...)
+    m.refresh_from_db()
+    return m
+
+
+def retire_model(uid):
+    """Retire l'image source d'un modele de gallery/ (-> gallery/_retires/) : un futur seed_library
+    ne le recree pas. -> chemin deplace ou None."""
+    import shutil
+    base = gallery_dir()
+    for root, dirs, files in os.walk(base):
+        dirs[:] = [d for d in dirs if not d.startswith("_")]
+        for fn in files:
+            full = os.path.join(root, fn)
+            if fn.lower().endswith(EXTS) and item_for(full, base)["uid"] == uid:
+                arch = os.path.join(base, "_retires")
+                os.makedirs(arch, exist_ok=True)
+                dst = os.path.join(arch, fn)
+                shutil.move(full, dst)
+                return dst
+    return None
+
+
 class Command(BaseCommand):
     help = ("Genere la galerie (store) + les assets du home a partir de TOUTES les images "
             "de studio/static/studio/gallery/ (aucune liste en dur). "
-            "Convention : sous-dossier = categorie ; nom de fichier = titre ; suffixe _cNN = nb couleurs.")
+            "Convention : sous-dossier = categorie ; nom de fichier = titre ; suffixes _cNN = nb couleurs, "
+            "_pNNN = prix en centimes, _land = paysage. Dossiers '_xxx' (ex. _retires) ignores.")
 
     def add_arguments(self, parser):
         parser.add_argument("--colors", type=int, default=24,
@@ -46,17 +146,7 @@ class Command(BaseCommand):
             self.stdout.write("Generation %s (%s, %d couleurs%s)..." % (
                 it["title"], it["category"], it["colors"], tag))
             try:
-                generate(it["path"], it["colors"], 40, 50, uid=it["uid"])
-                DigitalCanvas.objects.update_or_create(
-                    email=LIB, uid=it["uid"],
-                    defaults=dict(title=it["title"], category=it["category"], colors=it["colors"],
-                                  orientation="portrait", width_cm=40, height_cm=50,
-                                  source="library", price=it["price"]))
-                try:
-                    self._render_showcase(it["uid"], it["slug"], showdir)
-                except Exception as e:
-                    self.stdout.write(self.style.WARNING(
-                        "Assets home ignores pour %s : %s" % (it["slug"], e)))
+                seed_item(it, showdir, log=self.stdout.write)
                 n += 1
             except Exception as e:
                 self.stdout.write(self.style.ERROR("Echec %s : %s" % (it["title"], e)))
@@ -65,36 +155,15 @@ class Command(BaseCommand):
             "Genere : %d modeles (galerie + assets du home). Pense a collectstatic." % n))
 
     def _scan(self, base, prefix, default_colors):
-        """Scanne un dossier d'images -> liste d'items. Sous-dossier = categorie ;
-        nom = titre ; suffixe _cNN = couleurs ; suffixe _pNNN = prix en centimes."""
+        """Scanne un dossier d'images -> liste d'items (voir item_for). Les dossiers "_xxx" sont ignores."""
         items = []
         if not os.path.isdir(base):
             return items
-        for root, _dirs, files in os.walk(base):
+        for root, dirs, files in os.walk(base):
+            dirs[:] = [d for d in dirs if not d.startswith("_")]
             for fn in files:
-                if not fn.lower().endswith(EXTS):
-                    continue
-                full = os.path.join(root, fn)
-                rel = os.path.relpath(full, base)
-                parts = rel.replace("\\", "/").split("/")
-                category = _humanize(parts[0]) if len(parts) >= 2 else "Galerie"
-                stem = os.path.splitext(fn)[0]
-                colors = default_colors
-                m = re.search(r"_c(\d+)", stem)
-                if m:
-                    colors = max(2, min(99, int(m.group(1)))); stem = stem.replace(m.group(0), "")
-                price = 0.0
-                pm = re.search(r"_p(\d+)", stem)
-                if pm:
-                    price = round(int(pm.group(1)) / 100.0, 2); stem = stem.replace(pm.group(0), "")
-                if stem.lower().startswith(prefix):   # 'gal-rose.jpg' -> uid 'gal-rose' (pas 'gal-gal-rose')
-                    stem = stem[len(prefix):]
-                stem = stem.strip("_-") or "modele"
-                clean_rel = "/".join(parts[:-1] + [stem])   # chemin sans suffixes _cNN/_pNNN
-                slug = _slugify(clean_rel)
-                items.append(dict(path=full, title=_humanize(stem), category=category,
-                                  uid=prefix + slug, colors=colors, slug=_slugify(stem),
-                                  price=price))
+                if fn.lower().endswith(EXTS):
+                    items.append(item_for(os.path.join(root, fn), base, prefix, default_colors))
         return items
 
     def _render_showcase(self, uid, slug, showdir):

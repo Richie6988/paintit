@@ -20,6 +20,7 @@ class Command(BaseCommand):
         dry = opts["dry_run"]
         root = os.path.join(settings.MEDIA_ROOT, "orders")
         self._purge_lib(root, dry)
+        self._convert_published(dry)
         olds = sorted(set(DigitalCanvas.objects.filter(uid__startswith=OLD).values_list("uid", flat=True)))
         if not olds:
             self.stdout.write(self.style.SUCCESS("Rien a renommer.")); return
@@ -63,3 +64,18 @@ class Command(BaseCommand):
             d = os.path.join(root, uid)
             if not owned and os.path.isdir(d):
                 shutil.rmtree(d)
+
+    def _convert_published(self, dry):
+        """Modeles publies depuis une toile client AVANT le correctif (fiche bibliotheque pointant sur la
+        toile du client : invisible en galerie, purgee avec la commande) -> vrai modele gal-<titre>."""
+        from studio.views import _create_gallery_model
+        for m in DigitalCanvas.objects.filter(email=LIB).exclude(uid__startswith="gal-"):
+            self.stdout.write("publication %s -> modele gal- (%s)" % (m.uid, m.title or "sans titre"))
+            if dry:
+                continue
+            try:
+                _create_gallery_model(m.title or "Modele", m.category, m.price, colors=m.colors or 24,
+                                      orientation=m.orientation, from_uid=m.uid)
+                m.delete()
+            except Exception as exc:
+                self.stdout.write(self.style.ERROR("   echec : %s" % exc))

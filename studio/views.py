@@ -2067,6 +2067,24 @@ def _slug(text):
     return _re.sub(r"[^a-z0-9]+", "-", t).strip("-")[:40] or "modele"
 
 
+def _create_gallery_model(title, category="", price=0, colors=24, orientation="portrait",
+                          image_path=None, from_uid=None):
+    """Ajout a la galerie = exactement `seed_library` : l'image est rangee dans
+    studio/static/studio/gallery/<Categorie>/ (convention de nommage) puis seedee
+    (toile gal-..., fiche bibliotheque, assets du home). Source : image_path, ou la photo
+    originale de la toile `from_uid`."""
+    from .pipeline import source_file
+    from .management.commands.seed_library import seed_image
+    if from_uid and not image_path:
+        image_path = source_file(os.path.join(settings.MEDIA_ROOT, "orders", from_uid), from_uid) or None
+        if not image_path:
+            raise ValueError("photo originale de cette toile non conservée : impossible de la seeder")
+    m = seed_image(image_path, title, category, price, colors=int(colors or 24), landscape=(orientation == "paysage"))
+    if from_uid:
+        DigitalCanvas.objects.filter(pk=m.pk).update(origin_uid=from_uid)
+    return m
+
+
 @staff_member_required
 def erp_catalogue(request):
     from decimal import Decimal, InvalidOperation
@@ -2091,11 +2109,15 @@ def erp_catalogue(request):
             m.save(update_fields=["title", "category", "price"])
             messages.success(request, "« %s » mis à jour." % (m.title or m.uid))
         elif op == "unpublish" and m:
+            from .management.commands.seed_library import retire_model
+            retire_model(m.uid)
             m.delete()   # les fichiers restent : le modele peut etre republie depuis « Toiles clients »
-            messages.success(request, "Modèle retiré de la galerie (les joueurs le conservent).")
+            messages.success(request, "Modèle retiré de la galerie (les joueurs le conservent ; image archivée dans gallery/_retires/).")
         elif op == "delete" and m:
             import shutil
+            from .management.commands.seed_library import retire_model
             uid = m.uid
+            retire_model(uid)
             owners = DigitalCanvas.objects.filter(uid=uid).exclude(email=LIB_EMAIL).count()
             m.delete()
             if not owners and not Order.objects.filter(uid=uid).exists():
@@ -2104,39 +2126,37 @@ def erp_catalogue(request):
                                                              if owners else ""))
         elif op == "publish":
             c = DigitalCanvas.objects.filter(pk=request.POST.get("id")).exclude(email=LIB_EMAIL).first()
-            if c and not lib.filter(uid=c.uid).exists():
-                DigitalCanvas.objects.create(email=LIB_EMAIL, uid=c.uid, colors=c.colors, orientation=c.orientation,
-                                             width_cm=c.width_cm, height_cm=c.height_cm, source="library",
-                                             title=(request.POST.get("title") or c.title or "Nouveau modèle")[:80],
-                                             category=(request.POST.get("category") or c.category)[:40],
-                                             price=price(request.POST.get("price")))
-                messages.success(request, "Toile publiée dans la galerie.")
+            if c and lib.filter(origin_uid=c.uid).exists():
+                messages.error(request, "Cette toile est déjà publiée dans la galerie.")
+            elif c:
+                try:
+                    orient = c.orientation if c.orientation in ("portrait", "paysage") else \
+                        ("paysage" if (c.width_cm or 40) > (c.height_cm or 50) else "portrait")
+                    m = _create_gallery_model((request.POST.get("title") or c.title or "Nouveau modèle").strip(),
+                                              request.POST.get("category") or c.category, price(request.POST.get("price")),
+                                              colors=c.colors or 24, orientation=orient, from_uid=c.uid)
+                    messages.success(request, "Toile publiée dans la galerie : modèle « %s » (%s)." % (m.title, m.uid))
+                except Exception as exc:
+                    logger.exception("Publication galerie %s", c.uid)
+                    messages.error(request, "Publication impossible : %s" % exc)
         elif op == "add":
             f = request.FILES.get("image")
             title = (request.POST.get("title") or "").strip()[:80]
             if not f or not title:
                 messages.error(request, "Image et titre obligatoires.")
             else:
-                uid = "gal-" + _slug(title)
-                n = 2
-                while DigitalCanvas.objects.filter(uid=uid).exists() or \
-                        os.path.isdir(os.path.join(settings.MEDIA_ROOT, "orders", uid)):
-                    uid = "gal-%s-%d" % (_slug(title), n); n += 1
                 try:
-                    tmp = os.path.join(settings.MEDIA_ROOT, "uploads", uid + "_in" + (os.path.splitext(f.name)[1] or ".jpg"))
+                    tmp = os.path.join(settings.MEDIA_ROOT, "uploads", "gal_%s%s" % (uuid.uuid4().hex[:8],
+                                       os.path.splitext(f.name)[1] or ".jpg"))
                     os.makedirs(os.path.dirname(tmp), exist_ok=True)
                     with open(tmp, "wb") as out:
                         for chunk in f.chunks():
                             out.write(chunk)
-                    colors = int(request.POST.get("colors") or 24)
-                    portrait = request.POST.get("orientation", "portrait") == "portrait"
-                    w, h = (40, 50) if portrait else (50, 40)
-                    generate(tmp, colors, w, h, uid=uid, source_name=f.name)
-                    DigitalCanvas.objects.create(email=LIB_EMAIL, uid=uid, colors=colors,
-                                                 orientation="portrait" if portrait else "paysage",
-                                                 width_cm=w, height_cm=h, source="library", title=title,
-                                                 category=(request.POST.get("category") or "").strip()[:40],
-                                                 price=price(request.POST.get("price")))
+                    _create_gallery_model(title, request.POST.get("category", "").strip(), price(request.POST.get("price")),
+                                          colors=int(request.POST.get("colors") or 24),
+                                          orientation=request.POST.get("orientation", "portrait"),
+                                          image_path=tmp)
+                    os.remove(tmp)
                     messages.success(request, "Modèle « %s » créé et publié." % title)
                 except Exception as exc:
                     logger.exception("Catalogue add")
@@ -2160,7 +2180,7 @@ def erp_catalogue(request):
         qs = DigitalCanvas.objects.exclude(email=LIB_EMAIL).exclude(source="library")
         if q:
             qs = qs.filter(Q(email__icontains=q) | Q(uid__icontains=q) | Q(title__icontains=q))
-        published = set(lib.values_list("uid", flat=True))
+        published = set(lib.values_list("uid", flat=True)) | set(lib.exclude(origin_uid="").values_list("origin_uid", flat=True))
         items = list(qs.order_by("-created_at")[:120])
         for c in items:
             c.published = c.uid in published

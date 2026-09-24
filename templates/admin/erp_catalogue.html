@@ -133,7 +133,7 @@
 </form></div>
 
 <div class="drawer" id="dAdd" onclick="if(event.target===this)closeD()"><form class="pane" method="post" enctype="multipart/form-data" onsubmit="document.getElementById('ov').classList.add('on')">{% csrf_token %}
-  <h2>Nouveau modèle</h2><div class="muted">L'image est transformée en toile à peindre puis publiée dans la galerie.</div>
+  <h2>Nouveau modèle</h2><div class="muted">Comme <code>seed_library</code> : l'image est rangée dans <code>gallery/&lt;Catégorie&gt;/</code>, transformée en toile à peindre, publiée dans la galerie et ajoutée au slider de l'accueil.</div>
   <input type="hidden" name="op" value="add">
   <label class="drop" id="drop"><input type="file" name="image" id="aFile" accept="image/*" hidden required><span>Glissez une image<br>ou cliquez</span><img id="aThumb" hidden alt=""></label>
   <div><label>Titre</label><input type="text" name="title" maxlength="80" required placeholder="Coucher de soleil"></div>
