@@ -14,7 +14,7 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin, xfra
 from django.utils.translation import get_language, gettext as _
 from django.contrib.admin.views.decorators import staff_member_required
 
-from . import fulfillment, supplier, discounts, address, emails, payments, receipts, jobs, genqueue
+from . import fulfillment, supplier, discounts, address, emails, payments, receipts, jobs, genqueue, security
 from .forms import UploadForm, DeliveryForm, ContactForm, FORMATS, dimensions
 from .models import Order, OrderEvent, Pricing, DigitalCanvas, EmailCode
 from .pipeline import generate, compute_price, price_cfg
@@ -341,6 +341,10 @@ def order_image(request, uid, kind):
     if kind not in ("preview", "template", "digipaint", "poster", "source"):
         raise Http404
     if kind == "source":
+        # Photo d'origine du client : donnee personnelle -> staff, proprietaire (session) ou modele de galerie.
+        own = uid == (request.session.get("order") or {}).get("uid") or uid in request.session.get("my_uids", [])
+        if not (request.user.is_staff or own or uid.startswith(("gal-", "lib-", "mkt-"))):
+            raise Http404
         from .pipeline import source_file
         path = source_file(os.path.join(settings.MEDIA_ROOT, "orders", uid), uid)
     else:
@@ -352,6 +356,22 @@ def order_image(request, uid, kind):
     resp = FileResponse(open(path, "rb"), content_type=ctype)
     resp["Cache-Control"] = "no-store, max-age=0"
     resp["X-Robots-Tag"] = "noindex, nofollow, noimageindex"
+    return resp
+
+
+def order_file(request, uid, name):
+    """Fichier de media/orders/<uid>/ via lien signe (fournisseurs) ou pour le staff.
+    Le dossier n'est plus servi publiquement par nginx (donnees clients)."""
+    if "/" in name or "\\" in name or name.startswith(".") or "/" in uid or uid.startswith("."):
+        raise Http404
+    if not (request.user.is_staff or security.check_file_token(uid, name, request.GET.get("t", ""))):
+        raise Http404
+    path = os.path.join(settings.MEDIA_ROOT, "orders", uid, name)
+    if not os.path.isfile(path):
+        raise Http404
+    resp = FileResponse(open(path, "rb"), as_attachment=not name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".svg", ".pdf")))
+    resp["X-Robots-Tag"] = "noindex, nofollow"
+    resp["Cache-Control"] = "private, no-store"
     return resp
 
 
@@ -413,8 +433,11 @@ def paint_send_code(request):
         validate_email(email)
     except ValidationError:
         return JsonResponse({"error": "email"}, status=400)
-    import random
-    code = "%06d" % random.randint(0, 999999)
+    ip = security.client_ip(request)
+    if security.rate_limited("code-mail:" + email.lower(), 3, 600) or security.rate_limited("code-ip:" + ip, 10, 3600):
+        return JsonResponse({"error": "rate"}, status=429)
+    code = security.random_code()
+    EmailCode.objects.filter(email=email).delete()     # un seul code valide a la fois
     EmailCode.objects.create(email=email, code=code)
     emails.send_code(email, code, get_language() or "fr")
     return JsonResponse({"ok": True})
@@ -427,10 +450,15 @@ def paint_verify_code(request):
     from django.utils import timezone
     email = (request.POST.get("email") or "").strip()
     code = (request.POST.get("code") or "").strip()
+    if security.rate_limited("code-try:" + email.lower(), 5, 900) \
+            or security.rate_limited("code-try-ip:" + security.client_ip(request), 30, 900):
+        EmailCode.objects.filter(email=email).delete()   # trop d'essais : le code est grille
+        return JsonResponse({"error": "rate"}, status=429)
     ok = EmailCode.objects.filter(email=email, code=code,
                                   created_at__gte=timezone.now() - timedelta(minutes=15)).exists()
     if not ok:
         return JsonResponse({"error": "code"}, status=400)
+    EmailCode.objects.filter(email=email).delete()       # usage unique
     request.session["verified_email"] = email
     _bp = request.session.pop("buy_pending", None)
     return JsonResponse({"ok": True, "redirect": ("/gallery/buy/%s/" % _bp) if _bp else "/paint/"})
@@ -475,14 +503,13 @@ def paint_new(request):
         request.session["paid_credits"] = credits - 1
         request.session["digital_mode"] = True
         return redirect("studio:upload")
-    return redirect("studio:paint_pay")
+    # Toiles suivantes : parcours normal (jeu gratuit 5 min, sauvegarde a 0,99 EUR via le mur de paiement).
+    return redirect("studio:upload")
 
 
 def paint_pay(request):
-    # Toile supplementaire : 0,99 EUR (demo -> credit immediat ;
-    # avec Stripe, brancher ici un Checkout dedie).
-    request.session["paid_credits"] = request.session.get("paid_credits", 0) + 1
-    return redirect("studio:paint_new")
+    # Ancien credit "toile supplementaire" offert sans paiement : supprime (faille).
+    return redirect("studio:upload")
 
 
 def paint_unlock(request, uid):
@@ -494,8 +521,17 @@ def paint_unlock(request, uid):
 def _credit_digital(request, uid):
     """Enregistre/deverrouille la toile numerique dans la galerie de l'utilisateur."""
     verified = request.session.get("verified_email", "")
-    o = request.session.get("order") or {}
+    _record_digital(uid, verified, request.session.get("order") or {})
+    request.session["free_used"] = True
+    if verified:
+        uids = request.session.get("my_uids", [])
+        if uid not in uids: uids.append(uid); request.session["my_uids"] = uids[-60:]
+
+
+def _record_digital(uid, verified, o):
+    """Toile numerique payee -> fiche DigitalCanvas (Mes toiles). Aussi appele par le webhook Stripe."""
     import os, json as _json
+    o = o if o.get("uid") == uid else {}
     d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
     colors = o.get("colors", 24); ori = o.get("orientation", "portrait"); w = o.get("width_cm", 40); h = o.get("height_cm", 50)
     cj = os.path.join(d, f"{uid}_colors.json")
@@ -507,11 +543,7 @@ def _credit_digital(request, uid):
             email=verified, uid=uid,
             defaults=dict(colors=colors, orientation=ori, width_cm=w, height_cm=h, source="digital"))
     except Exception:
-        pass
-    request.session["free_used"] = True
-    if verified:
-        uids = request.session.get("my_uids", [])
-        if uid not in uids: uids.append(uid); request.session["my_uids"] = uids[-60:]
+        logger.exception("Toile numerique %s", uid)
 
 
 def paint_confirm(request, uid):
@@ -526,7 +558,9 @@ def paint_confirm(request, uid):
         except Exception as exc:
             logger.exception("Stripe digital session %s", uid)
             return JsonResponse({"ok": False, "error": str(exc)}, status=502)
-    # Demo : pas de paiement reel -> credit immediat.
+    if not payments.demo_allowed():
+        return JsonResponse({"ok": False, "error": "paiement indisponible"}, status=503)
+    # Demo (dev uniquement) : pas de paiement reel -> credit immediat.
     _credit_digital(request, uid)
     return JsonResponse({"ok": True})
 
@@ -535,10 +569,8 @@ def paint_unlock_success(request):
     """Retour Stripe apres paiement de la toile numerique : credite puis ouvre le jeu."""
     uid = request.GET.get("uid", "")
     sid = request.GET.get("sid", "")
-    if uid and sid and payments.stripe_live():
-        paid, meta_uid = payments.session_is_paid(sid)
-        if paid and (meta_uid == uid or not meta_uid):
-            _credit_digital(request, uid)
+    if uid and payments.paid_session(sid, uid=uid, kind="digital"):
+        _credit_digital(request, uid)
     return redirect("studio:digipaint", uid=uid)
 
 
@@ -994,7 +1026,7 @@ def _fulfill(order, shipping):
     manifest = fulfillment.build(o, shipping)
     supplier_result = supplier.place_order(o, shipping, manifest)
     discounts.issue(o["uid"])
-    discounts.issue_referral(o["uid"] + "-R")
+    discounts.issue_referral(security.referral_code_for(o["uid"]))
     _upsert_order(o, shipping, status=Order.FULFILLED, supplier_ref=supplier_result.get("supplier_ref"))
     # Lourd (regen toile au bon format + TIFF + notif fournisseur + email) -> tache de fond,
     # APRES paiement, pour repondre tout de suite (pas de lag au checkout).
@@ -1109,12 +1141,17 @@ def place_order(request):
                 "stripe": True, "msg": {"kind": "err", "text": f"Stripe indisponible : {exc}"}})
         return redirect(url)
 
-    # Demo : pas de paiement reel -> on honore la commande maintenant.
+    if not payments.demo_allowed():   # prod sans Stripe : on ne livre JAMAIS sans paiement
+        logger.error("Commande refusee : Stripe non configure (STRIPE_SECRET_KEY)")
+        return render(request, "studio/checkout.html", {
+            "order": order, "shipping": shipping, "discount": discount, "total": total,
+            "stripe": False, "msg": {"kind": "err", "text": _("Paiement momentanément indisponible, merci de réessayer plus tard.")}})
+    # Demo (dev uniquement) : pas de paiement reel -> on honore la commande maintenant.
     o, manifest, supplier_result = _fulfill(o, shipping)
     request.session.pop("applied_discount", None)
     _record_gift(o, shipping)
     request.session["verified_email"] = shipping.get("email", "")   # galerie auto apres achat
-    _rc = (o["uid"] + "-R").upper()
+    _rc = security.referral_code_for(o["uid"])
     return render(request, "studio/confirmation.html", {
         "referral_code": _rc, "referral_percent": int(round(Pricing.get().referral_rate*100)),
         "order": o, "shipping": shipping, "discount": o["discount"], "total": o["total"],
@@ -1153,12 +1190,16 @@ def _order_from_row(r):
             "lang": r.lang}
 
 
-def _ensure_fulfilled(uid):
-    try:
-        r = Order.objects.get(uid=uid)
-    except Order.DoesNotExist:
+def _ensure_fulfilled(uid, why=""):
+    """Honore une commande PAYEE une seule fois : seule une commande "en attente de paiement" est
+    traitee, et la bascule est atomique (webhook et page de retour peuvent arriver en meme temps)."""
+    r = Order.objects.filter(uid=uid).first()
+    if not r:
         return None
-    if r.status != Order.FULFILLED:
+    if Order.objects.filter(pk=r.pk, status=Order.PENDING).update(status=Order.PAID, status_changed_at=timezone.now()):
+        from .models import OrderEvent
+        OrderEvent.objects.create(order=r, kind="status", status=Order.PAID, text=("Paiement confirme " + why).strip())
+        r.refresh_from_db()
         _fulfill(_order_from_row(r), _shipping_from_row(r))
         r.refresh_from_db()
     return r
@@ -1166,15 +1207,23 @@ def _ensure_fulfilled(uid):
 
 def pay_success(request):
     uid = request.GET.get("uid")
-    r = _ensure_fulfilled(uid) if uid else None
+    sid = request.GET.get("sid", "")
+    r = Order.objects.filter(uid=uid).first() if uid else None
     if not r:
         return redirect("studio:home")
+    sess = payments.paid_session(sid, uid=uid, kind="kit")
+    mine = (request.session.get("order") or {}).get("uid") == uid
+    if sess:
+        r = _ensure_fulfilled(uid, "(retour Stripe)")
+    elif not (mine and r.status in Order.PAID_STATUSES):
+        # Pas de preuve de paiement : on ne livre rien et on n'expose pas la commande.
+        return redirect("studio:checkout" if mine else "studio:home")
     request.session.pop("applied_discount", None)
     o = _order_from_row(r)
     ship = _shipping_from_row(r)
     _record_gift(o, ship)
     request.session["verified_email"] = ship.get("email", "")   # galerie auto apres achat
-    _rc = (o["uid"] + "-R").upper()
+    _rc = security.referral_code_for(o["uid"])
     return render(request, "studio/confirmation.html", {
         "referral_code": _rc, "referral_percent": int(round(Pricing.get().referral_rate*100)),
         "order": o, "shipping": _shipping_from_row(r), "discount": o["discount"],
@@ -1189,12 +1238,51 @@ def stripe_webhook(request):
         event = payments.verify_webhook(request.body, request.headers.get("Stripe-Signature", ""))
     except Exception:
         return HttpResponse(status=400)
-    if event.get("type") == "checkout.session.completed":
-        uid = (event["data"]["object"].get("metadata", {}) or {}).get("uid") \
-              or event["data"]["object"].get("client_reference_id")
-        if uid:
-            _ensure_fulfilled(uid)
+    etype = event.get("type")
+    obj = event["data"]["object"]
+    meta = obj.get("metadata", {}) or {}
+    if etype in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
+        if obj.get("payment_status") != "paid":      # paiement differe : on attend async_payment_succeeded
+            return HttpResponse(status=200)
+        uid = meta.get("uid") or obj.get("client_reference_id")
+        kind = meta.get("kind", "kit")
+        if uid and kind == "digital":
+            _record_digital(uid, meta.get("email", ""), {})
+        elif uid and kind == "gallery":
+            m = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
+            if m and meta.get("email"):
+                DigitalCanvas.objects.get_or_create(
+                    email=meta["email"], uid=uid,
+                    defaults=dict(title=m.title, category=m.category, colors=m.colors, orientation=m.orientation,
+                                  width_cm=m.width_cm, height_cm=m.height_cm, source="library", price=0))
+        elif uid:
+            r = Order.objects.filter(uid=uid).first()
+            paid = (obj.get("amount_total") or 0) / 100.0
+            if r and r.status == Order.PENDING and paid + 0.01 < float(r.total or 0):
+                logger.error("Montant Stripe %.2f < total commande %.2f (%s)", paid, r.total, uid)
+                _order_note(r, "ALERTE : montant paye %.2f EUR < total %.2f EUR, non traitee" % (paid, r.total))
+            else:
+                _ensure_fulfilled(uid, "(webhook Stripe)")
+    elif etype in ("charge.refunded", "charge.dispute.created"):
+        uid = meta.get("uid")
+        if not uid and obj.get("payment_intent"):
+            try:
+                import stripe as _stripe
+                _stripe.api_key = settings.STRIPE_SECRET_KEY
+                uid = (_stripe.PaymentIntent.retrieve(obj["payment_intent"]).get("metadata") or {}).get("uid")
+            except Exception:
+                logger.exception("Stripe %s", etype)
+        r = Order.objects.filter(uid=uid).first() if uid else None
+        if r:
+            label = "Remboursement Stripe" if etype == "charge.refunded" else "LITIGE Stripe ouvert"
+            _order_note(r, "%s : %.2f EUR" % (label, (obj.get("amount_refunded") or obj.get("amount") or 0) / 100.0))
     return HttpResponse(status=200)
+
+
+def _order_note(r, text):
+    from .models import OrderEvent
+    OrderEvent.objects.create(order=r, kind="note", text=text[:300], user="stripe")
+    Order.objects.filter(pk=r.pk).update(notes=((r.notes or "") + "\n" + text).strip())
 
 
 def receipt_pdf(request, uid):
@@ -1872,19 +1960,19 @@ def gallery_buy(request, uid):
         except Exception:
             logger.exception("Stripe galerie %s", uid)
             return JsonResponse({"error": "paiement indisponible"}, status=502)
-    _grant_gallery(request, m, verified)               # demo : credit immediat
+    if not payments.demo_allowed():
+        return JsonResponse({"error": "paiement indisponible"}, status=503)
+    _grant_gallery(request, m, verified)               # demo (dev) : credit immediat
     return redirect("studio:digipaint", uid=uid)
 
 
 def gallery_buy_success(request):
     uid = request.GET.get("uid", ""); sid = request.GET.get("sid", "")
     verified = request.session.get("verified_email")
-    if uid and sid and verified and payments.stripe_live():
-        paid, _mu = payments.session_is_paid(sid)
-        if paid:
-            m = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
-            if m:
-                _grant_gallery(request, m, verified)
+    if uid and verified and payments.paid_session(sid, uid=uid, kind="gallery"):
+        m = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
+        if m:
+            _grant_gallery(request, m, verified)
     return redirect("studio:digipaint", uid=uid)
 
 
@@ -2177,6 +2265,11 @@ def erp_catalogue(request):
                     os.remove(tmp)
                     messages.success(request, "Modèle « %s » créé et publié%s." % (
                         title, " (galerie + slider de l'accueil)" if request.POST.get("in_slider") else " dans la galerie"))
+                except PermissionError as exc:
+                    logger.exception("Catalogue add")
+                    messages.error(request, "Génération impossible : le site n'a pas le droit d'écrire dans %s. "
+                                   "Sur le serveur : sudo chown -R paintit:paintit %s" % (
+                                       os.path.dirname(getattr(exc, "filename", "") or "") or "media/", settings.MEDIA_ROOT))
                 except Exception as exc:
                     logger.exception("Catalogue add")
                     messages.error(request, "Génération impossible : %s" % exc)

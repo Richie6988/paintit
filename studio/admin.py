@@ -125,7 +125,7 @@ class OrderAdmin(admin.ModelAdmin):
         for f in sorted(glob.glob(os.path.join(d, "*.tiff")) + glob.glob(os.path.join(d, "*.svg"))
                         + glob.glob(os.path.join(d, "*_palette.png")) + glob.glob(os.path.join(d, "*colors.json"))):
             name = os.path.basename(f)
-            u = settings.MEDIA_URL + "orders/%s/%s" % (obj.uid, name)
+            u = "/files/%s/%s" % (obj.uid, name)   # vue staff (media/orders non public)
             kb = os.path.getsize(f) // 1024
             tag = "TIFF" if name.endswith(".tiff") else ("SVG" if name.endswith(".svg") else name.split(".")[-1].upper())
             dl.append('<a class="button" href="%s" download style="margin:3px 8px 3px 0;display:inline-block">%s , %s (%d ko)</a>'

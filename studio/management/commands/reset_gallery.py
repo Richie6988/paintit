@@ -43,8 +43,14 @@ class Command(BaseCommand):
         owned.delete()
         for d in gal_dirs:
             shutil.rmtree(d, ignore_errors=True)
-        for d in dirs:
-            if os.path.isdir(d):
-                shutil.rmtree(d, ignore_errors=True)
-            os.makedirs(d, exist_ok=True)
+        for d in dirs:   # on vide le CONTENU : le dossier garde son proprietaire (utilisateur du site)
+            if not os.path.isdir(d):
+                continue
+            for name in os.listdir(d):
+                p = os.path.join(d, name)
+                shutil.rmtree(p, ignore_errors=True) if os.path.isdir(p) else os.remove(p)
+        if hasattr(os, "geteuid") and os.geteuid() == 0:
+            self.stdout.write(self.style.WARNING(
+                "Lance en root : si des dossiers media/ ont ete crees par root, rendez-les au site :\n"
+                "  sudo chown -R paintit:paintit %s" % settings.MEDIA_ROOT))
         self.stdout.write(self.style.SUCCESS("Galerie et slider vides. Ajoutez vos modeles depuis Admin > Catalogue."))

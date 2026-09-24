@@ -17,6 +17,12 @@ def stripe_live():
     return bool(settings.STRIPE_SECRET_KEY and stripe)
 
 
+def demo_allowed():
+    """Mode demo (commande honoree SANS paiement) : uniquement en developpement (DEBUG) et sans Stripe.
+    En production, pas de cle Stripe = pas de vente, jamais de livraison gratuite."""
+    return bool(settings.DEBUG) and not stripe_live()
+
+
 def order_description(order):
     base = (f"Peinture par numeros personnalisee, {order['format_label']} "
             f"({order['orientation']}), {order['colors']} couleurs")
@@ -31,7 +37,8 @@ def create_checkout_session(order, shipping, request):
         mode="payment",
         client_reference_id=order["uid"],
         customer_email=shipping.get("email"),
-        metadata={"uid": order["uid"]},
+        metadata={"uid": order["uid"], "kind": "kit"},
+        payment_intent_data={"metadata": {"uid": order["uid"], "kind": "kit"}},
         line_items=[{
             "quantity": 1,
             "price_data": {
@@ -41,7 +48,7 @@ def create_checkout_session(order, shipping, request):
             },
         }],
         success_url=request.build_absolute_uri(
-            reverse("studio:pay_success")) + "?uid=" + order["uid"],
+            reverse("studio:pay_success")) + "?uid=" + order["uid"] + "&sid={CHECKOUT_SESSION_ID}",
         cancel_url=request.build_absolute_uri(reverse("studio:checkout")),
     )
     return session.url
@@ -54,7 +61,8 @@ def create_digital_session(uid, request, amount_eur=0.99, email=None):
         mode="payment",
         client_reference_id=uid,
         customer_email=email or None,
-        metadata={"uid": uid, "kind": "digital"},
+        metadata={"uid": uid, "kind": "digital", "email": email or ""},
+        payment_intent_data={"metadata": {"uid": uid, "kind": "digital"}},
         line_items=[{
             "quantity": 1,
             "price_data": {
@@ -75,7 +83,8 @@ def create_gallery_session(uid, request, amount_eur, email=None):
     stripe.api_key = settings.STRIPE_SECRET_KEY
     session = stripe.checkout.Session.create(
         mode="payment", client_reference_id=uid, customer_email=email or None,
-        metadata={"uid": uid, "kind": "gallery"},
+        metadata={"uid": uid, "kind": "gallery", "email": email or ""},
+        payment_intent_data={"metadata": {"uid": uid, "kind": "gallery"}},
         line_items=[{"quantity": 1, "price_data": {"currency": "eur",
             "unit_amount": int(round(float(amount_eur) * 100)),
             "product_data": {"name": "Modele PaintIt (%s)" % uid}}}],
@@ -83,6 +92,25 @@ def create_gallery_session(uid, request, amount_eur, email=None):
                     + "?uid=" + uid + "&sid={CHECKOUT_SESSION_ID}",
         cancel_url=request.build_absolute_uri(reverse("studio:gallery")))
     return session.url
+
+
+def paid_session(session_id, uid=None, kind=None):
+    """Session Checkout PAYEE (et conforme a uid/kind attendus), sinon None."""
+    if not (session_id and stripe_live()):
+        return None
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    try:
+        sess = stripe.checkout.Session.retrieve(session_id)
+    except Exception:
+        return None
+    meta = sess.get("metadata") or {}
+    if sess.get("payment_status") != "paid":
+        return None
+    if uid and (meta.get("uid") or sess.get("client_reference_id")) != uid:
+        return None
+    if kind and meta.get("kind") and meta.get("kind") != kind:
+        return None
+    return sess
 
 
 def session_is_paid(session_id):

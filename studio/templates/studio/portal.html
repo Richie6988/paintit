@@ -36,14 +36,14 @@
             .then(function(r){return r.json();}).then(function(d){
               if(d.ok){ef.style.display='none';cf.style.display='';document.getElementById('veCode').focus();
                 hint.textContent='{% trans "Code envoyé à" %} '+email+'. {% trans "Vérifiez votre boîte mail." %}';}
-              else hint.textContent='{% trans "E-mail invalide." %}';
+              else hint.textContent=d.error==='rate'?'{% trans "Trop de tentatives, réessayez dans quelques minutes." %}':'{% trans "E-mail invalide." %}';
             }).catch(function(){hint.textContent='{% trans "Erreur, réessayez." %}';});
         });
         document.getElementById('veVerify').addEventListener('click',function(){
           var code=(document.getElementById('veCode').value||'').trim(); if(!code)return;
           fetch("{% url 'studio:paint_verify' %}",{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':CSRF},body:'email='+encodeURIComponent(email)+'&code='+encodeURIComponent(code)})
             .then(function(r){return r.json();}).then(function(d){
-              if(d.ok)location.href=d.redirect||'/paint/'; else hint.textContent='{% trans "Code invalide ou expiré." %}';
+              if(d.ok)location.href=d.redirect||'/paint/'; else hint.textContent=d.error==='rate'?'{% trans "Trop de tentatives, réessayez dans quelques minutes." %}':'{% trans "Code invalide ou expiré." %}';
             }).catch(function(){hint.textContent='{% trans "Erreur, réessayez." %}';});
         });
       })();

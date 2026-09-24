@@ -1094,3 +1094,9 @@ msgid ""
 msgstr ""
 "Play it for free online, then order your kit to paint it at home. Your "
 "digital masterpiece stays available anytime in %(t)sMy canvases%(e)s."
+
+msgid "Trop de tentatives, réessayez dans quelques minutes."
+msgstr "Too many attempts, please try again in a few minutes."
+
+msgid "Paiement momentanément indisponible, merci de réessayer plus tard."
+msgstr "Payment temporarily unavailable, please try again later."

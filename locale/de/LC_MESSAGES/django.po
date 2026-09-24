@@ -1122,3 +1122,10 @@ msgstr ""
 "Spielen Sie es kostenlos online und bestellen Sie dann Ihr Set, um es zu "
 "Hause zu malen. Ihr digitales Meisterwerk bleibt jederzeit unter %(t)sMeine "
 "Bilder%(e)s verfügbar."
+
+msgid "Trop de tentatives, réessayez dans quelques minutes."
+msgstr "Zu viele Versuche, bitte versuchen Sie es in einigen Minuten erneut."
+
+msgid "Paiement momentanément indisponible, merci de réessayer plus tard."
+msgstr ""
+"Zahlung vorübergehend nicht verfügbar, bitte versuchen Sie es später erneut."

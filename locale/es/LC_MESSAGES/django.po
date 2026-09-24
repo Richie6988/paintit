@@ -1101,3 +1101,9 @@ msgstr ""
 "Juégalo gratis en línea y luego pide tu kit para pintarlo en casa. Tu obra "
 "maestra digital sigue disponible en cualquier momento en %(t)sMis "
 "lienzos%(e)s."
+
+msgid "Trop de tentatives, réessayez dans quelques minutes."
+msgstr "Demasiados intentos, inténtalo de nuevo en unos minutos."
+
+msgid "Paiement momentanément indisponible, merci de réessayer plus tard."
+msgstr "Pago no disponible temporalmente, inténtalo más tarde."
