@@ -1043,3 +1043,23 @@ msgstr "Delete this design?"
 
 msgid "La toile et votre progression seront définitivement supprimées."
 msgstr "The canvas and your progress will be permanently deleted."
+
+msgid "Votre souvenir. Votre chef-d’œuvre."
+msgstr "Your memory. Your masterpiece."
+
+msgid "Transformez n'importe quelle photo en peinture par numéros."
+msgstr "Turn any photo into a paint-by-numbers."
+
+msgid ""
+"Envoyez votre photo et créez votre peinture personnalisée en moins d'une "
+"minute. Essayez-la gratuitement en ligne, puis commandez votre kit complet à"
+" peindre chez vous."
+msgstr ""
+"Upload your photo and create your custom painting in under a minute. Try it "
+"free online, then order your complete kit to paint at home."
+
+msgid "Créer ma peinture"
+msgstr "Create my painting"
+
+msgid "Créer ma toile"
+msgstr "Create my canvas"

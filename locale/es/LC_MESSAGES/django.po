@@ -1049,3 +1049,23 @@ msgstr "¿Eliminar este diseño?"
 
 msgid "La toile et votre progression seront définitivement supprimées."
 msgstr "El lienzo y su progreso se eliminarán definitivamente."
+
+msgid "Votre souvenir. Votre chef-d’œuvre."
+msgstr "Tu recuerdo. Tu obra maestra."
+
+msgid "Transformez n'importe quelle photo en peinture par numéros."
+msgstr "Convierte cualquier foto en una pintura por números."
+
+msgid ""
+"Envoyez votre photo et créez votre peinture personnalisée en moins d'une "
+"minute. Essayez-la gratuitement en ligne, puis commandez votre kit complet à"
+" peindre chez vous."
+msgstr ""
+"Envía tu foto y crea tu pintura personalizada en menos de un minuto. "
+"Pruébala gratis en línea y luego pide tu kit completo para pintar en casa."
+
+msgid "Créer ma peinture"
+msgstr "Crear mi pintura"
+
+msgid "Créer ma toile"
+msgstr "Crear mi lienzo"

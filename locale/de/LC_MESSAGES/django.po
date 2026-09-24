@@ -1069,3 +1069,24 @@ msgstr "Dieses Design löschen?"
 
 msgid "La toile et votre progression seront définitivement supprimées."
 msgstr "Die Leinwand und Ihr Fortschritt werden endgültig gelöscht."
+
+msgid "Votre souvenir. Votre chef-d’œuvre."
+msgstr "Ihre Erinnerung. Ihr Meisterwerk."
+
+msgid "Transformez n'importe quelle photo en peinture par numéros."
+msgstr "Verwandeln Sie jedes Foto in ein Malen-nach-Zahlen-Bild."
+
+msgid ""
+"Envoyez votre photo et créez votre peinture personnalisée en moins d'une "
+"minute. Essayez-la gratuitement en ligne, puis commandez votre kit complet à"
+" peindre chez vous."
+msgstr ""
+"Laden Sie Ihr Foto hoch und erstellen Sie Ihr persönliches Bild in weniger "
+"als einer Minute. Probieren Sie es kostenlos online aus und bestellen Sie "
+"dann Ihr komplettes Mal-Set nach Hause."
+
+msgid "Créer ma peinture"
+msgstr "Mein Bild erstellen"
+
+msgid "Créer ma toile"
+msgstr "Meine Leinwand erstellen"
