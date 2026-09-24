@@ -1053,3 +1053,19 @@ msgid ""
 msgstr ""
 "Unsere Server sind gerade stark ausgelastet. Bitte versuchen Sie es in ein "
 "paar Sekunden erneut."
+
+msgid "Recommencer cette toile ?"
+msgstr "Diese Leinwand neu beginnen?"
+
+msgid "Recommencer"
+msgstr "Neu beginnen"
+
+msgid "Toute la peinture et le score de cette toile seront effacés."
+msgstr ""
+"Die gesamte Farbe und der Punktestand dieser Leinwand werden gelöscht."
+
+msgid "Supprimer ce design ?"
+msgstr "Dieses Design löschen?"
+
+msgid "La toile et votre progression seront définitivement supprimées."
+msgstr "Die Leinwand und Ihr Fortschritt werden endgültig gelöscht."

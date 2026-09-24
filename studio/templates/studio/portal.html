@@ -92,11 +92,12 @@
             k.innerHTML='<span>Score <b>'+score+'</b></span><span><b>'+painted+(total?'/'+total:'')+'</b> {% trans "zones" %}</span>';meta.appendChild(k);}}}catch(e){}
     });}catch(e){}
   grid.addEventListener('click',function(e){var b=e.target.closest('.del');if(!b)return;e.preventDefault();
-    var uid=b.dataset.uid;if(!confirm('Supprimer ce design ?'))return;
+    var uid=b.dataset.uid;
+    PitDialog.confirm('{% filter escapejs %}{% trans "Supprimer ce design ?" %}{% endfilter %}',{danger:true,text:'{% filter escapejs %}{% trans "La toile et votre progression seront définitivement supprimées." %}{% endfilter %}'}).then(function(ok){if(!ok)return;
     fetch('/paint/'+uid+'/delete/',{method:'POST',headers:{'X-CSRFToken':CSRF}}).then(function(){
       try{['PIT_MODELS','PIT_GAME','PIT_DONE'].forEach(function(k){var o=JSON.parse(localStorage.getItem(k)||(k==='PIT_MODELS'?'[]':'{}'));
         if(Array.isArray(o))o=o.filter(function(x){return x.uid!==uid;});else delete o[uid];localStorage.setItem(k,JSON.stringify(o));});}catch(err){}
-      var card=grid.querySelector('.model-card[data-uid="'+uid+'"]');if(card)card.remove();});
+      var card=grid.querySelector('.model-card[data-uid="'+uid+'"]');if(card)card.remove();});});
   });
 })();
 </script>

@@ -1034,3 +1034,18 @@ msgid ""
 msgstr ""
 "Nuestros servidores están muy saturados en este momento. Inténtalo de nuevo "
 "en unos segundos."
+
+msgid "Recommencer cette toile ?"
+msgstr "¿Empezar de nuevo este lienzo?"
+
+msgid "Recommencer"
+msgstr "Empezar de nuevo"
+
+msgid "Toute la peinture et le score de cette toile seront effacés."
+msgstr "Se borrarán toda la pintura y la puntuación de este lienzo."
+
+msgid "Supprimer ce design ?"
+msgstr "¿Eliminar este diseño?"
+
+msgid "La toile et votre progression seront définitivement supprimées."
+msgstr "El lienzo y su progreso se eliminarán definitivamente."

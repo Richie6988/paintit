@@ -49,8 +49,8 @@
         <button class="pbtn sm" name="op" value="dispatch">Transmettre au fournisseur</button>
         <button class="pbtn sm" name="op" value="fulfilled">En production</button>
         <button class="pbtn sm" name="op" value="shipped">Expédiée</button>
-        <button class="pbtn sm" name="op" value="delivered" onclick="return confirm('Marquer comme livrées (et envoyer la demande d\'avis) ?')">Livrée + avis</button>
-        <button class="pbtn sm" name="op" value="failed" onclick="return confirm('Marquer en échec ?')">Échec</button>
+        <button class="pbtn sm" name="op" value="delivered" data-confirm="Marquer comme livrées ?" data-confirm-text="Une demande d'avis sera envoyée à chaque client." data-ok="Marquer livrées">Livrée + avis</button>
+        <button class="pbtn sm" name="op" value="failed" data-confirm="Marquer en échec ?" data-ok="Marquer en échec" data-danger>Échec</button>
         <button class="pbtn sm" name="op" value="feedback">Demande d'avis</button>
         <button class="pbtn sm" name="op" value="csv">⬇ CSV</button>
       </div>

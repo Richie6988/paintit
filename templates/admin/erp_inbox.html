@@ -73,7 +73,7 @@
             <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="reopen">Rouvrir</button></form>
           {% else %}<span class="bdg2 warn">À traiter</span>
             <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="close" title="Sans envoyer d'e-mail">Marquer traité</button></form>{% endif %}
-          <form method="post" onsubmit="return confirm('Supprimer ce message ?')">{% csrf_token %}<button class="pbtn sm" name="op" value="delete" style="color:#b42318">Supprimer</button></form>
+          <form method="post" data-confirm="Supprimer ce message ?" data-confirm-text="Le message et ses pièces jointes seront supprimés." data-danger>{% csrf_token %}<button class="pbtn sm" name="op" value="delete" style="color:#b42318">Supprimer</button></form>
         </div>
       </div>
       <div class="thread">
@@ -125,7 +125,8 @@
   var el=document.getElementById('fill');if(!el)return;var F=JSON.parse(JSON.parse(el.textContent)),ta=document.getElementById('rbody');
   document.querySelectorAll('.canned button').forEach(function(b){b.addEventListener('click',function(){
     var t=b.dataset.body.replace(/\{prenom\}/g,F.prenom||'').replace(/\{commande\}/g,F.commande||'').replace(/\{suivi\}/g,F.suivi||'').replace('Bonjour ,','Bonjour,');
-    if(ta.value.trim()&&!confirm('Remplacer le texte en cours ?'))return;ta.value=t;ta.focus();});});
+    function put(){ta.value=t;ta.focus();}
+    if(ta.value.trim()){PitDialog.confirm('Remplacer le texte en cours ?',{ok:'Remplacer'}).then(function(ok){if(ok)put();});}else put();});});
   var th=document.querySelector('.thread');if(th&&th.lastElementChild)th.lastElementChild.scrollIntoView({block:'nearest'});
 })();
 </script>

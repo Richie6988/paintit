@@ -55,6 +55,6 @@
         <button type="submit" class="pbtn pri">Enregistrer</button></span>
     </div>
   </form>
-  {% if sup %}<form method="post" id="delform" onsubmit="return confirm('Supprimer définitivement {{ sup.name|escapejs }} ? Les commandes restent, sans fournisseur rattaché.')">{% csrf_token %}<input type="hidden" name="op" value="delete"></form>{% endif %}
+  {% if sup %}<form method="post" id="delform" data-confirm="Supprimer définitivement {{ sup.name }} ?" data-confirm-text="Les commandes restent, sans fournisseur rattaché." data-danger>{% csrf_token %}<input type="hidden" name="op" value="delete"></form>{% endif %}
 </div>
 {% endblock %}

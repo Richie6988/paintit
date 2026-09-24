@@ -68,7 +68,7 @@
               </div></td>
               <td><form method="post" style="display:flex;gap:8px">{% csrf_token %}<input type="hidden" name="ad" value="{{ ad.pk }}">
                 <button class="ib" name="op" value="toggle">{% if ad.active %}Archiver{% else %}Réactiver{% endif %}</button>
-                <button class="ib" name="op" value="reset" onclick="return confirm('Remettre les compteurs à zéro ?')">RAZ</button></form></td>
+                <button class="ib" name="op" value="reset" data-confirm="Remettre les compteurs à zéro ?" data-confirm-text="Vues, clics et clics internes de cette pub repartent de 0." data-ok="Remettre à zéro" data-danger>RAZ</button></form></td>
             </tr>
             {% endfor %}
           {% endfor %}
@@ -86,6 +86,6 @@
 <script>
 document.querySelectorAll('.copy').forEach(function(b){b.addEventListener('click',function(){
   var u=b.dataset.u,t=b.textContent;function done(){b.textContent='Copié ✓';setTimeout(function(){b.textContent=t;},1400);}
-  if(navigator.clipboard)navigator.clipboard.writeText(u).then(done,function(){prompt('Lien :',u);});else prompt('Lien :',u);});});
+  if(navigator.clipboard)navigator.clipboard.writeText(u).then(done,function(){PitDialog.copy(u,'Lien');});else PitDialog.copy(u,'Lien');});});
 </script>
 {% endblock %}

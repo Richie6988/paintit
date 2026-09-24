@@ -1028,3 +1028,18 @@ msgid ""
 "quelques secondes."
 msgstr ""
 "Our servers are very busy right now. Please try again in a few seconds."
+
+msgid "Recommencer cette toile ?"
+msgstr "Start this canvas over?"
+
+msgid "Recommencer"
+msgstr "Start over"
+
+msgid "Toute la peinture et le score de cette toile seront effacés."
+msgstr "All the paint and the score of this canvas will be erased."
+
+msgid "Supprimer ce design ?"
+msgstr "Delete this design?"
+
+msgid "La toile et votre progression seront définitivement supprimées."
+msgstr "The canvas and your progress will be permanently deleted."

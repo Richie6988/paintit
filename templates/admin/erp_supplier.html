@@ -25,7 +25,7 @@
   {% if messages %}{% for m in messages %}<div class="banner {% if m.tags == 'error' %}err{% else %}warn{% endif %}"><span>{{ m }}</span></div>{% endfor %}{% endif %}
   {% if sup.health == "err" %}<div class="banner err"><span><b>Dernière transmission en échec</b>{% if sup.last_sync_at %} ({{ sup.last_sync_at|timesince }}){% endif %} : {{ sup.last_sync_error|default:"aucun canal configuré (e-mail ou URL API)" }}</span><a class="pbtn sm" href="/admin-hub/suppliers/{{ sup.pk }}/edit/">Corriger</a></div>{% endif %}
   {% if unassigned %}<div class="banner warn"><span><b>{{ unassigned }} commande{{ unassigned|pluralize }} payée{{ unassigned|pluralize }}</b> sans fournisseur rattaché.</span>
-    <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="assign" onclick="return confirm('Rattacher ces commandes à {{ sup.name|escapejs }} ?')">Rattacher à {{ sup.name }}</button></form></div>{% endif %}
+    <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="assign" data-confirm="Rattacher ces commandes à {{ sup.name }} ?" data-ok="Rattacher">Rattacher à {{ sup.name }}</button></form></div>{% endif %}
 
   <div class="kpis">
     <div class="kpi"><div class="l">Commandes (30 j)</div><div class="v">{{ sup.stats.orders_30 }}</div><div class="muted">{{ sup.stats.orders_total }} au total</div></div>
@@ -99,7 +99,7 @@
         <div style="display:flex;gap:6px"><input type="text" readonly value="{{ automation.callback }}" id="cbUrl" style="flex:1;font-size:.74rem" onclick="this.select()">
           <button type="button" class="pbtn sm" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('cbUrl').value);this.textContent='Copié ✓'">Copier</button></div>
         <p class="muted" style="margin:6px 0 0">À donner au fournisseur : il y envoie « en production », « expédiée » (+ n° de suivi), « livrée ». La commande se met à jour seule.</p>
-        <form method="post" style="margin-top:8px" onsubmit="return confirm('Générer un nouveau secret ? L\'ancienne URL de retour cessera de fonctionner.')">{% csrf_token %}<button class="pbtn sm" name="op" value="secret">Régénérer le secret</button></form>
+        <form method="post" style="margin-top:8px" data-confirm="Générer un nouveau secret ?" data-confirm-text="L'ancienne URL de retour cessera de fonctionner : transmettez la nouvelle au fournisseur." data-ok="Régénérer" data-danger>{% csrf_token %}<button class="pbtn sm" name="op" value="secret">Régénérer le secret</button></form>
         {% if automation.retries %}<div class="banner warn" style="margin:10px 0 0"><span>{{ automation.retries }} commande{{ automation.retries|pluralize }} en attente de relance automatique.</span></div>{% endif %}
       </div>
       <div class="card">

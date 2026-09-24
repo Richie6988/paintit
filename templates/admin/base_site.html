@@ -2,6 +2,7 @@
 {% load static %}
 {% block title %}{{ title }} | PaintIt ERP{% endblock %}
 {% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'studio/css/admin.css' %}">{% endblock %}
+{% block extrahead %}{{ block.super }}<script src="{% static 'studio/js/dialog.js' %}" defer></script>{% endblock %}
 {% block branding %}
 <div id="site-name"><a href="/admin-hub/" class="pit-brand">
   <img src="{% static 'studio/img/icon.svg' %}" alt="PaintIt"><span>PaintIt ERP</span></a></div>

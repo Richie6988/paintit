@@ -513,7 +513,7 @@
     setTimeout(function(){poll(g);},500);}).catch(function(){setTimeout(function(){poll(g);},800);});}
 
   document.getElementById('full').addEventListener('click',function(){var el=document.documentElement;if(!document.fullscreenElement){(el.requestFullscreen||el.webkitRequestFullscreen).call(el);}else document.exitFullscreen();});
-  document.getElementById('reset').addEventListener('click',function(){if(!confirm('Restart this canvas?'))return;localStorage.removeItem(key());zones.forEach(function(z){z.style.fill='';z.dataset.done='0';if(z.parentNode)z.parentNode.classList.remove('done');});score=0;done=0;combo=0;lastN=null;updateHUD();});
+  document.getElementById('reset').addEventListener('click',function(){PitDialog.confirm('{% filter escapejs %}{% trans "Recommencer cette toile ?" %}{% endfilter %}',{danger:true,ok:'{% filter escapejs %}{% trans "Recommencer" %}{% endfilter %}',text:'{% filter escapejs %}{% trans "Toute la peinture et le score de cette toile seront effacés." %}{% endfilter %}'}).then(function(ok){if(!ok)return;localStorage.removeItem(key());zones.forEach(function(z){z.style.fill='';z.dataset.done='0';if(z.parentNode)z.parentNode.classList.remove('done');});score=0;done=0;combo=0;lastN=null;updateHUD();});});
   document.getElementById('winok').addEventListener('click',function(){document.getElementById('win').classList.remove('show');});
   function win(){if(navigator.vibrate)navigator.vibrate([30,40,80]);document.getElementById('finalScore').textContent=score;document.getElementById('win').classList.add('show');confetti();try{var pd=JSON.parse(localStorage.getItem('PIT_DONE')||'{}');pd[UID]=true;localStorage.setItem('PIT_DONE',JSON.stringify(pd));}catch(e){}}
   function confetti(){var cv=document.getElementById('confetti'),ctx=cv.getContext('2d');cv.width=innerWidth;cv.height=innerHeight;var P=[],cols=['#2f6bf2','#3fd07a','#f6b93b','#e85d75','#fff'];
@@ -530,4 +530,5 @@
     try{var l=JSON.parse(localStorage.getItem('PIT_MODELS')||'[]').filter(function(x){return x.uid!==UID;});l.unshift(MODEL);localStorage.setItem('PIT_MODELS',JSON.stringify(l.slice(0,60)));}catch(e){}});
 })();
 </script>
+<script src="{% static 'studio/js/dialog.js' %}"></script>
 </body></html>

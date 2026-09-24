@@ -130,7 +130,7 @@
           <select name="status">{% for k, l in statuses %}<option value="{{ k }}" {% if k == o.status %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
           <button class="pbtn pri">Mettre à jour</button></form>
         <div class="stack" style="margin-top:10px">
-          <form method="post">{% csrf_token %}<button class="pbtn" style="width:100%" name="op" value="confirmation" onclick="return confirm('Renvoyer l\'e-mail de confirmation au client ?')">Renvoyer la confirmation au client</button></form>
+          <form method="post">{% csrf_token %}<button class="pbtn" style="width:100%" name="op" value="confirmation" data-confirm="Renvoyer l'e-mail de confirmation au client ?" data-ok="Renvoyer">Renvoyer la confirmation au client</button></form>
           <form method="post">{% csrf_token %}<button class="pbtn" style="width:100%" name="op" value="feedback">{% if o.feedback_sent %}Renvoyer{% else %}Envoyer{% endif %} la demande d'avis</button></form>
         </div>
       </div>
