@@ -108,9 +108,9 @@ main{min-height:70vh}
 .brand-word .it{color:var(--accent,#2f6bf2)}
 .nav-right{display:flex;align-items:center;gap:14px}
 .lang{display:flex;gap:4px;align-items:center}
-.lang button{border:1px solid var(--ring);background:#fff;color:var(--muted);
-  font:inherit;font-size:.8rem;font-weight:600;padding:5px 9px;border-radius:8px;cursor:pointer}
-.lang button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.lang button,.lang a{border:1px solid var(--ring);background:#fff;color:var(--muted);
+  font:inherit;font-size:.8rem;font-weight:600;padding:5px 9px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-block}
+.lang button.active,.lang a.active{background:var(--ink);color:#fff;border-color:var(--ink)}
 
 .foot{margin-top:60px;background:#0f1836;color:#c7d0e6}
 
@@ -533,7 +533,7 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 @media (max-width: 860px){
   .nav{flex-wrap:wrap;gap:8px;padding:10px 14px}
   .nav-right{gap:10px;flex-wrap:wrap;justify-content:flex-end}
-  .nav-right .lang button{padding:4px 7px;font-size:.8rem}
+  .nav-right .lang button,.nav-right .lang a{padding:4px 7px;font-size:.8rem}
   .preview-grid{grid-template-columns:1fr}
   .models-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
   .panel{padding:18px}
@@ -651,25 +651,25 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 .topbar{position:relative;display:flex;align-items:center;justify-content:flex-end;gap:12px}
 .topbar .tb-msg{position:absolute;left:0;right:0;text-align:center;pointer-events:none}
 .topbar .tb-lang{display:flex;gap:4px;flex:0 0 auto;position:relative;z-index:1}
-.topbar .tb-lang button{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.28);
-  border-radius:6px;padding:2px 7px;font-size:.72rem;font-weight:800;cursor:pointer;line-height:1.3;transition:.15s}
-.topbar .tb-lang button:hover{background:rgba(255,255,255,.28)}
-.topbar .tb-lang button.active{background:#fff;color:#12224f;border-color:#fff}
-@media(max-width:560px){.topbar{font-size:.72rem;padding:5px 8px}.topbar .tb-lang button{padding:2px 5px;font-size:.66rem}}
+.topbar .tb-lang button,.topbar .tb-lang a{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.28);
+  border-radius:6px;padding:2px 7px;font-size:.72rem;font-weight:800;cursor:pointer;line-height:1.3;transition:.15s;text-decoration:none;display:inline-block}
+.topbar .tb-lang button:hover,.topbar .tb-lang a:hover{background:rgba(255,255,255,.28)}
+.topbar .tb-lang button.active,.topbar .tb-lang a.active{background:#fff;color:#12224f;border-color:#fff}
+@media(max-width:560px){.topbar{font-size:.72rem;padding:5px 8px}.topbar .tb-lang button,.topbar .tb-lang a{padding:2px 5px;font-size:.66rem}}
 
 
 /* Footer PaintIt */
-.foot{margin-top:48px;background:#0f1836;color:#c8d2ea}
-.foot-in{max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:20px}
-.foot-motto{flex:1;text-align:center;margin:0;color:#93a1c4;font-size:.9rem}
-.foot-logo{display:inline-flex;align-items:center;gap:9px;text-decoration:none}
-.foot-logo img{height:28px}
-.foot-logo span{color:#fff;font-weight:800;font-size:1.1rem;letter-spacing:.3px}
+.foot{margin-top:28px;background:#0f1836;color:#c8d2ea}
+.foot-in{max-width:1180px;margin:0 auto;padding:7px 20px;display:flex;align-items:center;gap:16px}
+.foot-motto{flex:1;text-align:center;margin:0;color:#93a1c4;font-size:.8rem}
+.foot-logo{display:inline-flex;align-items:center;gap:7px;text-decoration:none}
+.foot-logo img{height:20px}
+.foot-logo span{color:#fff;font-weight:800;font-size:.95rem;letter-spacing:.3px}
 
 .foot-nav{display:flex;gap:20px;align-items:center;flex:0 0 auto}
-.foot-nav a{color:#c8d2ea;text-decoration:none;font-weight:600;font-size:.95rem;transition:.15s}
+.foot-nav a{color:#c8d2ea;text-decoration:none;font-weight:600;font-size:.86rem;transition:.15s}
 .foot-nav a:hover{color:#fff}
-.foot-bottom{border-top:1px solid rgba(255,255,255,.1);text-align:center;padding:9px 20px;color:#7e8bb0;font-size:.8rem}
+.foot-bottom{border-top:1px solid rgba(255,255,255,.1);text-align:center;padding:5px 20px;color:#7e8bb0;font-size:.72rem}
 @media(max-width:640px){.foot-in{flex-direction:column;gap:14px;text-align:center;padding:20px}.foot-nav{gap:16px}}
 .foot-link{display:none}
 
