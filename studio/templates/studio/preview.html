@@ -54,11 +54,7 @@
   <div class="digital-offer">
     <div class="do-txt"><b>{% trans "Jouez votre toile en digital" %}</b>
       <span>{% trans "Peignez-la en ligne, gagnez des points, retrouvez-la dans votre galerie." %}</span></div>
-    {% if digital_owned %}
-      <a class="digibtn" href="{% url 'studio:digipaint' order.uid %}">{% trans "Jouer" %} · {% trans "offert" %}</a>
-    {% else %}
-      <a class="digibtn" href="{% url 'studio:paint_unlock' order.uid %}">{% trans "Jouer" %} · 0,99 &euro;</a>
-    {% endif %}
+    <a class="digibtn" href="{% url 'studio:digipaint' order.uid %}">{% trans "Jouer" %}</a>
   </div>
 
   <div class="kit-included">

@@ -292,9 +292,10 @@
   <div class="big" id="finalScore">0</div><p style="color:var(--muted)">{% trans "Bravo, votre toile est complète." %}</p>
   <button class="btn pri" id="winok">{% trans "Continuer" %}</button></div></div>
 <div class="paywall" id="paywall"><div class="pw-card">
-  <h2>{% trans "Pour continuer" %}</h2>
-  <p>{% trans "Débloquez cette toile pour continuer à jouer et la sauvegarder dans votre galerie." %}</p>
-  <button class="btn pri" id="pwPay">{% trans "Débloquer" %} , 0,99 &euro;</button>
+  <h2>{% trans "Sauvegardez votre toile" %}</h2>
+  <p>{% trans "Vous jouez depuis 5 minutes. Sauvegardez cette toile dans « Mes toiles » pour continuer à la peindre quand vous voulez." %}</p>
+  <button class="btn pri" id="pwPay" style="width:100%;justify-content:center;font:inherit;font-size:.92rem;font-weight:700;padding:10px;white-space:normal">{% trans "Sauvegarder et continuer" %} · 0,99&nbsp;&euro;</button>
+  <a class="btn" id="pwBack" href="{{ back_url }}" style="display:flex;justify-content:center;width:100%;box-sizing:border-box;margin-top:10px;font-size:.92rem;font-weight:700;padding:10px">{% trans "Retour à la commande" %}</a>
 </div></div>
 <canvas id="confetti"></canvas>
 
@@ -303,7 +304,19 @@
 (function(){
   var UID="{{ uid|escapejs }}", CSRF="{{ csrf_token }}", OWNED={% if owned %}true{% else %}false{% endif %};
   document.addEventListener('contextmenu',function(e){e.preventDefault();});  // pas de clic droit
-  if(!OWNED){setTimeout(function(){document.getElementById('paywall').classList.add('show');},120000);}
+  // Essai gratuit : 5 min de jeu (cumulees, onglet visible), puis proposition de sauvegarde a 0,99 EUR.
+  var FREE_S=300, TKEY='digipaint-t:'+UID, played=0;
+  try{played=parseInt(localStorage.getItem(TKEY),10)||0;}catch(e){}
+  function wall(){document.getElementById('paywall').classList.add('show');}
+  if(!OWNED){
+    if(played>=FREE_S){wall();}
+    else{var tick=setInterval(function(){
+      if(OWNED){clearInterval(tick);return;}
+      if(document.hidden)return;
+      played+=5;try{localStorage.setItem(TKEY,String(played));}catch(e){}
+      if(played>=FREE_S){clearInterval(tick);wall();}
+    },5000);}
+  }
   document.getElementById('pwPay').addEventListener('click',function(){
     fetch("/paint/"+UID+"/confirm/",{method:'POST',headers:{'X-CSRFToken':CSRF}})
       .then(function(r){return r.json();}).then(function(d){if(d&&d.redirect){location.href=d.redirect;return;}if(d&&d.ok){OWNED=true;document.getElementById('paywall').classList.remove('show');}});

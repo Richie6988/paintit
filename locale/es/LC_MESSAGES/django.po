@@ -1069,3 +1069,19 @@ msgstr "Crear mi pintura"
 
 msgid "Créer ma toile"
 msgstr "Crear mi lienzo"
+
+msgid "Sauvegardez votre toile"
+msgstr "Guarda tu lienzo"
+
+msgid ""
+"Vous jouez depuis 5 minutes. Sauvegardez cette toile dans « Mes toiles » "
+"pour continuer à la peindre quand vous voulez."
+msgstr ""
+"Llevas 5 minutos jugando. Guarda este lienzo en «Mis lienzos» para seguir "
+"pintándolo cuando quieras."
+
+msgid "Sauvegarder et continuer"
+msgstr "Guardar y seguir jugando"
+
+msgid "Retour à la commande"
+msgstr "Volver al pedido"

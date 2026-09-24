@@ -280,8 +280,10 @@ def digipaint(request, uid):
         if verified and not owns:
             _grant_gallery(request, lib, verified)   # gratuite -> arrive dans Mes Toiles
     owned = DigitalCanvas.objects.filter(uid=uid).exists()
+    # Essai gratuit : "Retour a la commande" ramene a l'apercu de la commande en cours.
+    back_url = reverse("studio:preview") if (order and order.get("uid") == uid) else reverse("studio:paint_portal")
     return render(request, "studio/digipaint.html",
-                  {"uid": uid, "palette": palette, "owned": owned})
+                  {"uid": uid, "palette": palette, "owned": owned, "back_url": back_url})
 
 
 def preview(request):
@@ -304,11 +306,10 @@ def preview(request):
         order["width_cm"], order["height_cm"], order["format_label"] = cf["w"], cf["h"], cf["label"]
         order["price"] = round(cf["price"] + order.get("brushes_amount", 0.0), 2)
         request.session["order"] = order
-    digital_owned = DigitalCanvas.objects.filter(uid=order["uid"]).exists() or not request.session.get("free_used")
     return render(request, "studio/preview.html",
                   {"order": order, "brushes_price": p.brushes_price, "formats": formats,
                    "current_format": current_format,
-                   "brushes_available": p.av_brushes, "digital_owned": digital_owned})
+                   "brushes_available": p.av_brushes})
 
 
 def set_options(request):

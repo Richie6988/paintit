@@ -1090,3 +1090,19 @@ msgstr "Mein Bild erstellen"
 
 msgid "Créer ma toile"
 msgstr "Meine Leinwand erstellen"
+
+msgid "Sauvegardez votre toile"
+msgstr "Speichern Sie Ihr Bild"
+
+msgid ""
+"Vous jouez depuis 5 minutes. Sauvegardez cette toile dans « Mes toiles » "
+"pour continuer à la peindre quand vous voulez."
+msgstr ""
+"Sie spielen seit 5 Minuten. Speichern Sie dieses Bild unter „Meine Bilder“, "
+"um jederzeit weiterzumalen."
+
+msgid "Sauvegarder et continuer"
+msgstr "Speichern und weiterspielen"
+
+msgid "Retour à la commande"
+msgstr "Zurück zur Bestellung"

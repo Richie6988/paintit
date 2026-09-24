@@ -1063,3 +1063,19 @@ msgstr "Create my painting"
 
 msgid "Créer ma toile"
 msgstr "Create my canvas"
+
+msgid "Sauvegardez votre toile"
+msgstr "Save your canvas"
+
+msgid ""
+"Vous jouez depuis 5 minutes. Sauvegardez cette toile dans « Mes toiles » "
+"pour continuer à la peindre quand vous voulez."
+msgstr ""
+"You've been playing for 5 minutes. Save this canvas to “My canvases” to keep"
+" painting it whenever you like."
+
+msgid "Sauvegarder et continuer"
+msgstr "Save and keep playing"
+
+msgid "Retour à la commande"
+msgstr "Back to my order"
