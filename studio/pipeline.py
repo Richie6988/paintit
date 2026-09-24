@@ -66,6 +66,8 @@ def _dynamic_min_zone(width_cm, height_cm, colors):
 def _source_slug(uid, source_name):
     import re, os as _os
     base = _os.path.splitext(_os.path.basename(source_name or "image"))[0]
+    if base.startswith("%s_source_" % uid):          # regeneration : pas de "<uid>_source_<uid>_source_..."
+        base = base[len("%s_source_" % uid):]
     slug = re.sub(r"[^A-Za-z0-9_-]+", "-", base).strip("-")[:40] or "image"
     return "%s_source_%s.jpg" % (uid, slug)
 
@@ -89,15 +91,31 @@ def generate(image_path, colors, width_cm, height_cm, uid=None, dpi=None, progre
     outdir = os.path.join(settings.MEDIA_ROOT, "orders", uid)
     os.makedirs(outdir, exist_ok=True)
 
-    import glob as _glob
-    for _old in _glob.glob(os.path.join(outdir, "%s_source_*" % uid)) + [os.path.join(outdir, "source.jpg")]:
+    import glob as _glob, shutil as _shutil, tempfile as _tempfile
+    olds = _glob.glob(os.path.join(outdir, "%s_source_*" % uid)) + [os.path.join(outdir, "source.jpg")]
+    tmp_in = None
+    if os.path.abspath(image_path) in {os.path.abspath(p) for p in olds}:
+        # Regeneration a partir de l'original deja stocke (ex. reformatage apres paiement) :
+        # on le copie AVANT le menage, sinon on supprimait l'image a lire (original perdu).
+        fd, tmp_in = _tempfile.mkstemp(suffix=os.path.splitext(image_path)[1] or ".jpg")
+        os.close(fd)
+        _shutil.copyfile(image_path, tmp_in)
+        image_path = tmp_in
+    for _old in olds:
         try:
             os.remove(_old)
         except OSError:
             pass
     cropped = os.path.join(outdir, _source_slug(uid, source_name or image_path))
-    _center_crop_to_ratio(image_path, cropped, float(width_cm) / float(height_cm),
-                          fx=focus[0], fy=focus[1])
+    try:
+        _center_crop_to_ratio(image_path, cropped, float(width_cm) / float(height_cm),
+                              fx=focus[0], fy=focus[1])
+    finally:
+        if tmp_in:
+            try:
+                os.remove(tmp_in)
+            except OSError:
+                pass
 
     _mzm_override = float(min_zone_mm) if min_zone_mm else None   # surcharge utilisateur
     mzm, mpm = _dynamic_min_zone(width_cm, height_cm, colors)

@@ -2146,6 +2146,9 @@ def erp_catalogue(request):
             m.players = owners.get(m.uid, 0)
         if sort == "popular":
             items.sort(key=lambda m: -m.players)
+    from .pipeline import source_file
+    for it in items:   # original perdu (bug de regeneration corrige) : pas de lien mort
+        it.has_source = bool(source_file(os.path.join(settings.MEDIA_ROOT, "orders", it.uid), it.uid))
     return render(request, "admin/erp_catalogue.html", {
         **_admin.site.each_context(request), "tab": tab, "items": items, "q": q, "cat": cat, "pf": pf,
         "sort": sort, "cats": cats, "stats": stats, "erp_section": "catalogue"})

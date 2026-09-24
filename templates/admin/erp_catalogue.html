@@ -18,6 +18,8 @@
  .vsw{position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:4px;background:rgba(255,255,255,.92);border-radius:9px;padding:3px;z-index:3;box-shadow:0 2px 8px rgba(0,0,0,.12)}
  .vsw button{flex:1;border:0;background:none;border-radius:7px;padding:4px 0;font-size:.7rem;font-weight:800;color:#616161;cursor:pointer}
  .vsw button.on{background:#1a1a1a;color:#fff}
+ .vsw button:disabled{opacity:.35;cursor:not-allowed}
+ .nosrc{display:inline-flex;width:54px;height:66px;border-radius:8px;border:1px dashed #d4d4d4;align-items:center;justify-content:center;text-align:center;font-size:.6rem;line-height:1.1;color:#8a8a8a;font-weight:700;vertical-align:middle}
  .views3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
  .views3 figure{margin:0}.views3 img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:10px;border:1px solid #e3e3e3;background:#f6f6f7;cursor:zoom-in}
  .views3 figcaption{font-size:.72rem;color:#6d7175;text-align:center;margin-top:3px;font-weight:700}
@@ -77,14 +79,14 @@
       <div style="overflow-x:auto"><table class="t ctab">
         <tr><th>Original · Toile</th><th>Toile</th><th>Client</th><th>Origine</th><th>Créée</th><th></th></tr>
         {% for c in items %}<tr>
-          <td style="white-space:nowrap"><a href="/preview/img/{{ c.uid }}/source/" target="_blank" title="Photo originale"><img src="/preview/img/{{ c.uid }}/source/" alt="" loading="lazy" onerror="this.style.visibility='hidden'"></a>
+          <td style="white-space:nowrap">{% if c.has_source %}<a href="/preview/img/{{ c.uid }}/source/" target="_blank" title="Photo originale"><img src="/preview/img/{{ c.uid }}/source/" alt="" loading="lazy"></a>{% else %}<span class="nosrc" title="Photo originale non conservée">Original<br>non<br>conservé</span>{% endif %}
             <a href="/paint/{{ c.uid }}/" target="_blank" title="Toile"><img src="/preview/img/{{ c.uid }}/preview/" alt="" loading="lazy" onerror="this.style.visibility='hidden'"></a></td>
           <td><b>{{ c.title|default:"Sans titre" }}</b><div class="muted">{{ c.uid }} · {{ c.colors }} couleurs · {{ c.width_cm|floatformat:0 }}×{{ c.height_cm|floatformat:0 }} cm</div></td>
           <td>{{ c.email|default:"(anonyme)" }}</td>
           <td><span class="bdg2 {% if c.source == 'gift' %}info{% else %}idle{% endif %}">{% if c.source == 'gift' %}Cadeau{% else %}Photo client{% endif %}</span></td>
           <td class="muted">{{ c.created_at|date:"d/m/Y" }}</td>
           <td style="white-space:nowrap">{% if c.published %}<span class="bdg2 ok">En galerie</span>
-            {% else %}<button class="pbtn sm" type="button" onclick='openPublish({{ c.pk }}, "{{ c.uid|escapejs }}", "{{ c.title|escapejs }}")'>Publier en galerie</button>{% endif %}
+            {% else %}<button class="pbtn sm" type="button" onclick='openPublish({{ c.pk }}, "{{ c.uid|escapejs }}", {{ c.has_source|yesno:"true,false" }}, "{{ c.title|escapejs }}")'>Publier en galerie</button>{% endif %}
             <a class="pbtn sm" href="/paint/{{ c.uid }}/" target="_blank">Voir</a></td>
         </tr>{% empty %}<tr><td colspan="6" class="muted">Aucune toile client.</td></tr>{% endfor %}
       </table></div>
@@ -97,7 +99,7 @@
             <img class="v-source" src="/preview/img/{{ m.uid }}/source/" alt="Original" loading="lazy" onerror="this.remove()">
             <img class="v-preview on" src="/preview/img/{{ m.uid }}/preview/" alt="Toile" loading="lazy" onerror="this.remove()">
             <img class="v-template" src="/preview/img/{{ m.uid }}/template/" alt="Numérotée" loading="lazy" onerror="this.remove()">
-            <div class="vsw"><button type="button" data-v="source">Original</button><button type="button" data-v="preview" class="on">Toile</button><button type="button" data-v="template">Numérotée</button></div>
+            <div class="vsw"><button type="button" data-v="source" {% if not m.has_source %}disabled title="Photo originale non conservée"{% endif %}>Original</button><button type="button" data-v="preview" class="on">Toile</button><button type="button" data-v="template">Numérotée</button></div>
             <span class="price">{% if m.price > 0 %}<span class="bdg2 warn">{{ m.price|floatformat:2 }} €</span>{% else %}<span class="bdg2 ok">Gratuit</span>{% endif %}</span>
           </div>
           <div class="body">
@@ -106,7 +108,7 @@
             <div class="m">{{ m.players }} joueur{{ m.players|pluralize }}{% if m.price > 0 %} · {{ m.players }} vente{{ m.players|pluralize }}{% endif %}</div>
           </div>
           <div class="acts">
-            <button class="pbtn sm pri" type="button" onclick='openEdit({{ m.pk }}, "{{ m.uid|escapejs }}", "{{ m.title|escapejs }}", "{{ m.category|escapejs }}", "{{ m.price }}")'>Modifier</button>
+            <button class="pbtn sm pri" type="button" onclick='openEdit({{ m.pk }}, "{{ m.uid|escapejs }}", {{ m.has_source|yesno:"true,false" }}, "{{ m.title|escapejs }}", "{{ m.category|escapejs }}", "{{ m.price }}")'>Modifier</button>
             <a class="pbtn sm" href="/paint/{{ m.uid }}/" target="_blank">Jouer</a>
             <form method="post" onsubmit="return confirm('Retirer ce modèle de la galerie ? Les joueurs le conservent.')">{% csrf_token %}<input type="hidden" name="id" value="{{ m.pk }}"><button class="pbtn sm" name="op" value="unpublish">Retirer</button></form>
           </div>
@@ -155,15 +157,18 @@
 
 <script>
 function $(i){return document.getElementById(i);}
-function fill3(id,uid){document.querySelectorAll('#'+id+' img').forEach(function(im){var u='/preview/img/'+uid+'/'+im.dataset.k+'/';
+function fill3(id,uid,hs){document.querySelectorAll('#'+id+' img').forEach(function(im){var u='/preview/img/'+uid+'/'+im.dataset.k+'/';
+  var cap=im.closest('figure').querySelector('figcaption');
+  if(im.dataset.k==='source'&&!hs){im.removeAttribute('src');im.style.visibility='hidden';im.parentNode.removeAttribute('href');cap.textContent='Original non conservé';return;}
+  if(im.dataset.k==='source')cap.textContent='Original';
   im.style.visibility='visible';im.onerror=function(){this.style.visibility='hidden';};im.src=u;im.parentNode.href=u;});}
 document.querySelectorAll('.pc .vsw button').forEach(function(b){b.addEventListener('click',function(e){e.preventDefault();
   var card=b.closest('.pc');card.querySelectorAll('.vsw button').forEach(function(x){x.classList.toggle('on',x===b);});
   card.querySelectorAll('.img img').forEach(function(im){im.classList.toggle('on',im.classList.contains('v-'+b.dataset.v));});});});
 function closeD(){document.querySelectorAll('.drawer').forEach(function(d){d.classList.remove('on');});}
-function openEdit(id,uid,t,c,p){$('eId').value=id;$('eTitle').value=t;$('eCat').value=c;$('ePrice').value=String(p).replace(',','.');fill3('eV',uid);$('dEdit').classList.add('on');$('eTitle').focus();}
+function openEdit(id,uid,hs,t,c,p){$('eId').value=id;$('eTitle').value=t;$('eCat').value=c;$('ePrice').value=String(p).replace(',','.');fill3('eV',uid,hs);$('dEdit').classList.add('on');$('eTitle').focus();}
 function openAdd(){$('dAdd').classList.add('on');}
-function openPublish(id,uid,t){$('pId').value=id;$('pTitle').value=t||'';fill3('pV',uid);$('dPub').classList.add('on');}
+function openPublish(id,uid,hs,t){$('pId').value=id;$('pTitle').value=t||'';fill3('pV',uid,hs);$('dPub').classList.add('on');}
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeD();});
 (function(){var f=$('aFile'),d=$('drop'),th=$('aThumb');
   function show(x){if(!x)return;th.src=URL.createObjectURL(x);th.hidden=false;}
