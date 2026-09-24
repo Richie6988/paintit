@@ -775,7 +775,7 @@ def render_palette(palette_bgr, brand="PAINT BY NUMBERS", logo_path=None,
 def run(args):
     src = cv2.imread(args.image)
     if src is None:
-        sys.exit(f"Image illisible : {args.image}")
+        raise ValueError(f"Image illisible : {args.image}")   # jamais sys.exit : tuerait le thread appelant
     sh, sw = src.shape[:2]
     W, H, mmx, mmy, w_mm, h_mm = target_working_size(
         sw, sh, args.width_cm, args.height_cm, args.dpi)

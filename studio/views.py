@@ -938,7 +938,7 @@ def _safe_export_tiff(uid):
 
 def _reformat_for_supplier(o):
     """Apres paiement, avant l'envoi fournisseur : regenere la toile aux dimensions
-    du format commande, puis exporte les .tiff (sans perte). Conserve .svg/.png."""
+    du format commande (le poster, order.json et les TIFF sont produits ensuite, d'apres elle)."""
     from .pipeline import source_file, generate, export_tiff
     uid = o.get("uid")
     if not uid:
@@ -951,10 +951,6 @@ def _reformat_for_supplier(o):
                      uid=uid, source_name=os.path.basename(src))
     except Exception:
         logger.exception("Reformatage toile %s", uid)
-    try:
-        export_tiff(uid)
-    except Exception:
-        logger.exception("Export TIFF %s", uid)
 
 
 def _upsert_order(o, shipping, status, supplier_ref=None):
@@ -995,12 +991,57 @@ def _fulfill(order, shipping):
     return o, manifest, supplier_result
 
 
+SUPPLIER_FILES = [("template_tiff", "{uid}_template.tiff", "Toile numérotée TIFF (impression)"),
+                  ("template_svg", "{uid}_template.svg", "Toile numérotée SVG (vectoriel)"),
+                  ("poster", "{uid}_poster.png", "Poster (notice + palette + QR)"),
+                  ("order_json", "{uid}_order.json", "Bon de commande order.json")]
+
+
+def supplier_files_status(uid):
+    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    return [{"key": k, "name": n.format(uid=uid), "label": l, "ok": os.path.exists(os.path.join(d, n.format(uid=uid)))}
+            for k, n, l in SUPPLIER_FILES]
+
+
+def ensure_supplier_files(o, shipping, force=False, user="auto"):
+    """Produit le dossier fournisseur : poster + order.json (d'apres la toile FINALE) puis TIFF HD.
+    Chaque etape est independante et journalisee. -> liste des fichiers manquants restants."""
+    from .pipeline import export_tiff
+    uid = o.get("uid")
+    st = {f["key"]: f["ok"] for f in supplier_files_status(uid)}
+    errors = []
+    if force or not (st["poster"] and st["order_json"]):
+        try:
+            fulfillment.build(o, shipping)
+        except Exception as exc:
+            logger.exception("Poster/order.json %s", uid); errors.append("poster/order.json : %s" % exc)
+    if force or not st["template_tiff"]:
+        try:
+            export_tiff(uid)
+        except Exception as exc:
+            logger.exception("TIFF %s", uid); errors.append("TIFF : %s" % exc)
+    missing = [f["label"] for f in supplier_files_status(uid) if not f["ok"]]
+    row = Order.objects.filter(uid=uid).first()
+    if row:
+        OrderEvent.objects.create(order=row, kind="action", user=user, text=(
+            "Dossier fournisseur prêt (TIFF, SVG, poster, order.json)" if not missing
+            else "Dossier fournisseur incomplet : manque %s%s" % (", ".join(missing),
+                                                                 (" · " + " ; ".join(errors)) if errors else ""))[:300])
+    return missing
+
+
 def _post_order_async(o, shipping):
-    """Traitement post-paiement en arriere-plan : regen aux dimensions, TIFF, fournisseur, email."""
+    """Traitement post-paiement en arriere-plan, etapes INDEPENDANTES (une erreur n'empeche pas la suite) :
+    1. toile regeneree aux dimensions commandees ; 2. poster + order.json + TIFF d'apres cette toile ;
+    3. transmission fournisseur ; 4. e-mail de confirmation."""
     try:
         _reformat_for_supplier(o)
-    except Exception:
+    except BaseException:
         logger.exception("Reformat async %s", o.get("uid"))
+    try:
+        ensure_supplier_files(o, shipping, force=True)
+    except BaseException:
+        logger.exception("Dossier fournisseur %s", o.get("uid"))
     try:
         from .models import Supplier
         sup = Supplier.for_checkout("kit")
@@ -1008,11 +1049,11 @@ def _post_order_async(o, shipping):
             _notify_supplier(o, shipping, sup=sup, user="auto")
         elif sup:   # validation manuelle : la commande reste "payee" -> Centre d'actions
             Order.objects.filter(uid=o.get("uid"), status=Order.FULFILLED).update(status=Order.PAID)
-    except Exception:
+    except BaseException:
         logger.exception("Notify async %s", o.get("uid"))
     try:
         emails.send_order_confirmation(o, shipping)
-    except Exception:
+    except BaseException:
         logger.exception("Email async %s", o.get("uid"))
 
 
@@ -2295,6 +2336,11 @@ def erp_order(request, pk):
             elif op == "notes":
                 o.notes = request.POST.get("notes", ""); o.save(update_fields=["notes"])
                 messages.success(request, "Notes internes enregistrées.")
+            elif op == "missing":
+                missing = ensure_supplier_files(_order_from_row(o), _shipping_from_row(o), user=user)
+                (messages.error if missing else messages.success)(
+                    request, ("Toujours manquant : %s (voir l'historique)." % ", ".join(missing)) if missing
+                    else "Dossier fournisseur complet.")
             elif op == "tiff":
                 from .pipeline import export_tiff
                 made = export_tiff(o.uid)
@@ -2334,7 +2380,7 @@ def erp_order(request, pk):
         from .models import MarketingAd
         ad = MarketingAd.objects.filter(token=o.ad_ref).first()
     return render(request, "admin/erp_order.html", {
-        **_admin.site.each_context(request), "o": o, "files": files, "visuals": visuals, "have": have,
+        **_admin.site.each_context(request), "o": o, "files": files, "visuals": visuals, "have": have, "sfiles": supplier_files_status(o.uid),
         "has_tiff": any(f["ext"] in ("TIFF", "TIF") for _k, _l, fs in files for f in fs),
         "has_json": any(f["name"].endswith("_order.json") for _k, _l, fs in files for f in fs),
         "events": o.events.all()[:60], "flags": flags, "others": others, "ad": ad,

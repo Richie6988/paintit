@@ -27,6 +27,14 @@
  .tl2 li:before{content:"";position:absolute;left:-7px;top:3px;width:12px;height:12px;border-radius:50%;background:#d4d4d4;border:2px solid #fff}
  .tl2 li.status:before{background:#2f6bf2}.tl2 li.note:before{background:#f6b93b}.tl2 li.email:before{background:#1e8848}.tl2 li.err:before{background:#c0392b}
  .tl2 time{display:block;font-size:.72rem;color:#6d7175}
+ .sfiles{border:1px solid #e3e3e3;border-radius:12px;padding:10px 12px;margin-bottom:6px;background:#fafafa}
+ .sf-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+ .sf-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #ededed}
+ .sf-row .ck{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;background:#cdfee1;color:#0c5132;flex:0 0 auto}
+ .sf-row.miss .ck{background:#fedad9;color:#8e1f0b}
+ .sf-row .nm{flex:1;min-width:0}.sf-row .nm b{display:block;font-size:.85rem}.sf-row .nm span{font-size:.72rem;color:#6d7175}
+ .regen{position:relative}.regen summary{list-style:none;cursor:pointer}.regen summary::-webkit-details-marker{display:none}
+ .regen-menu{position:absolute;right:0;top:110%;background:#fff;border:1px solid #e3e3e3;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;z-index:5;box-shadow:0 10px 24px rgba(0,0,0,.1);white-space:nowrap}
  .money{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:.86rem}.money .tot{font-weight:800;border-top:1px solid #ebebeb;padding-top:6px}
 </style>
 <div class="erp">
@@ -62,10 +70,27 @@
 
       <div class="card">
         <div class="card-h"><h2>Fichiers</h2>
-          <span style="display:flex;gap:6px;flex-wrap:wrap">
-            <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="tiff" title="Toile numérotée + aperçu en TIFF sans perte">{% if has_tiff %}Regénérer{% else %}Générer{% endif %} les TIFF</button></form>
-            <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="manifest" title="Poster A4 (notice + palette + QR) et bon de commande order.json">{% if has_json %}Regénérer{% else %}Générer{% endif %} poster + order.json</button></form>
-          </span></div>
+          <details class="regen"><summary class="pbtn sm">Régénérer…</summary>
+            <div class="regen-menu">
+              <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="tiff" title="Toile numérotée en TIFF haute définition">TIFF haute définition</button></form>
+              <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="manifest" title="Poster A4 (notice + palette + QR) et bon de commande">Poster + order.json</button></form>
+            </div></details></div>
+        <div class="sfiles">
+          <div class="sf-h"><b>Dossier fournisseur</b>
+            {% if sfiles.0.ok and sfiles.1.ok and sfiles.2.ok and sfiles.3.ok %}<span class="bdg2 ok">Complet</span>{% else %}<span class="bdg2 err">Incomplet</span>{% endif %}</div>
+          {% for f in sfiles %}
+          <div class="sf-row {% if not f.ok %}miss{% endif %}">
+            <span class="ck">{% if f.ok %}✓{% else %}✕{% endif %}</span>
+            <span class="nm"><b>{{ f.label }}</b><span>{{ f.name }}</span></span>
+            {% if f.ok %}<a class="pbtn sm" href="/admin-hub/orders/{{ o.pk }}/f/{{ o.uid }}/{{ f.name }}" target="_blank">Ouvrir</a><a class="pbtn sm" href="/admin-hub/orders/{{ o.pk }}/f/{{ o.uid }}/{{ f.name }}?dl=1">⬇</a>
+            {% else %}<span class="muted">manquant</span>{% endif %}
+          </div>
+          {% endfor %}
+          {% if not sfiles.0.ok or not sfiles.1.ok or not sfiles.2.ok or not sfiles.3.ok %}
+          <form method="post" style="margin-top:8px">{% csrf_token %}<button class="pbtn pri" name="op" value="missing">Générer les fichiers manquants</button>
+            <span class="muted">Normalement produits automatiquement au paiement ; cette commande date d'avant le correctif ou la génération a échoué (voir l'historique).</span></form>
+          {% endif %}
+        </div>
         <div class="fgrp">
           <h3>Documents</h3>
           <div class="frow"><span class="ic ext-PDF">PDF</span><span class="nm"><b>Reçu de commande (PDF)</b><span>généré à la demande · PaintIt-{{ o.uid }}.pdf</span></span>
