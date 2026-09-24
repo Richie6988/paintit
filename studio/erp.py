@@ -200,7 +200,7 @@ def actions():
         out.append({"key": "messages", "count": unanswered, "hint": "Répondre depuis la fiche message",
                     "label": "Messages sans réponse" + (" (dont %d > 24 h)" % late_msgs if late_msgs else ""),
                     "level": "err" if late_msgs else "warn",
-                    "url": "/admin/studio/contactmessage/?answered__exact=0"})
+                    "url": "/admin-hub/messages/?box=open"})
     if not Supplier.for_checkout("kit"):
         out.append({"key": "supplier", "count": "!", "level": "err", "url": "/admin/studio/supplier/add/",
                     "label": "Aucun fournisseur actif pour le checkout Kit",

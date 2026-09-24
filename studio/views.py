@@ -2537,3 +2537,107 @@ def erp_orders(request):
         "countries": sorted(c for c in Order.objects.values_list("country", flat=True).distinct() if c),
         "total": agg["n"] or 0, "revenue": round(agg["ca"] or 0, 2), "qs_page": params.urlencode(),
         "qs_sort": sparams.urlencode(), "action": request.GET.get("action", ""), "erp_section": "orders"})
+
+
+# ---------------- Messagerie (boite de reception ERP) ----------------
+CANNED_REPLIES = [
+    ("Suivi de colis", "Bonjour {prenom},\n\nMerci pour votre message. Votre commande {commande} a bien été expédiée{suivi}.\n\nN'hésitez pas à revenir vers nous si besoin.\n\nBelle journée,\nL'équipe PaintIt"),
+    ("Délai de production", "Bonjour {prenom},\n\nMerci pour votre patience ! Votre toile {commande} est en cours de production dans notre atelier : chaque kit est imprimé et préparé à la demande. Vous recevrez un e-mail avec le numéro de suivi dès son expédition.\n\nBelle journée,\nL'équipe PaintIt"),
+    ("Retouche de la toile", "Bonjour {prenom},\n\nMerci pour votre retour. Nous pouvons tout à fait ajuster votre toile (nombre de couleurs, niveau de détail, cadrage). Pouvez-vous nous préciser ce que vous souhaitez modifier ?\n\nBelle journée,\nL'équipe PaintIt"),
+    ("Produit abîmé", "Bonjour {prenom},\n\nNous sommes désolés que votre colis soit arrivé endommagé. Pourriez-vous nous envoyer une photo du colis et du contenu ? Nous vous renverrons un kit neuf sans frais dès réception.\n\nToutes nos excuses,\nL'équipe PaintIt"),
+    ("Remerciement", "Bonjour {prenom},\n\nUn grand merci pour votre message, cela fait vraiment plaisir à toute l'équipe !\n\nÀ très bientôt sur PaintIt,\nL'équipe PaintIt"),
+]
+
+
+@staff_member_required
+def erp_inbox(request, pk=None):
+    import json as _json
+    from django.contrib import admin as _admin
+    from django.contrib import messages as flash
+    from django.core.mail import EmailMessage
+    from django.db.models import Q, Count
+    from .models import ContactMessage, MessageReply
+    user = request.user.get_username()
+    cur = ContactMessage.objects.filter(pk=pk).first() if pk else None
+    if pk and not cur:
+        raise Http404
+    if request.method == "POST" and cur:
+        op = request.POST.get("op")
+        thread_open = ContactMessage.objects.filter(email=cur.email, answered=False)
+        if op == "reply":
+            body = (request.POST.get("body") or "").strip()
+            files = request.FILES.getlist("files")
+            if not body and not files:
+                flash.error(request, "Message vide.")
+            elif sum(f.size for f in files) > 15 * 1024 * 1024:
+                flash.error(request, "Pièces jointes trop lourdes (15 Mo max).")
+            else:
+                mail = EmailMessage("Re: %s" % (cur.subject or "Votre message"), body, settings.DEFAULT_FROM_EMAIL,
+                                    [cur.email], reply_to=[settings.DEFAULT_FROM_EMAIL])
+                for f in files:
+                    mail.attach(f.name, f.read(), getattr(f, "content_type", None) or None)
+                try:
+                    sent = mail.send(fail_silently=False) > 0
+                except Exception as exc:
+                    logger.exception("Reponse message %s", cur.pk)
+                    sent = False
+                    flash.error(request, "Échec d'envoi de l'e-mail : %s" % exc)
+                MessageReply.objects.create(message=cur, body=body, attachments=[f.name for f in files],
+                                            user=user, sent=sent)
+                if sent:
+                    now = timezone.now()
+                    targets = thread_open if request.POST.get("close_all") else ContactMessage.objects.filter(pk=cur.pk)
+                    targets.update(answered=True, answered_at=now)
+                    ContactMessage.objects.filter(pk=cur.pk).update(answer=body)
+                    flash.success(request, "Réponse envoyée à %s." % cur.email)
+        elif op == "close":
+            thread_open.update(answered=True, answered_at=timezone.now())
+            flash.success(request, "Conversation marquée comme traitée.")
+        elif op == "reopen":
+            ContactMessage.objects.filter(pk=cur.pk).update(answered=False)
+            flash.success(request, "Conversation rouverte.")
+        elif op == "delete":
+            cur.delete()
+            flash.success(request, "Message supprimé.")
+            return redirect("studio:erp_inbox")
+        return redirect("studio:erp_inbox_msg", pk=cur.pk)
+
+    box = request.GET.get("box", "open")
+    q = (request.GET.get("q") or "").strip()
+    qs = ContactMessage.objects.annotate(nfiles=Count("attachments", distinct=True)).order_by("-created_at")
+    if box == "open":
+        qs = qs.filter(answered=False)
+    elif box == "done":
+        qs = qs.filter(answered=True)
+    if q:
+        qs = qs.filter(Q(name__icontains=q) | Q(email__icontains=q) | Q(subject__icontains=q) | Q(message__icontains=q))
+    items = list(qs[:200])
+    counts = {"open": ContactMessage.objects.filter(answered=False).count(),
+              "done": ContactMessage.objects.filter(answered=True).count(), "all": ContactMessage.objects.count()}
+    if not cur and items:
+        cur = items[0]
+    import datetime as _dt
+    late_ids = {m.pk for m in items if not m.answered and m.created_at < timezone.now() - _dt.timedelta(hours=24)}
+    ctx = {**_admin.site.each_context(request), "items": items, "box": box, "q": q, "counts": counts, "cur": cur,
+           "late_ids": late_ids,
+           "erp_section": "messages", "canned": CANNED_REPLIES}
+    if cur:
+        thread = []
+        for m in ContactMessage.objects.filter(email=cur.email).prefetch_related("attachments", "replies"):
+            atts = [{"name": a.original_name or a.file.name.split("/")[-1], "url": a.file.url,
+                     "image": (a.content_type or "").startswith("image/"), "pdf": "pdf" in (a.content_type or "")}
+                    for a in m.attachments.all() if a.file]
+            thread.append({"kind": "in", "at": m.created_at, "m": m, "atts": atts})
+            for r in m.replies.all():
+                thread.append({"kind": "out", "at": r.at, "r": r})
+        thread.sort(key=lambda x: x["at"])
+        orders = list(Order.objects.filter(customer_email__iexact=cur.email).order_by("-created_at")[:8])
+        last = orders[0] if orders else None
+        first = (cur.name or "").split()[0] if cur.name else ""
+        ctx.update(thread=thread, orders=orders, paid=sum(o.total for o in orders if o.status in Order.PAID_STATUSES),
+                   canvases=DigitalCanvas.objects.filter(email__iexact=cur.email).count(),
+                   fill=_json.dumps({"prenom": first, "commande": last.uid if last else "",
+                                     "suivi": (" (suivi %s %s%s)" % (last.carrier, last.tracking_number,
+                                               " : " + last.tracking_url if last.tracking_url else "")).replace("  ", " ")
+                                     if last and last.tracking_number else ""}))
+    return render(request, "admin/erp_inbox.html", ctx)

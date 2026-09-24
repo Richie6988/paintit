@@ -52,7 +52,7 @@
         <td class="r">{{ r.last|date:"d/m/Y" }}<div class="muted">il y a {{ r.days }} j</div></td>
         <td style="white-space:nowrap">
           <a href="/admin-hub/orders/?tab=all&q={{ r.customer_email|urlencode }}">Commandes</a> ·
-          <a href="/admin/studio/contactmessage/?q={{ r.customer_email|urlencode }}">Messages</a> ·
+          <a href="/admin-hub/messages/?box=all&q={{ r.customer_email|urlencode }}">Messages</a> ·
           <a href="mailto:{{ r.customer_email }}">E-mail</a>
         </td>
       </tr>

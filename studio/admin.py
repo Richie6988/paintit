@@ -368,6 +368,22 @@ class ContactMessageAdminForm(forms.ModelForm):
 
 @admin.register(ContactMessage)
 class ContactMessageAdmin(admin.ModelAdmin):
+    def changelist_view(self, request, extra_context=None):
+        from django.shortcuts import redirect
+        if request.method == "GET" and "django" not in request.GET:
+            box = {"0": "open", "1": "done"}.get(request.GET.get("answered__exact", ""), "all" if request.GET else "open")
+            q = request.GET.get("q", "")
+            return redirect("/admin-hub/messages/?box=%s%s" % (box, "&q=" + q if q else ""))
+        if "django" in request.GET:
+            g = request.GET.copy(); g.pop("django"); request.GET = g
+        return super().changelist_view(request, extra_context)
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        from django.shortcuts import redirect
+        if request.method == "GET" and "django" not in request.GET:
+            return redirect("studio:erp_inbox_msg", pk=object_id)
+        return super().change_view(request, object_id, form_url, extra_context)
+
     form = ContactMessageAdminForm
     list_display = ("subject", "name", "email", "has_files", "answered", "age_col", "created_at", "answered_at")
 

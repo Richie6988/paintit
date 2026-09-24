@@ -225,6 +225,21 @@ class ContactMessage(models.Model):
 
 
 
+class MessageReply(models.Model):
+    """Reponse envoyee a un message de contact (historique complet de la conversation)."""
+    message = models.ForeignKey(ContactMessage, related_name="replies", on_delete=models.CASCADE)
+    body = models.TextField()
+    attachments = models.JSONField(default=list, blank=True)   # noms des pieces jointes envoyees
+    user = models.CharField(max_length=150, blank=True, default="")
+    sent = models.BooleanField(default=True)
+    at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["at"]
+        verbose_name = "Reponse"
+        verbose_name_plural = "Reponses"
+
+
 class ContactAttachment(models.Model):
     message = models.ForeignKey(ContactMessage, related_name="attachments", on_delete=models.CASCADE)
     file = models.FileField(upload_to="contact/%Y/%m/")

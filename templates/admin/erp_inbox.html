@@ -1,0 +1,132 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Messages · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .ibx{display:grid;grid-template-columns:340px minmax(0,1fr) 290px;gap:14px;align-items:start}
+ @media(max-width:1200px){.ibx{grid-template-columns:320px minmax(0,1fr)}.ibx .ctxcol{grid-column:1/-1}}
+ @media(max-width:820px){.ibx{grid-template-columns:1fr}}
+ .lst{background:#fff;border:1px solid #e3e3e3;border-radius:14px;overflow:hidden;position:sticky;top:10px}
+ .lst .top{padding:12px;border-bottom:1px solid #ebebeb;display:flex;flex-direction:column;gap:8px}
+ .lst .seg a{flex:1;text-align:center;padding:7px 6px;font-size:.8rem;white-space:nowrap}
+ .lst .items{max-height:calc(100vh - 230px);overflow:auto}
+ .it{display:block;padding:11px 14px;border-bottom:1px solid #f1f1f1;color:#1a1a1a !important;position:relative}
+ .it:hover{background:#f7faff}.it.on{background:#eef4ff;box-shadow:inset 3px 0 0 #2f6bf2}
+ .it .l1{display:flex;justify-content:space-between;gap:8px;font-size:.86rem}
+ .it .l1 b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.it .l1 time{color:#6d7175;font-size:.74rem;white-space:nowrap}
+ .it .sj{font-size:.82rem;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .it .sn{font-size:.78rem;color:#6d7175;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .it.unread .l1 b:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#2f6bf2;margin-right:6px;vertical-align:1px}
+ .it .late{color:#b42318;font-weight:800}
+ .conv{background:#fff;border:1px solid #e3e3e3;border-radius:14px;display:flex;flex-direction:column;min-height:540px}
+ .conv .hd{padding:14px 18px;border-bottom:1px solid #ebebeb;display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+ .conv .hd h2{margin:0;font-size:1.1rem;color:#1a1a1a;background:none;padding:0;text-transform:none;letter-spacing:0}
+ .thread{padding:16px 18px;display:flex;flex-direction:column;gap:12px;flex:1}
+ .bub{max-width:78%;border-radius:14px;padding:10px 14px;font-size:.9rem;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
+ .bub.in{background:#f1f3f7;align-self:flex-start;border-top-left-radius:4px}
+ .bub.out{background:#1a1a1a;color:#fff;align-self:flex-end;border-top-right-radius:4px}
+ .bub.out.fail{background:#8e1f0b}
+ .meta{font-size:.72rem;color:#6d7175;margin-bottom:3px;white-space:normal}.bub.out .meta{color:#bdbdbd}
+ .bub .sj{font-weight:800;margin-bottom:4px;white-space:normal}
+ .atts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;white-space:normal}
+ .atts img{max-width:180px;max-height:140px;border-radius:8px;border:1px solid #d4d4d4;display:block}
+ .atts a.f{display:inline-flex;gap:6px;align-items:center;background:#fff;border:1px solid #d4d4d4;border-radius:8px;padding:5px 9px;font-size:.78rem;color:#1a1a1a !important}
+ .reply{border-top:1px solid #ebebeb;padding:12px 18px;background:#fafafa;border-radius:0 0 14px 14px}
+ .reply textarea{width:100%;box-sizing:border-box;min-height:120px;font-size:.9rem}
+ .reply .bar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+ .canned{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+ .canned button{border:1px solid #d4d4d4;background:#fff;border-radius:999px;padding:3px 10px;font-size:.74rem;font-weight:700;cursor:pointer}
+ .canned button:hover{background:#f1f1f1}
+ .ctxcol .card{padding:14px 16px}
+ .empty{padding:60px 20px;text-align:center;color:#6d7175}
+</style>
+<div class="erp" style="max-width:1500px">
+  <div class="erp-head"><div><h1>Messages</h1><div class="muted">{{ counts.open }} conversation{{ counts.open|pluralize }} à traiter · {{ counts.all }} au total</div></div></div>
+  {% if messages %}{% for m in messages %}<div class="banner {% if m.tags == 'error' %}err{% else %}warn{% endif %}" {% if m.tags == 'success' %}style="background:#e7f6ec;border-color:#b7e4c7;color:#1e5b35"{% endif %}><span>{{ m }}</span></div>{% endfor %}{% endif %}
+
+  <div class="ibx">
+    <div class="lst">
+      <div class="top">
+        <div class="seg" style="display:flex"><a href="?box=open" class="{% if box == 'open' %}on{% endif %}">À traiter {{ counts.open }}</a><a href="?box=done" class="{% if box == 'done' %}on{% endif %}">Traités</a><a href="?box=all" class="{% if box == 'all' %}on{% endif %}">Tous</a></div>
+        <form method="get"><input type="hidden" name="box" value="{{ box }}"><input type="search" name="q" value="{{ q }}" placeholder="Rechercher (nom, e-mail, texte)…" style="width:100%;box-sizing:border-box"></form>
+      </div>
+      <div class="items">
+        {% for m in items %}
+        <a class="it {% if cur and m.pk == cur.pk %}on{% endif %} {% if not m.answered %}unread{% endif %}" href="/admin-hub/messages/{{ m.pk }}/?box={{ box }}{% if q %}&q={{ q|urlencode }}{% endif %}">
+          <div class="l1"><b>{{ m.name|default:m.email }}</b><time class="{% if not m.answered and m.pk in late_ids %}late{% endif %}">{{ m.created_at|date:"d/m H:i" }}</time></div>
+          <div class="sj">{{ m.subject|default:"(sans sujet)" }}{% if m.nfiles %} 📎{% endif %}</div>
+          <div class="sn">{{ m.message|truncatechars:90 }}</div>
+        </a>
+        {% empty %}<div class="empty">{% if box == 'open' %}✓ Boîte vide : tout est traité.{% else %}Aucun message.{% endif %}</div>{% endfor %}
+      </div>
+    </div>
+
+    {% if cur %}
+    <div class="conv">
+      <div class="hd">
+        <div><h2>{{ cur.subject|default:"(sans sujet)" }}</h2>
+          <div class="muted">{{ cur.name }} · <a href="mailto:{{ cur.email }}">{{ cur.email }}</a> · reçu {{ cur.created_at|timesince }}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          {% if cur.answered %}<span class="bdg2 ok">Traité</span>
+            <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="reopen">Rouvrir</button></form>
+          {% else %}<span class="bdg2 warn">À traiter</span>
+            <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="close" title="Sans envoyer d'e-mail">Marquer traité</button></form>{% endif %}
+          <form method="post" onsubmit="return confirm('Supprimer ce message ?')">{% csrf_token %}<button class="pbtn sm" name="op" value="delete" style="color:#b42318">Supprimer</button></form>
+        </div>
+      </div>
+      <div class="thread">
+        {% for t in thread %}
+          {% if t.kind == "in" %}
+          <div class="bub in"><div class="meta">{{ t.m.name|default:t.m.email }} · {{ t.at|date:"d/m/Y H:i" }}{% if t.m.pk == cur.pk %} · <b>message ouvert</b>{% endif %}</div>{% if t.m.subject %}<div class="sj">{{ t.m.subject }}</div>{% endif %}{{ t.m.message }}{% if t.atts %}<div class="atts">{% for a in t.atts %}{% if a.image %}<a href="{{ a.url }}" target="_blank"><img src="{{ a.url }}" alt="{{ a.name }}"></a>{% else %}<a class="f" href="{{ a.url }}" target="_blank">{% if a.pdf %}📄{% else %}📎{% endif %} {{ a.name }}</a>{% endif %}{% endfor %}</div>{% endif %}</div>
+          {% else %}
+          <div class="bub out {% if not t.r.sent %}fail{% endif %}"><div class="meta">PaintIt{% if t.r.user %} ({{ t.r.user }}){% endif %} · {{ t.at|date:"d/m/Y H:i" }}{% if not t.r.sent %} · ⚠ non envoyé{% endif %}</div>{{ t.r.body }}{% if t.r.attachments %}<div class="atts">{% for a in t.r.attachments %}<span class="f" style="background:#303030;border-radius:8px;padding:4px 8px;font-size:.76rem">📎 {{ a }}</span>{% endfor %}</div>{% endif %}</div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <form class="reply" method="post" enctype="multipart/form-data" onsubmit="this.querySelector('.send').disabled=true;this.querySelector('.send').textContent='Envoi…'">{% csrf_token %}<input type="hidden" name="op" value="reply">
+        <div class="canned"><span class="muted" style="font-size:.74rem;align-self:center">Réponses types :</span>{% for title, body in canned %}<button type="button" data-body="{{ body }}">{{ title }}</button>{% endfor %}</div>
+        <textarea name="body" id="rbody" placeholder="Répondre à {{ cur.name|default:cur.email }}…"></textarea>
+        <div class="bar">
+          <span style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><input type="file" name="files" multiple>
+            <label style="font-size:.8rem;display:flex;gap:6px;align-items:center"><input type="checkbox" name="close_all" checked style="width:auto"> Clore tous ses messages en attente</label></span>
+          <button class="pbtn pri send">Envoyer la réponse</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="ctxcol">
+      <div class="card">
+        <div class="card-h"><h2>Client</h2><a href="/admin-hub/customers/?q={{ cur.email|urlencode }}">Fiche →</a></div>
+        <dl class="kv"><dt>Nom</dt><dd>{{ cur.name|default:"—" }}</dd><dt>E-mail</dt><dd>{{ cur.email }}</dd>
+          <dt>Messages</dt><dd>{{ thread|length }} dans le fil</dd><dt>Toiles num.</dt><dd>{{ canvases }}</dd>
+          <dt>Achats</dt><dd>{{ paid|floatformat:2 }} €</dd></dl>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Commandes</h2>{% if orders %}<a href="/admin-hub/orders/?tab=all&q={{ cur.email|urlencode }}">Toutes →</a>{% endif %}</div>
+        {% for o in orders %}
+          <a href="/admin-hub/orders/{{ o.pk }}/" style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #f1f1f1;color:#1a1a1a !important">
+            <img src="/preview/img/{{ o.uid }}/preview/" alt="" style="width:38px;height:46px;object-fit:cover;border-radius:6px;border:1px solid #e3e3e3" onerror="this.style.visibility='hidden'">
+            <span style="flex:1;min-width:0"><b style="font-size:.84rem">{{ o.uid }}</b> <span class="muted">· {{ o.total|floatformat:2 }} €</span>
+              <div style="margin-top:3px;white-space:nowrap"><span class="pill st-{{ o.status }}" style="font-size:.66rem">{{ o.get_status_display }}</span> <span class="muted">{{ o.created_at|date:"d/m/Y" }}</span></div></span></a>
+          {% if o.tracking_number %}<div class="muted" style="margin:-2px 0 6px 48px">Suivi : {% if o.tracking_url %}<a href="{{ o.tracking_url }}" target="_blank" rel="noopener">{{ o.carrier }} {{ o.tracking_number }}</a>{% else %}{{ o.carrier }} {{ o.tracking_number }}{% endif %}</div>{% endif %}
+        {% empty %}<p class="muted" style="margin:0">Aucune commande avec cet e-mail.</p>{% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="conv"><div class="empty">Sélectionnez un message.</div></div>
+    {% endif %}
+  </div>
+</div>
+{% if cur %}{{ fill|json_script:"fill" }}{% endif %}
+<script>
+(function(){
+  var el=document.getElementById('fill');if(!el)return;var F=JSON.parse(JSON.parse(el.textContent)),ta=document.getElementById('rbody');
+  document.querySelectorAll('.canned button').forEach(function(b){b.addEventListener('click',function(){
+    var t=b.dataset.body.replace(/\{prenom\}/g,F.prenom||'').replace(/\{commande\}/g,F.commande||'').replace(/\{suivi\}/g,F.suivi||'').replace('Bonjour ,','Bonjour,');
+    if(ta.value.trim()&&!confirm('Remplacer le texte en cours ?'))return;ta.value=t;ta.focus();});});
+  var th=document.querySelector('.thread');if(th&&th.lastElementChild)th.lastElementChild.scrollIntoView({block:'nearest'});
+})();
+</script>
+{% endblock %}

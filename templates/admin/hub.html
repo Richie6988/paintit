@@ -87,10 +87,10 @@
       </table>
     </div>
     <div class="card">
-      <div class="card-h"><h2>Messages</h2><a href="/admin/studio/contactmessage/">Tous →</a></div>
+      <div class="card-h"><h2>Messages</h2><a href="/admin-hub/messages/">Tous →</a></div>
       <table class="t">
         {% for m in recent_msgs %}<tr>
-          <td>{% if not m.answered %}<span class="dot"></span>{% endif %}<a href="/admin/studio/contactmessage/{{ m.id }}/change/">{{ m.name|default:m.email|truncatechars:20 }}</a></td>
+          <td>{% if not m.answered %}<span class="dot"></span>{% endif %}<a href="/admin-hub/messages/{{ m.id }}/">{{ m.name|default:m.email|truncatechars:20 }}</a></td>
           <td>{{ m.subject|default:"(sans sujet)"|truncatechars:34 }}</td>
           <td class="muted r">{{ m.created_at|timesince }}</td>
         </tr>{% empty %}<tr><td class="muted">Aucun message.</td></tr>{% endfor %}
