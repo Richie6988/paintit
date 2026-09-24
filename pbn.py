@@ -410,12 +410,19 @@ def build_svg(labels, k, mmx, mmy, w_mm, h_mm, eps, min_label_area,
 # Sorties bitmap : aperçu colorié + légende palette
 # --------------------------------------------------------------------------- #
 def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
-    """SVG jouable AUTONOME. Les remplissages sont DILATES de 1px et lisses : les zones
-    voisines se CHEVAUCHENT, donc aucun trou entre elles ni aux jonctions. Par-dessus,
-    UN SEUL calque de traits noirs (frontieres tracees une seule fois -> pas de doublons
-    ni de bug de coins), assez large (~2px, mis a l'echelle) pour couvrir tout le
-    chevauchement -> aucun debordement visible de peinture. Le numero (taille prudente)
-    reste dans sa cellule. data-n, data-a."""
+    """SVG jouable AUTONOME.
+
+    Chaque zone = UN <path> remplissable qui porte SON PROPRE trait noir :
+      - remplissage DILATE de 1px  -> les zones voisines se recouvrent : jamais
+        de trou de fond entre elles ni aux jonctions (T, coins) ;
+      - trait noir 'vector-effect=non-scaling-stroke' -> largeur CONSTANTE a
+        l'ecran quel que soit le zoom (jamais gras en zoomant), et assez large
+        (~1.2) pour recouvrir la dilatation : la peinture ne deborde pas et la
+        taille peinte reste celle de la vraie zone ;
+      - les traits des zones adjacentes se superposent (meme noir) -> un seul
+        trait net, sans doublon ni bug de coin.
+    Aucun calque de traits par-dessus -> les numeros ne sont jamais recouverts.
+    data-n = numero cible, data-a = surface (score)."""
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{w_mm:.1f}mm" height="{h_mm:.1f}mm" '
            f'viewBox="0 0 {w_mm:.2f} {h_mm:.2f}" shape-rendering="geometricPrecision" '
            f'text-rendering="geometricPrecision">',
@@ -442,7 +449,7 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
                 base = [(float(p[0][0]), float(p[0][1])) for p in approx]
                 if len(base) < 3:
                     continue
-                sm = _chaikin(base, True, iters=3)
+                sm = _chaikin(base, True, iters=2)
                 segs.append("M " + " L ".join(f"{x*mmx:.2f} {y*mmy:.2f}" for x, y in sm) + " Z")
             if not segs:
                 continue
@@ -452,6 +459,7 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
             r_mm = r * (mmx + mmy) * 0.5
             if r_mm >= LABEL_MIN_R_MM:
                 n = len(str(num))
+                # marge 0.86 : le numero tient dans la zone (jamais coupe)
                 fs = float(min(FS_CAP, 0.86 * 2.05 * r_mm / float(np.hypot(0.58 * n, 0.60))))
                 if fs >= 0.55:
                     hw = 0.32 * n * fs
@@ -459,36 +467,12 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
                     cy = min(max(y * mmy + fs * 0.34, fs * 0.9), h_mm - fs * 0.25)
                     txt = f'<text class="zn" x="{cx:.2f}" y="{cy:.2f}" font-size="{fs:.2f}">{num}</text>'
             out.append('<g class="cell"><path class="z" fill="#eef1f6" '
+                       'stroke="#141414" stroke-width="1.2" stroke-linejoin="round" '
+                       'stroke-linecap="round" vector-effect="non-scaling-stroke" '
                        f'fill-rule="evenodd" data-n="{num}" data-a="{area}" '
                        f'd="{" ".join(segs)}"/>{txt}</g>')
-    # Un seul calque de traits, lisse, PAR-DESSUS, ~2px (mis a l'echelle) : couvre le
-    # chevauchement des remplissages -> pas de debordement, et bouche tout joint -> pas de trou.
-    lw = max(0.4, 1.9 * (mmx + mmy) * 0.5)
-    eps_b = max(0.8, eps)
-    lines = []
-    for poly in _trace_boundaries(labels):
-        closed = len(poly) > 2 and poly[0] == poly[-1]
-        pts = poly[:-1] if closed else poly
-        if len(pts) < 2:
-            continue
-        arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
-        approx = cv2.approxPolyDP(arr, eps_b, closed)
-        base = [(float(pp[0][0]), float(pp[0][1])) for pp in approx]
-        if len(base) < 2:
-            continue
-        sm = _chaikin(base, closed, iters=3) if len(base) >= 3 else base
-        d = "M " + " L ".join(f"{x*mmx:.2f} {y*mmy:.2f}" for x, y in sm)
-        if closed:
-            d += " Z"
-        lines.append(d)
-    if lines:
-        out.append(f'<g class="lines" fill="none" stroke="#141414" stroke-width="{lw:.2f}" '
-                   'stroke-linejoin="round" stroke-linecap="round">')
-        out += [f'<path d="{d}"/>' for d in lines]
-        out.append('</g>')
     out.append("</svg>")
     return "\n".join(out)
-
 def render_preview(labels, palette_bgr):
     return palette_bgr[labels]
 
