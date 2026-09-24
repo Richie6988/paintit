@@ -146,7 +146,7 @@ def pipeline():
     counts = dict(Order.objects.values_list("status").annotate(c=Count("id")))
     order = [Order.PENDING, Order.PAID, Order.FULFILLED, Order.SHIPPED, Order.DELIVERED, Order.FAILED]
     return [{"status": s, "label": labels[s], "count": counts.get(s, 0),
-             "url": "/admin/studio/order/?status__exact=" + s} for s in order]
+             "url": "/admin-hub/orders/?tab=" + s} for s in order]
 
 
 # --------------------------------------------------------------------------- #
@@ -193,7 +193,7 @@ def actions():
         n = qs.count()
         if n:
             out.append({"key": key, "label": label, "level": level, "hint": hint, "count": n,
-                        "url": "/admin/studio/order/?action=" + key})
+                        "url": "/admin-hub/orders/?action=" + key})
     late_msgs = ContactMessage.objects.filter(answered=False, created_at__lt=now - datetime.timedelta(hours=24)).count()
     unanswered = ContactMessage.objects.filter(answered=False).count()
     if unanswered:

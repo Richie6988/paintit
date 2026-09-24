@@ -60,6 +60,26 @@ def _set_status(order, status, request):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
+    def changelist_view(self, request, extra_context=None):
+        # La liste ERP remplace la table Django (?django=1 pour la table, utile aux actions avancees)
+        from django.shortcuts import redirect
+        from urllib.parse import urlencode
+        if request.method == "GET" and not request.GET.get("django"):
+            g = request.GET
+            p = {}
+            if g.get("action"):
+                p["action"] = g["action"]
+            if g.get("status__exact"):
+                p["status"] = g["status__exact"]
+            if g.get("q"):
+                p["q"] = g["q"]
+            if g.get("supplier__id__exact"):
+                p["supplier"] = g["supplier__id__exact"]
+            return redirect("/admin-hub/orders/" + ("?" + urlencode(p) if p else ""))
+        if "django" in request.GET:   # parametre de contournement : inconnu des filtres Django
+            g = request.GET.copy(); g.pop("django"); request.GET = g
+        return super().changelist_view(request, extra_context)
+
     def change_view(self, request, object_id, form_url="", extra_context=None):
         # La fiche ERP remplace le formulaire (?django=1 pour le formulaire complet)
         from django.shortcuts import redirect

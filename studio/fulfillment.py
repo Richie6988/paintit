@@ -164,6 +164,57 @@ def _compose_poster(uid, d, colors, lang):
     cv2.imwrite(out, img)
 
 
+def load_colors(uid):
+    """Couleurs numerotees de la toile, sans jamais renvoyer vide si une source existe :
+    <uid>_colors.json (pipeline) > order.json > supplier.json > palette deduite de l'apercu."""
+    d = _order_dir(uid)
+    cj = os.path.join(d, f"{uid}_colors.json")
+    if os.path.exists(cj):
+        with open(cj, encoding="utf-8") as f:
+            cols = json.load(f)
+        if cols:
+            return cols
+    for name in (f"{uid}_order.json", f"{uid}_supplier.json"):
+        p = os.path.join(d, name)
+        if os.path.exists(p):
+            with open(p, encoding="utf-8") as f:
+                cols = json.load(f).get("color_specifications") or []
+            if cols:
+                return cols
+    # dernier recours : numero -> couleur relu sur la toile elle-meme : chaque numero imprime
+    # sur la toile numerotee est au milieu d'une zone de SA couleur dans l'apercu (PNG sans perte).
+    return colors_from_canvas(uid)
+    return []
+
+
+def colors_from_canvas(uid):
+    import re
+    from collections import Counter
+    d = _order_dir(uid)
+    tp, pv = os.path.join(d, f"{uid}_template.svg"), os.path.join(d, f"{uid}_preview.png")
+    if not (os.path.exists(tp) and os.path.exists(pv)):
+        return []
+    svg = open(tp, encoding="utf-8").read()
+    m = re.search(r'viewBox="0 0 ([\d.]+) ([\d.]+)"', svg)
+    img = cv2.imread(pv, cv2.IMREAD_COLOR)
+    if not m or img is None:
+        return []
+    wmm, hmm = float(m.group(1)), float(m.group(2))
+    H, W = img.shape[:2]
+    votes = {}
+    for x, y, fs, t in re.findall(r'<text x="([\d.]+)" y="([\d.]+)" font-size="([\d.]+)">(\d+)</text>', svg):
+        cx = int(float(x) / wmm * W)
+        cy = int((float(y) - 0.34 * float(fs)) / hmm * H)      # y = ligne de base -> centre du chiffre
+        if 0 <= cx < W and 0 <= cy < H:
+            b, g, r = (int(v) for v in img[cy, cx])
+            votes.setdefault(int(t), Counter())[(r, g, b)] += 1
+    cols = []
+    for num in sorted(votes):
+        r, g, b = votes[num].most_common(1)[0][0]
+        cols.append({"number": num, "hex": "#%02X%02X%02X" % (r, g, b), "rgb": [r, g, b]})
+    return cols
+
+
 def build(order, shipping):
     """Ecrit order.json (complet) + poster A4, nettoie les intermediaires."""
     uid = order["uid"]
@@ -171,12 +222,10 @@ def build(order, shipping):
     os.makedirs(d, exist_ok=True)
 
     # Couleurs : fournies par le preview (order["colors_list"]) ; fallback fichier si present.
-    colors = order.get("colors_list") or []
-    if not colors:
-        cj = os.path.join(d, f"{uid}_colors.json")
-        if os.path.exists(cj):
-            with open(cj, encoding="utf-8") as f:
-                colors = json.load(f)
+    colors = order.get("colors_list") or load_colors(uid)
+    if colors and not os.path.exists(os.path.join(d, f"{uid}_colors.json")):
+        with open(os.path.join(d, f"{uid}_colors.json"), "w", encoding="utf-8") as f:   # restaure la source
+            json.dump(colors, f, ensure_ascii=False, indent=2)
 
     poster_lang = lang_for_country(shipping.get("country", ""))
     _compose_poster(uid, d, colors, poster_lang)
@@ -237,7 +286,7 @@ def build(order, shipping):
         json.dump(supplier_json, f, ensure_ascii=False, indent=2)
 
     # Nettoyage : un seul JSON, pas de doublons, pas d'intermediaires.
-    for junk in (f"{uid}_colors.json", f"{uid}_palette.png", "order.json",
+    for junk in (f"{uid}_palette.png", "order.json",
                  f"{uid}_poster.svg", f"{uid}_poster.tiff", f"{uid}_preview.tiff"):
         pth = os.path.join(d, junk)
         if os.path.exists(pth):

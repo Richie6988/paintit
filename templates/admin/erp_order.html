@@ -182,7 +182,7 @@
         <form method="post">{% csrf_token %}<input type="hidden" name="op" value="notes"><textarea name="notes" rows="4">{{ o.notes }}</textarea>
           <button class="pbtn" style="width:100%;margin-top:8px">Enregistrer</button></form>
       </div>
-      <p class="muted" style="text-align:center"><a href="/admin/studio/order/{{ o.pk }}/change/?django=1">Formulaire complet (avancé)</a></p>
+      <p class="muted" style="text-align:center"><a href="/admin-hub/orders/{{ o.pk }}/?django=1">Formulaire complet (avancé)</a></p>
     </div>
   </div>
 </div>

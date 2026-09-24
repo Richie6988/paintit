@@ -1,0 +1,107 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Commandes · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .ol-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 12px}
+ .ol-tools input[type=search]{flex:1;min-width:220px}
+ .ol-tools select{width:auto}
+ .ot{width:100%;border-collapse:collapse}
+ .ot th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:#6d7175;padding:8px;border-bottom:1px solid #ebebeb;white-space:nowrap;background:#fafafa}
+ .ot th a{color:#6d7175 !important}
+ .ot td{padding:9px 8px;border-bottom:1px solid #f1f1f1;font-size:.86rem;vertical-align:middle;background:#fff}
+ .ot tr.row{cursor:pointer}.ot tr.row:hover td{background:#f7faff}
+ .ot tr.sel td{background:#eef4ff}
+ .ot .th{width:44px;height:54px;border-radius:7px;object-fit:cover;border:1px solid #e3e3e3;background:#f6f6f7;display:block}
+ .ot .ref{font-weight:800;color:#1a1a1a !important}
+ .ot .sub{font-size:.74rem;color:#6d7175}
+ .ot .r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+ .ot .late{color:#b42318;font-weight:800}
+ .bulk{position:sticky;top:0;z-index:5;display:none;align-items:center;gap:8px;flex-wrap:wrap;background:#1a1a1a;color:#fff;border-radius:10px;padding:8px 12px;margin-bottom:10px}
+ .bulk.on{display:flex}.bulk .pbtn{background:#303030;color:#fff !important;border-color:#444}
+ .pager{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+ .tabs2 a em{font-style:normal}
+ input[type=checkbox].ck{width:17px;height:17px;cursor:pointer}
+</style>
+<div class="erp">
+  <div class="erp-head">
+    <div><h1>Commandes</h1><div class="muted">{{ total }} commande{{ total|pluralize }} · {{ revenue|floatformat:"2g" }} € dans cette vue{% if action %} · filtre « à traiter » du Centre d'actions{% endif %}</div></div>
+    <div style="display:flex;gap:8px"><a class="pbtn" href="/admin-hub/orders.csv">⬇ Export CSV</a></div>
+  </div>
+
+  {% if messages %}{% for m in messages %}<div class="banner {% if m.tags == 'error' %}err{% else %}warn{% endif %}" {% if m.tags == 'success' %}style="background:#e7f6ec;border-color:#b7e4c7;color:#1e5b35"{% endif %}><span>{{ m }}</span></div>{% endfor %}{% endif %}
+
+  <div class="card" style="padding-top:6px">
+    <div class="tabs2">{% for k, l, n in tabs %}<a href="?tab={{ k }}" class="{% if k == tab and not action %}on{% endif %}">{{ l }}<em{% if k == 'todo' and n %} style="background:#fedad9;color:#8e1f0b"{% endif %}>{{ n }}</em></a>{% endfor %}</div>
+    <form class="ol-tools" method="get">
+      <input type="hidden" name="tab" value="{{ tab }}">
+      <input type="search" name="q" value="{{ q }}" placeholder="Référence, client, e-mail, ville, n° de suivi…">
+      <select name="supplier" onchange="this.form.submit()"><option value="">Tous fournisseurs</option><option value="none" {% if supplier == 'none' %}selected{% endif %}>Sans fournisseur</option>{% for s in suppliers %}<option value="{{ s.pk }}" {% if supplier == s.pk|stringformat:'s' %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select>
+      <select name="country" onchange="this.form.submit()"><option value="">Tous pays</option>{% for c in countries %}<option {% if c == country %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+      <select name="period" onchange="this.form.submit()"><option value="">Toutes dates</option><option value="7d" {% if period == '7d' %}selected{% endif %}>7 jours</option><option value="30d" {% if period == '30d' %}selected{% endif %}>30 jours</option><option value="90d" {% if period == '90d' %}selected{% endif %}>90 jours</option></select>
+      <button class="pbtn">Filtrer</button>{% if q or supplier or country or period or action %}<a class="pbtn" href="?tab={{ tab }}">Réinitialiser</a>{% endif %}
+    </form>
+
+    <form method="post" id="bulkform">{% csrf_token %}
+      <div class="bulk" id="bulk"><b id="nsel">0</b>&nbsp;sélectionnée(s)
+        <button class="pbtn sm" name="op" value="dispatch">Transmettre au fournisseur</button>
+        <button class="pbtn sm" name="op" value="fulfilled">En production</button>
+        <button class="pbtn sm" name="op" value="shipped">Expédiée</button>
+        <button class="pbtn sm" name="op" value="delivered" onclick="return confirm('Marquer comme livrées (et envoyer la demande d\'avis) ?')">Livrée + avis</button>
+        <button class="pbtn sm" name="op" value="failed" onclick="return confirm('Marquer en échec ?')">Échec</button>
+        <button class="pbtn sm" name="op" value="feedback">Demande d'avis</button>
+        <button class="pbtn sm" name="op" value="csv">⬇ CSV</button>
+      </div>
+      <div style="overflow-x:auto">
+      <table class="ot">
+        <tr>
+          <th style="width:28px"><input type="checkbox" class="ck" id="ckall"></th><th></th>
+          <th><a href="?{{ qs_sort }}&sort={% if sort == '-uid' %}uid{% else %}-uid{% endif %}">Commande</a></th>
+          <th><a href="?{{ qs_sort }}&sort={% if sort == '-created_at' %}created_at{% else %}-created_at{% endif %}">Date{% if sort == '-created_at' %} ↓{% elif sort == 'created_at' %} ↑{% endif %}</a></th>
+          <th><a href="?{{ qs_sort }}&sort={% if sort == 'customer_name' %}-customer_name{% else %}customer_name{% endif %}">Client</a></th>
+          <th>Produit</th>
+          <th class="r"><a href="?{{ qs_sort }}&sort={% if sort == '-total' %}total{% else %}-total{% endif %}">Total{% if sort == '-total' %} ↓{% elif sort == 'total' %} ↑{% endif %}</a></th>
+          <th><a href="?{{ qs_sort }}&sort={% if sort == 'status' %}-status{% else %}status{% endif %}">Statut</a></th>
+          <th class="r"><a href="?{{ qs_sort }}&sort={% if sort == 'status_changed_at' %}-status_changed_at{% else %}status_changed_at{% endif %}">Depuis</a></th>
+          <th>Fournisseur</th><th>Suivi</th>
+        </tr>
+        {% for r in rows %}{% with o=r.o %}
+        <tr class="row" data-href="/admin-hub/orders/{{ o.pk }}/">
+          <td onclick="event.stopPropagation()"><input type="checkbox" class="ck rowck" name="ids" value="{{ o.pk }}"></td>
+          <td><img class="th" src="/preview/img/{{ o.uid }}/preview/" alt="" loading="lazy" onerror="this.style.visibility='hidden'"></td>
+          <td><a class="ref" href="/admin-hub/orders/{{ o.pk }}/">{{ o.uid }}</a>{% if o.notes %} <span title="{{ o.notes }}">📝</span>{% endif %}</td>
+          <td style="white-space:nowrap">{{ o.created_at|date:"d/m/Y" }}<div class="sub">{{ o.created_at|date:"H:i" }}</div></td>
+          <td>{{ o.customer_name|truncatechars:26 }}<div class="sub">{{ o.customer_email|truncatechars:30 }}{% if o.country %} · {{ o.country }}{% endif %}</div></td>
+          <td style="white-space:nowrap">{{ o.format_label }}<div class="sub">{{ o.colors }} couleurs{% if o.brushes %} · pinceaux{% endif %}</div></td>
+          <td class="r"><b>{{ o.total|floatformat:2 }} €</b><div class="sub">marge {{ o.benefit|floatformat:2 }} €</div></td>
+          <td><span class="pill st-{{ o.status }}">{{ o.get_status_display }}</span></td>
+          <td class="r {% if r.late %}late{% endif %}">{{ r.age }}{% if r.late %} ⚠{% endif %}</td>
+          <td>{% if o.supplier %}{{ o.supplier.name|truncatechars:18 }}{% else %}<span class="sub">—</span>{% endif %}</td>
+          <td>{% if o.tracking_number %}{% if o.tracking_url %}<a href="{{ o.tracking_url }}" target="_blank" rel="noopener" onclick="event.stopPropagation()">{{ o.tracking_number|truncatechars:16 }}</a>{% else %}{{ o.tracking_number|truncatechars:16 }}{% endif %}<div class="sub">{{ o.carrier }}</div>{% else %}<span class="sub">—</span>{% endif %}</td>
+        </tr>{% endwith %}
+        {% empty %}<tr><td colspan="11" style="text-align:center;padding:40px" class="muted">{% if tab == 'todo' %}✓ Rien à traiter.{% else %}Aucune commande.{% endif %}</td></tr>{% endfor %}
+      </table>
+      </div>
+    </form>
+    {% if page.paginator.num_pages > 1 %}
+    <div class="pager"><span class="muted">Page {{ page.number }} / {{ page.paginator.num_pages }}</span>
+      <span style="display:flex;gap:6px">{% if page.has_previous %}<a class="pbtn sm" href="?{{ qs_page }}&page={{ page.previous_page_number }}">← Précédente</a>{% endif %}
+      {% if page.has_next %}<a class="pbtn sm" href="?{{ qs_page }}&page={{ page.next_page_number }}">Suivante →</a>{% endif %}</span></div>
+    {% endif %}
+  </div>
+  <p class="muted" style="text-align:center"><a href="/admin/studio/order/?django=1">Table Django (avancé)</a></p>
+</div>
+<script>
+(function(){
+  var cks=[].slice.call(document.querySelectorAll('.rowck')),all=document.getElementById('ckall'),bulk=document.getElementById('bulk'),n=document.getElementById('nsel');
+  function upd(){var c=cks.filter(function(x){return x.checked;});n.textContent=c.length;bulk.classList.toggle('on',c.length>0);
+    cks.forEach(function(x){x.closest('tr').classList.toggle('sel',x.checked);});all.checked=c.length&&c.length===cks.length;}
+  cks.forEach(function(x){x.addEventListener('change',upd);});
+  if(all)all.addEventListener('change',function(){cks.forEach(function(x){x.checked=all.checked;});upd();});
+  document.querySelectorAll('tr.row').forEach(function(tr){tr.addEventListener('click',function(e){if(e.target.closest('a,input,button'))return;
+    if(e.metaKey||e.ctrlKey){window.open(tr.dataset.href,'_blank');}else{location.href=tr.dataset.href;}});});
+})();
+</script>
+{% endblock %}

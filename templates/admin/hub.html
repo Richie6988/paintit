@@ -66,7 +66,7 @@
       </div>
       <div class="chips">{% for s, n in cust.segments.items %}<a class="chip" href="/admin-hub/customers/?seg={{ s }}">{{ s }} · {{ n }}</a>{% endfor %}</div>
       <table class="t" style="margin-top:8px">
-        {% for r in cust.top|slice:":5" %}<tr><td><a href="/admin/studio/order/?q={{ r.customer_email|urlencode }}">{{ r.name|default:r.customer_email|truncatechars:24 }}</a></td><td class="r">{{ r.orders }} cmd</td><td class="r"><b>{{ r.revenue|floatformat:"2g" }} €</b></td></tr>
+        {% for r in cust.top|slice:":5" %}<tr><td><a href="/admin-hub/orders/?tab=all&q={{ r.customer_email|urlencode }}">{{ r.name|default:r.customer_email|truncatechars:24 }}</a></td><td class="r">{{ r.orders }} cmd</td><td class="r"><b>{{ r.revenue|floatformat:"2g" }} €</b></td></tr>
         {% empty %}<tr><td class="muted">Aucun client pour l'instant.</td></tr>{% endfor %}
       </table>
     </div>
@@ -74,10 +74,10 @@
 
   <div class="g-2">
     <div class="card">
-      <div class="card-h"><h2>Dernières commandes</h2><a href="/admin/studio/order/">Toutes →</a></div>
+      <div class="card-h"><h2>Dernières commandes</h2><a href="/admin-hub/orders/">Toutes →</a></div>
       <table class="t"><tr><th>Réf</th><th>Client</th><th>Produit</th><th class="r">Total</th><th>Statut</th><th>Date</th></tr>
         {% for o in recent_orders %}<tr>
-          <td><a href="/admin/studio/order/{{ o.id }}/change/">{{ o.uid|truncatechars:14 }}</a></td>
+          <td><a href="/admin-hub/orders/{{ o.id }}/">{{ o.uid|truncatechars:14 }}</a></td>
           <td>{{ o.customer_name|default:o.customer_email|truncatechars:22 }}</td>
           <td>{{ o.format_label }} · {{ o.colors }}c</td>
           <td class="r"><b>{{ o.total|floatformat:"2g" }} €</b></td>

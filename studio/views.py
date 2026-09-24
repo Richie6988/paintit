@@ -1000,8 +1000,20 @@ SUPPLIER_FILES = [("template_pdf", "{uid}_template.pdf", "Toile numérotée PDF 
 
 
 def supplier_files_status(uid):
+    import json as _json
     d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
-    return [{"key": k, "name": n.format(uid=uid), "label": l, "ok": os.path.exists(os.path.join(d, n.format(uid=uid)))}
+
+    def ok(name):
+        p = os.path.join(d, name)
+        if not os.path.exists(p):
+            return False
+        if name.endswith(".json"):   # une fiche sans couleurs est inutilisable par le fournisseur
+            try:
+                return bool(_json.load(open(p, encoding="utf-8")).get("color_specifications"))
+            except ValueError:
+                return False
+        return True
+    return [{"key": k, "name": n.format(uid=uid), "label": l, "ok": ok(n.format(uid=uid))}
             for k, n, l in SUPPLIER_FILES]
 
 
@@ -2395,3 +2407,133 @@ def erp_order(request, pk):
         "statuses": Order.STATUS_CHOICES, "suppliers": Supplier.objects.all(),
         "age": (timezone.now() - (o.status_changed_at or o.created_at)).days,
         "erp_section": "orders"})
+
+
+# ---------------- Liste des commandes (ERP) ----------------
+ORDER_TABS = [("todo", "À traiter"), ("pending", "En attente"), ("paid", "Payées"), ("fulfilled", "En production"),
+              ("shipped", "Expédiées"), ("delivered", "Livrées"), ("failed", "Échecs"), ("all", "Toutes")]
+
+
+def _orders_queryset(request):
+    import datetime as _dt
+    from django.db.models import Q
+    from . import erp
+    g = request.GET
+    tab = g.get("tab") or ("todo" if not (g.get("status") or g.get("action")) else "all")
+    qs = Order.objects.select_related("supplier")
+    if g.get("action"):                                   # liens du Centre d'actions
+        aq = erp.action_querysets().get(g["action"])
+        if aq:
+            qs = qs.filter(pk__in=aq[0].values("pk"))
+    if g.get("status"):
+        qs = qs.filter(status=g["status"])
+    if tab == "todo":
+        ids = set()
+        for q_, *_rest in erp.action_querysets().values():
+            ids.update(q_.values_list("pk", flat=True))
+        qs = qs.filter(pk__in=ids)
+    elif tab in dict(Order.STATUS_CHOICES):
+        qs = qs.filter(status=tab)
+    q = (g.get("q") or "").strip()
+    if q:
+        qs = qs.filter(Q(uid__icontains=q) | Q(customer_name__icontains=q) | Q(customer_email__icontains=q) |
+                       Q(city__icontains=q) | Q(tracking_number__icontains=q) | Q(supplier_ref__icontains=q))
+    if g.get("supplier"):
+        qs = qs.filter(supplier__isnull=True) if g["supplier"] == "none" else qs.filter(supplier_id=g["supplier"])
+    if g.get("country"):
+        qs = qs.filter(country=g["country"])
+    days = {"7d": 7, "30d": 30, "90d": 90}.get(g.get("period", ""))
+    if days:
+        qs = qs.filter(created_at__gte=timezone.now() - _dt.timedelta(days=days))
+    sort = g.get("sort") or "-created_at"
+    allowed = {"created_at", "total", "status", "customer_name", "status_changed_at", "uid"}
+    if sort.lstrip("-") in allowed:
+        qs = qs.order_by(sort, "-id")
+    return qs, tab, sort
+
+
+@staff_member_required
+def erp_orders(request):
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from django.core.paginator import Paginator
+    from django.db.models import Count, Sum
+    from .models import Supplier
+    from . import erp
+    user = request.user.get_username()
+    if request.method == "POST":
+        ids = [int(i) for i in request.POST.getlist("ids") if i.isdigit()]
+        op = request.POST.get("op")
+        sel = Order.objects.filter(pk__in=ids)
+        if not ids:
+            messages.error(request, "Sélectionnez au moins une commande.")
+        elif op == "csv":
+            return _csv_response("commandes_selection.csv",
+                                 ["uid", "date", "statut", "format", "couleurs", "total_eur", "marge_eur", "client",
+                                  "email", "ville", "pays", "fournisseur", "suivi"],
+                                 ([o.uid, o.created_at.strftime("%Y-%m-%d %H:%M"), o.get_status_display(), o.format_label,
+                                   o.colors, o.total, o.benefit, o.customer_name, o.customer_email, o.city, o.country,
+                                   o.supplier.name if o.supplier else "", o.tracking_number] for o in sel))
+        elif op == "dispatch":
+            ok = ko = 0
+            for o in sel:
+                if _notify_supplier(_order_from_row(o), _shipping_from_row(o), sup=o.supplier, user=user):
+                    ok += 1
+                    if o.status == Order.PAID:
+                        o.status = Order.FULFILLED; o._erp_user = user; o.save(update_fields=["status", "status_changed_at"])
+                else:
+                    ko += 1
+            (messages.warning if ko else messages.success)(request, "%d transmise(s), %d échec(s)." % (ok, ko))
+        elif op in ("shipped", "delivered", "failed", "fulfilled"):
+            n = 0
+            for o in sel.exclude(status=op):
+                o.status = op; o._erp_user = user; o.save(update_fields=["status", "status_changed_at"]); n += 1
+                if op == Order.DELIVERED and not o.feedback_sent:
+                    try:
+                        emails.send_feedback_request(o)
+                        Order.objects.filter(pk=o.pk).update(feedback_sent=True)
+                        OrderEvent.objects.create(order=o, kind="email", text="Demande d'avis envoyée", user=user)
+                    except Exception:
+                        logger.exception("Avis %s", o.uid)
+            messages.success(request, "%d commande(s) : %s." % (n, dict(Order.STATUS_CHOICES)[op]))
+        elif op == "feedback":
+            n = 0
+            for o in sel:
+                try:
+                    emails.send_feedback_request(o); n += 1
+                    Order.objects.filter(pk=o.pk).update(feedback_sent=True)
+                    OrderEvent.objects.create(order=o, kind="email", text="Demande d'avis envoyée", user=user)
+                except Exception:
+                    logger.exception("Avis %s", o.uid)
+            messages.success(request, "%d demande(s) d'avis envoyée(s)." % n)
+        return redirect(request.get_full_path())
+
+    qs, tab, sort = _orders_queryset(request)
+    page = Paginator(qs, 50).get_page(request.GET.get("page"))
+    now = timezone.now()
+    p = Pricing.get()
+    rows = []
+    for o in page.object_list:
+        age = now - (o.status_changed_at or o.created_at)
+        lead = (o.supplier.lead_time_days if o.supplier else 5)
+        late = (o.status == Order.PAID and age.total_seconds() > 12 * 3600) or \
+               (o.status == Order.FULFILLED and age.days >= lead) or \
+               (o.status == Order.SHIPPED and age.days >= int(p.delivery_days_max or 9) + 3)
+        rows.append({"o": o, "age": ("%d j" % age.days) if age.days else ("%d h" % (age.seconds // 3600)), "late": late})
+    counts = dict(Order.objects.values_list("status").annotate(n=Count("id")))
+    todo_ids = set()
+    for q_, *_r in erp.action_querysets().values():
+        todo_ids.update(q_.values_list("pk", flat=True))
+    tabs = [(k, lbl, len(todo_ids) if k == "todo" else sum(counts.values()) if k == "all" else counts.get(k, 0))
+            for k, lbl in ORDER_TABS]
+    agg = qs.aggregate(n=Count("id"), ca=Sum("total"))
+    params = request.GET.copy(); params.pop("page", None)
+    sparams = request.GET.copy(); sparams.pop("sort", None); sparams.pop("page", None)
+    return render(request, "admin/erp_orders.html", {
+        **_admin.site.each_context(request), "rows": rows, "page": page, "tab": tab, "tabs": tabs, "sort": sort,
+        "q": request.GET.get("q", ""), "supplier": request.GET.get("supplier", ""),
+        "country": request.GET.get("country", ""), "period": request.GET.get("period", ""),
+        "suppliers": Supplier.objects.all(),
+        "countries": sorted(c for c in Order.objects.values_list("country", flat=True).distinct() if c),
+        "total": agg["n"] or 0, "revenue": round(agg["ca"] or 0, 2), "qs_page": params.urlencode(),
+        "qs_sort": sparams.urlencode(), "action": request.GET.get("action", ""), "erp_section": "orders"})

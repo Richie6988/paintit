@@ -7,6 +7,7 @@ urlpatterns = [
     path("admin-hub/orders.csv", views.orders_csv, name="orders_csv"),
     path("admin-hub/customers/", views.erp_customers, name="erp_customers"),
     path("admin-hub/catalogue/", views.erp_catalogue, name="erp_catalogue"),
+    path("admin-hub/orders/", views.erp_orders, name="erp_orders"),
     path("admin-hub/orders/<int:pk>/", views.erp_order, name="erp_order"),
     path("admin-hub/orders/<int:pk>/files.zip", views.erp_order_zip, name="erp_order_zip"),
     path("admin-hub/orders/<int:pk>/receipt.pdf", views.erp_order_receipt, name="erp_order_receipt"),
