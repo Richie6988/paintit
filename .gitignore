@@ -17,3 +17,5 @@ db.sqlite3-shm
 
 # OS
 .DS_Store
+
+media/
