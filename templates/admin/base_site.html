@@ -1,9 +1,28 @@
 {% extends "admin/base.html" %}
 {% load static %}
-{% block title %}{{ title }} | PaintIt Admin{% endblock %}
+{% block title %}{{ title }} | PaintIt ERP{% endblock %}
 {% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'studio/css/admin.css' %}">{% endblock %}
 {% block branding %}
-<div id="site-name"><a href="{% url 'admin:index' %}" class="pit-brand">
-  <img src="{% static 'studio/img/icon.svg' %}" alt="PaintIt"><span>PaintIt Admin</span></a></div>
+<div id="site-name"><a href="/admin-hub/" class="pit-brand">
+  <img src="{% static 'studio/img/icon.svg' %}" alt="PaintIt"><span>PaintIt ERP</span></a></div>
 {% endblock %}
 {% block nav-global %}{% endblock %}
+{% block header %}{{ block.super }}
+{% if user.is_active and user.is_staff and not is_popup %}
+<nav class="erp-nav" aria-label="ERP">
+  <a href="/admin-hub/" class="{% if erp_path == '/admin-hub/' %}on{% endif %}">Pilotage</a>
+  <a href="/admin/studio/order/" class="{% if '/admin/studio/order' in erp_path %}on{% endif %}">Commandes{% if erp_badges.actions %}<b class="bdg err" title="Actions a traiter">{{ erp_badges.actions }}</b>{% endif %}</a>
+  <a href="/admin-hub/customers/" class="{% if '/admin-hub/customers' in erp_path %}on{% endif %}">Clients</a>
+  <a href="/admin/studio/contactmessage/" class="{% if '/admin/studio/contactmessage' in erp_path %}on{% endif %}">Messages{% if erp_badges.messages %}<b class="bdg">{{ erp_badges.messages }}</b>{% endif %}</a>
+  <a href="/admin/studio/digitalcanvas/" class="{% if '/admin/studio/digitalcanvas' in erp_path %}on{% endif %}">Catalogue</a>
+  <a href="/admin/studio/discount/" class="{% if '/admin/studio/discount' in erp_path %}on{% endif %}">Remises</a>
+  <a href="/admin/studio/supplier/" class="{% if '/admin/studio/supplier' in erp_path %}on{% endif %}">Fournisseurs</a>
+  <a href="/admin-tarifs/">Tarifs</a>
+  <a href="/marketing/">Marketing</a>
+  <a href="/pbn/">Lab</a>
+  <span class="sp"></span>
+  <a href="/admin-hub/orders.csv" title="Export des commandes (CSV)">&#8681; CSV</a>
+  <a href="/admin/auth/user/" class="{% if '/admin/auth/' in erp_path %}on{% endif %}">Utilisateurs</a>
+</nav>
+{% endif %}
+{% endblock %}

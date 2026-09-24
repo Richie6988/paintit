@@ -1221,37 +1221,9 @@ def contact(request):
 # ---------------- Tour de controle (dashboard) ----------------
 @staff_member_required
 def finance_dashboard(request):
-    from collections import OrderedDict
-    from .models import ContactMessage
-    rows = Order.objects.filter(status=Order.FULFILLED).order_by("created_at")
-    by_month = OrderedDict()
-    for o in rows:
-        m = o.created_at.strftime("%Y-%m")
-        b = by_month.setdefault(m, {"t": 0.0, "c": 0.0, "n": 0})
-        b["t"] += o.total; b["c"] += o.cost; b["n"] += 1
-    months = list(by_month)
-    turnover = [round(by_month[m]["t"], 2) for m in months]
-    cost = [round(by_month[m]["c"], 2) for m in months]
-    benefit = [round(t - c, 2) for t, c in zip(turnover, cost)]
-    counts = [by_month[m]["n"] for m in months]
-    kpis = {"orders": rows.count(),
-            "turnover": round(sum(turnover), 2), "cost": round(sum(cost), 2),
-            "benefit": round(sum(benefit), 2),
-            "pending": Order.objects.filter(status=Order.PENDING).count(),
-            "unanswered": ContactMessage.objects.filter(answered=False).count()}
-    from .models import Discount
-    kpis["discounts_used"] = Discount.objects.filter(status="used").count()
-    kpis["discounts_issued"] = Discount.objects.filter(status="issued").count()
-    recent = Order.objects.order_by("-created_at")[:12]
-    fmt = OrderedDict()
-    for o in rows:
-        fb = fmt.setdefault(o.format_label, {"n": 0, "t": 0.0, "b": 0.0})
-        fb["n"] += 1; fb["t"] += o.total; fb["b"] += o.benefit
-    per_format = [{"label": k, "n": v["n"], "t": round(v["t"], 2), "b": round(v["b"], 2)}
-                  for k, v in sorted(fmt.items(), key=lambda kv: -kv[1]["t"])]
-    return render(request, "studio/finance.html", {
-        "months": months, "turnover": turnover, "cost": cost, "benefit": benefit,
-        "counts": counts, "kpis": kpis, "recent": recent, "per_format": per_format})
+    """Ancienne 'Tour de controle' : fusionnee dans le Hub ERP (definitions de CA unifiees)."""
+    return redirect("studio:admin_hub")
+
 
 def llm_txt(request):
     from django.http import HttpResponse
@@ -1565,113 +1537,76 @@ def marketing_page(request):
 
 
 # ---------------- Hub ERP (tableau de bord admin) ----------------
-@staff_member_required
-def orders_csv(request):
+def _csv_cell(v):
+    """Neutralise l'injection de formules (Excel/LibreOffice) dans les exports CSV."""
+    v = "" if v is None else str(v)
+    return "'" + v if v[:1] in ("=", "+", "-", "@", "\t", "\r") else v
+
+
+def _csv_response(name, header, rows):
     import csv
     from django.http import HttpResponse
-    from .models import Order
-    resp = HttpResponse(content_type="text/csv")
-    resp["Content-Disposition"] = 'attachment; filename="commandes_paintit.csv"'
-    w = csv.writer(resp)
-    w.writerow(["uid", "date", "statut", "format", "couleurs", "total_eur", "cout_eur",
-                "client", "email", "ville", "pays", "fournisseur_ref"])
-    for o in Order.objects.order_by("-created_at"):
-        w.writerow([o.uid, o.created_at.strftime("%Y-%m-%d %H:%M"), o.get_status_display(),
-                    getattr(o, "format_label", ""), getattr(o, "colors", ""),
-                    getattr(o, "total", ""), getattr(o, "cost", ""),
-                    getattr(o, "customer_name", ""), getattr(o, "customer_email", ""),
-                    getattr(o, "city", ""), getattr(o, "country", ""),
-                    getattr(o, "supplier_ref", "")])
+    resp = HttpResponse(content_type="text/csv; charset=utf-8")
+    resp["Content-Disposition"] = 'attachment; filename="%s"' % name
+    resp.write("\ufeff")   # BOM : accents corrects a l'ouverture dans Excel
+    w = csv.writer(resp, delimiter=";")
+    w.writerow(header)
+    for r in rows:
+        w.writerow([_csv_cell(c) for c in r])
     return resp
 
 
 @staff_member_required
+def orders_csv(request):
+    from .models import Order
+    rows = ([o.uid, o.created_at.strftime("%Y-%m-%d %H:%M"), o.get_status_display(), o.format_label,
+             o.colors, "oui" if o.brushes else "non", o.price, o.discount_code or "", o.discount_amount,
+             o.total, o.cost, o.benefit, o.customer_name, o.customer_email, o.city, o.country,
+             o.supplier_ref or "", o.carrier, o.tracking_number]
+            for o in Order.objects.order_by("-created_at"))
+    return _csv_response("commandes_paintit.csv",
+                         ["uid", "date", "statut", "format", "couleurs", "pinceaux", "prix", "code_remise",
+                          "remise_eur", "total_eur", "cout_eur", "marge_eur", "client", "email", "ville",
+                          "pays", "fournisseur_ref", "transporteur", "suivi"], rows)
+
+
+@staff_member_required
 def admin_hub(request):
-    from django.db.models import Sum, Count
-    from django.utils import timezone
-    from .models import Order, DigitalCanvas, ContactMessage, KitFormat
-    import datetime
-    now = timezone.now()
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    orders = Order.objects.all()
-    agg = orders.aggregate(ca=Sum("total"), cost=Sum("cost"), n=Count("id"))
-    ca = agg["ca"] or 0.0
-    cost = agg["cost"] or 0.0
-    month = orders.filter(created_at__gte=month_start).aggregate(ca=Sum("total"), n=Count("id"))
-    by_status = {s: c for s, c in orders.values_list("status").annotate(c=Count("id"))}
-    kpis = {
-        "orders": agg["n"] or 0,
-        "revenue": round(ca, 2),
-        "margin": round(ca - cost, 2),
-        "margin_pct": round((ca - cost) / ca * 100, 1) if ca else 0,
-        "month_revenue": round(month["ca"] or 0.0, 2),
-        "month_orders": month["n"] or 0,
-        "canvases": DigitalCanvas.objects.exclude(email="__library__").count(),
-        "gallery": DigitalCanvas.objects.filter(email="__library__").count(),
-        "messages": ContactMessage.objects.count(),
-        "formats": KitFormat.objects.filter(available=True).count(),
-    }
-    # Graphique CA sur 30 jours
-    from django.db.models.functions import TruncDate
-    d30 = now - datetime.timedelta(days=29)
-    by_day = {r["d"]: float(r["ca"] or 0) for r in
-              orders.filter(created_at__gte=d30).annotate(d=TruncDate("created_at"))
-              .values("d").annotate(ca=Sum("total"))}
-    series = []
-    for i in range(30):
-        day = (d30 + datetime.timedelta(days=i)).date()
-        series.append({"day": day.strftime("%d/%m"), "ca": round(by_day.get(day, 0.0), 2)})
-    max_ca = max([x["ca"] for x in series] + [1.0])
-    for x in series:
-        x["h"] = round(x["ca"] / max_ca * 100, 1)
-    # Alertes "a traiter"
-    from .models import Supplier
-    pending = orders.filter(status=Order.PENDING).count()
-    failed = orders.filter(status=Order.FAILED).count()
-    to_ship = orders.filter(status=Order.PAID).count()
-    alerts = []
-    if pending:
-        alerts.append({"label": "Commandes en attente de paiement", "count": pending,
-                       "url": "/admin/studio/order/?status__exact=" + Order.PENDING, "level": "warn"})
-    if failed:
-        alerts.append({"label": "Commandes en echec", "count": failed,
-                       "url": "/admin/studio/order/?status__exact=" + Order.FAILED, "level": "err"})
-    if to_ship:
-        alerts.append({"label": "Payees a envoyer au fournisseur", "count": to_ship,
-                       "url": "/admin/studio/order/?status__exact=" + Order.PAID, "level": "info"})
-    unanswered = ContactMessage.objects.filter(answered=False).count()
-    if unanswered:
-        alerts.append({"label": "Messages non repondus", "count": unanswered,
-                       "url": "/admin/studio/contactmessage/?answered__exact=0", "level": "warn"})
-    try:
-        if not Supplier.for_checkout("kit"):
-            alerts.append({"label": "Aucun fournisseur pour le checkout Kit", "count": "!",
-                           "url": "/admin/studio/supplier/add/", "level": "err"})
-    except Exception:
-        pass
-    # Repartition par statut (avec libelles)
-    labels = dict(Order.STATUS_CHOICES)
-    status_rows = [{"label": labels.get(st, st), "count": c,
-                    "url": "/admin/studio/order/?status__exact=" + st}
-                   for st, c in sorted(by_status.items(), key=lambda kv: -kv[1])]
-    recent_orders = list(orders.order_by("-created_at")[:8])
-    recent_msgs = list(ContactMessage.objects.order_by("-created_at")[:6])
-    tools = [
-        {"name": "Grille tarifaire", "desc": "Formats kit & tableau, prix, options", "url": "/admin-tarifs/", "icon": "\U0001F4B6"},
-        {"name": "Marketing Corner", "desc": "Promos + GIF pub a partir d'une image", "url": "/marketing/", "icon": "\U0001F4E3"},
-        {"name": "PBN Lab", "desc": "Pipeline pas a pas (R&D)", "url": "/pbn/", "icon": "\U0001F9EA"},
-        {"name": "Suivi financier", "desc": "CA, marge, graphiques", "url": "/dashboard/", "icon": "\U0001F4C8"},
-        {"name": "Commandes", "desc": "Suivi, fichiers fournisseur (.tiff)", "url": "/admin/studio/order/", "icon": "\U0001F4E6"},
-        {"name": "Galerie / modeles", "desc": "Toiles, prix, apercus", "url": "/admin/studio/digitalcanvas/", "icon": "\U0001F5BC"},
-        {"name": "Messages contact", "desc": "Demandes + pieces jointes", "url": "/admin/studio/contactmessage/", "icon": "\U0001F4E8"},
-        {"name": "Fournisseurs", "desc": "Connexion checkout, tarifs, API/mail", "url": "/admin/studio/supplier/", "icon": "\U0001F3ED"},
-        {"name": "Remises / parrainage", "desc": "Codes et taux", "url": "/admin/studio/discount/", "icon": "\U0001F3AB"},
-        {"name": "Admin Django", "desc": "Tous les modeles", "url": "/admin/", "icon": "\u2699\uFE0F"},
-    ]
-    return render(request, "admin/hub.html", {
-        "kpis": kpis, "recent_orders": recent_orders, "recent_msgs": recent_msgs,
-        "tools": tools, "by_status": by_status, "series": series, "max_ca": round(max_ca, 2),
-        "alerts": alerts, "status_rows": status_rows})
+    from . import erp
+    from .models import Order, ContactMessage
+    period = request.GET.get("p", "30d")
+    k = erp.kpis(period)
+    ctx = {"k": k, "series": erp.series(k["period"]), "mix": erp.mix(k["period"]),
+           "pipeline": erp.pipeline(), "actions": erp.actions(), "cust": erp.customer_stats(),
+           "recent_orders": list(Order.objects.order_by("-created_at")[:8]),
+           "recent_msgs": list(ContactMessage.objects.order_by("answered", "-created_at")[:6]),
+           "gallery_all": erp.gallery_sales(), "erp_section": "hub"}
+    from django.contrib import admin as _admin
+    ctx.update(_admin.site.each_context(request))
+    return render(request, "admin/hub.html", ctx)
+
+
+@staff_member_required
+def erp_customers(request):
+    from . import erp
+    q = (request.GET.get("q") or "").strip()
+    sort = request.GET.get("sort") or "-revenue"
+    seg = request.GET.get("seg") or ""
+    rows = erp.customers(q=q, sort=sort, segment=seg)
+    if request.GET.get("format") == "csv":
+        return _csv_response("clients_paintit.csv",
+                             ["email", "nom", "segment", "commandes_payees", "tentatives", "ca_eur", "marge_eur",
+                              "premiere", "derniere", "ville", "pays", "toiles_numeriques"],
+                             ([r["customer_email"], r["name"], r["segment"], r["orders"], r["attempts"],
+                               r["revenue"], r["margin"], r["first"].strftime("%Y-%m-%d"),
+                               r["last"].strftime("%Y-%m-%d"), r["city"], r["country"], r["canvases"]]
+                              for r in rows))
+    from django.contrib import admin as _admin
+    return render(request, "admin/erp_customers.html", {**_admin.site.each_context(request),
+        "rows": rows[:500], "count": len(rows), "q": q, "sort": sort, "seg": seg,
+        "stats": erp.customer_stats(), "erp_section": "customers",
+        "segments": [("", "Tous"), ("vip", "VIP"), ("fidele", "Fideles"), ("client", "Clients"),
+                     ("inactif", "Inactifs"), ("prospect", "Prospects")]})
 
 
 def _grant_gallery(request, m, email):

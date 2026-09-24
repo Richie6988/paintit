@@ -207,3 +207,15 @@ a:link,a:visited{color:var(--pit-acc)}
 /* Fieldsets espacés */
 fieldset.module{margin-bottom:18px}
 .form-row{border-bottom:1px solid #f0f3fa}
+
+/* ---------- Menu ERP (toutes les pages admin) ---------- */
+.erp-nav{display:flex;flex-shrink:0;align-items:center;gap:2px;background:#fff;border-bottom:1px solid #e2e8f2;
+  padding:0 24px;overflow-x:auto;white-space:nowrap;box-shadow:0 2px 8px rgba(18,34,79,.04)}
+.erp-nav a{display:inline-flex;align-items:center;gap:6px;padding:12px 12px;color:#33415c !important;
+  font-weight:600;font-size:.88rem;text-decoration:none;border-bottom:2px solid transparent}
+.erp-nav a:hover{color:#2f6bf2 !important;background:#f7faff}
+.erp-nav a.on{color:#12224f !important;border-bottom-color:#2f6bf2}
+.erp-nav .sp{flex:1}
+.erp-nav .bdg{background:#eef2fb;color:#2f4b8f;border-radius:999px;padding:1px 7px;font-size:.72rem;font-weight:800}
+.erp-nav .bdg.err{background:#fdecef;color:#c0392b}
+@media (max-width:767px){.erp-nav{padding:0 8px}.erp-nav a{padding:10px 8px;font-size:.82rem}}

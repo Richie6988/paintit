@@ -6,12 +6,56 @@ from django import forms
 from django.utils.html import format_html, escape
 from django.utils.safestring import mark_safe
 
-from .models import Discount, Order, ContactMessage, ContactAttachment, Pricing, DigitalCanvas, EmailCode, PrintPricing, Supplier
+from .models import Discount, Order, OrderEvent, ContactMessage, ContactAttachment, Pricing, DigitalCanvas, EmailCode, PrintPricing, Supplier
 from . import emails
 
-admin.site.site_header = "PaintIt Admin"
-admin.site.site_title = "PaintIt Admin"
+admin.site.site_header = "PaintIt ERP"
+admin.site.site_title = "PaintIt ERP"
 admin.site.index_title = "Gestion PaintIt"
+admin.site.site_url = "/admin-hub/"
+admin.site.enable_nav_sidebar = False   # remplace par le menu ERP (base_site.html)
+
+
+class ActionFilter(admin.SimpleListFilter):
+    """'A traiter' : memes regles (SLA) que le centre d'actions du Hub."""
+    title = "a traiter"
+    parameter_name = "action"
+
+    def lookups(self, request, model_admin):
+        from . import erp
+        return [(k, v[1]) for k, v in erp.action_querysets().items()]
+
+    def queryset(self, request, queryset):
+        from . import erp
+        qs = erp.action_querysets().get(self.value())
+        return queryset.filter(pk__in=qs[0].values("pk")) if qs else queryset
+
+
+class OrderEventInline(admin.TabularInline):
+    model = OrderEvent
+    extra = 0
+    can_delete = False
+    fields = ("at", "kind", "status_label", "text", "user")
+    readonly_fields = fields
+    verbose_name_plural = "Historique (journal)"
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="Statut")
+    def status_label(self, obj):
+        return dict(Order.STATUS_CHOICES).get(obj.status, obj.status or "")
+
+
+def _log(order, kind, text, request=None, status=""):
+    OrderEvent.objects.create(order=order, kind=kind, text=text[:300], status=status,
+                              user=request.user.get_username() if request else "")
+
+
+def _set_status(order, status, request):
+    order.status = status
+    order._erp_user = request.user.get_username()
+    order.save(update_fields=["status", "status_changed_at"])
 
 
 @admin.register(Order)
@@ -73,18 +117,24 @@ class OrderAdmin(admin.ModelAdmin):
                 self.message_user(request, "%s : %s" % (uid, exc), level="error")
         self.message_user(request, "%d fichier(s) .tiff genere(s)." % n)
 
-    list_display = ("uid", "status_badge", "product_col", "total", "benefit_col",
-                    "tracking_col", "customer_email", "created_at")
-    list_filter = ("status", "lang", "carrier", "orientation", "colors", "brushes")
+    list_display = ("uid", "status_badge", "since_col", "product_col", "total", "benefit_col",
+                    "tracking_col", "customer_col", "country", "created_at")
+    list_filter = (ActionFilter, "status", "country", "lang", "carrier", "colors", "brushes")
+    inlines = (OrderEventInline,)
+    save_on_top = True
     search_fields = ("uid", "customer_name", "customer_email", "discount_code",
                      "supplier_ref", "tracking_number")
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
     list_per_page = 25
-    readonly_fields = ("uid", "created_at", "cost", "benefit_col", "supplier_ref", "feedback_sent", "fichiers")
-    actions = ("fichiers_fournisseur", "mark_shipped", "mark_delivered", "send_feedback")
+    readonly_fields = ("uid", "created_at", "status_changed_at", "cost", "benefit_col", "supplier_ref",
+                       "feedback_sent", "fichiers")
+    actions = ("fichiers_fournisseur", "mark_fulfilled", "mark_shipped", "mark_delivered", "mark_failed",
+               "send_feedback")
     fieldsets = (
-        ("Commande", {"fields": (("uid", "status"), ("created_at", "lang"), "supplier_ref")}),
+        ("Commande", {"fields": (("uid", "status"), ("created_at", "status_changed_at"), ("lang", "supplier_ref"))}),
+        ("Notes internes", {"fields": ("notes",),
+                            "description": "Visible uniquement en interne ; chaque modification est tracee dans l'historique."}),
         ("Suivi & expedition", {"fields": ("carrier", ("tracking_number", "tracking_url"),
                                            "feedback_sent")}),
         ("Produit", {"fields": (("format_label", "orientation"),
@@ -109,6 +159,21 @@ class OrderAdmin(admin.ModelAdmin):
                            colors.get(obj.status, "#333"), bg.get(obj.status, "#eee"),
                            obj.get_status_display())
 
+    @admin.display(description="Depuis", ordering="status_changed_at")
+    def since_col(self, obj):
+        if not obj.status_changed_at:
+            return "\u2014"
+        d = (timezone.now() - obj.status_changed_at)
+        txt = "%d j" % d.days if d.days else "%d h" % (d.seconds // 3600)
+        late = obj.status in (Order.PAID, Order.FULFILLED, Order.SHIPPED) and d.days >= 7
+        return format_html('<span style="color:{};font-weight:{}">{}</span>',
+                           "#c0392b" if late else "#5b647a", 700 if late else 400, txt)
+
+    @admin.display(description="Client", ordering="customer_email")
+    def customer_col(self, obj):
+        return format_html('{}<br><a href="/admin/studio/order/?q={}" style="font-size:.85em">{}</a>',
+                           obj.customer_name or "", obj.customer_email, obj.customer_email)
+
     @admin.display(description="Produit")
     def product_col(self, obj):
         extra = " · pinceaux" if obj.brushes else ""
@@ -129,26 +194,51 @@ class OrderAdmin(admin.ModelAdmin):
         return label
 
     def save_model(self, request, obj, form, change):
+        obj._erp_user = request.user.get_username()
         super().save_model(request, obj, form, change)
+        if change and "notes" in form.changed_data:
+            _log(obj, "note", "Notes modifiees : " + (obj.notes or "(vide)").strip().replace("\n", " "), request)
+        for f in ("tracking_number", "carrier"):
+            if change and f in form.changed_data and getattr(obj, f):
+                _log(obj, "action", "%s : %s" % (form.fields[f].label, getattr(obj, f)), request)
         # E-mail d'avis automatique quand la commande passe a "Livree".
         if obj.status == Order.DELIVERED and not obj.feedback_sent:
             emails.send_feedback_request(obj)
             Order.objects.filter(pk=obj.pk).update(feedback_sent=True)
+            _log(obj, "email", "Demande d'avis envoyee", request)
+
+    def _bulk_status(self, request, queryset, status, label):
+        n = 0
+        for o in queryset.exclude(status=status):
+            _set_status(o, status, request); n += 1
+        self.message_user(request, f"{n} commande(s) : {label}.")
+
+    @admin.action(description="Marquer en production (envoyee au fournisseur)")
+    def mark_fulfilled(self, request, queryset):
+        self._bulk_status(request, queryset, Order.FULFILLED, "en production")
 
     @admin.action(description="Marquer comme expediee")
     def mark_shipped(self, request, queryset):
-        n = queryset.update(status=Order.SHIPPED)
-        self.message_user(request, f"{n} commande(s) marquee(s) expediee(s).")
+        missing = queryset.filter(tracking_number="").count()
+        self._bulk_status(request, queryset, Order.SHIPPED, "expediee(s)")
+        if missing:
+            self.message_user(request, f"{missing} commande(s) sans n° de suivi : pensez a le renseigner.",
+                              level="warning")
+
+    @admin.action(description="Marquer en echec")
+    def mark_failed(self, request, queryset):
+        self._bulk_status(request, queryset, Order.FAILED, "en echec")
 
     @admin.action(description="Marquer comme livree + demander un avis")
     def mark_delivered(self, request, queryset):
         sent = 0
         for o in queryset:
-            o.status = Order.DELIVERED
-            o.save(update_fields=["status"])
+            if o.status != Order.DELIVERED:
+                _set_status(o, Order.DELIVERED, request)
             if not o.feedback_sent:
                 emails.send_feedback_request(o)
                 Order.objects.filter(pk=o.pk).update(feedback_sent=True)
+                _log(o, "email", "Demande d'avis envoyee", request)
                 sent += 1
         self.message_user(request, f"{queryset.count()} livree(s), {sent} e-mail(s) d'avis envoye(s).")
 
@@ -158,6 +248,7 @@ class OrderAdmin(admin.ModelAdmin):
         for o in queryset:
             emails.send_feedback_request(o)
             Order.objects.filter(pk=o.pk).update(feedback_sent=True)
+            _log(o, "email", "Demande d'avis envoyee", request)
             sent += 1
         self.message_user(request, f"{sent} e-mail(s) d'avis envoye(s).")
 
@@ -230,7 +321,15 @@ class ContactMessageAdminForm(forms.ModelForm):
 @admin.register(ContactMessage)
 class ContactMessageAdmin(admin.ModelAdmin):
     form = ContactMessageAdminForm
-    list_display = ("subject", "name", "email", "has_files", "answered", "created_at", "answered_at")
+    list_display = ("subject", "name", "email", "has_files", "answered", "age_col", "created_at", "answered_at")
+
+    @admin.display(description="Attente", ordering="created_at")
+    def age_col(self, obj):
+        if obj.answered:
+            return "\u2014"
+        h = int((timezone.now() - obj.created_at).total_seconds() // 3600)
+        return format_html('<b style="color:{}">{}</b>', "#c0392b" if h >= 24 else "#a86a00",
+                           "%d j" % (h // 24) if h >= 48 else "%d h" % h)
     list_filter = ("answered",)
     search_fields = ("name", "email", "subject", "message")
     ordering = ("-created_at",)
@@ -406,13 +505,19 @@ class EmailCodeAdmin(admin.ModelAdmin):
     search_fields = ("email",)
     ordering = ("-created_at",)
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(PrintPricing)
 class PrintPricingAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Dimensions (prix de base)", {"fields": (("d_30x40","av_30x40"),("d_40x50","av_40x50"),
             ("d_50x70","av_50x70"),("d_60x80","av_60x80"),("d_70x100","av_70x100"),("d_80x120","av_80x120"))}),
-        ("Matiere (supplement)", {"fields": (("m_toile","av_m_toile"),("m_alu","av_m_alu"),("m_acrylique","av_m_acrylique"))}),
+        ("Matiere (supplement)", {"fields": (("m_toile","av_m_toile"),("m_alu","av_m_alu"),("m_bois","av_m_bois"))}),
         ("Cadre (supplement)", {"fields": (("f_noir","av_f_noir"),("f_bois","av_f_bois"),("f_blanc","av_f_blanc"))}),
         ("Verre", {"fields": (("av_glass","glass_price"),)}),
         ("Fournisseur impression", {"fields": ("supplier_email","supplier_url")}),

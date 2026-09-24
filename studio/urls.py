@@ -5,6 +5,7 @@ app_name = "studio"
 urlpatterns = [
     path("admin-hub/", views.admin_hub, name="admin_hub"),
     path("admin-hub/orders.csv", views.orders_csv, name="orders_csv"),
+    path("admin-hub/customers/", views.erp_customers, name="erp_customers"),
     path("admin-tarifs/", views.shop_pricing, name="shop_pricing"),
     path("llm.txt", views.llm_txt, name="llm_txt"),
     path("llm.json", views.llm_json, name="llm_json"),

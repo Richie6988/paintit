@@ -1,0 +1,64 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Clients · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}
+<div class="erp">
+  <div class="erp-head">
+    <div><h1>Clients</h1><div class="muted">Agrégés depuis les commandes (clé : e-mail) · CA = commandes payées</div></div>
+    <form method="get" style="display:flex;gap:8px;flex-wrap:wrap">
+      <input type="search" name="q" value="{{ q }}" placeholder="E-mail, nom, ville…">
+      <input type="hidden" name="seg" value="{{ seg }}"><input type="hidden" name="sort" value="{{ sort }}">
+      <button class="btn" type="submit">Rechercher</button>
+      <a class="btn ghost" href="?q={{ q|urlencode }}&seg={{ seg }}&sort={{ sort }}&format=csv">&#8681; CSV</a>
+    </form>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Contacts</div><div class="v">{{ stats.total }}</div><div class="muted">dont {{ stats.buyers }} acheteurs</div></div>
+    <div class="kpi"><div class="l">Taux de réachat</div><div class="v">{{ stats.repeat_rate }} %</div><div class="muted">acheteurs avec 2+ commandes</div></div>
+    <div class="kpi"><div class="l">CA moyen / client</div><div class="v">{{ stats.ltv|floatformat:"2g" }} €</div><div class="muted">valeur vie client (LTV)</div></div>
+    {% for s, n in stats.segments.items %}<div class="kpi"><div class="l">{{ s }}</div><div class="v">{{ n }}</div></div>{% endfor %}
+  </div>
+
+  <div class="card">
+    <div class="card-h">
+      <div class="seg">{% for key, label in segments %}<a href="?seg={{ key }}&q={{ q|urlencode }}&sort={{ sort }}" class="{% if key == seg %}on{% endif %}">{{ label }}</a>{% endfor %}</div>
+      <span class="muted">{{ count }} résultat{{ count|pluralize }}{% if count > 500 %} (500 affichés){% endif %}</span>
+    </div>
+    <div style="overflow-x:auto">
+    <table class="t">
+      <tr>
+        <th><a href="?sort={% if sort == 'customer_email' %}-{% endif %}customer_email&seg={{ seg }}&q={{ q|urlencode }}">Client</a></th>
+        <th>Segment</th>
+        <th class="r"><a href="?sort={% if sort == '-orders' %}{% else %}-{% endif %}orders&seg={{ seg }}&q={{ q|urlencode }}">Cmd payées</a></th>
+        <th class="r"><a href="?sort={% if sort == '-revenue' %}{% else %}-{% endif %}revenue&seg={{ seg }}&q={{ q|urlencode }}">CA</a></th>
+        <th class="r"><a href="?sort={% if sort == '-margin' %}{% else %}-{% endif %}margin&seg={{ seg }}&q={{ q|urlencode }}">Marge</a></th>
+        <th class="r">Toiles num.</th>
+        <th>Localisation</th>
+        <th class="r"><a href="?sort={% if sort == '-last' %}{% else %}-{% endif %}last&seg={{ seg }}&q={{ q|urlencode }}">Dernière cmd</a></th>
+        <th>Actions</th>
+      </tr>
+      {% for r in rows %}
+      <tr>
+        <td><b>{{ r.name|default:"—" }}</b><div class="muted">{{ r.customer_email }}</div></td>
+        <td><span class="pill sg-{{ r.segment }}">{{ r.segment }}</span></td>
+        <td class="r">{{ r.orders }}{% if r.attempts > r.orders %} <span class="muted">/ {{ r.attempts }}</span>{% endif %}</td>
+        <td class="r"><b>{{ r.revenue|floatformat:"2g" }} €</b></td>
+        <td class="r">{{ r.margin|floatformat:"2g" }} €</td>
+        <td class="r">{{ r.canvases }}</td>
+        <td>{{ r.city|default:"" }}{% if r.city and r.country %}, {% endif %}{{ r.country|default:"" }}</td>
+        <td class="r">{{ r.last|date:"d/m/Y" }}<div class="muted">il y a {{ r.days }} j</div></td>
+        <td style="white-space:nowrap">
+          <a href="/admin/studio/order/?q={{ r.customer_email|urlencode }}">Commandes</a> ·
+          <a href="/admin/studio/contactmessage/?q={{ r.customer_email|urlencode }}">Messages</a> ·
+          <a href="mailto:{{ r.customer_email }}">E-mail</a>
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="9" class="muted">Aucun client.</td></tr>{% endfor %}
+    </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

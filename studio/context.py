@@ -27,3 +27,21 @@ def assets(request):
         alts = []
         lang_urls = {}
     return {"I18N_VERSION": v, "SITE_URL": site, "HREFLANGS": alts, "LANG_URLS": lang_urls}
+
+
+def erp_nav(request):
+    """Badges du menu ERP (admin uniquement, staff connecte)."""
+    path = request.path
+    user = getattr(request, "user", None)
+    if not (user and user.is_authenticated and user.is_staff):
+        return {}
+    if not (path.startswith("/admin") or path.startswith("/admin-")):
+        return {}
+    try:
+        from . import erp
+        from .models import ContactMessage
+        return {"erp_badges": {"actions": erp.action_count(),
+                               "messages": ContactMessage.objects.filter(answered=False).count()},
+                "erp_path": path}
+    except Exception:
+        return {}

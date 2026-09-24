@@ -88,6 +88,10 @@ class Discount(models.Model):
     used_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        verbose_name = "Code remise"
+        verbose_name_plural = "Codes remise"
+
     @property
     def remaining(self):
         if self.kind == self.PROMO:
@@ -137,7 +141,16 @@ class Order(models.Model):
     tracking_number = models.CharField("N° de suivi", max_length=80, blank=True, default="")
     tracking_url = models.CharField("Lien de suivi", max_length=300, blank=True, default="")
     feedback_sent = models.BooleanField(default=False)
+    notes = models.TextField("Notes internes", blank=True, default="")
+    status_changed_at = models.DateTimeField("Statut depuis", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Commande"
+        verbose_name_plural = "Commandes"
+
+    # Statuts qui comptent comme chiffre d'affaires encaisse
+    PAID_STATUSES = (PAID, FULFILLED, SHIPPED, DELIVERED)
 
     @property
     def benefit(self):
@@ -145,6 +158,45 @@ class Order(models.Model):
 
     def __str__(self):
         return self.uid
+
+
+class OrderEvent(models.Model):
+    """Historique d'une commande (journal ERP) : changements de statut (auto) + notes/actions."""
+    order = models.ForeignKey(Order, related_name="events", on_delete=models.CASCADE)
+    at = models.DateTimeField(auto_now_add=True)
+    kind = models.CharField(max_length=12, default="status")   # status | note | email | action
+    status = models.CharField(max_length=10, blank=True, default="")
+    text = models.CharField(max_length=300, blank=True, default="")
+    user = models.CharField(max_length=150, blank=True, default="")
+
+    class Meta:
+        ordering = ["-at"]
+        verbose_name = "Evenement commande"
+        verbose_name_plural = "Historique commandes"
+
+    def __str__(self):
+        return "%s %s %s" % (self.order_id, self.kind, self.status or self.text)
+
+
+def _order_pre_save(sender, instance, **kw):
+    from django.utils import timezone
+    old = None
+    if instance.pk:
+        old = sender.objects.filter(pk=instance.pk).values_list("status", flat=True).first()
+    instance._erp_status_changed = old != instance.status
+    if instance._erp_status_changed or not instance.status_changed_at:
+        instance.status_changed_at = timezone.now()
+
+
+def _order_post_save(sender, instance, created, **kw):
+    if getattr(instance, "_erp_status_changed", False):
+        OrderEvent.objects.create(order=instance, kind="status", status=instance.status,
+                                  text="Creee" if created else "",
+                                  user=getattr(instance, "_erp_user", "") or "")
+
+
+models.signals.pre_save.connect(_order_pre_save, sender=Order, dispatch_uid="erp_order_pre")
+models.signals.post_save.connect(_order_post_save, sender=Order, dispatch_uid="erp_order_post")
 
 
 class ContactMessage(models.Model):
@@ -156,6 +208,10 @@ class ContactMessage(models.Model):
     answered = models.BooleanField(default=False)
     answer = models.TextField(blank=True, default="")
     answered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Message contact"
+        verbose_name_plural = "Messages contact"
 
     def __str__(self):
         return f"{self.subject} ({self.email})"
@@ -189,12 +245,18 @@ class DigitalCanvas(models.Model):
     class Meta:
         unique_together = ("email", "uid")
         ordering = ["-created_at"]
+        verbose_name = "Toile / modele"
+        verbose_name_plural = "Toiles & modeles (catalogue)"
 
 
 class EmailCode(models.Model):
     email = models.EmailField()
     code = models.CharField(max_length=8)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Code de verification"
+        verbose_name_plural = "Codes de verification"
 
 
 class PrintPricing(models.Model):
@@ -341,6 +403,8 @@ class Supplier(models.Model):
 
     class Meta:
         ordering = ["priority", "name"]
+        verbose_name = "Fournisseur"
+        verbose_name_plural = "Fournisseurs"
 
     def __str__(self):
         return self.name

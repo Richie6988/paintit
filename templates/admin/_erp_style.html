@@ -1,0 +1,69 @@
+<style>
+ .erp{max-width:1320px;color:#12224f}
+ .erp .muted{color:#8a97b4;font-size:.82rem}
+ .erp a{text-decoration:none}
+ .erp-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:4px 0 18px}
+ .erp-head h1{margin:0 0 2px;font-size:1.55rem;color:#12224f}
+ .seg{display:inline-flex;background:#fff;border:1px solid #e2e8f2;border-radius:11px;padding:3px;gap:2px;flex-wrap:wrap}
+ .seg a{padding:7px 12px;border-radius:8px;color:#5b647a !important;font-weight:600;font-size:.84rem}
+ .seg a.on{background:#12224f;color:#fff !important}
+ .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+ .kpi{background:#fff;border:1px solid #e2e8f2;border-radius:14px;padding:14px 16px;box-shadow:0 1px 3px rgba(18,34,79,.05)}
+ .kpi .l{color:#5b647a;font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+ .kpi .v{font-size:1.6rem;font-weight:800;margin:6px 0 4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+ .kpi .d{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+ .dl{font-size:.74rem;font-weight:800;padding:2px 7px;border-radius:999px}
+ .dl.up{background:#e7f6ec;color:#1e8848}.dl.down{background:#fdecef;color:#c0392b}.dl.flat{background:#eef2fb;color:#5b647a}
+ .card{background:#fff;border:1px solid #e2e8f2;border-radius:14px;padding:16px 18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(18,34,79,.05);min-width:0}
+ .card-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px}
+ .card-h h2{margin:0;font-size:1rem;color:#12224f;background:none;padding:0;text-transform:none;letter-spacing:0}
+ .card-h a{font-weight:700;font-size:.84rem}
+ .g-2-1{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+ .g-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+ .g-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+ .g-2-1,.g-2,.g-3{align-items:start}
+ @media(max-width:1100px){.g-3{grid-template-columns:1fr 1fr}}
+ @media(max-width:860px){.g-2-1,.g-2,.g-3{grid-template-columns:1fr}}
+ .act{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;margin-bottom:8px;border:1px solid}
+ .act span{display:flex;flex-direction:column;gap:2px}.act b{font-size:.88rem}.act small{font-size:.76rem;opacity:.85}
+ .act em{font-style:normal;font-weight:800;min-width:30px;text-align:center;padding:3px 9px;border-radius:999px;background:rgba(0,0,0,.07)}
+ .act.err{background:#fdecef;color:#a3281c !important;border-color:#f5c2cf}
+ .act.warn{background:#fff6e6;color:#8a4d00 !important;border-color:#ffe0a3}
+ .act.info{background:#eef2fb;color:#2f4b8f !important;border-color:#cfdcfa}
+ .act:hover{filter:brightness(.97)}
+ .ok{background:#e7f6ec;color:#1e8848;border-radius:11px;padding:14px;font-weight:700}
+ .pipe{display:flex;gap:6px;overflow-x:auto}
+ .step{flex:1;min-width:120px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 8px;border-radius:12px;background:#f4f6fb;position:relative}
+ .step em{font-style:normal;font-size:1.5rem;font-weight:800;color:#12224f}
+ .step span{font-size:.76rem;color:#5b647a;font-weight:600;text-align:center}
+ .step:hover{background:#eaf1ff}
+ .step.st-failed{background:#fdecef}.step.st-delivered{background:#e7f6ec}.step.st-pending{background:#fff6e6}
+ .t{width:100%;border-collapse:collapse}
+ .t th{text-align:left;color:#8a97b4;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;padding:6px;border-bottom:1px solid #eef1f6;background:none}
+ .t td{padding:7px 6px;border-bottom:1px solid #f4f6fb;font-size:.86rem;vertical-align:middle}
+ .t tr:last-child td{border-bottom:none}
+ .t .r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+ .t a{font-weight:600}
+ .pill{padding:2px 9px;border-radius:999px;font-size:.73rem;font-weight:700;background:#eef2fb;color:#334;white-space:nowrap}
+ .pill.st-paid,.pill.st-fulfilled{background:#e9f0ff;color:#1f56cf}.pill.st-shipped{background:#efeaff;color:#5a3fb8}
+ .pill.st-delivered{background:#e7f6ec;color:#237a3e}.pill.st-pending{background:#fff4e0;color:#a86a00}.pill.st-failed{background:#fde8e8;color:#b23}
+ .pill.sg-vip{background:#fff1d6;color:#9a6300}.pill.sg-fidele{background:#e7f6ec;color:#237a3e}.pill.sg-inactif{background:#f1f1f4;color:#6b6f80}.pill.sg-prospect{background:#eef2fb;color:#5b647a}
+ .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+ .chip{background:#f4f6fb;border:1px solid #e2e8f2;border-radius:999px;padding:3px 10px;font-size:.76rem;font-weight:600;color:#33415c !important}
+ .mini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+ .mini div{background:#f7f9fd;border-radius:10px;padding:10px;display:flex;flex-direction:column}
+ .mini b{font-size:1.15rem}.mini span{font-size:.72rem;color:#8a97b4}
+ .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#e85d75;margin-right:6px}
+ .chart{position:relative}.chart svg{display:block}
+ .tip{position:absolute;top:6px;display:none;background:#12224f;color:#fff;font-size:.76rem;padding:6px 9px;border-radius:8px;pointer-events:none;width:120px;line-height:1.4}
+ .legend{display:flex;gap:14px;align-items:center;font-size:.76rem;color:#5b647a;margin-top:6px}
+ .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:-8px}
+ .hbars .hb{display:grid;grid-template-columns:90px 1fr auto auto;gap:8px;align-items:center;margin:9px 0;font-size:.84rem}
+ .hbars .hb div{background:#f4f6fb;border-radius:6px;height:14px;overflow:hidden}
+ .hbars .hb i{display:block;height:100%;background:linear-gradient(90deg,#7a3ff2,#2f6bf2);border-radius:6px}
+ .hbars .hb em{font-style:normal;color:#8a97b4;font-size:.76rem}
+ .erp .t tr,.erp .t td{background:none}
+ .erp input[type=search]{padding:8px 12px;min-width:260px}
+ .erp .btn{display:inline-flex;align-items:center;gap:6px;background:#12224f;color:#fff !important;font-weight:700;padding:8px 14px;border-radius:10px;font-size:.84rem;border:0;cursor:pointer}
+ .erp .btn.ghost{background:#fff;color:#12224f !important;border:1px solid #e2e8f2}
+</style>

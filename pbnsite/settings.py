@@ -92,6 +92,7 @@ TEMPLATES = [{
         "django.contrib.messages.context_processors.messages",
         "django.template.context_processors.i18n",
         "studio.context.assets",
+        "studio.context.erp_nav",
     ]},
 }]
 
