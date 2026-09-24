@@ -91,6 +91,8 @@ class Command(BaseCommand):
                 pm = re.search(r"_p(\d+)", stem)
                 if pm:
                     price = round(int(pm.group(1)) / 100.0, 2); stem = stem.replace(pm.group(0), "")
+                if not showcase and stem.lower().startswith(prefix):   # 'gal-rose.jpg' -> uid 'gal-rose' (pas 'gal-gal-rose')
+                    stem = stem[len(prefix):]
                 stem = stem.strip("_-") or "modele"
                 clean_rel = "/".join(parts[:-1] + [stem])   # chemin sans suffixes _cNN/_pNNN
                 slug = _slugify(clean_rel)

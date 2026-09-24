@@ -232,7 +232,9 @@ def current_photo(request):
 
 
 def digipaint(request, uid):
-    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    if uid.startswith("gal-gal-"):   # anciens uid de galerie (double prefixe) -> nouvel uid
+        return redirect("studio:digipaint", uid=uid[4:], permanent=True)
+    d =os.path.join(settings.MEDIA_ROOT, "orders", uid)
     if not os.path.exists(os.path.join(d, f"{uid}_digipaint.svg")):
         raise Http404
     import json
@@ -1340,10 +1342,8 @@ def sitemap_xml(request):
     from django.urls import translate_url
     from .models import DigitalCanvas
     site = settings.SITE_URL
+    # pages publiques uniquement (les toiles /paint/<uid>/ ne sont pas indexees)
     paths = ["/", "/create/", "/gallery/", "/paint/", "/contact/", "/privacy/"]
-    # modeles de galerie indexables
-    for uid in DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-").values_list("uid", flat=True):
-        paths.append("/paint/%s/" % uid)
     langs = [c for c, _ in settings.LANGUAGES]
     x = ['<?xml version="1.0" encoding="UTF-8"?>',
          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '

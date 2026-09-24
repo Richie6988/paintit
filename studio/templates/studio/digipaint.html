@@ -320,7 +320,7 @@
   function imgURL(u,k){return "/preview/img/"+u+"/"+k+"/";}
   function key(){return 'digipaint:'+board;}
   function save(){try{var st={score:score,total:total,painted:{},done:{}};zones.forEach(function(z,i){if(z.style.fill){st.painted[i]=z.style.fill;if(z.dataset.done==='1')st.done[i]=1;}});localStorage.setItem(key(),JSON.stringify(st));}catch(e){}}
-  function load(){try{return JSON.parse(localStorage.getItem(key())||'null');}catch(e){return null;}}
+  function load(){try{return JSON.parse(localStorage.getItem(key())||(board.indexOf('gal-')===0?localStorage.getItem('digipaint:gal-'+board):null)||'null');}catch(e){return null;}}
   function apply(){wrap.style.transform='translate('+tx+'px,'+ty+'px) scale('+sc+')';updateMiniPos();}
   function updateMiniPos(){var svg=host.querySelector('svg'),mini=document.getElementById('mini'),dot=document.getElementById('miniPos');
     if(!svg||!mini||!dot||!mini.offsetWidth)return;var b=boardEl.getBoundingClientRect();var sr=svg.getBoundingClientRect();
