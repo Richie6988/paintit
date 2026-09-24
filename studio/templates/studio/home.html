@@ -12,9 +12,9 @@
 
   <div class="hero-visual">
     <div class="reveal" id="reveal" style="--pos:50%">
-      <img class="reveal-img" id="revealBase" src="{% static 'studio/showcase/moto_template.png' %}" alt="" draggable="false" onerror="this.dataset.bad=1">
+      <img class="reveal-img" id="revealBase" src="{% if first_slide %}{{ first_slide.t }}{% else %}{% static 'studio/showcase/moto_template.png' %}{% endif %}" alt="" draggable="false" onerror="this.dataset.bad=1">
       <div class="reveal-top" id="revealTop">
-        <img class="reveal-img" id="revealPhoto" src="{% static 'studio/showcase/moto_pbn.png' %}" alt="" draggable="false">
+        <img class="reveal-img" id="revealPhoto" src="{% if first_slide %}{{ first_slide.p }}{% else %}{% static 'studio/showcase/moto_pbn.png' %}{% endif %}" alt="" draggable="false">
       </div>
       <div class="reveal-handle" id="revealHandle"><span class="knob"></span></div>
     </div>
@@ -74,11 +74,11 @@
     function setPos(x){ var b=r.getBoundingClientRect(); var p=(x-b.left)/b.width;
       p=Math.max(0,Math.min(1,p)); r.style.setProperty('--pos',(p*100)+'%'); }
     var autoOn=true, t=0;
-    var seq={{ showcase_slugs|safe }}; if(!seq||!seq.length){seq=['rose'];}
-    var i=0, base=document.getElementById('revealBase'), photo=document.getElementById('revealPhoto'), dir='';
-    function rotStep(){var s=(i=(i+1)%seq.length,seq[i]);base.style.opacity=0;photo.style.opacity=0;
-      setTimeout(function(){base.src=dir+s+'_template.png';photo.src=dir+s+'_pbn.png';base.style.opacity=1;photo.style.opacity=1;},260);}
-    function startRot(){autoOn=true; if(!window.__rot&&base&&photo){window.__rot=setInterval(rotStep,6500);}}
+    var seq={{ showcase_slides|safe }};
+    var i=0, base=document.getElementById('revealBase'), photo=document.getElementById('revealPhoto');
+    function rotStep(){if(!seq.length)return;var s=(i=(i+1)%seq.length,seq[i]);base.style.opacity=0;photo.style.opacity=0;
+      setTimeout(function(){base.src=s.t;photo.src=s.p;base.style.opacity=1;photo.style.opacity=1;},260);}
+    function startRot(){autoOn=true; if(seq.length>1&&!window.__rot&&base&&photo){window.__rot=setInterval(rotStep,6500);}}
     function stopRot(){autoOn=false; if(window.__rot){clearInterval(window.__rot);window.__rot=null;}}
     function down(e){ dragging=true; stopRot(); setPos((e.touches?e.touches[0]:e).clientX); e.preventDefault(); }
     function move(e){ if(dragging) setPos((e.touches?e.touches[0]:e).clientX); }
@@ -92,8 +92,9 @@
     setInterval(function(){ if(!autoOn||dragging) return; t+=0.018; var p=50+42*Math.sin(t);
       r.style.setProperty('--pos',p+'%'); }, 33);
     // Rotation des modeles
-    if(base&&photo){dir=base.getAttribute('src').replace(/[^/]+$/,'');
-      base.src=dir+seq[0]+'_template.png';photo.src=dir+seq[0]+'_pbn.png';startRot();}
+    if(base&&photo){   // 1re image rendue cote serveur ; on reprend la rotation a partir d'elle
+      for(var k=0;k<seq.length;k++){if(photo.getAttribute('src')===seq[k].p){i=k;break;}}
+      startRot();}
   })();
 </script>
 {% endblock %}

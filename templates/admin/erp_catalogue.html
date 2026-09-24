@@ -24,6 +24,8 @@
  .views3 figure{margin:0}.views3 img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:10px;border:1px solid #e3e3e3;background:#f6f6f7;cursor:zoom-in}
  .views3 figcaption{font-size:.72rem;color:#6d7175;text-align:center;margin-top:3px;font-weight:700}
  .pc .price{position:absolute;top:10px;left:10px;z-index:2}
+ .pc .slb{position:absolute;top:10px;right:10px;z-index:2;background:#1a1a1a;color:#fff;border-radius:8px;padding:2px 8px;font-size:.7rem;font-weight:800}
+ .pc .acts .sw{display:flex;align-items:center;cursor:pointer;padding:4px 6px}
  .pc .noimg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#8a8a8a;font-weight:700;font-size:.8rem;text-align:center}
  .pc .body{padding:12px 14px;display:flex;flex-direction:column;gap:4px;flex:1}
  .pc .t{font-weight:800;color:#1a1a1a;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -55,6 +57,7 @@
     <div class="kpi"><div class="l">Modèles publiés</div><div class="v">{{ stats.models }}</div><div class="muted">{{ stats.free }} gratuits · {{ stats.paid }} payants</div></div>
     <div class="kpi"><div class="l">Joueurs</div><div class="v">{{ stats.players }}</div><div class="muted">toiles de la galerie en cours</div></div>
     <div class="kpi"><div class="l">Ventes galerie</div><div class="v">{{ stats.sales }}</div><div class="muted">{{ stats.revenue|floatformat:"2g" }} € (prix actuels)</div></div>
+    <div class="kpi"><div class="l">Slider de l'accueil</div><div class="v">{{ stats.slider }}</div><div class="muted"><a href="?slider=1">voir les modèles affichés</a></div></div>
     <div class="kpi"><div class="l">Toiles clients</div><div class="v">{{ stats.customer }}</div><div class="muted">créées à partir de photos</div></div>
   </div>
 
@@ -69,10 +72,11 @@
       {% if tab != 'customer' %}
       <select name="cat" onchange="this.form.submit()"><option value="">Toutes catégories</option>{% for c in cats %}<option value="{{ c }}" {% if c == cat %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
       <select name="price" onchange="this.form.submit()"><option value="">Tous les prix</option><option value="free" {% if pf == 'free' %}selected{% endif %}>Gratuits</option><option value="paid" {% if pf == 'paid' %}selected{% endif %}>Payants</option></select>
+      <label class="sw" style="font-size:.84rem;font-weight:700"><input type="checkbox" name="slider" value="1" {% if slider %}checked{% endif %} onchange="this.form.submit()" style="width:auto"> Dans le slider</label>
       <select name="sort" onchange="this.form.submit()"><option value="recent">Plus récents</option><option value="popular" {% if sort == 'popular' %}selected{% endif %}>Plus joués</option><option value="title" {% if sort == 'title' %}selected{% endif %}>Titre A→Z</option></select>
       {% endif %}
       <button class="pbtn" type="submit">Filtrer</button>
-      {% if q or cat or pf %}<a class="pbtn" href="?tab={{ tab }}">Réinitialiser</a>{% endif %}
+      {% if q or cat or pf or slider %}<a class="pbtn" href="?tab={{ tab }}">Réinitialiser</a>{% endif %}
     </form>
 
     {% if tab == 'customer' %}
@@ -100,6 +104,7 @@
             <img class="v-preview on" src="/preview/img/{{ m.uid }}/preview/" alt="Toile" loading="lazy" onerror="this.remove()">
             <img class="v-template" src="/preview/img/{{ m.uid }}/template/" alt="Numérotée" loading="lazy" onerror="this.remove()">
             <div class="vsw"><button type="button" data-v="source" {% if not m.has_source %}disabled title="Photo originale non conservée"{% endif %}>Original</button><button type="button" data-v="preview" class="on">Toile</button><button type="button" data-v="template">Numérotée</button></div>
+            {% if m.in_slider and m.has_showcase %}<span class="slb" title="Affiché dans le slider interactif de l'accueil">★ Slider accueil</span>{% endif %}
             <span class="price">{% if m.price > 0 %}<span class="bdg2 warn">{{ m.price|floatformat:2 }} €</span>{% else %}<span class="bdg2 ok">Gratuit</span>{% endif %}</span>
           </div>
           <div class="body">
@@ -110,6 +115,9 @@
           <div class="acts">
             <button class="pbtn sm pri" type="button" onclick='openEdit({{ m.pk }}, "{{ m.uid|escapejs }}", {{ m.has_source|yesno:"true,false" }}, "{{ m.title|escapejs }}", "{{ m.category|escapejs }}", "{{ m.price }}")'>Modifier</button>
             <a class="pbtn sm" href="/paint/{{ m.uid }}/" target="_blank">Jouer</a>
+            <form method="post" title="{% if m.has_showcase %}Afficher / masquer dans le slider interactif de l'accueil{% else %}Images du slider absentes : relancer seed_library{% endif %}">{% csrf_token %}<input type="hidden" name="id" value="{{ m.pk }}">
+              <label class="sw" style="font-size:.76rem;font-weight:700;gap:6px;{% if not m.has_showcase %}opacity:.45{% endif %}"><input type="checkbox" {% if m.in_slider %}checked{% endif %} {% if not m.has_showcase %}disabled{% endif %} onchange="this.form.submit()" style="width:auto"> Slider</label>
+              <input type="hidden" name="op" value="slider"></form>
             <form method="post" onsubmit="return confirm('Retirer ce modèle de la galerie ? Les joueurs le conservent.')">{% csrf_token %}<input type="hidden" name="id" value="{{ m.pk }}"><button class="pbtn sm" name="op" value="unpublish">Retirer</button></form>
           </div>
         </div>

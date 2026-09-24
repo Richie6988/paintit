@@ -684,3 +684,17 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 .lib-carousel .lib-tile{flex:0 0 auto;width:200px;position:relative;border-radius:14px;overflow:hidden;box-shadow:0 6px 18px rgba(18,34,79,.12);transition:transform .15s}
 .lib-carousel .lib-tile:hover{transform:translateY(-4px)}
 .lib-carousel .lib-tile img{width:100%;aspect-ratio:40/50;object-fit:cover;display:block}
+
+/* ===== Pied de page (centre, sobre) ===== */
+.foot{margin-top:56px;background:#0f1836;color:#c8d2ea;border-top:1px solid rgba(255,255,255,.06)}
+.foot .foot-in{max-width:760px;margin:0 auto;padding:30px 20px 22px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.foot .foot-logo{display:inline-flex;align-items:center;gap:9px;text-decoration:none}
+.foot .foot-logo img{height:26px}
+.foot .foot-logo span{color:#fff;font-weight:800;font-size:1.08rem;letter-spacing:.02em}
+.foot .foot-motto{display:block;flex:none;margin:0;color:#93a1c4;font-size:.88rem;line-height:1.5;max-width:520px}
+.foot .foot-nav{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:0}
+.foot .foot-nav a{color:#dbe3f6;text-decoration:none;font-weight:600;font-size:.88rem;padding:4px 14px;transition:color .15s}
+.foot .foot-nav a+a{border-left:1px solid rgba(255,255,255,.18)}
+.foot .foot-nav a:hover{color:#fff}
+.foot .foot-bottom{border-top:1px solid rgba(255,255,255,.1);padding:14px 0 0;margin-top:6px;width:100%;color:#7e8bb0;font-size:.76rem}
+@media(max-width:640px){.foot .foot-in{padding:24px 16px 18px}.foot .foot-motto{font-size:.82rem}}

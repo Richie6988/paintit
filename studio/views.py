@@ -43,16 +43,26 @@ def home(request):
     # carrousel du home : modeles GRATUITS tires au hasard dans toute la galerie
     lib = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-", price=0)
                .order_by("?")[:12])
-    showdir = os.path.join(settings.BASE_DIR, "studio", "static", "studio", "showcase")
-    slugs = []
-    if os.path.isdir(showdir):
-        for f in sorted(os.listdir(showdir)):
-            if f.endswith("_pbn.png"):
-                sg = f[:-8]
-                if os.path.exists(os.path.join(showdir, sg + "_template.png")):
-                    slugs.append(sg)
+    from django.templatetags.static import static as _static
+    lib_slugs = dict(DigitalCanvas.objects.filter(email="__library__").exclude(showcase_slug="")
+                     .values_list("showcase_slug", "in_slider"))
+    slides = []
+    # assets du home : livres avec le code (static) + ajoutes depuis l'admin (media, sans collectstatic)
+    for folder, url_for in ((os.path.join(settings.BASE_DIR, "studio", "static", "studio", "showcase"),
+                             lambda n: _static("studio/showcase/" + n)),
+                            (os.path.join(settings.MEDIA_ROOT, "showcase"),
+                             lambda n: settings.MEDIA_URL + "showcase/" + n)):
+        if os.path.isdir(folder):
+            for f in sorted(os.listdir(folder)):
+                if f.endswith("_pbn.png") and os.path.exists(os.path.join(folder, f[:-8] + "_template.png")) \
+                        and (not lib_slugs or lib_slugs.get(f[:-8], False)):   # choix « slider » du Catalogue
+                    try:
+                        slides.append({"p": url_for(f), "t": url_for(f[:-8] + "_template.png")})
+                    except ValueError:   # absent du manifest (collectstatic pas encore passe)
+                        pass
     return render(request, "studio/home.html",
-                  {"library_preview": lib, "showcase_slugs": _json.dumps(slugs)})
+                  {"library_preview": lib, "showcase_slides": _json.dumps(slides),
+                   "first_slide": next((x for x in slides if "moto" in x["p"]), slides[0] if slides else None)})
 
 
 # ---------------- Upload / preview ----------------
@@ -2108,6 +2118,11 @@ def erp_catalogue(request):
             m.price = price(request.POST.get("price"))
             m.save(update_fields=["title", "category", "price"])
             messages.success(request, "« %s » mis à jour." % (m.title or m.uid))
+        elif op == "slider" and m:
+            m.in_slider = not m.in_slider
+            m.save(update_fields=["in_slider"])
+            messages.success(request, "« %s » %s le slider de l'accueil." % (m.title or m.uid,
+                                                                            "ajouté dans" if m.in_slider else "retiré du"))
         elif op == "unpublish" and m:
             from .management.commands.seed_library import retire_model
             retire_model(m.uid)
@@ -2173,7 +2188,8 @@ def erp_catalogue(request):
     stats = {"models": lib.count(), "free": lib.filter(price=0).count(), "paid": lib.filter(price__gt=0).count(),
              "players": sum(owners.get(u, 0) for u in lib.values_list("uid", flat=True)),
              "sales": sum(owners.get(u, 0) for u in lib.filter(price__gt=0).values_list("uid", flat=True)),
-             "customer": DigitalCanvas.objects.exclude(email=LIB_EMAIL).exclude(source="library").count()}
+             "customer": DigitalCanvas.objects.exclude(email=LIB_EMAIL).exclude(source="library").count(),
+             "slider": lib.filter(in_slider=True).count()}
     stats["revenue"] = round(sum(float(p) * owners.get(u, 0) for u, p in lib.filter(price__gt=0)
                                  .values_list("uid", "price")), 2)
     if tab == "customer":
@@ -2190,6 +2206,8 @@ def erp_catalogue(request):
             qs = qs.filter(Q(title__icontains=q) | Q(uid__icontains=q) | Q(category__icontains=q))
         if cat:
             qs = qs.filter(category=cat)
+        if request.GET.get("slider") == "1":
+            qs = qs.filter(in_slider=True)
         if pf == "free":
             qs = qs.filter(price=0)
         elif pf == "paid":
@@ -2200,11 +2218,19 @@ def erp_catalogue(request):
         if sort == "popular":
             items.sort(key=lambda m: -m.players)
     from .pipeline import source_file
+    shows = set()
+    for folder in (os.path.join(settings.BASE_DIR, "studio", "static", "studio", "showcase"),
+                   os.path.join(settings.MEDIA_ROOT, "showcase")):
+        if os.path.isdir(folder):
+            shows.update(f[:-8] for f in os.listdir(folder) if f.endswith("_pbn.png"))
+    for it in items:
+        it.has_showcase = bool(getattr(it, "showcase_slug", "")) and it.showcase_slug in shows
     for it in items:   # original perdu (bug de regeneration corrige) : pas de lien mort
         it.has_source = bool(source_file(os.path.join(settings.MEDIA_ROOT, "orders", it.uid), it.uid))
     return render(request, "admin/erp_catalogue.html", {
         **_admin.site.each_context(request), "tab": tab, "items": items, "q": q, "cat": cat, "pf": pf,
-        "sort": sort, "cats": cats, "stats": stats, "erp_section": "catalogue"})
+        "sort": sort, "cats": cats, "stats": stats, "slider": request.GET.get("slider", ""),
+        "erp_section": "catalogue"})
 
 
 

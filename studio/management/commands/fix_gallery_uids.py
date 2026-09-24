@@ -19,6 +19,7 @@ class Command(BaseCommand):
     def handle(self, *args, **opts):
         dry = opts["dry_run"]
         root = os.path.join(settings.MEDIA_ROOT, "orders")
+        self._move_admin_uploads(dry)
         self._purge_lib(root, dry)
         self._convert_published(dry)
         olds = sorted(set(DigitalCanvas.objects.filter(uid__startswith=OLD).values_list("uid", flat=True)))
@@ -79,3 +80,34 @@ class Command(BaseCommand):
                 m.delete()
             except Exception as exc:
                 self.stdout.write(self.style.ERROR("   echec : %s" % exc))
+
+    def _move_admin_uploads(self, dry):
+        """Images ajoutees depuis l'admin AVANT le correctif : rangees dans le dossier du code
+        (fichiers non suivis par git) -> deplacees dans media/ (donnees du site)."""
+        import subprocess
+        from studio.management.commands.seed_library import (gallery_dir, showcase_dir,
+                                                             media_gallery_dir, media_showcase_dir)
+        base = str(settings.BASE_DIR)
+        for src_root, dst_root in ((gallery_dir(), media_gallery_dir()), (showcase_dir(), media_showcase_dir())):
+            if not os.path.isdir(src_root):
+                continue
+            try:
+                tracked = set(subprocess.run(["git", "ls-files", "-z", "--", os.path.relpath(src_root, base)],
+                                             cwd=base, capture_output=True, check=True).stdout.decode().split("\0"))
+            except Exception:
+                self.stdout.write(self.style.WARNING("git indisponible : deplacement des images admin ignore"))
+                return
+            for r, dirs, files in os.walk(src_root):
+                for fn in files:
+                    full = os.path.join(r, fn)
+                    if os.path.relpath(full, base).replace(os.sep, "/") in tracked:
+                        continue
+                    dst = os.path.join(dst_root, os.path.relpath(full, src_root))
+                    self.stdout.write("image admin -> media : %s" % os.path.relpath(full, base))
+                    if not dry:
+                        os.makedirs(os.path.dirname(dst), exist_ok=True)
+                        shutil.move(full, dst)
+            if not dry:   # dossiers vides laisses par le deplacement
+                for r, dirs, files in sorted(os.walk(src_root), key=lambda x: -len(x[0])):
+                    if r != src_root and not os.listdir(r):
+                        os.rmdir(r)

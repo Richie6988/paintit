@@ -47,11 +47,12 @@
       <a href="{% url 'studio:home' %}" class="foot-logo"><img src="{% static 'studio/img/icon.svg' %}" alt=""><span>PaintIt</span></a>
       <p class="foot-motto">{% trans "Peinture par numéros personnalisée, fabriquée à partir de vos photos." %}</p>
       <nav class="foot-nav">
+        <a href="{% url 'studio:gallery' %}">{% trans "Galerie" %}</a>
         <a href="{% url 'studio:contact' %}">{% trans "Contact" %}</a>
         <a href="{% url 'studio:privacy' %}">{% trans "Confidentialité" %}</a>
       </nav>
+      <div class="foot-bottom">&copy; {% now "Y" %} PaintIt · {% trans "Tous droits réservés." %}</div>
     </div>
-    <div class="foot-bottom">&copy; {% now "Y" %} PaintIt. {% trans "Tous droits réservés." %}</div>
   </footer>
 </body>
 </html>

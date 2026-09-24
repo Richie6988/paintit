@@ -22,11 +22,27 @@ def _humanize(stem):
 
 
 def gallery_dir():
+    """Images de galerie livrees avec le code (depot git)."""
     return os.path.join(settings.BASE_DIR, "studio", "static", "studio", "gallery")
 
 
 def showcase_dir():
     return os.path.join(settings.BASE_DIR, "studio", "static", "studio", "showcase")
+
+
+def media_gallery_dir():
+    """Images ajoutees depuis l'admin : DONNEES du site (media/, sauvegardees avec lui, hors git)."""
+    return os.path.join(settings.MEDIA_ROOT, "gallery")
+
+
+def media_showcase_dir():
+    """Assets du home des modeles ajoutes depuis l'admin : servis tout de suite (pas de collectstatic)."""
+    return os.path.join(settings.MEDIA_ROOT, "showcase")
+
+
+def gallery_sources():
+    """[(dossier galerie, dossier assets home)] : code puis admin."""
+    return [(gallery_dir(), showcase_dir()), (media_gallery_dir(), media_showcase_dir())]
 
 
 def item_for(full, base, prefix="gal-", default_colors=24):
@@ -62,10 +78,10 @@ def seed_item(it, showdir=None, log=None):
     m, _ = DigitalCanvas.objects.update_or_create(
         email=LIB, uid=it["uid"],
         defaults=dict(colors=it["colors"], orientation="paysage" if it.get("landscape") else "portrait",
-                      width_cm=w, height_cm=h, source="library"),
+                      width_cm=w, height_cm=h, source="library", showcase_slug=it["slug"]),
         create_defaults=dict(title=it["title"], category=it["category"], price=it["price"], colors=it["colors"],
                              orientation="paysage" if it.get("landscape") else "portrait",
-                             width_cm=w, height_cm=h, source="library"))
+                             width_cm=w, height_cm=h, source="library", showcase_slug=it["slug"]))
     try:
         sd = showdir or showcase_dir()
         os.makedirs(sd, exist_ok=True)
@@ -80,7 +96,7 @@ def seed_image(src_path, title, category="", price=0, colors=24, landscape=False
     """Admin -> galerie : range l'image dans gallery/<Categorie>/ selon la convention de nommage
     (comme si on l'avait deposee a la main) puis la seed. -> fiche DigitalCanvas."""
     import shutil
-    base = gallery_dir()
+    base = media_gallery_dir()
     folder = os.path.join(base, _slugify(category).replace("-", " ").title().replace(" ", "-")) if category else base
     os.makedirs(folder, exist_ok=True)
     ext = os.path.splitext(src_path)[1].lower()
@@ -93,7 +109,7 @@ def seed_image(src_path, title, category="", price=0, colors=24, landscape=False
             uid=item_for(dst, base)["uid"]).exists():
         dst = os.path.join(folder, "%s-%d%s%s" % (stem, n, suffix, ext)); n += 1
     shutil.copyfile(src_path, dst)
-    m = seed_item(item_for(dst, base, "gal-", int(colors)))
+    m = seed_item(item_for(dst, base, "gal-", int(colors)), media_showcase_dir())
     DigitalCanvas.objects.filter(pk=m.pk).update(title=title[:80], category=(category or "Galerie")[:40],
                                                  price=price or 0)   # libelles exacts (accents...)
     m.refresh_from_db()
@@ -104,17 +120,17 @@ def retire_model(uid):
     """Retire l'image source d'un modele de gallery/ (-> gallery/_retires/) : un futur seed_library
     ne le recree pas. -> chemin deplace ou None."""
     import shutil
-    base = gallery_dir()
-    for root, dirs, files in os.walk(base):
-        dirs[:] = [d for d in dirs if not d.startswith("_")]
-        for fn in files:
-            full = os.path.join(root, fn)
-            if fn.lower().endswith(EXTS) and item_for(full, base)["uid"] == uid:
-                arch = os.path.join(base, "_retires")
-                os.makedirs(arch, exist_ok=True)
-                dst = os.path.join(arch, fn)
-                shutil.move(full, dst)
-                return dst
+    for base, _sd in gallery_sources():
+        for root, dirs, files in os.walk(base):
+            dirs[:] = [d for d in dirs if not d.startswith("_")]
+            for fn in files:
+                full = os.path.join(root, fn)
+                if fn.lower().endswith(EXTS) and item_for(full, base)["uid"] == uid:
+                    arch = os.path.join(base, "_retires")
+                    os.makedirs(arch, exist_ok=True)
+                    dst = os.path.join(arch, fn)
+                    shutil.move(full, dst)
+                    return dst
     return None
 
 
@@ -136,9 +152,13 @@ class Command(BaseCommand):
         default_colors = int(opts["colors"])
 
         # gallery/ = source unique : modeles de la galerie (uid gal-xxx) ET assets du home
-        items = self._scan(gallery, "gal-", default_colors)
+        items = []
+        for gdir, sdir in gallery_sources():
+            for it in self._scan(gdir, "gal-", default_colors):
+                it["showdir"] = sdir
+                items.append(it)
         if not items:
-            self.stdout.write(self.style.WARNING("Aucune image dans %s" % gallery)); return
+            self.stdout.write(self.style.WARNING("Aucune image dans %s ni %s" % (gallery, media_gallery_dir()))); return
 
         n = 0
         for it in items:
@@ -146,7 +166,7 @@ class Command(BaseCommand):
             self.stdout.write("Generation %s (%s, %d couleurs%s)..." % (
                 it["title"], it["category"], it["colors"], tag))
             try:
-                seed_item(it, showdir, log=self.stdout.write)
+                seed_item(it, it.get("showdir") or showdir, log=self.stdout.write)
                 n += 1
             except Exception as e:
                 self.stdout.write(self.style.ERROR("Echec %s : %s" % (it["title"], e)))
