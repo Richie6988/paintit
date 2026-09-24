@@ -218,6 +218,24 @@ def build(order, shipping):
     with open(os.path.join(d, "%s_order.json" % uid), "w", encoding="utf-8") as f:
         json.dump(order_json, f, ensure_ascii=False, indent=2)
 
+    # Version FOURNISSEUR : uniquement ce qu'il faut pour produire et livrer
+    # (ni statut, ni langue du poster, ni nom de fournisseur, ni type produit, ni prix).
+    oi = order_json["order_information"]
+    supplier_json = {
+        "consignee_information": order_json["consignee_information"],
+        "order_information": {
+            "uid": uid, "created_at": oi["created_at"],
+            "format": oi["format"], "orientation": oi["orientation"],
+            "width_cm": oi["width_cm"], "height_cm": oi["height_cm"],
+            "colors_count": oi["colors_count"], "brushes": oi["brushes"],
+            "files": {"template_pdf": "%s_template.pdf" % uid, "template_tiff": "%s_template.tiff" % uid,
+                      "template_svg": "%s_template.svg" % uid, "poster_png": "%s_poster.png" % uid},
+        },
+        "color_specifications": order_json["color_specifications"],
+    }
+    with open(os.path.join(d, "%s_supplier.json" % uid), "w", encoding="utf-8") as f:
+        json.dump(supplier_json, f, ensure_ascii=False, indent=2)
+
     # Nettoyage : un seul JSON, pas de doublons, pas d'intermediaires.
     for junk in (f"{uid}_colors.json", f"{uid}_palette.png", "order.json",
                  f"{uid}_poster.svg", f"{uid}_poster.tiff", f"{uid}_preview.tiff"):
@@ -225,4 +243,4 @@ def build(order, shipping):
         if os.path.exists(pth):
             os.remove(pth)
 
-    return {"dir": d, "files": [f"{uid}_template.svg", f"{uid}_poster.png", f"{uid}_order.json"]}
+    return {"dir": d, "files": [f"{uid}_template.svg", f"{uid}_poster.png", f"{uid}_supplier.json"]}

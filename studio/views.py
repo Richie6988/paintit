@@ -991,10 +991,12 @@ def _fulfill(order, shipping):
     return o, manifest, supplier_result
 
 
-SUPPLIER_FILES = [("template_tiff", "{uid}_template.tiff", "Toile numérotée TIFF (impression)"),
-                  ("template_svg", "{uid}_template.svg", "Toile numérotée SVG (vectoriel)"),
+SUPPLIER_FILES = [("template_pdf", "{uid}_template.pdf", "Toile numérotée PDF vectoriel (impression)"),
+                  ("template_tiff", "{uid}_template.tiff", "Toile numérotée TIFF 600 dpi"),
+                  ("template_svg", "{uid}_template.svg", "Toile numérotée SVG (source)"),
                   ("poster", "{uid}_poster.png", "Poster (notice + palette + QR)"),
-                  ("order_json", "{uid}_order.json", "Bon de commande order.json")]
+                  ("supplier_json", "{uid}_supplier.json", "Fiche fournisseur JSON (sans prix)"),
+                  ("order_json", "{uid}_order.json", "Bon de commande interne (order.json)")]
 
 
 def supplier_files_status(uid):
@@ -1010,12 +1012,12 @@ def ensure_supplier_files(o, shipping, force=False, user="auto"):
     uid = o.get("uid")
     st = {f["key"]: f["ok"] for f in supplier_files_status(uid)}
     errors = []
-    if force or not (st["poster"] and st["order_json"]):
+    if force or not (st["poster"] and st["order_json"] and st["supplier_json"]):
         try:
             fulfillment.build(o, shipping)
         except Exception as exc:
             logger.exception("Poster/order.json %s", uid); errors.append("poster/order.json : %s" % exc)
-    if force or not st["template_tiff"]:
+    if force or not (st["template_tiff"] and st["template_pdf"]):
         try:
             export_tiff(uid)
         except Exception as exc:
@@ -1024,7 +1026,7 @@ def ensure_supplier_files(o, shipping, force=False, user="auto"):
     row = Order.objects.filter(uid=uid).first()
     if row:
         OrderEvent.objects.create(order=row, kind="action", user=user, text=(
-            "Dossier fournisseur prêt (TIFF, SVG, poster, order.json)" if not missing
+            "Dossier fournisseur prêt (PDF vectoriel, TIFF 600 dpi, poster, fiches JSON)" if not missing
             else "Dossier fournisseur incomplet : manque %s%s" % (", ".join(missing),
                                                                  (" · " + " ; ".join(errors)) if errors else ""))[:300])
     return missing
@@ -1984,10 +1986,11 @@ def erp_supplier(request, pk):
         **_admin.site.each_context(request), "sup": sup, "tab": tab, "rows": rows,
         "tabs": [(k, l, q.count()) for k, l, q in tabs], "events": events,
         "iban": mask(sup.iban), "api_key": mask(sup.api_key, 3),
-        "files": [lbl for flag, lbl in [("want_source", "Photo source"), ("want_template_svg", "Toile numérotée .svg"),
+        "files": [lbl for flag, lbl in [("want_template_pdf", "Toile numérotée PDF vectoriel"),
+                                        ("want_source", "Photo source"), ("want_template_svg", "Toile numérotée .svg"),
                                         ("want_template_tiff", "Toile numérotée .tiff"),
                                         ("want_preview_svg", "Aperçu colorié .svg"), ("want_poster", "Poster PNG"),
-                                        ("want_order_json", "Order JSON")] if getattr(sup, flag, False)],
+                                        ("want_order_json", "Fiche JSON (sans prix)")] if getattr(sup, flag, False)],
         "unassigned": erp.unassigned_orders().count(), "erp_section": "suppliers"})
 
 
@@ -2029,7 +2032,8 @@ def erp_supplier_edit(request, pk=None):
         ("Intégration", "Comment les commandes lui sont transmises : e-mail (liens des fichiers) ou API (POST JSON, Bearer).",
          ["integration", "auto_dispatch", "email", "api_url", "api_key"]),
         ("Fichiers transmis", "Fichiers joints à chaque commande.",
-         ["want_source", "want_template_svg", "want_template_tiff", "want_preview_svg", "want_poster", "want_order_json"]),
+         ["want_template_pdf", "want_template_tiff", "want_template_svg", "want_poster", "want_order_json",
+          "want_source", "want_preview_svg"]),
         ("Contact", "", ["contact_name", "contact_email", "phone", "address"]),
         ("Production & conditions", "", ["lead_time_days", "incoterms", "production_notes", "pricing", "terms"]),
         ("Banque", "Coordonnées de paiement du fournisseur.", ["bank_name", "iban", "bic"]),
@@ -2220,7 +2224,8 @@ def _order_files(o):
                 g = "game"
             elif "_digipaint" in low:
                 g = "game"
-            elif ext in ("tiff", "tif") or "_poster" in low or (ext == "svg" and "_template" in low):
+            elif ext in ("tiff", "tif") or "_poster" in low or "_supplier.json" in low or \
+                    (ext in ("svg", "pdf") and "_template" in low):
                 g = "print"
             elif ext == "json":
                 g = "data"
@@ -2229,9 +2234,11 @@ def _order_files(o):
             else:
                 g = "other"
             label = {"_source_": "Photo originale", "_preview.": "Toile coloriée", "_template.": "Toile numérotée",
-                     "_poster": "Poster (notice + palette)", "_palette": "Palette", "_order.json": "Bon de commande (order.json)",
-                     "_colors.json": "Couleurs (JSON)", "_digipaint": "Toile jouable", "_preview_": "Aperçu"}
-            nice = next((v for k, v in label.items() if k in low), name)
+                     "_poster": "Poster (notice + palette)", "_palette": "Palette", "_order.json": "Bon de commande interne (order.json)",
+                     "_colors.json": "Couleurs (JSON)", "_supplier.json": "Fiche fournisseur (sans prix)",
+                     "_template.pdf": "Toile numérotée PDF vectoriel", "_template.tiff": "Toile numérotée TIFF 600 dpi", "_digipaint": "Toile jouable", "_preview_": "Aperçu"}
+            hits = [k for k in label if k in low]
+            nice = label[max(hits, key=len)] if hits else name   # cle la plus specifique
             out[g].append({"name": name, "folder": folder, "label": nice, "ext": ext.upper(),
                            "size": os.path.getsize(p), "mtime": os.path.getmtime(p),
                            "image": ext in ("png", "jpg", "jpeg", "webp") or (ext == "svg" and "_digipaint" not in low)})
@@ -2381,6 +2388,7 @@ def erp_order(request, pk):
         ad = MarketingAd.objects.filter(token=o.ad_ref).first()
     return render(request, "admin/erp_order.html", {
         **_admin.site.each_context(request), "o": o, "files": files, "visuals": visuals, "have": have, "sfiles": supplier_files_status(o.uid),
+        "sfiles_ok": all(f["ok"] for f in supplier_files_status(o.uid)),
         "has_tiff": any(f["ext"] in ("TIFF", "TIF") for _k, _l, fs in files for f in fs),
         "has_json": any(f["name"].endswith("_order.json") for _k, _l, fs in files for f in fs),
         "events": o.events.all()[:60], "flags": flags, "others": others, "ad": ad,

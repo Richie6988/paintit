@@ -77,7 +77,7 @@
             </div></details></div>
         <div class="sfiles">
           <div class="sf-h"><b>Dossier fournisseur</b>
-            {% if sfiles.0.ok and sfiles.1.ok and sfiles.2.ok and sfiles.3.ok %}<span class="bdg2 ok">Complet</span>{% else %}<span class="bdg2 err">Incomplet</span>{% endif %}</div>
+            {% if sfiles_ok %}<span class="bdg2 ok">Complet</span>{% else %}<span class="bdg2 err">Incomplet</span>{% endif %}</div>
           {% for f in sfiles %}
           <div class="sf-row {% if not f.ok %}miss{% endif %}">
             <span class="ck">{% if f.ok %}✓{% else %}✕{% endif %}</span>
@@ -86,7 +86,7 @@
             {% else %}<span class="muted">manquant</span>{% endif %}
           </div>
           {% endfor %}
-          {% if not sfiles.0.ok or not sfiles.1.ok or not sfiles.2.ok or not sfiles.3.ok %}
+          {% if not sfiles_ok %}
           <form method="post" style="margin-top:8px">{% csrf_token %}<button class="pbtn pri" name="op" value="missing">Générer les fichiers manquants</button>
             <span class="muted">Normalement produits automatiquement au paiement ; cette commande date d'avant le correctif ou la génération a échoué (voir l'historique).</span></form>
           {% endif %}

@@ -393,7 +393,8 @@ class Supplier(models.Model):
     want_template_tiff = models.BooleanField("Toile numerotee .tiff", default=True)
     want_preview_svg = models.BooleanField("Apercu colorie .svg", default=True)
     want_poster = models.BooleanField("Poster (PNG)", default=True)
-    want_order_json = models.BooleanField("Order JSON (consignee/order/couleurs)", default=True)
+    want_order_json = models.BooleanField("Fiche commande JSON (livraison/format/couleurs, sans prix)", default=True)
+    want_template_pdf = models.BooleanField("Toile numerotee PDF vectoriel", default=True)
     # Process
     lead_time_days = models.PositiveIntegerField("Delai production (jours)", default=5)
     incoterms = models.CharField("Incoterms / livraison", max_length=60, blank=True, default="")
@@ -417,10 +418,11 @@ class Supplier(models.Model):
 
     def wanted_files(self, uid):
         """Noms de fichiers coches (fixes). La photo source (nom variable) est ajoutee a part."""
-        m = [("want_template_svg", "%s_template.svg"), ("want_template_tiff", "%s_template.tiff"),
+        m = [("want_template_pdf", "%s_template.pdf"),
+             ("want_template_svg", "%s_template.svg"), ("want_template_tiff", "%s_template.tiff"),
              ("want_preview_svg", "%s_preview.svg"),
              ("want_poster", "%s_poster.png"),
-             ("want_order_json", "%s_order.json")]
+             ("want_order_json", "%s_supplier.json")]
         return [(pat % uid) for flag, pat in m if getattr(self, flag, False)]
 
     class Meta:

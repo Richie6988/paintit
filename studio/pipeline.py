@@ -194,6 +194,15 @@ def export_tiff(uid, media_root=None, dpi=600):
     from django.conf import settings as _st
     root = media_root or _st.MEDIA_ROOT
     d = os.path.join(root, "orders", uid)
+    # Moteur d'impression vectoriel (PDF vectoriel + TIFF 600 dpi), sans dependance systeme
+    try:
+        from . import printfiles
+        hq = printfiles.export(uid, root, dpi=dpi)
+        if hq:
+            return list(hq.values())
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Rendu impression HQ %s", uid)
     made = {}
 
     def _save(img, out_name):
