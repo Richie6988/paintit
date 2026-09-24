@@ -151,6 +151,7 @@ ADDRESS_API_URL = os.environ.get("ADDRESS_API_URL", "")
 # --- E-mail ---
 EMAIL_BACKEND = os.environ.get("DJANGO_EMAIL_BACKEND",
                                "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "15"))   # jamais de requete bloquee par un SMTP lent
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.hostinger.com")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "465"))
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "contact@paintit.click")

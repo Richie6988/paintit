@@ -5,6 +5,7 @@ import threading
 import uuid
 
 from django.conf import settings
+from django.utils import timezone
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -15,7 +16,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 
 from . import fulfillment, supplier, discounts, address, emails, payments, receipts, jobs, genqueue
 from .forms import UploadForm, DeliveryForm, ContactForm, FORMATS, dimensions
-from .models import Order, Pricing, DigitalCanvas, EmailCode
+from .models import Order, OrderEvent, Pricing, DigitalCanvas, EmailCode
 from .pipeline import generate, compute_price, price_cfg
 
 PHASE_LABELS = {
@@ -912,17 +913,20 @@ def _build_supplier_assets(o, shipping):
         logger.exception("poster %s", uid)
 
 
-def _notify_supplier(o, shipping):
+def _notify_supplier(o, shipping, sup=None, user=""):
     """Plug & play : route la commande vers le fournisseur connecte au checkout
-    (e-mail avec liens fichiers, ou POST JSON API). Ne casse jamais la commande."""
+    (e-mail avec liens fichiers, ou POST JSON API). Ne casse jamais la commande.
+    Trace le routage (Order.supplier), la sante de l'integration (Supplier.last_sync_*)
+    et un evenement dans le journal de la commande. Renvoie True si transmis."""
+    from django.utils import timezone
+    from .models import Supplier, OrderEvent
     try:
-        from .models import Supplier
-        sup = Supplier.for_checkout("kit")
+        sup = sup or Supplier.for_checkout("kit")
     except Exception:
         logger.exception("Lecture fournisseur (migration manquante ?)")
-        return
+        return False
     if not sup:
-        return
+        return False
     uid = o.get("uid")
     base = settings.SITE_URL + settings.MEDIA_URL + "orders/%s/" % uid
     files = {name: base + name for name in sup.wanted_files(uid)}
@@ -931,7 +935,9 @@ def _notify_supplier(o, shipping):
         d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
         for sp in _glob.glob(os.path.join(d, "%s_source_*" % uid)):
             fn = os.path.basename(sp); files[fn] = base + fn; break
+    ok, err, channel = False, "", ""
     if sup.integration == "api" and sup.api_url:
+        channel = "API"
         try:
             import json as _json, urllib.request
             payload = _json.dumps({
@@ -943,9 +949,12 @@ def _notify_supplier(o, shipping):
                 "Content-Type": "application/json",
                 "Authorization": "Bearer " + (sup.api_key or "")})
             urllib.request.urlopen(req, timeout=15)
-        except Exception:
+            ok = True
+        except Exception as exc:
+            err = str(exc)[:300]
             logger.exception("API fournisseur %s (%s)", sup.name, uid)
     elif sup.email:
+        channel = "e-mail"
         try:
             from django.core.mail import EmailMessage
             body = ("Nouvelle commande %s\n\nFormat : %s (%sx%s cm), %s couleurs\n\n"
@@ -955,10 +964,25 @@ def _notify_supplier(o, shipping):
                        shipping.get("full_name", ""), shipping.get("address1", ""),
                        shipping.get("postal_code", ""), shipping.get("city", ""),
                        shipping.get("country", ""), shipping.get("phone", "")))
-            EmailMessage("PaintIt , commande %s" % uid, body,
-                         settings.DEFAULT_FROM_EMAIL, [sup.email]).send(fail_silently=True)
-        except Exception:
+            ok = EmailMessage("PaintIt , commande %s" % uid, body,
+                              settings.DEFAULT_FROM_EMAIL, [sup.email]).send(fail_silently=False) > 0
+        except Exception as exc:
+            err = str(exc)[:300]
             logger.exception("Mail fournisseur %s (%s)", sup.name, uid)
+    else:
+        err = "Aucun canal configure (e-mail ou URL API manquant)"
+    try:
+        Supplier.objects.filter(pk=sup.pk).update(last_sync_at=timezone.now(), last_sync_ok=ok,
+                                                  last_sync_error="" if ok else err)
+        order = Order.objects.filter(uid=uid).first()
+        if order:
+            Order.objects.filter(pk=order.pk).update(supplier=sup)
+            OrderEvent.objects.create(order=order, kind="action", user=user or "",
+                                      text=("Transmise a %s (%s)" % (sup.name, channel)) if ok
+                                      else ("Echec transmission %s : %s" % (sup.name, err))[:300])
+    except Exception:
+        logger.exception("Trace transmission %s", uid)
+    return ok
 
 
 def _safe_export_tiff(uid):
@@ -1536,6 +1560,7 @@ def marketing_page(request):
                 else:
                     gif = ad.texts
             ctx.update(uid=base.image_uid, campaign=base.campaign, link=base.target_url)
+            ctx["results"] = ads     # apercus de la variante dupliquee
     ctx["promos"] = [{"key": k, "label": lbl, "slots": marketing.template_slots(k, texts.get(k))}
                      for k, lbl in marketing.TEMPLATES]
     ctx["gif_slots"] = marketing.gif_slots(gif)
@@ -1588,17 +1613,26 @@ def marketing_page(request):
 _BOT_RX = None
 
 
-def _countable(request, ad, what):
-    """Compte 1x par session et par pub ; ignore le staff et les robots (apercus de liens)."""
+def _visitor_kind(request):
+    """'bot' (apercus de liens / robots), 'staff' (tests internes) ou 'human'."""
     global _BOT_RX
     import re as _re
     if _BOT_RX is None:
-        _BOT_RX = _re.compile(r"bot|crawl|spider|preview|facebookexternalhit|slurp|whatsapp|telegram|"
-                              r"discord|embedly|curl|wget|python-requests|headless", _re.I)
-    if getattr(request, "user", None) and request.user.is_authenticated and request.user.is_staff:
-        return False
+        _BOT_RX = _re.compile(r"bot\b|bot/|crawl|spider|facebookexternalhit|facebookcatalog|slurp|"
+                              r"whatsapp|telegrambot|discordbot|embedly|skypeuripreview|curl/|wget/|"
+                              r"python-requests|headlesschrome", _re.I)
     if _BOT_RX.search(request.META.get("HTTP_USER_AGENT", "")):
-        return False
+        return "bot"
+    if request.method == "HEAD":
+        return "bot"
+    user = getattr(request, "user", None)
+    if user and user.is_authenticated and user.is_staff:
+        return "staff"
+    return "human"
+
+
+def _first_time(request, ad, what):
+    """True la 1re fois pour ce visiteur (session) et cette pub."""
     k = "ad_%s_%s" % (what, ad.pk)
     if request.session.get(k):
         return False
@@ -1608,19 +1642,30 @@ def _countable(request, ad, what):
 
 def ad_click(request, token):
     from django.db.models import F
+    from django.utils import timezone
     from urllib.parse import urlencode, urlparse, parse_qsl, urlunparse
     from .models import MarketingAd
     ad = MarketingAd.objects.filter(token=token).first()
     if not ad:
         return redirect("studio:home")
-    if _countable(request, ad, "c"):
-        MarketingAd.objects.filter(pk=ad.pk).update(clicks=F("clicks") + 1)
-    request.session["ad_ref"] = ad.token          # attribution de la vente (dernier clic)
+    who = _visitor_kind(request)
+    if who == "human":
+        upd = {"clicks": F("clicks") + 1, "last_click_at": timezone.now()}
+        if _first_time(request, ad, "c"):
+            upd["unique_clicks"] = F("unique_clicks") + 1
+        MarketingAd.objects.filter(pk=ad.pk).update(**upd)
+    elif who == "staff":   # tests internes : visibles mais hors statistiques A/B
+        MarketingAd.objects.filter(pk=ad.pk).update(test_clicks=F("test_clicks") + 1,
+                                                     last_click_at=timezone.now())
+    if who != "bot":
+        request.session["ad_ref"] = ad.token          # attribution de la vente (dernier clic)
     u = urlparse(ad.target_url or settings.SITE_URL + "/create/")
     q = dict(parse_qsl(u.query))
     q.update({"utm_source": "paintit_ad", "utm_medium": ad.fmt, "utm_campaign": ad.campaign or ad.image_uid,
               "utm_content": "%s-%s" % (ad.variant, ad.kind)})
-    return redirect(urlunparse(u._replace(query=urlencode(q))))
+    resp = redirect(urlunparse(u._replace(query=urlencode(q))))
+    resp["Cache-Control"] = "no-store"   # jamais de redirection mise en cache (sinon clics perdus)
+    return resp
 
 
 @xframe_options_exempt   # une pub peut etre integree (iframe) sur un site partenaire
@@ -1631,7 +1676,7 @@ def ad_view(request, token):
     path = ad and os.path.join(settings.MEDIA_ROOT, "marketing", ad.image_uid, ad.file_name)
     if not ad or not os.path.exists(path):
         raise Http404
-    if _countable(request, ad, "v"):
+    if _visitor_kind(request) == "human" and _first_time(request, ad, "v"):
         MarketingAd.objects.filter(pk=ad.pk).update(views=F("views") + 1)
     ctype = "image/gif" if ad.fmt == "gif" else "text/html; charset=utf-8"
     with open(path, "rb") as fh:
@@ -1676,6 +1721,7 @@ def marketing_gallery(request):
         g["ads"].append(ad)
         g["variants"].setdefault(ad.variant, []).append(ad)
         g["views"] += ad.views; g["clicks"] += ad.clicks; g["orders"] += ad.orders; g["revenue"] += ad.revenue
+        g["tests"] = g.get("tests", 0) + ad.test_clicks
         g["campaign"] = g["campaign"] or ad.campaign
     # Gagnant par gabarit (au moins 2 variantes, meilleur taux de clic avec >= 20 vues, sinon plus de clics)
     for g in groups.values():
@@ -1686,21 +1732,24 @@ def marketing_gallery(request):
         for kind, ads in by_kind.items():
             ads.sort(key=lambda a: a.variant)
             if len(ads) >= 2:
-                ranked = sorted(ads, key=lambda a: ((a.ctr or 0) if a.views >= 20 else -1, a.clicks, a.orders),
+                ranked = sorted(ads, key=lambda a: ((a.ctr or 0) if a.views >= 20 else -1, a.unique_clicks, a.orders),
                                 reverse=True)
                 if ranked[0].clicks > 0:
                     ranked[0].winner = True
             g["kinds"].append({"kind": kind, "label": ads[0].label, "ads": ads})
         order = ["slider", "shiny", "zoom", "gif_square", "gif_portrait", "gif_story"]
         g["kinds"].sort(key=lambda k: order.index(k["kind"]) if k["kind"] in order else 99)
-        g["ctr"] = round(g["clicks"] / g["views"] * 100, 1) if g["views"] else None
+        g["uclicks"] = sum(a.unique_clicks for a in g["ads"])
+        g["ctr"] = round(min(g["uclicks"], g["views"]) / g["views"] * 100, 1) if g["views"] else None
         g["last_variant"] = list(g["variants"])[-1]
-    tot = MarketingAd.objects.aggregate(v=Sum("views"), c=Sum("clicks"), n=Count("id"))
+    tot = MarketingAd.objects.aggregate(v=Sum("views"), c=Sum("clicks"), u=Sum("unique_clicks"),
+                                        t=Sum("test_clicks"), n=Count("id"))
     att = Order.objects.filter(status__in=Order.PAID_STATUSES).exclude(ad_ref="").aggregate(n=Count("id"), ca=Sum("total"))
     return render(request, "admin/erp_marketing.html", {
         **_admin.site.each_context(request), "groups": list(groups.values()), "show": show,
         "tot": {"ads": tot["n"] or 0, "views": tot["v"] or 0, "clicks": tot["c"] or 0,
-                "ctr": round((tot["c"] or 0) / tot["v"] * 100, 1) if tot["v"] else None,
+                "unique": tot["u"] or 0, "tests": tot["t"] or 0,
+                "ctr": round(min(tot["u"] or 0, tot["v"]) / tot["v"] * 100, 1) if tot["v"] else None,
                 "orders": att["n"] or 0, "revenue": round(att["ca"] or 0, 2)},
         "erp_section": "marketing"})
 
@@ -1823,3 +1872,103 @@ def gallery_buy_success(request):
             if m:
                 _grant_gallery(request, m, verified)
     return redirect("studio:digipaint", uid=uid)
+
+
+# ---------------- Fournisseurs (tableau de bord facon Shopify) ----------------
+def _sup_color(name):
+    import hashlib
+    cols = ["#2f6bf2", "#7a3ff2", "#1e8848", "#e8703b", "#e85d75", "#0f9bb3", "#b3287a", "#9a6300"]
+    return cols[int(hashlib.md5((name or "?").encode()).hexdigest(), 16) % len(cols)]
+
+
+def _sup_card(sup):
+    from . import erp
+    sup.stats = erp.supplier_stats(sup)
+    sup.color = _sup_color(sup.name)
+    sup.initials = "".join(w[0] for w in (sup.name or "?").split()[:2]).upper()
+    sup.channel = ("API" if sup.integration == "api" and sup.api_url else
+                   "E-mail" if sup.email else None)
+    sup.health = ("off" if not sup.active else "err" if not sup.channel or not sup.last_sync_ok
+                  else "ok" if sup.last_sync_at else "idle")
+    return sup
+
+
+@staff_member_required
+def erp_suppliers(request):
+    from django.contrib import admin as _admin
+    from . import erp
+    from .models import Supplier
+    if request.method == "POST":
+        sup = Supplier.objects.filter(pk=request.POST.get("sup")).first()
+        if sup and request.POST.get("op") == "toggle":
+            sup.active = not sup.active; sup.save(update_fields=["active"])
+        return redirect("studio:erp_suppliers")
+    sups = [_sup_card(s) for s in Supplier.objects.all()]
+    routing = {c: Supplier.for_checkout(c) for c in ("kit", "print")}
+    tot = {"active": sum(1 for s in sups if s.active),
+           "orders_30": sum(s.stats["orders_30"] for s in sups),
+           "spend_30": round(sum(s.stats["spend_30"] for s in sups), 2),
+           "in_production": sum(s.stats["in_production"] for s in sups),
+           "late": sum(s.stats["late"] for s in sups),
+           "errors": sum(1 for s in sups if s.health == "err")}
+    return render(request, "admin/erp_suppliers.html", {
+        **_admin.site.each_context(request), "sups": sups, "tot": tot, "routing": routing,
+        "unassigned": erp.unassigned_orders().count(), "erp_section": "suppliers"})
+
+
+@staff_member_required
+def erp_supplier(request, pk):
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from .models import Supplier
+    from . import erp
+    sup = Supplier.objects.filter(pk=pk).first()
+    if not sup:
+        raise Http404
+    if request.method == "POST":
+        op = request.POST.get("op")
+        user = request.user.get_username()
+        if op == "toggle":
+            sup.active = not sup.active; sup.save(update_fields=["active"])
+        elif op == "resend":
+            o = Order.objects.filter(pk=request.POST.get("order")).first()
+            if o:
+                ok = _notify_supplier(_order_from_row(o), _shipping_from_row(o), sup=sup, user=user)
+                messages.success(request, "Commande %s transmise." % o.uid) if ok else \
+                    messages.error(request, "Echec de transmission de %s (voir journal)." % o.uid)
+        elif op == "assign":
+            n = 0
+            for o in erp.unassigned_orders():
+                Order.objects.filter(pk=o.pk).update(supplier=sup); n += 1
+            messages.success(request, "%d commande(s) rattachee(s) a %s." % (n, sup.name))
+        return redirect(request.get_full_path())
+    _sup_card(sup)
+    tab = request.GET.get("tab", "open")
+    qs = Order.objects.filter(supplier=sup).order_by("-created_at")
+    tabs = [("open", "À traiter", qs.filter(status__in=(Order.PAID, Order.FULFILLED))),
+            ("shipped", "Expédiées", qs.filter(status=Order.SHIPPED)),
+            ("delivered", "Livrées", qs.filter(status=Order.DELIVERED)),
+            ("failed", "Échecs", qs.filter(status=Order.FAILED)),
+            ("all", "Toutes", qs)]
+    current = dict((k, q) for k, _l, q in tabs).get(tab, tabs[0][2])
+    now = timezone.now()
+    p = Pricing.get()
+    rows = []
+    for o in current[:100]:
+        age = (now - (o.status_changed_at or o.created_at)).days
+        late = (o.status == Order.FULFILLED and age >= sup.stats["lead"]) or \
+               (o.status == Order.SHIPPED and age >= int(p.delivery_days_max or 9) + 3)
+        rows.append({"o": o, "age": age, "late": late})
+    events = (OrderEvent.objects.filter(order__supplier=sup, kind="action").select_related("order")[:12])
+    def mask(v, keep=4):
+        v = v or ""
+        return ("•••• " + v[-keep:]) if len(v) > keep else v
+    return render(request, "admin/erp_supplier.html", {
+        **_admin.site.each_context(request), "sup": sup, "tab": tab, "rows": rows,
+        "tabs": [(k, l, q.count()) for k, l, q in tabs], "events": events,
+        "iban": mask(sup.iban), "api_key": mask(sup.api_key, 3),
+        "files": [lbl for flag, lbl in [("want_source", "Photo source"), ("want_template_svg", "Toile numérotée .svg"),
+                                        ("want_template_tiff", "Toile numérotée .tiff"),
+                                        ("want_preview_svg", "Aperçu colorié .svg"), ("want_poster", "Poster PNG"),
+                                        ("want_order_json", "Order JSON")] if getattr(sup, flag, False)],
+        "unassigned": erp.unassigned_orders().count(), "erp_section": "suppliers"})

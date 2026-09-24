@@ -30,7 +30,7 @@
   <div class="kpis">
     <div class="kpi"><div class="l">Pubs</div><div class="v">{{ tot.ads }}</div></div>
     <div class="kpi"><div class="l">Vues</div><div class="v">{{ tot.views }}</div></div>
-    <div class="kpi"><div class="l">Clics</div><div class="v">{{ tot.clicks }}</div></div>
+    <div class="kpi"><div class="l">Clics</div><div class="v">{{ tot.clicks }}</div><div class="muted">{{ tot.unique }} visiteurs uniques{% if tot.tests %} · {{ tot.tests }} tests internes{% endif %}</div></div>
     <div class="kpi"><div class="l">Taux de clic</div><div class="v">{% if tot.ctr is not None %}{{ tot.ctr }} %{% else %}—{% endif %}</div></div>
     <div class="kpi"><div class="l">Ventes attribuées</div><div class="v">{{ tot.orders }}</div></div>
     <div class="kpi"><div class="l">CA attribué</div><div class="v">{{ tot.revenue|floatformat:"2g" }} €</div></div>
@@ -45,7 +45,7 @@
       </div>
       <div style="min-width:0">
         <div class="card-h"><h2>{{ g.campaign|default:"Sans campagne" }} <span class="muted">· {{ g.uid }} · {{ g.variants|length }} variante{{ g.variants|length|pluralize }}</span></h2>
-          <span class="muted">{{ g.views }} vues · {{ g.clicks }} clics{% if g.ctr is not None %} · {{ g.ctr }} %{% endif %} · {{ g.orders }} ventes · {{ g.revenue|floatformat:"2g" }} €</span></div>
+          <span class="muted">{{ g.views }} vues · {{ g.clicks }} clics{% if g.tests %} (+{{ g.tests }} tests){% endif %}{% if g.ctr is not None %} · {{ g.ctr }} %{% endif %} · {{ g.orders }} ventes · {{ g.revenue|floatformat:"2g" }} €</span></div>
         <div style="overflow-x:auto">
         <table class="t">
           <tr><th>Variante</th><th>Textes</th><th class="r">Vues</th><th class="r">Clics</th><th class="r">CTR</th><th class="r">Ventes</th><th class="r">CA</th><th>Liens</th><th></th></tr>
@@ -56,7 +56,7 @@
               <td style="white-space:nowrap"><span class="vt">{{ ad.variant }}</span>{% if ad.winner %}<span class="win">🏆 gagnante</span>{% endif %}</td>
               <td class="txt">{{ ad.headline|truncatechars:70 }}<small>{{ ad.cta }}</small></td>
               <td class="r">{{ ad.views }}</td>
-              <td class="r"><b>{{ ad.clicks }}</b></td>
+              <td class="r"><b>{{ ad.clicks }}</b>{% if ad.unique_clicks != ad.clicks %}<div class="muted">{{ ad.unique_clicks }} uniques</div>{% endif %}{% if ad.test_clicks %}<div class="muted" title="Vos clics (compte staff connecté) : hors statistiques">+{{ ad.test_clicks }} test{{ ad.test_clicks|pluralize }}</div>{% endif %}{% if ad.last_click_at %}<div class="muted" title="Dernier clic">{{ ad.last_click_at|timesince }}</div>{% endif %}</td>
               <td class="r">{% if ad.ctr is not None %}{{ ad.ctr }} %{% else %}—{% endif %}</td>
               <td class="r">{{ ad.orders }}{% if ad.conv is not None and ad.orders %} <span class="muted">({{ ad.conv }} %)</span>{% endif %}</td>
               <td class="r">{{ ad.revenue|floatformat:"2g" }} €</td>
@@ -81,7 +81,7 @@
   {% empty %}
   <div class="card"><p class="muted">Aucune pub pour l'instant. <a href="/marketing/">Créer la première →</a></p></div>
   {% endfor %}
-  <p class="muted">Gagnante : meilleur taux de clic parmi les variantes d'un même gabarit ayant au moins 20 vues (à défaut, le plus de clics). Les visites du staff et des robots (aperçus de liens) ne sont pas comptées ; 1 vue / 1 clic max par visiteur et par pub.</p>
+  <p class="muted">Gagnante : meilleur taux de clic parmi les variantes d'un même gabarit ayant au moins 20 vues (à défaut, le plus de clics). Clics = tous les clics réels ; uniques = visiteurs distincts (base du taux de clic). Vos propres clics (compte admin connecté) apparaissent en « tests » sans fausser l'A/B ; les robots d'aperçu de liens (Facebook, WhatsApp…) sont ignorés. Vues = 1 par visiteur via le lien public.</p>
 </div>
 <script>
 document.querySelectorAll('.copy').forEach(function(b){b.addEventListener('click',function(){

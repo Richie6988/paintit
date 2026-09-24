@@ -119,7 +119,7 @@ class OrderAdmin(admin.ModelAdmin):
 
     list_display = ("uid", "status_badge", "since_col", "product_col", "total", "benefit_col",
                     "tracking_col", "customer_col", "country", "created_at")
-    list_filter = (ActionFilter, "status", "country", "lang", "carrier", "colors", "brushes")
+    list_filter = (ActionFilter, "status", "supplier", "country", "lang", "carrier", "colors", "brushes")
     inlines = (OrderEventInline,)
     save_on_top = True
     search_fields = ("uid", "customer_name", "customer_email", "discount_code",
@@ -129,10 +129,25 @@ class OrderAdmin(admin.ModelAdmin):
     list_per_page = 25
     readonly_fields = ("uid", "created_at", "status_changed_at", "cost", "benefit_col", "supplier_ref",
                        "feedback_sent", "fichiers")
-    actions = ("fichiers_fournisseur", "mark_fulfilled", "mark_shipped", "mark_delivered", "mark_failed",
-               "send_feedback")
+    actions = ("send_to_supplier", "fichiers_fournisseur", "mark_fulfilled", "mark_shipped", "mark_delivered",
+               "mark_failed", "send_feedback")
+
+    @admin.action(description="Transmettre au fournisseur (API / e-mail)")
+    def send_to_supplier(self, request, queryset):
+        from .views import _notify_supplier, _order_from_row, _shipping_from_row
+        ok = ko = 0
+        for o in queryset:
+            if _notify_supplier(_order_from_row(o), _shipping_from_row(o), sup=o.supplier,
+                                user=request.user.get_username()):
+                ok += 1
+                if o.status == Order.PAID:
+                    _set_status(o, Order.FULFILLED, request)
+            else:
+                ko += 1
+        self.message_user(request, "%d transmise(s), %d echec(s) (voir le journal de la commande)." % (ok, ko),
+                          level="warning" if ko else "info")
     fieldsets = (
-        ("Commande", {"fields": (("uid", "status"), ("created_at", "status_changed_at"), ("lang", "supplier_ref"))}),
+        ("Commande", {"fields": (("uid", "status"), ("created_at", "status_changed_at"), ("supplier", "supplier_ref"), "lang")}),
         ("Notes internes", {"fields": ("notes",),
                             "description": "Visible uniquement en interne ; chaque modification est tracee dans l'historique."}),
         ("Suivi & expedition", {"fields": ("carrier", ("tracking_number", "tracking_url"),
@@ -530,6 +545,24 @@ class PrintPricingAdmin(admin.ModelAdmin):
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):
+    def changelist_view(self, request, extra_context=None):
+        from django.shortcuts import redirect
+        if request.GET or request.method == "POST":
+            return super().changelist_view(request, extra_context)
+        return redirect("studio:erp_suppliers")   # le tableau de bord remplace la liste
+
+    def _back(self, request, obj, default):
+        from django.shortcuts import redirect
+        if "_continue" in request.POST or "_addanother" in request.POST:
+            return default
+        return redirect("studio:erp_supplier", pk=obj.pk)
+
+    def response_add(self, request, obj, post_url_continue=None):
+        return self._back(request, obj, super().response_add(request, obj, post_url_continue))
+
+    def response_change(self, request, obj):
+        return self._back(request, obj, super().response_change(request, obj))
+
     list_display = ("name", "active", "checkout", "integration", "email", "lead_time_days", "priority")
     list_editable = ("active", "checkout", "priority")
     list_filter = ("active", "checkout", "integration")

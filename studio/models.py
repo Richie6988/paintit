@@ -136,6 +136,8 @@ class Order(models.Model):
     city = models.CharField(max_length=120, blank=True, default="")
     country = models.CharField(max_length=80, blank=True, default="")
     supplier_ref = models.CharField(max_length=64, null=True, blank=True)
+    supplier = models.ForeignKey("Supplier", verbose_name="Fournisseur", null=True, blank=True,
+                                 on_delete=models.SET_NULL, related_name="orders")
     # Suivi colis (renseigne d'apres le fournisseur)
     carrier = models.CharField("Transporteur", max_length=60, blank=True, default="")
     tracking_number = models.CharField("N° de suivi", max_length=80, blank=True, default="")
@@ -392,6 +394,10 @@ class Supplier(models.Model):
     lead_time_days = models.PositiveIntegerField("Delai production (jours)", default=5)
     incoterms = models.CharField("Incoterms / livraison", max_length=60, blank=True, default="")
     production_notes = models.TextField("Process / consignes de production", blank=True, default="")
+    # Sante de l'integration (derniere transmission)
+    last_sync_at = models.DateTimeField("Derniere transmission", null=True, blank=True)
+    last_sync_ok = models.BooleanField("Derniere transmission OK", default=True)
+    last_sync_error = models.CharField("Derniere erreur", max_length=300, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def wanted_files(self, uid):
@@ -433,8 +439,11 @@ class MarketingAd(models.Model):
     file_name = models.CharField(max_length=120)
     target_url = models.CharField("Lien cible", max_length=300, default="https://paintit.click/create/")
     texts = models.JSONField(default=dict, blank=True)
-    views = models.PositiveIntegerField("Vues", default=0)
-    clicks = models.PositiveIntegerField("Clics", default=0)
+    views = models.PositiveIntegerField("Vues (visiteurs uniques)", default=0)
+    clicks = models.PositiveIntegerField("Clics (total)", default=0)
+    unique_clicks = models.PositiveIntegerField("Clics (visiteurs uniques)", default=0)
+    test_clicks = models.PositiveIntegerField("Clics internes (staff)", default=0)
+    last_click_at = models.DateTimeField("Dernier clic", null=True, blank=True)
     active = models.BooleanField("Active", default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -445,7 +454,8 @@ class MarketingAd(models.Model):
 
     @property
     def ctr(self):
-        return round(self.clicks / self.views * 100, 1) if self.views else None
+        """Taux de clic = visiteurs ayant clique / visiteurs ayant vu la pub."""
+        return round(min(self.unique_clicks, self.views) / self.views * 100, 1) if self.views else None
 
     def __str__(self):
         return "%s %s/%s" % (self.image_uid, self.variant, self.kind)

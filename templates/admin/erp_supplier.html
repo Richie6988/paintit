@@ -1,0 +1,105 @@
+{% extends "admin/base_site.html" %}
+{% block title %}{{ sup.name }} · Fournisseurs · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<div class="erp">
+  <a href="/admin-hub/suppliers/" class="muted" style="font-weight:700">← Fournisseurs</a>
+  <div class="erp-head" style="margin-top:8px">
+    <div style="display:flex;gap:14px;align-items:center">
+      <div class="av lg" style="background:{{ sup.color }}">{{ sup.initials }}</div>
+      <div><h1 style="display:flex;gap:10px;align-items:center">{{ sup.name }}
+        {% if not sup.active %}<span class="bdg2 off"><span class="dot2"></span>Inactif</span>
+        {% elif sup.health == "err" %}<span class="bdg2 err"><span class="dot2"></span>Erreur d'intégration</span>
+        {% elif sup.health == "ok" %}<span class="bdg2 ok"><span class="dot2"></span>Connecté</span>
+        {% else %}<span class="bdg2 idle"><span class="dot2"></span>En attente de 1re commande</span>{% endif %}</h1>
+        <div class="muted">{{ sup.get_checkout_display }} · priorité {{ sup.priority }} · délai promis {{ sup.lead_time_days }} j{% if sup.incoterms %} · {{ sup.incoterms }}{% endif %}</div></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <form method="post">{% csrf_token %}<button class="pbtn" name="op" value="toggle">{% if sup.active %}Mettre en pause{% else %}Activer{% endif %}</button></form>
+      <a class="pbtn pri" href="/admin/studio/supplier/{{ sup.pk }}/change/">Modifier</a>
+    </div>
+  </div>
+
+  {% if messages %}{% for m in messages %}<div class="banner {% if m.tags == 'error' %}err{% else %}warn{% endif %}"><span>{{ m }}</span></div>{% endfor %}{% endif %}
+  {% if sup.health == "err" %}<div class="banner err"><span><b>Dernière transmission en échec</b>{% if sup.last_sync_at %} ({{ sup.last_sync_at|timesince }}){% endif %} : {{ sup.last_sync_error|default:"aucun canal configuré (e-mail ou URL API)" }}</span><a class="pbtn sm" href="/admin/studio/supplier/{{ sup.pk }}/change/">Corriger</a></div>{% endif %}
+  {% if unassigned %}<div class="banner warn"><span><b>{{ unassigned }} commande{{ unassigned|pluralize }} payée{{ unassigned|pluralize }}</b> sans fournisseur rattaché.</span>
+    <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="assign" onclick="return confirm('Rattacher ces commandes à {{ sup.name|escapejs }} ?')">Rattacher à {{ sup.name }}</button></form></div>{% endif %}
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Commandes (30 j)</div><div class="v">{{ sup.stats.orders_30 }}</div><div class="muted">{{ sup.stats.orders_total }} au total</div></div>
+    <div class="kpi"><div class="l">Achats (30 j)</div><div class="v">{{ sup.stats.spend_30|floatformat:"2g" }} €</div><div class="muted">pour {{ sup.stats.revenue_30|floatformat:"2g" }} € de ventes</div></div>
+    <div class="kpi"><div class="l">En production</div><div class="v">{{ sup.stats.in_production }}</div><div class="muted">{{ sup.stats.shipped }} en transit</div></div>
+    <div class="kpi"><div class="l">En retard</div><div class="v" {% if sup.stats.late %}style="color:#b42318"{% endif %}>{{ sup.stats.late }}</div><div class="muted">{{ sup.stats.late_prod }} prod. · {{ sup.stats.late_ship }} livraison</div></div>
+    <div class="kpi"><div class="l">Délai réel moyen</div><div class="v">{% if sup.stats.avg_days is not None %}{{ sup.stats.avg_days }} j{% else %}—{% endif %}</div><div class="muted">promis : {{ sup.stats.lead }} j</div></div>
+    <div class="kpi"><div class="l">Dans les délais</div><div class="v">{% if sup.stats.on_time is not None %}{{ sup.stats.on_time }} %{% else %}—{% endif %}</div><div class="muted">production ≤ délai promis</div></div>
+  </div>
+
+  <div class="sp-layout">
+    <div>
+      <div class="card">
+        <div class="tabs2">{% for k, l, n in tabs %}<a href="?tab={{ k }}" class="{% if k == tab %}on{% endif %}">{{ l }}<em>{{ n }}</em></a>{% endfor %}</div>
+        <div style="overflow-x:auto">
+        <table class="t">
+          <tr><th>Commande</th><th>Produit</th><th>Client</th><th>Statut</th><th class="r">Depuis</th><th>Suivi</th><th class="r">Coût</th><th></th></tr>
+          {% for r in rows %}<tr>
+            <td><a href="/admin/studio/order/{{ r.o.pk }}/change/">{{ r.o.uid|truncatechars:16 }}</a><div class="muted">{{ r.o.created_at|date:"d/m/Y" }}</div></td>
+            <td>{{ r.o.format_label }} · {{ r.o.colors }}c{% if r.o.brushes %} · pinceaux{% endif %}</td>
+            <td>{{ r.o.customer_name|truncatechars:20 }}<div class="muted">{{ r.o.city }}{% if r.o.country %}, {{ r.o.country }}{% endif %}</div></td>
+            <td><span class="pill st-{{ r.o.status }}">{{ r.o.get_status_display }}</span></td>
+            <td class="r {% if r.late %}late{% endif %}">{{ r.age }} j{% if r.late %} ⚠{% endif %}</td>
+            <td>{% if r.o.tracking_number %}{% if r.o.tracking_url %}<a href="{{ r.o.tracking_url }}" target="_blank" rel="noopener">{{ r.o.carrier }} {{ r.o.tracking_number }}</a>{% else %}{{ r.o.carrier }} {{ r.o.tracking_number }}{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="r">{{ r.o.cost|floatformat:2 }} €</td>
+            <td><form method="post">{% csrf_token %}<input type="hidden" name="order" value="{{ r.o.pk }}"><button class="pbtn sm" name="op" value="resend" title="Renvoyer la commande et les fichiers à ce fournisseur">Renvoyer</button></form></td>
+          </tr>{% empty %}<tr><td colspan="8" class="muted">Aucune commande dans cet onglet.</td></tr>{% endfor %}
+        </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Activité</h2><span class="muted">transmissions et échecs</span></div>
+        <ul class="tl">{% for e in events %}<li><time>{{ e.at|date:"d/m H:i" }}</time><span><a href="/admin/studio/order/{{ e.order_id }}/change/">{{ e.order.uid }}</a> · {{ e.text }}{% if e.user %} <span class="muted">({{ e.user }})</span>{% endif %}</span></li>
+        {% empty %}<li class="muted">Aucune transmission enregistrée pour l'instant.</li>{% endfor %}</ul>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-h"><h2>Intégration</h2>{% if sup.channel %}<span class="bdg2 info">{{ sup.channel }}</span>{% else %}<span class="bdg2 err">Aucun canal</span>{% endif %}</div>
+        <dl class="kv">
+          {% if sup.integration == "api" %}<dt>Endpoint</dt><dd>{{ sup.api_url|default:"—" }}</dd><dt>Clé API</dt><dd>{{ api_key|default:"—" }}</dd>
+          {% else %}<dt>E-mail commande</dt><dd>{{ sup.email|default:"—" }}</dd>{% endif %}
+          <dt>Dernier envoi</dt><dd>{% if sup.last_sync_at %}{{ sup.last_sync_at|date:"d/m/Y H:i" }} · {% if sup.last_sync_ok %}<span class="bdg2 ok">OK</span>{% else %}<span class="bdg2 err">Échec</span>{% endif %}{% else %}—{% endif %}</dd>
+        </dl>
+        <div style="margin-top:10px" class="files">{% for f in files %}<span class="chip">{{ f }}</span>{% empty %}<span class="muted">Aucun fichier sélectionné</span>{% endfor %}</div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Contact</h2></div>
+        <dl class="kv">
+          <dt>Contact</dt><dd>{{ sup.contact_name|default:"—" }}</dd>
+          <dt>E-mail</dt><dd>{% if sup.contact_email %}<a href="mailto:{{ sup.contact_email }}">{{ sup.contact_email }}</a>{% else %}—{% endif %}</dd>
+          <dt>Téléphone</dt><dd>{% if sup.phone %}<a href="tel:{{ sup.phone }}">{{ sup.phone }}</a>{% else %}—{% endif %}</dd>
+          <dt>Adresse</dt><dd>{{ sup.address|default:"—"|linebreaksbr }}</dd>
+        </dl>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Conditions &amp; paiement</h2></div>
+        <dl class="kv">
+          <dt>Délai promis</dt><dd>{{ sup.lead_time_days }} jours</dd>
+          <dt>Incoterms</dt><dd>{{ sup.incoterms|default:"—" }}</dd>
+          <dt>Banque</dt><dd>{{ sup.bank_name|default:"—" }}</dd>
+          <dt>IBAN</dt><dd>{{ iban|default:"—" }}</dd>
+          <dt>BIC</dt><dd>{{ sup.bic|default:"—" }}</dd>
+        </dl>
+        {% if sup.pricing %}<div class="muted" style="margin-top:10px;font-weight:700">Grille tarifaire</div><div style="font-size:.82rem;white-space:pre-line">{{ sup.pricing|truncatechars:600 }}</div>{% endif %}
+        {% if sup.terms %}<div class="muted" style="margin-top:10px;font-weight:700">Conditions</div><div style="font-size:.82rem;white-space:pre-line">{{ sup.terms|truncatechars:600 }}</div>{% endif %}
+      </div>
+      {% if sup.production_notes or sup.notes %}<div class="card"><div class="card-h"><h2>Notes</h2></div>
+        <div style="font-size:.84rem;white-space:pre-line">{{ sup.production_notes }}{% if sup.production_notes and sup.notes %}
+
+{% endif %}{{ sup.notes }}</div></div>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

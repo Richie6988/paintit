@@ -59,7 +59,7 @@ code{background:var(--bg3);padding:1px 5px;border-radius:5px}
 
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
 
-  {% if results %}
+  {% if results and variant %}
   <div class="panel ok">
     <b>Variante « {{ variant }} » enregistrée</b> — {{ results|length }} pubs ajoutées à la <a href="/admin-hub/marketing/">galerie A/B</a>.
     Modifiez les textes ci-dessous puis régénérez pour créer la variante suivante (même image).

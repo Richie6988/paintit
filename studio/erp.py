@@ -269,3 +269,50 @@ def customer_stats():
             "repeat_rate": round(len(repeat) / len(buyers) * 100, 1) if buyers else 0.0,
             "ltv": round(rev / len(buyers), 2) if buyers else 0.0, "segments": segs,
             "top": sorted(buyers, key=lambda r: -r["revenue"])[:8]}
+
+
+# --------------------------------------------------------------------------- #
+# Fournisseurs : performance, file de production, sante de l'integration
+# --------------------------------------------------------------------------- #
+def _production_days(order_ids):
+    """{order_id: jours entre 'en production' et 'expediee'} d'apres le journal."""
+    from .models import OrderEvent
+    first = {}
+    for e in (OrderEvent.objects.filter(order_id__in=order_ids, kind="status",
+                                        status__in=[Order.FULFILLED, Order.SHIPPED])
+              .order_by("at").values("order_id", "status", "at")):
+        first.setdefault((e["order_id"], e["status"]), e["at"])
+    out = {}
+    for oid in order_ids:
+        a, b = first.get((oid, Order.FULFILLED)), first.get((oid, Order.SHIPPED))
+        if a and b and b >= a:
+            out[oid] = (b - a).total_seconds() / 86400
+    return out
+
+
+def supplier_stats(sup, days=30):
+    now = timezone.now()
+    since = now - datetime.timedelta(days=days)
+    p = Pricing.get()
+    lead = int(sup.lead_time_days or 5)
+    ship_max = int(p.delivery_days_max or 9)
+    qs = Order.objects.filter(supplier=sup)
+    recent = qs.filter(created_at__gte=since, status__in=Order.PAID_STATUSES)
+    a = recent.aggregate(n=Count("id"), cost=Sum("cost"), ca=Sum("total"))
+    late_prod = qs.filter(status=Order.FULFILLED, status_changed_at__lt=now - datetime.timedelta(days=lead))
+    late_ship = qs.filter(status=Order.SHIPPED, status_changed_at__lt=now - datetime.timedelta(days=ship_max + 3))
+    shipped_ids = list(qs.filter(status__in=(Order.SHIPPED, Order.DELIVERED)).values_list("id", flat=True)[:500])
+    prod = _production_days(shipped_ids)
+    avg = round(sum(prod.values()) / len(prod), 1) if prod else None
+    on_time = round(sum(1 for d in prod.values() if d <= lead) / len(prod) * 100) if prod else None
+    return {"orders_30": a["n"] or 0, "spend_30": round(a["cost"] or 0, 2), "revenue_30": round(a["ca"] or 0, 2),
+            "orders_total": qs.count(), "in_production": qs.filter(status=Order.FULFILLED).count(),
+            "shipped": qs.filter(status=Order.SHIPPED).count(),
+            "late": late_prod.count() + late_ship.count(), "late_prod": late_prod.count(),
+            "late_ship": late_ship.count(), "avg_days": avg, "lead": lead, "on_time": on_time,
+            "failed": qs.filter(status=Order.FAILED).count()}
+
+
+def unassigned_orders():
+    """Commandes payees sans fournisseur rattache (avant ce suivi, ou transmission impossible)."""
+    return Order.objects.filter(supplier__isnull=True, status__in=(Order.PAID, Order.FULFILLED))

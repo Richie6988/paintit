@@ -1,0 +1,70 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Fournisseurs · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<div class="erp">
+  <div class="erp-head">
+    <div><h1>Fournisseurs</h1><div class="muted">Production &amp; expédition en dropshipping : routage des commandes, performance et santé des intégrations</div></div>
+    <a class="pbtn pri" href="/admin/studio/supplier/add/">+ Ajouter un fournisseur</a>
+  </div>
+
+  {% if unassigned %}
+  <div class="banner warn"><span><b>{{ unassigned }} commande{{ unassigned|pluralize }} payée{{ unassigned|pluralize }}</b> sans fournisseur rattaché (antérieures au suivi ou non transmises).</span>
+    {% if routing.kit %}<a class="pbtn sm" href="/admin-hub/suppliers/{{ routing.kit.pk }}/">Rattacher à {{ routing.kit.name }}</a>{% endif %}</div>
+  {% endif %}
+  {% if not routing.kit %}<div class="banner err"><span><b>Aucun fournisseur actif pour le Kit</b> : les commandes payées ne sont transmises à personne.</span><a class="pbtn sm" href="/admin/studio/supplier/add/">Configurer</a></div>{% endif %}
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Fournisseurs actifs</div><div class="v">{{ tot.active }}</div></div>
+    <div class="kpi"><div class="l">Commandes (30 j)</div><div class="v">{{ tot.orders_30 }}</div></div>
+    <div class="kpi"><div class="l">Achats (30 j)</div><div class="v">{{ tot.spend_30|floatformat:"2g" }} €</div><div class="muted">coût fournisseur estimé</div></div>
+    <div class="kpi"><div class="l">En production</div><div class="v">{{ tot.in_production }}</div></div>
+    <div class="kpi"><div class="l">En retard</div><div class="v" {% if tot.late %}style="color:#b42318"{% endif %}>{{ tot.late }}</div></div>
+    <div class="kpi"><div class="l">Intégrations en erreur</div><div class="v" {% if tot.errors %}style="color:#b42318"{% endif %}>{{ tot.errors }}</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>Routage des commandes</h2><span class="muted">fournisseur actif de plus haute priorité, par checkout</span></div>
+    <div class="route">
+      <div class="r1"><small>Kit à peindre</small>{% if routing.kit %}<b>{{ routing.kit.name }}</b>{% else %}<span class="bdg2 err">Non configuré</span>{% endif %}</div>
+      <div class="r1"><small>Tableau fini (impression)</small>{% if routing.print %}<b>{{ routing.print.name }}</b>{% else %}<span class="bdg2 idle">Non configuré</span>{% endif %}</div>
+    </div>
+  </div>
+
+  <div class="sp-grid">
+    {% for s in sups %}
+    <div class="sp-card {% if not s.active %}off{% endif %}">
+      <div class="sp-top">
+        <div class="av" style="background:{{ s.color }}">{{ s.initials }}</div>
+        <div style="flex:1;min-width:0">
+          <div class="sp-name">{{ s.name }}</div>
+          <div class="sp-sub">{{ s.get_checkout_display }} · priorité {{ s.priority }} · délai {{ s.lead_time_days }} j</div>
+        </div>
+        {% if not s.active %}<span class="bdg2 off"><span class="dot2"></span>Inactif</span>
+        {% elif s.health == "err" %}<span class="bdg2 err"><span class="dot2"></span>Erreur</span>
+        {% elif s.health == "ok" %}<span class="bdg2 ok"><span class="dot2"></span>Connecté</span>
+        {% else %}<span class="bdg2 idle"><span class="dot2"></span>En attente</span>{% endif %}
+      </div>
+      <div class="sp-stats">
+        <div><b>{{ s.stats.orders_30 }}</b><span>cmd 30 j</span></div>
+        <div><b>{{ s.stats.in_production }}</b><span>en production</span></div>
+        <div><b class="{% if s.stats.late %}bad{% endif %}">{{ s.stats.late }}</b><span>en retard</span></div>
+        <div><b>{% if s.stats.avg_days is not None %}{{ s.stats.avg_days }} j{% else %}—{% endif %}</b><span>délai réel</span></div>
+      </div>
+      <div class="sp-foot">
+        <span class="meta">{% if s.channel %}<span class="bdg2 info">{{ s.channel }}</span>{% else %}<span class="bdg2 err">Aucun canal</span>{% endif %}
+          {% if s.last_sync_at %} · transmis {{ s.last_sync_at|timesince }}{% endif %}</span>
+        <span style="display:flex;gap:6px">
+          <form method="post">{% csrf_token %}<input type="hidden" name="sup" value="{{ s.pk }}"><button class="pbtn sm" name="op" value="toggle">{% if s.active %}Mettre en pause{% else %}Activer{% endif %}</button></form>
+          <a class="pbtn sm pri" href="/admin-hub/suppliers/{{ s.pk }}/">Ouvrir</a>
+        </span>
+      </div>
+    </div>
+    {% empty %}
+    <div class="card"><p class="muted">Aucun fournisseur. <a href="/admin/studio/supplier/add/">Ajouter le premier →</a></p></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
