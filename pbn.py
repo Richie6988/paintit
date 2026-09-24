@@ -409,19 +409,132 @@ def build_svg(labels, k, mmx, mmy, w_mm, h_mm, eps, min_label_area,
 # --------------------------------------------------------------------------- #
 # Sorties bitmap : aperçu colorié + légende palette
 # --------------------------------------------------------------------------- #
+def _zone_rings(labels, eps_px, chaikin_iters=2):
+    """Geometrie TOPOLOGIQUE des zones (graphe planaire des frontieres).
+
+    Les frontieres sont decoupees en aretes entre jonctions (sommets de degre != 2
+    + 4 coins de la toile) ; chaque arete est simplifiee/lissee UNE seule fois en
+    gardant ses extremites fixes, puis reutilisee telle quelle par les DEUX zones
+    qu'elle separe -> aucune fente entre zones, jonctions exactes, et le cadre
+    exterieur reste droit avec des coins carres.
+    Renvoie {id composante 4-connexe: [liste de polylignes fermees en px]}, la
+    carte des composantes (4-connexes) et leur nombre."""
+    H, W = labels.shape
+    ncc = 0
+    comp = np.zeros((H, W), np.int32)
+    for c in np.unique(labels):
+        n, cc = cv2.connectedComponents((labels == c).astype(np.uint8), connectivity=4)
+        m = cc > 0
+        comp[m] = cc[m] + ncc
+        ncc += n - 1
+    P = np.pad(comp, 1, mode="constant", constant_values=0)   # 0 = exterieur
+    stride = W + 3
+    adj = {}
+    side = {}   # arete elementaire -> (comp a, comp b)
+
+    def add(a, b, ca, cb):
+        adj.setdefault(a, []).append(b)
+        adj.setdefault(b, []).append(a)
+        side[(a, b) if a < b else (b, a)] = (ca, cb)
+
+    vy, vx = np.nonzero(P[:, :-1] != P[:, 1:])
+    for y, x in zip(vy.tolist(), vx.tolist()):
+        i = x + 1
+        add(y * stride + i, (y + 1) * stride + i, int(P[y, x]), int(P[y, x + 1]))
+    hy, hx = np.nonzero(P[:-1, :] != P[1:, :])
+    for y, x in zip(hy.tolist(), hx.tolist()):
+        j = y + 1
+        add(j * stride + x, j * stride + x + 1, int(P[y, x]), int(P[y + 1, x]))
+
+    corners = {1 * stride + 1, 1 * stride + W + 1, (H + 1) * stride + 1, (H + 1) * stride + W + 1}
+    used = set()
+
+    def canon(a, b):
+        return (a, b) if a < b else (b, a)
+
+    def walk(start, nxt):
+        pts = [start, nxt]
+        used.add(canon(start, nxt))
+        cur = nxt
+        while cur != start and len(adj[cur]) == 2 and cur not in corners:
+            cont = [n for n in adj[cur] if canon(cur, n) not in used]
+            if not cont:
+                break
+            used.add(canon(cur, cont[0]))
+            pts.append(cont[0])
+            cur = cont[0]
+        return pts
+
+    chains = []
+    for p in list(adj.keys()):
+        if len(adj[p]) != 2 or p in corners:
+            for n in adj[p]:
+                if canon(p, n) not in used:
+                    chains.append(walk(p, n))
+    for p in list(adj.keys()):
+        for n in adj[p]:
+            if canon(p, n) not in used:
+                chains.append(walk(p, n))
+
+    rings = {}
+    for ids in chains:
+        ca, cb = side[canon(ids[0], ids[1])]
+        pts = [(pid % stride - 1, pid // stride - 1) for pid in ids]
+        closed = ids[0] == ids[-1]
+        arr = np.array(pts[:-1] if closed else pts, dtype=np.int32).reshape(-1, 1, 2)
+        approx = cv2.approxPolyDP(arr, eps_px, closed)
+        base = [(float(q[0][0]), float(q[0][1])) for q in approx]
+        if closed and len(base) < 3:
+            base = [(float(x), float(y)) for x, y in pts[:-1]]
+        if len(base) >= 3:
+            base = _chaikin(base, closed, iters=chaikin_iters)
+        for cid in (ca, cb):
+            if cid > 0:
+                rings.setdefault(cid, []).append((base, closed))
+    return rings, comp, ncc
+
+
+def _link_rings(edges):
+    """Chaine les aretes (ouvertes) d'une zone en anneaux fermes. Les extremites
+    sont des sommets entiers de la grille (conserves tels quels par approxPolyDP
+    et Chaikin ouvert) -> raccord exact. Chaque jonction a un degre pair pour une
+    zone donnee, donc la marche se referme toujours."""
+    out = [pts for pts, closed in edges if closed]
+    opened = [pts for pts, closed in edges if not closed]
+    ends = {}
+    for i, pts in enumerate(opened):
+        ends.setdefault(pts[0], []).append(i)
+        ends.setdefault(pts[-1], []).append(i)
+    used = [False] * len(opened)
+    for i in range(len(opened)):
+        if used[i]:
+            continue
+        used[i] = True
+        ring = list(opened[i])
+        start = ring[0]
+        while ring[-1] != start:
+            nxt = next((j for j in ends.get(ring[-1], []) if not used[j]), None)
+            if nxt is None:
+                break
+            used[nxt] = True
+            seg = opened[nxt] if opened[nxt][0] == ring[-1] else opened[nxt][::-1]
+            ring.extend(seg[1:])
+        if ring[-1] == start:
+            ring.pop()
+        if len(ring) >= 3:
+            out.append(ring)
+    return out
+
+
 def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
     """SVG jouable AUTONOME.
 
-    Chaque zone = UN <path> remplissable qui porte SON PROPRE trait noir :
-      - remplissage DILATE de 1px  -> les zones voisines se recouvrent : jamais
-        de trou de fond entre elles ni aux jonctions (T, coins) ;
-      - trait noir 'vector-effect=non-scaling-stroke' -> largeur CONSTANTE a
-        l'ecran quel que soit le zoom (jamais gras en zoomant), et assez large
-        (~1.2) pour recouvrir la dilatation : la peinture ne deborde pas et la
-        taille peinte reste celle de la vraie zone ;
-      - les traits des zones adjacentes se superposent (meme noir) -> un seul
-        trait net, sans doublon ni bug de coin.
-    Aucun calque de traits par-dessus -> les numeros ne sont jamais recouverts.
+    Chaque zone = UN <path> remplissable construit a partir des aretes PARTAGEES
+    du graphe des frontieres (_zone_rings) : deux zones voisines ont exactement
+    la meme frontiere -> aucun trou, aucun debordement, coins de toile carres.
+    Trait noir 'vector-effect=non-scaling-stroke' : largeur constante au zoom.
+    evenodd : l'ensemble des aretes d'une zone (bord + trous) suffit, l'ordre
+    de chainage n'a pas d'importance.
     data-n = numero cible, data-a = surface (score)."""
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{w_mm:.1f}mm" height="{h_mm:.1f}mm" '
            f'viewBox="0 0 {w_mm:.2f} {h_mm:.2f}" shape-rendering="geometricPrecision" '
@@ -430,32 +543,25 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
     eps_px = max(0.8, eps)
     LABEL_MIN_R_MM = 0.55
     FS_CAP = 7.0
-    k3 = np.ones((3, 3), np.uint8)
+    rings, comp4, _n4 = _zone_rings(labels, eps_px)
     for c in range(len(palette_bgr)):
         m = (labels == c).astype(np.uint8)
         if not m.any():
             continue
         ncc, cc = cv2.connectedComponents(m, connectivity=8)
-        for lb in range(1, ncc):
-            comp = (cc == lb).astype(np.uint8)
+        for lb, sl in enumerate(ndimage.find_objects(cc), 1):   # travail borne a la bbox de la zone
+            comp = cc[sl] == lb
             area = int(comp.sum())
-            comp_fill = cv2.dilate(comp, k3, iterations=1)   # chevauchement -> pas de trou
-            cnts, _hier = cv2.findContours(comp_fill, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
             segs = []
-            for cnt in cnts:
-                if len(cnt) < 3:
-                    continue
-                approx = cv2.approxPolyDP(cnt, eps_px, True)
-                base = [(float(p[0][0]), float(p[0][1])) for p in approx]
-                if len(base) < 3:
-                    continue
-                sm = _chaikin(base, True, iters=2)
-                segs.append("M " + " L ".join(f"{x*mmx:.2f} {y*mmy:.2f}" for x, y in sm) + " Z")
+            for cid in np.unique(comp4[sl][comp]).tolist():
+                for pts in _link_rings(rings.get(cid, [])):
+                    segs.append("M " + " L ".join(f"{x*mmx:.2f} {y*mmy:.2f}" for x, y in pts) + " Z")
             if not segs:
                 continue
             num = c + 1
             txt = ""
-            x, y, r = label_at_center(comp == 1)
+            x, y, r = label_at_center(comp)
+            x, y = x + sl[1].start, y + sl[0].start
             r_mm = r * (mmx + mmy) * 0.5
             if r_mm >= LABEL_MIN_R_MM:
                 n = len(str(num))
@@ -473,6 +579,8 @@ def build_digipaint_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
                        f'd="{" ".join(segs)}"/>{txt}</g>')
     out.append("</svg>")
     return "\n".join(out)
+
+
 def render_preview(labels, palette_bgr):
     return palette_bgr[labels]
 
