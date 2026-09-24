@@ -18,6 +18,14 @@
   <link rel="canonical" href="{{ SITE_URL }}{{ request.path }}">
   {% for a in HREFLANGS %}<link rel="alternate" hreflang="{{ a.lang }}" href="{{ a.href }}">
   {% endfor %}
+<style>/* anti-copie : pas de selection ni de clic droit (sauf champs de saisie) */
+  body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text}
+  img{-webkit-user-drag:none}</style>
+<script>(function(){function f(e){var t=e.target;return t&&t.closest&&t.closest('input,textarea,select,[contenteditable]');}
+  document.addEventListener('contextmenu',function(e){if(!f(e))e.preventDefault();});
+  document.addEventListener('selectstart',function(e){if(!f(e))e.preventDefault();});
+  document.addEventListener('dragstart',function(e){if(e.target&&e.target.tagName==='IMG')e.preventDefault();});})();</script>
 </head>
 <body>
   <div class="topbar">

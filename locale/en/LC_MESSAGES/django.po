@@ -1079,3 +1079,6 @@ msgstr "Save and keep playing"
 
 msgid "Retour à la commande"
 msgstr "Back to my order"
+
+msgid "Copié !"
+msgstr "Copied!"

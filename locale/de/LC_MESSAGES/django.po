@@ -1106,3 +1106,6 @@ msgstr "Speichern und weiterspielen"
 
 msgid "Retour à la commande"
 msgstr "Zurück zur Bestellung"
+
+msgid "Copié !"
+msgstr "Kopiert!"

@@ -28,7 +28,26 @@
     <b>{% blocktrans %}Parrainez vos amis : {{ referral_percent }}% offerts{% endblocktrans %}</b>
     <p>{% trans "Partagez votre code. Vos amis économisent, et vous êtes récompensé." %}</p>
     <div class="ref-code"><code id="refCode">{{ referral_code }}</code>
-      <button class="btn-sm" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('refCode').textContent)">{% trans "Copier" %}</button></div>
+      <button class="btn-sm" id="refCopy" data-ok="{% trans "Copié !" %}">{% trans "Copier" %}</button></div>
+    <style>
+      .ref-code{position:relative}
+      #refCode{transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s}
+      #refCode.copied{transform:scale(1.06);box-shadow:0 0 0 4px rgba(63,208,122,.35)}
+      #refCopy{transition:background .2s,color .2s,border-color .2s,transform .15s}
+      #refCopy:active{transform:scale(.94)}
+      #refCopy.done{background:#3fd07a;border-color:#3fd07a;color:#fff}
+      .ref-burst{position:absolute;pointer-events:none;width:7px;height:7px;border-radius:50%;animation:refb .7s ease-out forwards}
+      @keyframes refb{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.4)}}
+    </style>
+    <script>(function(){var b=document.getElementById('refCopy'),c=document.getElementById('refCode'),lbl=b.textContent,t;
+      b.addEventListener('click',function(){var v=c.textContent.trim();
+        (navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).catch(function(){var i=document.createElement('textarea');i.value=v;document.body.appendChild(i);i.select();try{document.execCommand('copy');}catch(e){}i.remove();});
+        b.textContent='✓ '+b.dataset.ok;b.classList.add('done');c.classList.add('copied');
+        var box=b.parentNode,r=box.getBoundingClientRect(),br=b.getBoundingClientRect(),cols=['#3fd07a','#2f6bf2','#f6b93b','#e85d75'];
+        for(var k=0;k<12;k++){var d=document.createElement('span'),a=k/12*6.283,m=26+Math.random()*16;d.className='ref-burst';
+          d.style.left=(br.left-r.left+br.width/2-3)+'px';d.style.top=(br.top-r.top+br.height/2-3)+'px';d.style.background=cols[k%4];
+          d.style.setProperty('--dx',Math.cos(a)*m+'px');d.style.setProperty('--dy',Math.sin(a)*m+'px');box.appendChild(d);setTimeout(d.remove.bind(d),750);}
+        clearTimeout(t);t=setTimeout(function(){b.textContent=lbl;b.classList.remove('done');c.classList.remove('copied');},1800);});})();</script>
     <p class="hint">{% blocktrans %}Un code depuis un produit physique (poster) donne encore plus.{% endblocktrans %}</p>
   </div>
   {% endif %}

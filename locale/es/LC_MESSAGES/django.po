@@ -1085,3 +1085,6 @@ msgstr "Guardar y seguir jugando"
 
 msgid "Retour à la commande"
 msgstr "Volver al pedido"
+
+msgid "Copié !"
+msgstr "¡Copiado!"
