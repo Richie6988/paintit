@@ -32,13 +32,14 @@ def issue(code):
 
 
 def issue_referral(code):
-    """Code de PARRAINAGE digital a partager (taux referral_rate), multi-usage."""
+    """Code de PARRAINAGE digital a partager (taux referral_rate), USAGE UNIQUE.
+    (Il etait cree en promo illimitee : un seul code partage pouvait servir a l'infini.)"""
     code = norm(code)
     if not code:
         return
     pct = int(round(Pricing.get().referral_rate * 100))
     Discount.objects.get_or_create(code=code, defaults={
-        "kind": Discount.PROMO, "percent": pct, "max_uses": 0,
+        "kind": Discount.LOYALTY, "percent": pct, "max_uses": 1,
         "status": Discount.ISSUED, "active": True})
 
 
