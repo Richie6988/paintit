@@ -23,24 +23,25 @@
  .top .sp{flex:1}
  .stat{background:#f4f6fb;border:1px solid #e2e8f2;border-radius:12px;padding:6px 14px;font-weight:800;display:flex;gap:8px;align-items:baseline;font-size:1.15rem;color:#12224f}
  .stat small{color:#6b7793;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
- /* Combo : jauge persistante (serie de bonnes zones enchainees en < COMBO_MS) */
- #combo{position:fixed;left:50%;top:146px;transform:translateX(-50%) scale(.8);opacity:0;pointer-events:none;z-index:100000;
-   background:linear-gradient(120deg,#f6b93b,#e85d75,#7a3ff2);color:#fff;font-weight:900;border-radius:16px;
-   padding:6px 16px 9px;min-width:140px;text-align:center;white-space:nowrap;
-   box-shadow:0 10px 30px rgba(232,93,117,.45),0 0 0 3px rgba(255,255,255,.7);transition:opacity .25s,transform .25s cubic-bezier(.34,1.56,.64,1)}
- #combo.on{opacity:1;transform:translateX(-50%) scale(1)}
- #combo .cm{font-size:1.45rem;line-height:1.1}#combo .cs{font-size:.72rem;opacity:.9;letter-spacing:.04em;text-transform:uppercase}
- #combo .cbar{height:5px;border-radius:9px;background:rgba(255,255,255,.3);margin-top:5px;overflow:hidden}
- #combo .cbar i{display:block;height:100%;width:100%;background:#fff;border-radius:9px}
+ /* Combo : jauge dans la barre du haut, a gauche du score (serie de bonnes zones enchainees en < COMBO_MS) */
+ #combo{position:relative;display:flex;flex-direction:column;justify-content:center;min-width:128px;height:36px;padding:0 12px;
+   border-radius:12px;background:#f4f6fb;border:1px solid #e2e8f2;color:#8a97b4;font-weight:900;white-space:nowrap;overflow:hidden;
+   transition:background .25s,color .25s,box-shadow .25s,border-color .25s}
+ #combo .cr{display:flex;align-items:baseline;gap:7px}
+ #combo .cm{font-size:1.05rem;line-height:1.1}#combo .cs{font-size:.66rem;opacity:.9;letter-spacing:.04em;text-transform:uppercase}
+ #combo .cbar{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.28)}
+ #combo .cbar i{display:block;height:100%;width:0;background:#fff}
+ #combo.on{background:linear-gradient(120deg,#f6b93b,#e85d75,#7a3ff2);border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(232,93,117,.4)}
  #combo.hit{animation:cHit .35s cubic-bezier(.34,1.56,.64,1)}
- @keyframes cHit{0%{transform:translateX(-50%) scale(1)}40%{transform:translateX(-50%) scale(1.14)}100%{transform:translateX(-50%) scale(1)}}
- #combo.lost{opacity:1;background:#5b647a;box-shadow:0 8px 20px rgba(10,18,40,.3);animation:cLost .5s ease}
- @keyframes cLost{0%,100%{transform:translateX(-50%)}20%{transform:translateX(calc(-50% - 8px))}40%{transform:translateX(calc(-50% + 8px))}60%{transform:translateX(calc(-50% - 5px))}80%{transform:translateX(calc(-50% + 5px))}}
+ @keyframes cHit{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
+ #combo.lost{background:#5b647a;border-color:transparent;color:#fff;animation:cLost .5s ease}
+ @keyframes cLost{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
  /* Palier de multiplicateur atteint : grande banniere */
- .lvlup{position:fixed;left:50%;top:38%;z-index:100001;pointer-events:none;font-weight:900;font-size:3rem;color:#fff;white-space:nowrap;
-   text-shadow:0 4px 0 #7a3ff2,0 8px 24px rgba(122,63,242,.6);-webkit-text-stroke:1.5px #7a3ff2;
+ /* Palier de multiplicateur atteint : jaillit de la jauge combo */
+ .lvlup{position:fixed;z-index:100001;pointer-events:none;font-weight:900;font-size:2.4rem;color:#fff;white-space:nowrap;
+   text-shadow:0 3px 0 #7a3ff2,0 8px 24px rgba(122,63,242,.6);-webkit-text-stroke:1.5px #7a3ff2;
    animation:lvl 1.6s cubic-bezier(.2,1.3,.3,1) forwards}
- @keyframes lvl{0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(-8deg)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(2deg)}30%{transform:translate(-50%,-50%) scale(1) rotate(0)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-90%) scale(.9)}}
+ @keyframes lvl{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}18%{opacity:1;transform:translate(-50%,40%) scale(1.25) rotate(-4deg)}32%{transform:translate(-50%,40%) scale(1) rotate(0)}75%{opacity:1;transform:translate(-50%,40%) scale(1)}100%{opacity:0;transform:translate(-50%,120%) scale(.9)}}
  #score{display:inline-block;transition:color .2s}#score.bump{animation:sBump .45s cubic-bezier(.34,1.56,.64,1);color:#7a3ff2}
  @keyframes sBump{0%{transform:scale(1)}35%{transform:scale(1.35)}100%{transform:scale(1)}}
  .btn{background:#f4f6fb;border:1px solid #e2e8f2;color:#12224f;border-radius:10px;padding:7px 11px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
@@ -166,8 +167,12 @@
    .top{gap:3px;padding:6px 6px;overflow:visible;flex-wrap:nowrap}
    .top .brand{display:none}
    .top .sp{display:none}
-   #combo{min-width:120px;padding:5px 12px 8px}#combo .cm{font-size:1.2rem}
-   .lvlup{font-size:2.2rem}
+   .top #combo{position:fixed;bottom:78px;left:50%;margin-left:-48px;z-index:16;min-width:96px;height:30px;border-radius:999px;
+     padding:0 11px;box-shadow:0 4px 14px rgba(10,18,40,.28);background:rgba(255,255,255,.95)}
+   .top #combo.on{background:linear-gradient(120deg,#f6b93b,#e85d75,#7a3ff2)}.top #combo.lost{background:#5b647a}
+   #combo .cm{font-size:.85rem}#combo .cs{display:none}
+   .lvlup{font-size:2rem;animation-name:lvlM}
+   @keyframes lvlM{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}18%{opacity:1;transform:translate(-50%,-160%) scale(1.25) rotate(-4deg)}32%{transform:translate(-50%,-160%) scale(1) rotate(0)}75%{opacity:1;transform:translate(-50%,-160%) scale(1)}100%{opacity:0;transform:translate(-50%,-240%) scale(.9)}}
    .top .stat{position:fixed;bottom:78px;z-index:16;font-size:.82rem;padding:5px 11px;border-radius:999px;
      background:rgba(255,255,255,.95);color:#12224f;box-shadow:0 4px 14px rgba(10,18,40,.28)}
    .top .stat small{color:#5b647a;margin-right:5px;font-size:.72rem}
@@ -205,6 +210,7 @@
   </button>
   <input type="color" id="freecolor" value="#ff5252" title="Free colour" style="width:38px;height:34px;border:1px solid #2a3c6b;border-radius:8px;background:#16224a;display:none;cursor:pointer;padding:2px">
   <div class="sp"></div>
+  <div id="combo"><div class="cr"><span class="cm">COMBO</span><span class="cs">&times;1</span></div><div class="cbar"><i></i></div></div>
   <div class="stat stat-score"><small>{% trans "Score" %}</small><span id="score">0</span></div>
   <div class="stat stat-zones"><small>{% trans "Zones" %}</small><span id="zones">0/0</span></div>
   <div class="sp"></div>
@@ -281,7 +287,6 @@
 
 <div class="overlaym" id="modal"><img id="modalimg" alt="aperçu final"></div>
 
-<div id="combo"><div class="cm"></div><div class="cs"></div><div class="cbar"><i></i></div></div>
 <div class="win" id="win"><div class="wincard"><div class="shine-sweep"></div>
   <h2>{% trans "Terminé !" %}</h2><div class="badge"><svg viewBox="0 0 24 24" width="16" height="16" fill="#0b1226" style="vertical-align:-3px"><path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6z"/></svg> {% trans "Œuvre certifiée" %}</div>
   <div class="big" id="finalScore">0</div><p style="color:var(--muted)">{% trans "Bravo, votre toile est complète." %}</p>
@@ -383,19 +388,21 @@
   var COMBO_MS=4000, comboAt=0;
   function multFor(c){return c>=15?5:c>=10?4:c>=6?3:c>=3?2:1;}
   function comboBar(){var i=comboEl.querySelector('.cbar i');i.style.transition='none';i.style.width='100%';void i.offsetWidth;i.style.transition='width '+COMBO_MS+'ms linear';i.style.width='0%';}
+  function comboIdle(){comboEl.classList.remove('on','lost','hit');comboEl.querySelector('.cm').textContent='COMBO';comboEl.querySelector('.cs').textContent='\u00d71';
+    var i=comboEl.querySelector('.cbar i');i.style.transition='none';i.style.width='0%';}
   function showCombo(mult,prev){clearTimeout(comboTimer);comboEl.classList.remove('lost','hit');
-    if(combo<2){comboEl.classList.remove('on');return;}
+    if(combo<2){comboIdle();return;}
     var nxt=[3,6,10,15].filter(function(t){return t>combo;})[0];
     comboEl.querySelector('.cm').textContent='COMBO \u00d7'+mult;
     comboEl.querySelector('.cs').textContent=combo+' '+(nxt?'\u2022 \u00d7'+(mult+1)+' @ '+nxt:'\u2022 MAX');
-    try{comboEl.style.top=(boardEl.getBoundingClientRect().top+10)+'px';}catch(e){}
     void comboEl.offsetWidth;comboEl.classList.add('on','hit');comboBar();
     comboTimer=setTimeout(function(){breakCombo();},COMBO_MS);
-    if(mult>prev){var b=document.createElement('div');b.className='lvlup';b.textContent='COMBO \u00d7'+mult+'!';document.body.appendChild(b);setTimeout(function(){b.remove();},1600);if(navigator.vibrate)navigator.vibrate([15,30,15]);}}
-  function breakCombo(){clearTimeout(comboTimer);var had=combo>=2;combo=0;if(!had){comboEl.classList.remove('on');return;}
+    if(mult>prev){var b=document.createElement('div');b.className='lvlup';b.textContent='\u00d7'+mult+'!';
+      var r=comboEl.getBoundingClientRect();b.style.left=(r.left+r.width/2)+'px';b.style.top=(r.top+r.height/2)+'px';document.body.appendChild(b);setTimeout(function(){b.remove();},1600);if(navigator.vibrate)navigator.vibrate([15,30,15]);}}
+  function breakCombo(){clearTimeout(comboTimer);var had=combo>=2;combo=0;if(!had){comboIdle();return;}
     comboEl.classList.remove('hit');comboEl.querySelector('.cm').textContent='COMBO';comboEl.querySelector('.cs').textContent='\u2715';
     var i=comboEl.querySelector('.cbar i');i.style.transition='none';i.style.width='0%';
-    void comboEl.offsetWidth;comboEl.classList.add('lost');comboTimer=setTimeout(function(){comboEl.classList.remove('on','lost');},900);}
+    void comboEl.offsetWidth;comboEl.classList.add('lost');comboTimer=setTimeout(comboIdle,900);}
   function countScore(){cancelAnimationFrame(countRaf);var from=shown,to=score,t0=performance.now();
     scoreEl.classList.remove('bump');void scoreEl.offsetWidth;scoreEl.classList.add('bump');
     (function step(t){var k=Math.min(1,(t-t0)/600);shown=Math.round(from+(to-from)*(1-Math.pow(1-k,3)));scoreEl.textContent=shown;if(k<1)countRaf=requestAnimationFrame(step);})(t0);}

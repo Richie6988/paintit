@@ -234,7 +234,9 @@ def current_photo(request):
 def digipaint(request, uid):
     if uid.startswith("gal-gal-"):   # anciens uid de galerie (double prefixe) -> nouvel uid
         return redirect("studio:digipaint", uid=uid[4:], permanent=True)
-    d =os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    if uid.startswith("lib-") and not os.path.isdir(d):   # anciens modeles du home -> meme modele en galerie
+        return redirect("studio:digipaint", uid="gal-" + uid[4:].removeprefix("lib-"), permanent=True)
     if not os.path.exists(os.path.join(d, f"{uid}_digipaint.svg")):
         raise Http404
     import json

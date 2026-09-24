@@ -20,8 +20,8 @@ def _humanize(stem):
 
 
 class Command(BaseCommand):
-    help = ("Genere la bibliotheque (store) + les assets du home a partir de TOUTES les images "
-            "de studio/static/studio/samples/ (aucune liste en dur). "
+    help = ("Genere la galerie (store) + les assets du home a partir de TOUTES les images "
+            "de studio/static/studio/gallery/ (aucune liste en dur). "
             "Convention : sous-dossier = categorie ; nom de fichier = titre ; suffixe _cNN = nb couleurs.")
 
     def add_arguments(self, parser):
@@ -30,18 +30,15 @@ class Command(BaseCommand):
 
     def handle(self, *args, **opts):
         root_static = os.path.join(settings.BASE_DIR, "studio", "static", "studio")
-        samples = os.path.join(root_static, "samples")
         gallery = os.path.join(root_static, "gallery")
         showdir = os.path.join(root_static, "showcase")
         os.makedirs(showdir, exist_ok=True)
         default_colors = int(opts["colors"])
 
-        # samples/ = HOMEPAGE uniquement (prefixe lib-) ; gallery/ = GALERIE uniquement (prefixe gal-)
-        items = self._scan(samples, "lib-", default_colors, showcase=True)
-        items += self._scan(gallery, "gal-", default_colors, showcase=False)
+        # gallery/ = source unique : modeles de la galerie (uid gal-xxx) ET assets du home
+        items = self._scan(gallery, "gal-", default_colors)
         if not items:
-            self.stdout.write(self.style.WARNING(
-                "Aucune image dans %s ni %s" % (samples, gallery))); return
+            self.stdout.write(self.style.WARNING("Aucune image dans %s" % gallery)); return
 
         n = 0
         for it in items:
@@ -55,20 +52,19 @@ class Command(BaseCommand):
                     defaults=dict(title=it["title"], category=it["category"], colors=it["colors"],
                                   orientation="portrait", width_cm=40, height_cm=50,
                                   source="library", price=it["price"]))
-                if it["showcase"]:
-                    try:
-                        self._render_showcase(it["uid"], it["slug"], showdir)
-                    except Exception as e:
-                        self.stdout.write(self.style.WARNING(
-                            "Assets home ignores pour %s : %s" % (it["slug"], e)))
+                try:
+                    self._render_showcase(it["uid"], it["slug"], showdir)
+                except Exception as e:
+                    self.stdout.write(self.style.WARNING(
+                        "Assets home ignores pour %s : %s" % (it["slug"], e)))
                 n += 1
             except Exception as e:
                 self.stdout.write(self.style.ERROR("Echec %s : %s" % (it["title"], e)))
 
         self.stdout.write(self.style.SUCCESS(
-            "Genere : %d modeles (samples->homepage, gallery->galerie). Pense a collectstatic." % n))
+            "Genere : %d modeles (galerie + assets du home). Pense a collectstatic." % n))
 
-    def _scan(self, base, prefix, default_colors, showcase):
+    def _scan(self, base, prefix, default_colors):
         """Scanne un dossier d'images -> liste d'items. Sous-dossier = categorie ;
         nom = titre ; suffixe _cNN = couleurs ; suffixe _pNNN = prix en centimes."""
         items = []
@@ -81,7 +77,7 @@ class Command(BaseCommand):
                 full = os.path.join(root, fn)
                 rel = os.path.relpath(full, base)
                 parts = rel.replace("\\", "/").split("/")
-                category = _humanize(parts[0]) if len(parts) >= 2 else ("Modeles" if showcase else "Galerie")
+                category = _humanize(parts[0]) if len(parts) >= 2 else "Galerie"
                 stem = os.path.splitext(fn)[0]
                 colors = default_colors
                 m = re.search(r"_c(\d+)", stem)
@@ -91,14 +87,14 @@ class Command(BaseCommand):
                 pm = re.search(r"_p(\d+)", stem)
                 if pm:
                     price = round(int(pm.group(1)) / 100.0, 2); stem = stem.replace(pm.group(0), "")
-                if not showcase and stem.lower().startswith(prefix):   # 'gal-rose.jpg' -> uid 'gal-rose' (pas 'gal-gal-rose')
+                if stem.lower().startswith(prefix):   # 'gal-rose.jpg' -> uid 'gal-rose' (pas 'gal-gal-rose')
                     stem = stem[len(prefix):]
                 stem = stem.strip("_-") or "modele"
                 clean_rel = "/".join(parts[:-1] + [stem])   # chemin sans suffixes _cNN/_pNNN
                 slug = _slugify(clean_rel)
                 items.append(dict(path=full, title=_humanize(stem), category=category,
                                   uid=prefix + slug, colors=colors, slug=_slugify(stem),
-                                  price=price, showcase=showcase))
+                                  price=price))
         return items
 
     def _render_showcase(self, uid, slug, showdir):

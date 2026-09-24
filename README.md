@@ -749,7 +749,7 @@ Reglages : densite de zones et max_zones dans pbn.run ; planchers dans pipeline.
 - Confidentialite : precise que les fichiers d'une toile sont conserves TANT QUE le modele est
   dans la galerie (supprime de la galerie => fichiers effaces).
 - Bibliotheque DigiPaint : modeles embarques CATEGORISES (Paysage, Vehicules...) affiches sur
-  /paint/, jouables gratuitement. Images echantillons dans studio/static/studio/samples/.
+  /paint/, jouables gratuitement. Images sources dans studio/static/studio/gallery/ (galerie + assets du home).
   IMPORTANT : lancer `python manage.py seed_library` apres installation pour generer ces modeles
   (les fichiers media ne sont pas inclus dans le zip). Ajoutez des images a la commande pour
   plus de categories.
