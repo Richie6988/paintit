@@ -303,6 +303,13 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(Discount)
 class DiscountAdmin(admin.ModelAdmin):
+    def changelist_view(self, request, extra_context=None):
+        from django.shortcuts import redirect
+        if request.GET.get("django") or request.method == "POST":
+            request.GET = request.GET.copy(); request.GET.pop("django", None)
+            return super().changelist_view(request, extra_context)
+        return redirect("studio:erp_discounts")   # page ERP dediee
+
     list_display = ("code", "kind", "percent", "max_uses", "used_count", "remaining_display",
                     "active", "status", "created_at")
     list_filter = ("kind", "active", "status")
@@ -587,7 +594,7 @@ class CompanyInfoAdmin(admin.ModelAdmin):
 
     def changelist_view(self, request, extra_context=None):
         from django.shortcuts import redirect
-        return redirect("admin:studio_companyinfo_change", CompanyInfo.get().pk)
+        return redirect("studio:erp_legal")
 
     def has_add_permission(self, request):
         return False

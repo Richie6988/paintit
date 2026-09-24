@@ -733,3 +733,10 @@ main{overflow-x:clip}
   form .cta[type=submit]{width:100%}
 }
 .cgv-check span{font-weight:400;color:var(--muted,#5b647a);line-height:1.45}
+/* Bandeau du haut : message et langues cote a cote a TOUTES les largeurs (jamais superposes) */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.topbar .tb-msg{position:static;flex:1 1 auto;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;padding-left:150px;pointer-events:auto}
+.topbar .tb-lang{flex:0 0 auto}
+@media (max-width: 900px){.topbar .tb-msg{padding-left:0;text-align:left}.topbar .tb-x{display:none}}
+@media (max-width: 480px){.topbar .tb-x2{display:none}}

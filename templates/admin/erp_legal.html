@@ -1,0 +1,60 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Informations légales · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .lg{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start;max-width:1180px}
+ .pf-sec{display:grid;grid-template-columns:230px minmax(0,1fr);gap:18px;padding:18px 0;border-top:1px solid #e3e3e3}
+ .pf-sec:first-of-type{border-top:0;padding-top:4px}
+ .pf-sec h2{font-size:1rem;margin:0 0 4px;color:#1a1a1a;background:none;padding:0;text-transform:none;letter-spacing:0}
+ .pf-sec p{color:#6d7175;font-size:.8rem;margin:0;line-height:1.45}
+ .pf-box{background:#fff;border:1px solid #e3e3e3;border-radius:12px;padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+ .pf-f{display:flex;flex-direction:column;gap:5px;min-width:0}
+ .pf-f.wide{grid-column:1/-1}
+ .pf-f label{font-weight:700;font-size:.82rem;color:#303030 !important}
+ .pf-f input,.pf-f textarea{width:100%;box-sizing:border-box;font-size:.9rem}
+ .pf-f .hlp{color:#6d7175;font-size:.74rem}.pf-f .err{color:#b42318;font-size:.78rem;font-weight:700}
+ .pf-bar{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:10px;background:rgba(255,255,255,.96);
+   border:1px solid #e3e3e3;border-radius:12px;padding:12px 16px;margin-top:10px;box-shadow:0 -6px 20px rgba(0,0,0,.06);z-index:5}
+ .ck{list-style:none;margin:10px 0 0;padding:0}.ck li{display:flex;gap:8px;align-items:center;padding:6px 0;font-size:.86rem;border-bottom:1px solid #f4f4f4}
+ .ck .ck-ok{color:#1e8848;font-weight:900}.ck .ck-ko{color:#b42318;font-weight:900}
+ .meter{height:6px;background:#ebebeb;border-radius:999px;overflow:hidden;margin-top:8px}.meter i{display:block;height:100%;background:#1e8848}
+ .links a{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f4f4f4;font-weight:700;font-size:.86rem}
+ @media(max-width:960px){.lg{grid-template-columns:1fr}.pf-sec{grid-template-columns:1fr}.pf-box{grid-template-columns:1fr}}
+</style>
+<div class="erp">
+  <div class="erp-head"><div><h1>Informations légales</h1>
+    <div class="muted">Une seule saisie alimente les mentions légales, les CGV, la politique de confidentialité et les factures.</div></div></div>
+  {% if messages %}{% for m in messages %}<div class="banner warn" style="background:#e7f6ec;border-color:#b7e4c7;color:#1e5b35"><span>{{ m }}</span></div>{% endfor %}{% endif %}
+  {% if form.errors %}<div class="banner err"><span>Corrigez les champs signalés en rouge.</span></div>{% endif %}
+  <div class="lg">
+    <form method="post">{% csrf_token %}
+      {% for s in sections %}
+      <div class="pf-sec">
+        <div><h2>{{ s.title }}</h2><p>{{ s.help }}</p></div>
+        <div class="pf-box">{% for f in s.fields %}
+          <div class="pf-f {% if f.field.widget.attrs.rows %}wide{% endif %}"><label for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}
+            {% if f.help_text %}<span class="hlp">{{ f.help_text }}</span>{% endif %}{% for e in f.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+        {% endfor %}</div>
+      </div>
+      {% endfor %}
+      <div class="pf-bar"><button class="pbtn pri">Enregistrer</button></div>
+    </form>
+    <div>
+      <div class="card">
+        <div class="card-h"><h2>Conformité</h2><b>{{ done }}/{{ checks|length }}</b></div>
+        <div class="meter"><i style="width:{% widthratio done checks|length 100 %}%"></i></div>
+        <ul class="ck">{% for label, ok in checks %}<li><span class="{% if ok %}ck-ok{% else %}ck-ko{% endif %}">{% if ok %}✓{% else %}✕{% endif %}</span>{{ label }}</li>{% endfor %}</ul>
+      </div>
+      <div class="card links">
+        <div class="card-h"><h2>Pages publiques</h2></div>
+        <a href="/mentions-legales/" target="_blank">Mentions légales <span>↗</span></a>
+        <a href="/cgv/" target="_blank">Conditions générales de vente <span>↗</span></a>
+        <a href="/privacy/" target="_blank">Confidentialité <span>↗</span></a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

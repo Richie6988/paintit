@@ -1,0 +1,105 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Remises · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .dc-new{display:grid;grid-template-columns:minmax(0,1.4fr) 110px 150px auto;gap:10px;align-items:end}
+ .dc-new label{display:flex;flex-direction:column;gap:4px;font-size:.78rem;font-weight:700;color:#303030}
+ .dc-new input{width:100%;box-sizing:border-box}
+ .dc-code{display:flex;gap:6px}
+ .dt{width:100%;border-collapse:collapse}
+ .dt th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:#6d7175;padding:8px;border-bottom:1px solid #ebebeb;background:#fafafa;white-space:nowrap}
+ .dt td{padding:9px 8px;border-bottom:1px solid #f1f1f1;font-size:.86rem;vertical-align:middle;background:#fff}
+ .dt tr:hover td{background:#fafcff}
+ .dt .r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+ .dt code{font-weight:800;font-size:.86rem;background:#f6f6f7;border:1px solid #e3e3e3;border-radius:6px;padding:3px 7px;cursor:pointer}
+ .dt code:hover{border-color:#2f6bf2}
+ .dt .sub{font-size:.74rem;color:#6d7175}
+ .st{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;font-weight:800;border-radius:999px;padding:3px 10px}
+ .st.ok{background:#e7f6ec;color:#1e5b35}.st.used{background:#f1f1f1;color:#6d7175}.st.off{background:#fff1f0;color:#b42318}
+ .kind{font-size:.72rem;font-weight:800;border-radius:6px;padding:2px 7px;background:#eef2ff;color:#3b4bb3}
+ .kind.ref{background:#f5edff;color:#6b2fd6}.kind.phy{background:#fff4e5;color:#9a5b00}
+ .inl{display:flex;gap:4px;align-items:center}
+ .inl input{width:58px;padding:4px 6px !important;font-size:.82rem}
+ .acts{display:flex;gap:4px;justify-content:flex-end}
+ .ol-tools{display:flex;gap:8px;align-items:center;margin:4px 0 12px}
+ .ol-tools input[type=search]{flex:1;min-width:200px}
+ @media(max-width:800px){.dc-new{grid-template-columns:1fr 1fr}.dc-new .go{grid-column:1/-1}}
+</style>
+<div class="erp">
+  <div class="erp-head">
+    <div><h1>Remises</h1><div class="muted">Codes promo, parrainage (-{{ rates.ref }} %, créé après chaque commande) et fidélité via le QR du poster (-{{ rates.phys }} %). Taux modifiables dans <a href="/admin-tarifs/">Tarifs</a>.</div></div>
+  </div>
+
+  {% if messages %}{% for m in messages %}<div class="banner {% if m.tags == 'error' %}err{% else %}warn{% endif %}" {% if m.tags == 'success' %}style="background:#e7f6ec;border-color:#b7e4c7;color:#1e5b35"{% endif %}><span>{{ m }}</span></div>{% endfor %}{% endif %}
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Codes utilisables</div><div class="v">{{ kpi.active }}</div></div>
+    <div class="kpi"><div class="l">Commandes avec code</div><div class="v">{{ kpi.orders }}</div><div class="muted">{{ kpi.share }} % des commandes payées</div></div>
+    <div class="kpi"><div class="l">CA généré</div><div class="v">{{ kpi.ca|floatformat:"2g" }} €</div></div>
+    <div class="kpi"><div class="l">Remises accordées</div><div class="v">{{ kpi.rem|floatformat:"2g" }} €</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>Nouveau code promo</h2><span class="muted">laissez le code vide pour en générer un</span></div>
+    <form method="post" class="dc-new">{% csrf_token %}<input type="hidden" name="op" value="create">
+      <label>Code<span class="dc-code"><input name="code" id="newCode" placeholder="ex. NOEL25" style="text-transform:uppercase" maxlength="32">
+        <button type="button" class="pbtn sm" id="genCode" title="Générer">🎲</button></span></label>
+      <label>Remise (%)<input type="number" name="percent" min="1" max="90" value="15" required></label>
+      <label>Utilisations max<input type="number" name="max_uses" min="0" value="0"><span class="sub" style="font-weight:400;color:#6d7175">0 = illimité</span></label>
+      <button class="pbtn pri go">Créer le code</button>
+    </form>
+  </div>
+
+  <div class="card" style="padding-top:6px">
+    <div class="tabs2">{% for k, l, n in tabs %}<a href="?tab={{ k }}" class="{% if k == tab %}on{% endif %}">{{ l }}<em>{{ n }}</em></a>{% endfor %}</div>
+    <form class="ol-tools" method="get"><input type="hidden" name="tab" value="{{ tab }}">
+      <input type="search" name="q" value="{{ q }}" placeholder="Rechercher un code ou une commande…">
+      <button class="pbtn">Rechercher</button>{% if q %}<a class="pbtn" href="?tab={{ tab }}">Effacer</a>{% endif %}</form>
+    <div style="overflow-x:auto">
+    <table class="dt">
+      <tr><th>Code</th><th>Type</th><th>Remise</th><th>Utilisations</th><th>Statut</th><th class="r">Commandes</th><th class="r">CA</th><th>Créé</th><th></th></tr>
+      {% for r in rows %}{% with d=r.d %}
+      <tr>
+        <td><code title="Cliquer pour copier" data-copy="{{ d.code }}">{{ d.code }}</code>{% if d.used_by %}<div class="sub">utilisé par {{ d.used_by }}</div>{% endif %}</td>
+        <td>{% if d.kind == 'promo' %}<span class="kind">Promo</span>{% elif d.code|slice:"-2:" == "-R" %}<span class="kind ref">Parrainage</span>{% else %}<span class="kind phy">Poster</span>{% endif %}</td>
+        <td>
+          <form method="post" class="inl">{% csrf_token %}<input type="hidden" name="op" value="update"><input type="hidden" name="pk" value="{{ d.pk }}">
+            <input type="number" name="percent" min="1" max="90" value="{{ d.percent }}"> %
+            {% if d.kind == 'promo' %}<input type="hidden" name="max_uses" value="{{ d.max_uses }}">{% endif %}
+            <button class="pbtn sm" title="Enregistrer">✓</button></form>
+        </td>
+        <td>{% if d.kind == 'promo' %}
+          <form method="post" class="inl">{% csrf_token %}<input type="hidden" name="op" value="update"><input type="hidden" name="pk" value="{{ d.pk }}"><input type="hidden" name="percent" value="{{ d.percent }}">
+            <span class="sub">{{ d.used_count }} /</span><input type="number" name="max_uses" min="0" value="{{ d.max_uses }}" title="0 = illimité"><button class="pbtn sm" title="Enregistrer">✓</button></form>
+          {% else %}{{ r.uses }}{% endif %}</td>
+        <td><span class="st {{ r.state.0 }}">{{ r.state.1 }}</span></td>
+        <td class="r">{{ r.orders }}</td>
+        <td class="r">{% if r.ca %}{{ r.ca|floatformat:"2g" }} €<div class="sub">-{{ r.rem|floatformat:"2g" }} €</div>{% else %}<span class="sub">—</span>{% endif %}</td>
+        <td style="white-space:nowrap">{{ d.created_at|date:"d/m/Y" }}</td>
+        <td><div class="acts">
+          <form method="post">{% csrf_token %}<input type="hidden" name="op" value="toggle"><input type="hidden" name="pk" value="{{ d.pk }}">
+            <button class="pbtn sm">{% if d.active %}Désactiver{% else %}Activer{% endif %}</button></form>
+          {% if not d.used_count and d.status != 'used' %}<form method="post" data-confirm="Supprimer le code {{ d.code }} ?" data-danger data-ok="Supprimer">{% csrf_token %}<input type="hidden" name="op" value="delete"><input type="hidden" name="pk" value="{{ d.pk }}">
+            <button class="pbtn sm" title="Supprimer" style="color:#b42318">✕</button></form>{% endif %}
+        </div></td>
+      </tr>{% endwith %}
+      {% empty %}<tr><td colspan="9" style="text-align:center;padding:40px" class="muted">Aucun code{% if q %} pour « {{ q }} »{% endif %}.</td></tr>{% endfor %}
+    </table>
+    </div>
+  </div>
+  <p class="muted" style="text-align:center"><a href="/admin/studio/discount/?django=1">Table Django (avancé)</a></p>
+</div>
+<script>
+(function(){
+  document.getElementById('genCode').addEventListener('click',function(){
+    var a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',s='PROMO-';for(var i=0;i<6;i++)s+=a[Math.floor(Math.random()*a.length)];
+    document.getElementById('newCode').value=s;});
+  document.querySelectorAll('code[data-copy]').forEach(function(c){c.addEventListener('click',function(){
+    var v=c.dataset.copy;(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(function(){
+      var o=c.textContent;c.textContent='✓ copié';setTimeout(function(){c.textContent=o;},1100);}).catch(function(){});});});
+})();
+</script>
+{% endblock %}

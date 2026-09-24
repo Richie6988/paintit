@@ -268,5 +268,36 @@ class AdminSecurityTests(TestCase):
         self.assertContains(r, "404", status_code=404)
 
 
+class ErpPagesTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
+        self.client.login(username="boss", password="pw-Secret-123")
+
+    def test_discounts_crud(self):
+        from studio.models import Discount
+        self.client.post("/admin-hub/discounts/", {"op": "create", "code": "noel25", "percent": "25", "max_uses": "10"})
+        d = Discount.objects.get(code="NOEL25")
+        self.assertEqual((d.kind, d.percent, d.max_uses), ("promo", 25, 10))
+        self.client.post("/admin-hub/discounts/", {"op": "toggle", "pk": d.pk})
+        self.assertFalse(Discount.objects.get(pk=d.pk).active)
+        self.assertContains(self.client.get("/admin-hub/discounts/?tab=promo"), "NOEL25")
+        self.client.post("/admin-hub/discounts/", {"op": "delete", "pk": d.pk})
+        self.assertFalse(Discount.objects.filter(pk=d.pk).exists())
+
+    def test_legal_page_saves(self):
+        from studio.models import CompanyInfo
+        r = self.client.post("/admin-hub/legal/", {"legal_name": "PaintIt SAS", "email": "contact@paintit.click",
+                                                  "vat_rate": "0", "invoice_prefix": "F", "siret": "12345678900011"})
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(CompanyInfo.get().legal_name, "PaintIt SAS")
+        self.assertContains(self.client.get("/mentions-legales/"), "PaintIt SAS")
+
+    def test_lab_renders_in_erp(self):
+        r = self.client.get("/pbn/")
+        self.assertContains(r, 'id="runBtn"')
+        self.assertContains(r, "erp-nav")
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)

@@ -1221,3 +1221,9 @@ msgstr "Puede que el enlace sea incorrecto o que la página se haya movido."
 
 msgid "Voir la galerie"
 msgstr "Ver la galería"
+
+msgid "Qui se cache derrière PaintIt, et comment nous joindre."
+msgstr "Quién está detrás de PaintIt y cómo contactarnos."
+
+msgid "Nous écrire"
+msgstr "Escríbenos"

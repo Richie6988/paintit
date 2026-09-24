@@ -16,10 +16,10 @@
   <a href="/admin-hub/customers/" class="{% if '/admin-hub/customers' in erp_path %}on{% endif %}">Clients</a>
   <a href="/admin-hub/messages/" class="{% if '/admin/studio/contactmessage' in erp_path or '/admin-hub/messages' in erp_path %}on{% endif %}">Messages{% if erp_badges.messages %}<b class="bdg">{{ erp_badges.messages }}</b>{% endif %}</a>
   <a href="/admin-hub/catalogue/" class="{% if '/admin/studio/digitalcanvas' in erp_path or '/admin-hub/catalogue' in erp_path %}on{% endif %}">Catalogue</a>
-  <a href="/admin/studio/discount/" class="{% if '/admin/studio/discount' in erp_path %}on{% endif %}">Remises</a>
+  <a href="/admin-hub/discounts/" class="{% if '/admin/studio/discount' in erp_path or '/admin-hub/discounts' in erp_path %}on{% endif %}">Remises</a>
   <a href="/admin-hub/suppliers/" class="{% if '/admin/studio/supplier' in erp_path or '/admin-hub/suppliers' in erp_path %}on{% endif %}">Fournisseurs</a>
   <a href="/admin-tarifs/">Tarifs</a>
-  <a href="/admin/studio/companyinfo/" class="{% if '/admin/studio/companyinfo' in erp_path %}on{% endif %}">Légal{% if erp_badges.legal %}<b class="bdg err" title="Infos légales incomplètes">!</b>{% endif %}</a>
+  <a href="/admin-hub/legal/" class="{% if '/admin-hub/legal' in erp_path %}on{% endif %}">Légal{% if erp_badges.legal %}<b class="bdg err" title="Infos légales incomplètes">!</b>{% endif %}</a>
   <a href="/admin-hub/marketing/" class="{% if '/admin-hub/marketing' in erp_path or '/admin/studio/marketingad' in erp_path %}on{% endif %}">Marketing</a>
   <a href="/pbn/">Lab</a>
   <span class="sp"></span>

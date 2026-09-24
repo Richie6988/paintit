@@ -1,29 +1,33 @@
+{% extends "admin/base_site.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PBN Lab — Pipeline peinture par numéros</title>
-<link rel="stylesheet" href="{% static 'pbn/style.css' %}">
-</head>
-<body>
-<header class="topbar">
-  <div class="logo">🎨 PBN <span>Lab</span></div>
-  <div class="topbar-sub">Pipeline d'apprentissage — vectorisation image & couleurs</div>
-  <div class="job-badge" id="jobBadge" hidden>job <code id="jobId"></code></div>
-</header>
-<div class="actionbar">
-  <button class="btn primary" id="runBtn" disabled>▶ Lancer le pipeline</button>
-  <button class="btn" id="rerunBtn" hidden>↺ Recharger l'image (mêmes params)</button>
+{% block title %}Lab · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'pbn/style.css' %}">{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<div class="erp lab">
+  <div class="erp-head">
+    <div><h1>Lab</h1><div class="muted">Testez l'algorithme sur une image et réglez les paramètres : chaque étape du pipeline s'affiche avec ses fichiers.</div></div>
+    <div class="lab-actions">
+      <div class="job-badge" id="jobBadge" hidden>job <code id="jobId"></code></div>
+      <button class="pbtn" id="rerunBtn" hidden>↺ Relancer (mêmes réglages)</button>
+      <button class="pbtn pri" id="runBtn" disabled>▶ Lancer</button>
+    </div>
+  </div>
   <div class="progress"><div class="bar" id="progressBar"></div></div>
-</div>
-
-<main class="layout">
+  <div class="lab-presets card">
+    <b>Préréglages</b>
+    <button class="pbtn sm" data-preset="easy">Facile · 12 couleurs</button>
+    <button class="pbtn sm" data-preset="std">Standard · 24 couleurs</button>
+    <button class="pbtn sm" data-preset="pro">Détaillé · 36 couleurs</button>
+    <span class="muted" style="font-size:.78rem">Les réglages fins sont dans les sections repliées du panneau.</span>
+  </div>
+<main class="lab-layout">
   <!-- ===================== PANNEAU PARAMÈTRES ===================== -->
-  <aside class="panel" id="panel">
+  <aside class="lab-panel card" id="panel">
     <section class="group">
-      <h3>1 · Image</h3>
+      <h3>Image</h3>
       <label class="dropzone" id="dropzone">
         <input type="file" id="fileInput" accept="image/*" hidden>
         <span id="dropLabel">Glissez une image ici<br><em>ou cliquez pour parcourir</em></span>
@@ -31,8 +35,8 @@
       </label>
     </section>
 
-    <section class="group">
-      <h3>2 · Support physique</h3>
+    <details class="group adv">
+      <summary>Support physique</summary>
       <div class="row">
         <div class="param">
           <label>Largeur (cm)</label>
@@ -57,10 +61,10 @@
           <output id="maxPxOut">1400</output></div>
         </div>
       </div>
-    </section>
+    </details>
 
     <section class="group">
-      <h3>3 · Couleurs</h3>
+      <h3>Couleurs</h3>
       <div class="param">
         <label>Nombre de couleurs (K)</label>
         <div class="ctrl"><input type="range" id="colors" min="2" max="48" step="1" value="12">
@@ -74,7 +78,7 @@
     </section>
 
     <section class="group">
-      <h3>4 · Lissage & CNN</h3>
+      <h3>Lissage & détection des contours</h3>
       <div class="param">
         <label>Algorithme</label>
         <div class="segmented" id="smoothSeg">
@@ -102,8 +106,8 @@
       </div>
     </section>
 
-    <section class="group">
-      <h3>5 · Zones peignables</h3>
+    <details class="group adv">
+      <summary>Zones peignables</summary>
       <div class="param">
         <label>Zone min (mm)</label>
         <div class="ctrl"><input type="range" id="minZoneMm" min="1" max="15" step="0.5" value="3">
@@ -126,10 +130,10 @@
           <output id="densityOut">auto</output></div>
         </div>
       </div>
-    </section>
+    </details>
 
-    <section class="group">
-      <h3>6 · Traits & rendu</h3>
+    <details class="group adv">
+      <summary>Traits & rendu</summary>
       <div class="param">
         <label>Épaisseur trait (mm)</label>
         <div class="ctrl"><input type="range" id="strokeMm" min="0.05" max="1" step="0.05" value="0.25">
@@ -140,10 +144,10 @@
         <div class="ctrl"><input type="range" id="palScale" min="1" max="6" step="1" value="3">
         <output id="palScaleOut">3</output></div>
       </div>
-    </section>
+    </details>
 
-    <section class="group">
-      <h3>7 · Branding & QR</h3>
+    <details class="group adv">
+      <summary>Branding & QR</summary>
       <div class="param"><label>Marque</label>
         <input type="text" id="brand" value="PAINT BY NUMBERS" class="text"></div>
       <div class="param"><label>Texte remise</label>
@@ -154,13 +158,13 @@
         <span>Désactiver le QR de fidélité</span></label>
       <div class="param"><label>Logo (optionnel)</label>
         <input type="file" id="logoInput" accept="image/*"></div>
-    </section>
+    </details>
 
 
   </aside>
 
   <!-- ===================== TIMELINE DES ÉTAPES ===================== -->
-  <section class="timeline" id="timeline">
+  <section class="lab-timeline" id="timeline">
     <div class="placeholder" id="placeholder">
       <div class="ph-icon">🖼️</div>
       <p>Chargez une image puis lancez le pipeline.<br>
@@ -168,8 +172,20 @@
     </div>
   </section>
 </main>
-
+</div>
 <div class="toast" id="toast" hidden></div>
 <script src="{% static 'pbn/app.js' %}"></script>
-</body>
-</html>
+<script>
+(function(){
+  var P={easy:{colors:12,minZoneMm:5,minPaintMm:1,strokeMm:.3,detail:'low'},
+         std:{colors:24,minZoneMm:3,minPaintMm:.6,strokeMm:.25,detail:'med'},
+         pro:{colors:36,minZoneMm:2,minPaintMm:.4,strokeMm:.2,detail:'high'}};
+  document.querySelectorAll('[data-preset]').forEach(function(b){b.addEventListener('click',function(){
+    var p=P[b.dataset.preset];
+    ['colors','minZoneMm','minPaintMm','strokeMm'].forEach(function(k){var el=document.getElementById(k);el.value=p[k];el.dispatchEvent(new Event('input'));});
+    document.querySelectorAll('#detailSeg button').forEach(function(x){x.classList.toggle('on',x.dataset.v===p.detail);});
+    document.querySelectorAll('[data-preset]').forEach(function(x){x.classList.toggle('pri',x===b);});
+  });});
+})();
+</script>
+{% endblock %}

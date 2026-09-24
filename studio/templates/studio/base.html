@@ -39,7 +39,7 @@
 </head>
 <body>
   <div class="topbar">
-    <span class="tb-msg">{% trans "Livraison offerte" %} &middot; {% trans "Toile digitale offerte" %} &middot; {% trans "Aperçu gratuit en quelques secondes" %}</span>
+    <span class="tb-msg"><span>{% trans "Livraison offerte" %}</span><span class="tb-x"> &middot; {% trans "Toile digitale offerte" %}</span><span class="tb-x2"> &middot; {% trans "Aperçu gratuit en quelques secondes" %}</span></span>
     <div class="lang tb-lang" id="langform" data-current="{{ LANGUAGE_CODE }}">
       {% get_current_language as LANG %}
       <a href="{{ LANG_URLS.fr }}" data-lang="fr" class="{% if LANG == 'fr' %}active{% endif %}">FR</a>

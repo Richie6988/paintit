@@ -1212,3 +1212,9 @@ msgstr "The link may be wrong or the page may have moved."
 
 msgid "Voir la galerie"
 msgstr "See the gallery"
+
+msgid "Qui se cache derrière PaintIt, et comment nous joindre."
+msgstr "Who is behind PaintIt, and how to reach us."
+
+msgid "Nous écrire"
+msgstr "Write to us"

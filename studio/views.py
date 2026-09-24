@@ -2820,3 +2820,118 @@ def two_factor_setup(request):
     import segno
     qr = segno.make(uri, error="m").svg_inline(scale=5, dark="#12224f")
     return render(request, "admin/two_factor.html", {"mode": "setup", "qr": qr, "secret": secret, "error": error})
+
+
+# ---------------- Remises (ERP) ----------------
+@staff_member_required
+def erp_discounts(request):
+    from django.contrib import messages
+    from django.db.models import Count, Q, Sum
+    from .models import Discount
+    if request.method == "POST":
+        op = request.POST.get("op")
+        d = Discount.objects.filter(pk=request.POST.get("pk")).first()
+        if op == "create":
+            import secrets as _sec
+            code = discounts.norm(request.POST.get("code")) or ("PROMO-" + _sec.token_hex(3).upper())
+            try:
+                pct = max(1, min(90, int(request.POST.get("percent") or 10)))
+                uses = max(0, int(request.POST.get("max_uses") or 0))
+            except ValueError:
+                pct, uses = 10, 0
+            if Discount.objects.filter(code=code).exists():
+                messages.error(request, "Le code %s existe déjà." % code)
+            else:
+                Discount.objects.create(code=code, kind=Discount.PROMO, percent=pct, max_uses=uses, active=True)
+                messages.success(request, "Code %s créé (-%d %%, %s)." % (code, pct, "illimité" if uses == 0 else "%d utilisation(s)" % uses))
+        elif d and op == "toggle":
+            d.active = not d.active
+            d.save(update_fields=["active"])
+            messages.success(request, "%s %s." % (d.code, "réactivé" if d.active else "désactivé"))
+        elif d and op == "update":
+            try:
+                d.percent = max(1, min(90, int(request.POST.get("percent") or d.percent)))
+                if d.kind == Discount.PROMO:
+                    d.max_uses = max(0, int(request.POST.get("max_uses") or 0))
+                d.save(update_fields=["percent", "max_uses"])
+                messages.success(request, "%s mis à jour." % d.code)
+            except ValueError:
+                messages.error(request, "Valeurs invalides.")
+        elif d and op == "delete":
+            if d.used_count or d.status == Discount.USED:
+                messages.error(request, "%s a déjà servi : désactivez-le plutôt (historique des commandes)." % d.code)
+            else:
+                d.delete()
+                messages.success(request, "Code supprimé.")
+        return redirect(request.get_full_path())
+
+    tab = request.GET.get("tab", "all")
+    q = (request.GET.get("q") or "").strip()
+    qs = Discount.objects.all().order_by("-created_at")
+    tabs_q = {"promo": Q(kind=Discount.PROMO), "referral": Q(kind=Discount.LOYALTY, code__endswith="-R"),
+              "loyalty": Q(kind=Discount.LOYALTY) & ~Q(code__endswith="-R"), "all": Q()}
+    tabs = [(k, l, qs.filter(tabs_q[k]).count()) for k, l in
+            (("promo", "Codes promo"), ("referral", "Parrainage"), ("loyalty", "Fidélité (poster)"), ("all", "Tous"))]
+    qs = qs.filter(tabs_q.get(tab, Q()))
+    if q:
+        qs = qs.filter(Q(code__icontains=q) | Q(used_by__icontains=q))
+    paid = Order.objects.filter(status__in=Order.PAID_STATUSES).exclude(discount_code__isnull=True).exclude(discount_code="")
+    per = {r["discount_code"]: r for r in paid.values("discount_code").annotate(n=Count("id"), ca=Sum("total"), rem=Sum("discount_amount"))}
+    rows = []
+    for d in qs[:300]:
+        st = per.get(d.code, {})
+        if not d.active:
+            state = ("off", "Désactivé")
+        elif discounts.is_redeemable(d.code):
+            state = ("ok", "Actif")
+        else:
+            state = ("used", "Épuisé")
+        rows.append({"d": d, "orders": st.get("n", 0), "ca": st.get("ca") or 0, "rem": st.get("rem") or 0, "state": state,
+                     "uses": ("%d / ∞" % d.used_count) if (d.kind == Discount.PROMO and d.max_uses == 0) else
+                             ("%d / %d" % (d.used_count, d.max_uses) if d.kind == Discount.PROMO else
+                              ("1 / 1" if d.status == Discount.USED else "0 / 1"))})
+    agg = paid.aggregate(n=Count("id"), ca=Sum("total"), rem=Sum("discount_amount"))
+    kpi = {"active": sum(1 for x in Discount.objects.filter(active=True) if discounts.is_redeemable(x.code)),
+           "orders": agg["n"] or 0, "ca": agg["ca"] or 0, "rem": agg["rem"] or 0,
+           "share": round(100.0 * (agg["n"] or 0) / max(1, Order.objects.filter(status__in=Order.PAID_STATUSES).count()))}
+    p = Pricing.get()
+    return render(request, "admin/erp_discounts.html", {
+        "rows": rows, "tabs": tabs, "tab": tab, "q": q, "kpi": kpi,
+        "rates": {"ref": round(p.referral_rate * 100), "phys": round(p.referral_physical_rate * 100)}})
+
+
+# ---------------- Infos legales (ERP) ----------------
+@staff_member_required
+def erp_legal(request):
+    from django import forms as _f
+    from django.contrib import messages
+    from .models import CompanyInfo
+
+    class LegalForm(_f.ModelForm):
+        class Meta:
+            model = CompanyInfo
+            exclude = []
+            widgets = {"address": _f.Textarea(attrs={"rows": 3}), "host": _f.Textarea(attrs={"rows": 3}),
+                       "mediator": _f.Textarea(attrs={"rows": 2})}
+
+    info = CompanyInfo.get()
+    form = LegalForm(request.POST or None, instance=info)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Informations légales enregistrées : pages publiques et factures à jour.")
+        return redirect("studio:erp_legal")
+    sections = [
+        ("Entreprise", "Apparaît dans les mentions légales, les CGV et sur chaque facture.",
+         ["legal_name", "legal_form", "capital", "siret", "rcs", "address", "director"]),
+        ("Contact", "Adresse affichée aux clients pour le SAV et les réclamations.", ["email", "phone"]),
+        ("TVA et factures", "Taux 0 = micro-entreprise en franchise (mention art. 293 B du CGI sur la facture).",
+         ["vat_rate", "vat_number", "invoice_prefix"]),
+        ("Hébergeur et médiation", "Obligatoires : nom, adresse et téléphone de l'hébergeur, médiateur de la consommation.",
+         ["host", "mediator"]),
+    ]
+    checks = [("Raison sociale", bool(info.legal_name)), ("Adresse du siège", bool(info.address)),
+              ("SIRET", bool(info.siret)), ("Hébergeur", bool(info.host)),
+              ("Médiateur de la consommation", bool(info.mediator)), ("E-mail de contact", bool(info.email))]
+    return render(request, "admin/erp_legal.html", {
+        "form": form, "checks": checks, "done": sum(1 for _, ok in checks if ok),
+        "sections": [{"title": t, "help": h, "fields": [form[n] for n in names]} for t, h, names in sections]})

@@ -230,3 +230,7 @@ select{height:auto !important;min-height:38px;line-height:1.3 !important;padding
 a.button, a.button:link, a.button:visited, .submit-row a.button{color:#fff !important}
 /* Champs en lecture seule : lisibles */
 .form-row .readonly{color:var(--body-fg) !important;font-weight:600}
+/* Barre ERP : jamais coupee, defilement horizontal si l'ecran est etroit */
+.erp-nav{overflow-x:auto;scrollbar-width:none;white-space:nowrap}
+.erp-nav::-webkit-scrollbar{display:none}
+.erp-nav a{flex:0 0 auto;padding:12px 10px}
