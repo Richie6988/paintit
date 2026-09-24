@@ -1,0 +1,160 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Catalogue · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .cat-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+ .cat-tools input[type=search]{min-width:240px}
+ .cat-tools select{width:auto}
+ .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+ .pc{background:#fff;border:1px solid #e3e3e3;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;transition:.15s}
+ .pc:hover{box-shadow:0 10px 26px rgba(0,0,0,.08);transform:translateY(-2px)}
+ .pc .img{position:relative;aspect-ratio:4/5;background:#f6f6f7;overflow:hidden}
+ .pc .img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .25s}
+ .pc .img img.tpl{opacity:0;background:#fff;object-fit:contain}
+ .pc:hover .img img.tpl{opacity:1}
+ .pc .price{position:absolute;top:10px;left:10px;z-index:2}
+ .pc .noimg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#8a8a8a;font-weight:700;font-size:.8rem;text-align:center}
+ .pc .body{padding:12px 14px;display:flex;flex-direction:column;gap:4px;flex:1}
+ .pc .t{font-weight:800;color:#1a1a1a;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .pc .m{color:#6d7175;font-size:.78rem}
+ .pc .acts{display:flex;gap:6px;padding:10px 14px;border-top:1px solid #ebebeb;background:#fafafa;flex-wrap:wrap}
+ .drawer{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:1000;justify-content:flex-end}
+ .drawer.on{display:flex}
+ .drawer .pane{width:min(440px,100%);height:100%;background:#fff;padding:22px;overflow:auto;box-shadow:-10px 0 30px rgba(0,0,0,.15);display:flex;flex-direction:column;gap:12px}
+ .drawer h2{margin:0;font-size:1.15rem;background:none;color:#1a1a1a;padding:0;text-transform:none;letter-spacing:0}
+ .drawer label{font-weight:700;font-size:.82rem;color:#303030 !important;display:block;margin-bottom:4px}
+ .drawer input[type=text],.drawer input[type=number],.drawer select{width:100%;box-sizing:border-box}
+ .drawer .prev{width:100%;border-radius:12px;border:1px solid #e3e3e3}
+ .drop{border:2px dashed #d4d4d4;border-radius:12px;min-height:150px;display:flex;align-items:center;justify-content:center;text-align:center;color:#6d7175;cursor:pointer;position:relative;overflow:hidden}
+ .drop:hover{border-color:#1a1a1a}.drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+ .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);display:none;align-items:center;justify-content:center;z-index:2000;flex-direction:column;gap:12px;font-weight:700}
+ .overlay.on{display:flex}.spin{width:42px;height:42px;border:4px solid #e3e3e3;border-top-color:#1a1a1a;border-radius:50%;animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+ .ctab td{vertical-align:middle}.ctab img{width:54px;height:66px;object-fit:cover;border-radius:8px;border:1px solid #e3e3e3}
+</style>
+<div class="erp">
+  <div class="erp-head">
+    <div><h1>Catalogue</h1><div class="muted">Modèles de la galerie publique (jouables sur /paint et vendus à l'unité) et toiles créées par les clients</div></div>
+    <button class="pbtn pri" type="button" onclick="openAdd()">+ Nouveau modèle</button>
+  </div>
+
+  {% if messages %}{% for m in messages %}<div class="banner {% if m.tags == 'error' %}err{% else %}warn{% endif %}" style="{% if m.tags != 'error' %}background:#e7f6ec;border-color:#b7e4c7;color:#1e5b35{% endif %}"><span>{{ m }}</span></div>{% endfor %}{% endif %}
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Modèles publiés</div><div class="v">{{ stats.models }}</div><div class="muted">{{ stats.free }} gratuits · {{ stats.paid }} payants</div></div>
+    <div class="kpi"><div class="l">Joueurs</div><div class="v">{{ stats.players }}</div><div class="muted">toiles de la galerie en cours</div></div>
+    <div class="kpi"><div class="l">Ventes galerie</div><div class="v">{{ stats.sales }}</div><div class="muted">{{ stats.revenue|floatformat:"2g" }} € (prix actuels)</div></div>
+    <div class="kpi"><div class="l">Toiles clients</div><div class="v">{{ stats.customer }}</div><div class="muted">créées à partir de photos</div></div>
+  </div>
+
+  <div class="card">
+    <div class="tabs2">
+      <a href="?tab=gallery" class="{% if tab != 'customer' %}on{% endif %}">Galerie<em>{{ stats.models }}</em></a>
+      <a href="?tab=customer" class="{% if tab == 'customer' %}on{% endif %}">Toiles clients<em>{{ stats.customer }}</em></a>
+    </div>
+    <form class="cat-tools" method="get">
+      <input type="hidden" name="tab" value="{{ tab }}">
+      <input type="search" name="q" value="{{ q }}" placeholder="{% if tab == 'customer' %}E-mail, référence…{% else %}Titre, catégorie…{% endif %}">
+      {% if tab != 'customer' %}
+      <select name="cat" onchange="this.form.submit()"><option value="">Toutes catégories</option>{% for c in cats %}<option value="{{ c }}" {% if c == cat %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+      <select name="price" onchange="this.form.submit()"><option value="">Tous les prix</option><option value="free" {% if pf == 'free' %}selected{% endif %}>Gratuits</option><option value="paid" {% if pf == 'paid' %}selected{% endif %}>Payants</option></select>
+      <select name="sort" onchange="this.form.submit()"><option value="recent">Plus récents</option><option value="popular" {% if sort == 'popular' %}selected{% endif %}>Plus joués</option><option value="title" {% if sort == 'title' %}selected{% endif %}>Titre A→Z</option></select>
+      {% endif %}
+      <button class="pbtn" type="submit">Filtrer</button>
+      {% if q or cat or pf %}<a class="pbtn" href="?tab={{ tab }}">Réinitialiser</a>{% endif %}
+    </form>
+
+    {% if tab == 'customer' %}
+      <div style="overflow-x:auto"><table class="t ctab">
+        <tr><th></th><th>Toile</th><th>Client</th><th>Origine</th><th>Créée</th><th></th></tr>
+        {% for c in items %}<tr>
+          <td><a href="/paint/{{ c.uid }}/" target="_blank"><img src="/preview/img/{{ c.uid }}/preview/" alt="" loading="lazy" onerror="this.style.visibility='hidden'"></a></td>
+          <td><b>{{ c.title|default:"Sans titre" }}</b><div class="muted">{{ c.uid }} · {{ c.colors }} couleurs · {{ c.width_cm|floatformat:0 }}×{{ c.height_cm|floatformat:0 }} cm</div></td>
+          <td>{{ c.email|default:"(anonyme)" }}</td>
+          <td><span class="bdg2 {% if c.source == 'gift' %}info{% else %}idle{% endif %}">{% if c.source == 'gift' %}Cadeau{% else %}Photo client{% endif %}</span></td>
+          <td class="muted">{{ c.created_at|date:"d/m/Y" }}</td>
+          <td style="white-space:nowrap">{% if c.published %}<span class="bdg2 ok">En galerie</span>
+            {% else %}<button class="pbtn sm" type="button" onclick='openPublish({{ c.pk }}, "{{ c.uid|escapejs }}", "{{ c.title|escapejs }}")'>Publier en galerie</button>{% endif %}
+            <a class="pbtn sm" href="/paint/{{ c.uid }}/" target="_blank">Voir</a></td>
+        </tr>{% empty %}<tr><td colspan="6" class="muted">Aucune toile client.</td></tr>{% endfor %}
+      </table></div>
+    {% else %}
+      <div class="pgrid">
+        {% for m in items %}
+        <div class="pc">
+          <a class="img" href="/paint/{{ m.uid }}/" target="_blank" title="Survoler : toile numérotée · Cliquer : jouer">
+            <span class="noimg">Aperçu indisponible<br><small>{{ m.uid }}</small></span>
+            <img src="/preview/img/{{ m.uid }}/preview/" alt="" loading="lazy" onerror="this.remove()">
+            <img class="tpl" src="/preview/img/{{ m.uid }}/template/" alt="" loading="lazy" onerror="this.remove()">
+            <span class="price">{% if m.price > 0 %}<span class="bdg2 warn">{{ m.price|floatformat:2 }} €</span>{% else %}<span class="bdg2 ok">Gratuit</span>{% endif %}</span>
+          </a>
+          <div class="body">
+            <div class="t">{{ m.title|default:m.uid }}</div>
+            <div class="m">{{ m.category|default:"Sans catégorie" }} · {{ m.colors }} couleurs</div>
+            <div class="m">{{ m.players }} joueur{{ m.players|pluralize }}{% if m.price > 0 %} · {{ m.players }} vente{{ m.players|pluralize }}{% endif %}</div>
+          </div>
+          <div class="acts">
+            <button class="pbtn sm pri" type="button" onclick='openEdit({{ m.pk }}, "{{ m.uid|escapejs }}", "{{ m.title|escapejs }}", "{{ m.category|escapejs }}", "{{ m.price }}")'>Modifier</button>
+            <a class="pbtn sm" href="/paint/{{ m.uid }}/" target="_blank">Jouer</a>
+            <form method="post" onsubmit="return confirm('Retirer ce modèle de la galerie ? Les joueurs le conservent.')">{% csrf_token %}<input type="hidden" name="id" value="{{ m.pk }}"><button class="pbtn sm" name="op" value="unpublish">Retirer</button></form>
+          </div>
+        </div>
+        {% empty %}<p class="muted">Aucun modèle{% if q or cat or pf %} pour ces filtres{% endif %}. <a href="#" onclick="openAdd();return false">Ajouter un modèle →</a></p>{% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<datalist id="cats">{% for c in cats %}<option value="{{ c }}">{% endfor %}</datalist>
+
+<div class="drawer" id="dEdit" onclick="if(event.target===this)closeD()"><form class="pane" method="post">{% csrf_token %}
+  <h2>Modifier le modèle</h2><img class="prev" id="eImg" alt="">
+  <input type="hidden" name="op" value="update"><input type="hidden" name="id" id="eId">
+  <div><label>Titre</label><input type="text" name="title" id="eTitle" maxlength="80" required></div>
+  <div class="row2"><div><label>Catégorie</label><input type="text" name="category" id="eCat" list="cats" maxlength="40"></div>
+  <div><label>Prix (€) — 0 = gratuit</label><input type="number" name="price" id="ePrice" min="0" step="0.01"></div></div>
+  <div style="display:flex;gap:8px;margin-top:auto;justify-content:space-between">
+    <button class="pbtn" type="submit" name="op" value="delete" style="color:#b42318" onclick="return confirm('Supprimer définitivement ce modèle ?')">Supprimer</button>
+    <span style="display:flex;gap:8px"><button class="pbtn" type="button" onclick="closeD()">Annuler</button><button class="pbtn pri" type="submit">Enregistrer</button></span></div>
+</form></div>
+
+<div class="drawer" id="dAdd" onclick="if(event.target===this)closeD()"><form class="pane" method="post" enctype="multipart/form-data" onsubmit="document.getElementById('ov').classList.add('on')">{% csrf_token %}
+  <h2>Nouveau modèle</h2><div class="muted">L'image est transformée en toile à peindre puis publiée dans la galerie.</div>
+  <input type="hidden" name="op" value="add">
+  <label class="drop" id="drop"><input type="file" name="image" id="aFile" accept="image/*" hidden required><span>Glissez une image<br>ou cliquez</span><img id="aThumb" hidden alt=""></label>
+  <div><label>Titre</label><input type="text" name="title" maxlength="80" required placeholder="Coucher de soleil"></div>
+  <div class="row2"><div><label>Catégorie</label><input type="text" name="category" list="cats" maxlength="40" placeholder="Paysages"></div>
+  <div><label>Prix (€)</label><input type="number" name="price" min="0" step="0.01" value="0"></div></div>
+  <div class="row2"><div><label>Couleurs</label><select name="colors"><option>12</option><option selected>24</option><option>36</option></select></div>
+  <div><label>Orientation</label><select name="orientation"><option value="portrait">Portrait</option><option value="paysage">Paysage</option></select></div></div>
+  <div style="display:flex;gap:8px;margin-top:auto;justify-content:flex-end"><button class="pbtn" type="button" onclick="closeD()">Annuler</button><button class="pbtn pri" type="submit">Créer le modèle</button></div>
+</form></div>
+
+<div class="drawer" id="dPub" onclick="if(event.target===this)closeD()"><form class="pane" method="post">{% csrf_token %}
+  <h2>Publier dans la galerie</h2><img class="prev" id="pImg" alt="">
+  <input type="hidden" name="op" value="publish"><input type="hidden" name="id" id="pId">
+  <div><label>Titre</label><input type="text" name="title" id="pTitle" maxlength="80" required></div>
+  <div class="row2"><div><label>Catégorie</label><input type="text" name="category" list="cats" maxlength="40"></div>
+  <div><label>Prix (€)</label><input type="number" name="price" min="0" step="0.01" value="0"></div></div>
+  <p class="muted">Vérifiez que vous avez l'accord du client avant de publier sa toile.</p>
+  <div style="display:flex;gap:8px;margin-top:auto;justify-content:flex-end"><button class="pbtn" type="button" onclick="closeD()">Annuler</button><button class="pbtn pri" type="submit">Publier</button></div>
+</form></div>
+<div class="overlay" id="ov"><div class="spin"></div>Génération de la toile… (15-40 s)</div>
+
+<script>
+function $(i){return document.getElementById(i);}
+function closeD(){document.querySelectorAll('.drawer').forEach(function(d){d.classList.remove('on');});}
+function openEdit(id,uid,t,c,p){$('eId').value=id;$('eTitle').value=t;$('eCat').value=c;$('ePrice').value=String(p).replace(',','.');$('eImg').src='/preview/img/'+uid+'/preview/';$('dEdit').classList.add('on');$('eTitle').focus();}
+function openAdd(){$('dAdd').classList.add('on');}
+function openPublish(id,uid,t){$('pId').value=id;$('pTitle').value=t||'';$('pImg').src='/preview/img/'+uid+'/preview/';$('dPub').classList.add('on');}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeD();});
+(function(){var f=$('aFile'),d=$('drop'),th=$('aThumb');
+  function show(x){if(!x)return;th.src=URL.createObjectURL(x);th.hidden=false;}
+  f.addEventListener('change',function(){show(f.files[0]);});
+  d.addEventListener('dragover',function(e){e.preventDefault();});
+  d.addEventListener('drop',function(e){e.preventDefault();var x=e.dataTransfer.files[0];if(!x)return;try{var dt=new DataTransfer();dt.items.add(x);f.files=dt.files;}catch(_){}show(x);});})();
+</script>
+{% endblock %}

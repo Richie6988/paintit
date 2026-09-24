@@ -18,12 +18,12 @@
     </div>
     <div style="display:flex;gap:8px">
       <form method="post">{% csrf_token %}<button class="pbtn" name="op" value="toggle">{% if sup.active %}Mettre en pause{% else %}Activer{% endif %}</button></form>
-      <a class="pbtn pri" href="/admin/studio/supplier/{{ sup.pk }}/change/">Modifier</a>
+      <a class="pbtn pri" href="/admin-hub/suppliers/{{ sup.pk }}/edit/">Modifier</a>
     </div>
   </div>
 
   {% if messages %}{% for m in messages %}<div class="banner {% if m.tags == 'error' %}err{% else %}warn{% endif %}"><span>{{ m }}</span></div>{% endfor %}{% endif %}
-  {% if sup.health == "err" %}<div class="banner err"><span><b>Dernière transmission en échec</b>{% if sup.last_sync_at %} ({{ sup.last_sync_at|timesince }}){% endif %} : {{ sup.last_sync_error|default:"aucun canal configuré (e-mail ou URL API)" }}</span><a class="pbtn sm" href="/admin/studio/supplier/{{ sup.pk }}/change/">Corriger</a></div>{% endif %}
+  {% if sup.health == "err" %}<div class="banner err"><span><b>Dernière transmission en échec</b>{% if sup.last_sync_at %} ({{ sup.last_sync_at|timesince }}){% endif %} : {{ sup.last_sync_error|default:"aucun canal configuré (e-mail ou URL API)" }}</span><a class="pbtn sm" href="/admin-hub/suppliers/{{ sup.pk }}/edit/">Corriger</a></div>{% endif %}
   {% if unassigned %}<div class="banner warn"><span><b>{{ unassigned }} commande{{ unassigned|pluralize }} payée{{ unassigned|pluralize }}</b> sans fournisseur rattaché.</span>
     <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="assign" onclick="return confirm('Rattacher ces commandes à {{ sup.name|escapejs }} ?')">Rattacher à {{ sup.name }}</button></form></div>{% endif %}
 

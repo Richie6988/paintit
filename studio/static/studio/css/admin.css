@@ -219,3 +219,10 @@ fieldset.module{margin-bottom:18px}
 .erp-nav .bdg{background:#eef2fb;color:#2f4b8f;border-radius:999px;padding:1px 7px;font-size:.72rem;font-weight:800}
 .erp-nav .bdg.err{background:#fdecef;color:#c0392b}
 @media (max-width:767px){.erp-nav{padding:0 8px}.erp-nav a{padding:10px 8px;font-size:.82rem}}
+
+/* ---------- Correctifs formulaires ----------
+   Seule la DERNIERE barre d'enregistrement reste collee en bas ; celle du haut (save_on_top)
+   n'est plus flottante (elle recouvrait les champs du milieu de page). */
+form > div > .submit-row:first-child, .submit-row:not(:last-child){position:static;box-shadow:none}
+/* Listes deroulantes : hauteur libre (le texte etait coupe) */
+select{height:auto !important;min-height:38px;line-height:1.3 !important;padding-top:7px !important;padding-bottom:7px !important}

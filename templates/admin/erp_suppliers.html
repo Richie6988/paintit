@@ -7,14 +7,14 @@
 <div class="erp">
   <div class="erp-head">
     <div><h1>Fournisseurs</h1><div class="muted">Production &amp; expédition en dropshipping : routage des commandes, performance et santé des intégrations</div></div>
-    <a class="pbtn pri" href="/admin/studio/supplier/add/">+ Ajouter un fournisseur</a>
+    <a class="pbtn pri" href="/admin-hub/suppliers/new/">+ Ajouter un fournisseur</a>
   </div>
 
   {% if unassigned %}
   <div class="banner warn"><span><b>{{ unassigned }} commande{{ unassigned|pluralize }} payée{{ unassigned|pluralize }}</b> sans fournisseur rattaché (antérieures au suivi ou non transmises).</span>
     {% if routing.kit %}<a class="pbtn sm" href="/admin-hub/suppliers/{{ routing.kit.pk }}/">Rattacher à {{ routing.kit.name }}</a>{% endif %}</div>
   {% endif %}
-  {% if not routing.kit %}<div class="banner err"><span><b>Aucun fournisseur actif pour le Kit</b> : les commandes payées ne sont transmises à personne.</span><a class="pbtn sm" href="/admin/studio/supplier/add/">Configurer</a></div>{% endif %}
+  {% if not routing.kit %}<div class="banner err"><span><b>Aucun fournisseur actif pour le Kit</b> : les commandes payées ne sont transmises à personne.</span><a class="pbtn sm" href="/admin-hub/suppliers/new/">Configurer</a></div>{% endif %}
 
   <div class="kpis">
     <div class="kpi"><div class="l">Fournisseurs actifs</div><div class="v">{{ tot.active }}</div></div>
@@ -63,7 +63,7 @@
       </div>
     </div>
     {% empty %}
-    <div class="card"><p class="muted">Aucun fournisseur. <a href="/admin/studio/supplier/add/">Ajouter le premier →</a></p></div>
+    <div class="card"><p class="muted">Aucun fournisseur. <a href="/admin-hub/suppliers/new/">Ajouter le premier →</a></p></div>
     {% endfor %}
   </div>
 </div>

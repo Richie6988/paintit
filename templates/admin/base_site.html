@@ -14,7 +14,7 @@
   <a href="/admin/studio/order/" class="{% if '/admin/studio/order' in erp_path %}on{% endif %}">Commandes{% if erp_badges.actions %}<b class="bdg err" title="Actions a traiter">{{ erp_badges.actions }}</b>{% endif %}</a>
   <a href="/admin-hub/customers/" class="{% if '/admin-hub/customers' in erp_path %}on{% endif %}">Clients</a>
   <a href="/admin/studio/contactmessage/" class="{% if '/admin/studio/contactmessage' in erp_path %}on{% endif %}">Messages{% if erp_badges.messages %}<b class="bdg">{{ erp_badges.messages }}</b>{% endif %}</a>
-  <a href="/admin/studio/digitalcanvas/" class="{% if '/admin/studio/digitalcanvas' in erp_path %}on{% endif %}">Catalogue</a>
+  <a href="/admin-hub/catalogue/" class="{% if '/admin/studio/digitalcanvas' in erp_path or '/admin-hub/catalogue' in erp_path %}on{% endif %}">Catalogue</a>
   <a href="/admin/studio/discount/" class="{% if '/admin/studio/discount' in erp_path %}on{% endif %}">Remises</a>
   <a href="/admin-hub/suppliers/" class="{% if '/admin/studio/supplier' in erp_path or '/admin-hub/suppliers' in erp_path %}on{% endif %}">Fournisseurs</a>
   <a href="/admin-tarifs/">Tarifs</a>

@@ -1972,3 +1972,180 @@ def erp_supplier(request, pk):
                                         ("want_preview_svg", "Aperçu colorié .svg"), ("want_poster", "Poster PNG"),
                                         ("want_order_json", "Order JSON")] if getattr(sup, flag, False)],
         "unassigned": erp.unassigned_orders().count(), "erp_section": "suppliers"})
+
+
+def _supplier_form_class():
+    from django import forms
+    from .models import Supplier
+
+    class SupplierForm(forms.ModelForm):
+        class Meta:
+            model = Supplier
+            exclude = ("created_at", "last_sync_at", "last_sync_ok", "last_sync_error")
+            widgets = {k: forms.Textarea(attrs={"rows": 3}) for k in
+                       ("address", "pricing", "terms", "production_notes", "notes")}
+    return SupplierForm
+
+
+@staff_member_required
+def erp_supplier_edit(request, pk=None):
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from .models import Supplier
+    sup = Supplier.objects.filter(pk=pk).first() if pk else None
+    if pk and not sup:
+        raise Http404
+    Form = _supplier_form_class()
+    if request.method == "POST" and request.POST.get("op") == "delete" and sup:
+        name = sup.name
+        sup.delete()
+        messages.success(request, "Fournisseur %s supprime." % name)
+        return redirect("studio:erp_suppliers")
+    form = Form(request.POST or None, instance=sup)
+    if request.method == "POST" and form.is_valid():
+        sup = form.save()
+        messages.success(request, "Fournisseur enregistre.")
+        return redirect("studio:erp_supplier", pk=sup.pk)
+    f = form
+    sections = [
+        ("Identité", "Nom, statut et checkout servi par ce fournisseur.", ["name", "active", "checkout", "priority"]),
+        ("Intégration", "Comment les commandes lui sont transmises : e-mail (liens des fichiers) ou API (POST JSON, Bearer).",
+         ["integration", "email", "api_url", "api_key"]),
+        ("Fichiers transmis", "Fichiers joints à chaque commande.",
+         ["want_source", "want_template_svg", "want_template_tiff", "want_preview_svg", "want_poster", "want_order_json"]),
+        ("Contact", "", ["contact_name", "contact_email", "phone", "address"]),
+        ("Production & conditions", "", ["lead_time_days", "incoterms", "production_notes", "pricing", "terms"]),
+        ("Banque", "Coordonnées de paiement du fournisseur.", ["bank_name", "iban", "bic"]),
+        ("Notes internes", "", ["notes"]),
+    ]
+    sec = [{"title": t, "help": h, "fields": [f[n] for n in names if n in f.fields]} for t, h, names in sections]
+    return render(request, "admin/erp_supplier_form.html", {
+        **_admin.site.each_context(request), "form": form, "sup": sup, "sections": sec,
+        "erp_section": "suppliers"})
+
+
+# ---------------- Catalogue (galerie de modeles + toiles clients) ----------------
+LIB_EMAIL = "__library__"
+
+
+def _slug(text):
+    import re as _re, unicodedata
+    t = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode().lower()
+    return _re.sub(r"[^a-z0-9]+", "-", t).strip("-")[:40] or "modele"
+
+
+@staff_member_required
+def erp_catalogue(request):
+    from decimal import Decimal, InvalidOperation
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from django.db.models import Count, Q
+    from .models import DigitalCanvas
+    lib = DigitalCanvas.objects.filter(email=LIB_EMAIL)
+    if request.method == "POST":
+        op = request.POST.get("op")
+        m = lib.filter(pk=request.POST.get("id")).first()
+
+        def price(v):
+            try:
+                return max(Decimal("0"), Decimal((v or "0").replace(",", ".")).quantize(Decimal("0.01")))
+            except InvalidOperation:
+                return Decimal("0")
+        if op == "update" and m:
+            m.title = (request.POST.get("title") or "").strip()[:80]
+            m.category = (request.POST.get("category") or "").strip()[:40]
+            m.price = price(request.POST.get("price"))
+            m.save(update_fields=["title", "category", "price"])
+            messages.success(request, "« %s » mis à jour." % (m.title or m.uid))
+        elif op == "unpublish" and m:
+            m.delete()   # les fichiers restent : le modele peut etre republie depuis « Toiles clients »
+            messages.success(request, "Modèle retiré de la galerie (les joueurs le conservent).")
+        elif op == "delete" and m:
+            import shutil
+            uid = m.uid
+            owners = DigitalCanvas.objects.filter(uid=uid).exclude(email=LIB_EMAIL).count()
+            m.delete()
+            if not owners and not Order.objects.filter(uid=uid).exists():
+                shutil.rmtree(os.path.join(settings.MEDIA_ROOT, "orders", uid), ignore_errors=True)
+            messages.success(request, "Modèle supprimé%s." % (" (fichiers conservés : %d joueur(s) le possèdent)" % owners
+                                                             if owners else ""))
+        elif op == "publish":
+            c = DigitalCanvas.objects.filter(pk=request.POST.get("id")).exclude(email=LIB_EMAIL).first()
+            if c and not lib.filter(uid=c.uid).exists():
+                DigitalCanvas.objects.create(email=LIB_EMAIL, uid=c.uid, colors=c.colors, orientation=c.orientation,
+                                             width_cm=c.width_cm, height_cm=c.height_cm, source="library",
+                                             title=(request.POST.get("title") or c.title or "Nouveau modèle")[:80],
+                                             category=(request.POST.get("category") or c.category)[:40],
+                                             price=price(request.POST.get("price")))
+                messages.success(request, "Toile publiée dans la galerie.")
+        elif op == "add":
+            f = request.FILES.get("image")
+            title = (request.POST.get("title") or "").strip()[:80]
+            if not f or not title:
+                messages.error(request, "Image et titre obligatoires.")
+            else:
+                uid = "gal-" + _slug(title)
+                n = 2
+                while DigitalCanvas.objects.filter(uid=uid).exists() or \
+                        os.path.isdir(os.path.join(settings.MEDIA_ROOT, "orders", uid)):
+                    uid = "gal-%s-%d" % (_slug(title), n); n += 1
+                try:
+                    tmp = os.path.join(settings.MEDIA_ROOT, "uploads", uid + "_in" + (os.path.splitext(f.name)[1] or ".jpg"))
+                    os.makedirs(os.path.dirname(tmp), exist_ok=True)
+                    with open(tmp, "wb") as out:
+                        for chunk in f.chunks():
+                            out.write(chunk)
+                    colors = int(request.POST.get("colors") or 24)
+                    portrait = request.POST.get("orientation", "portrait") == "portrait"
+                    w, h = (40, 50) if portrait else (50, 40)
+                    generate(tmp, colors, w, h, uid=uid, source_name=f.name)
+                    DigitalCanvas.objects.create(email=LIB_EMAIL, uid=uid, colors=colors,
+                                                 orientation="portrait" if portrait else "paysage",
+                                                 width_cm=w, height_cm=h, source="library", title=title,
+                                                 category=(request.POST.get("category") or "").strip()[:40],
+                                                 price=price(request.POST.get("price")))
+                    messages.success(request, "Modèle « %s » créé et publié." % title)
+                except Exception as exc:
+                    logger.exception("Catalogue add")
+                    messages.error(request, "Génération impossible : %s" % exc)
+        return redirect(request.get_full_path())
+
+    tab = request.GET.get("tab", "gallery")
+    q = (request.GET.get("q") or "").strip()
+    cat = request.GET.get("cat", "")
+    pf = request.GET.get("price", "")
+    sort = request.GET.get("sort", "recent")
+    owners = dict(DigitalCanvas.objects.exclude(email=LIB_EMAIL).values_list("uid").annotate(n=Count("id")))
+    cats = sorted(set(c for c in lib.values_list("category", flat=True) if c))
+    stats = {"models": lib.count(), "free": lib.filter(price=0).count(), "paid": lib.filter(price__gt=0).count(),
+             "players": sum(owners.get(u, 0) for u in lib.values_list("uid", flat=True)),
+             "sales": sum(owners.get(u, 0) for u in lib.filter(price__gt=0).values_list("uid", flat=True)),
+             "customer": DigitalCanvas.objects.exclude(email=LIB_EMAIL).exclude(source="library").count()}
+    stats["revenue"] = round(sum(float(p) * owners.get(u, 0) for u, p in lib.filter(price__gt=0)
+                                 .values_list("uid", "price")), 2)
+    if tab == "customer":
+        qs = DigitalCanvas.objects.exclude(email=LIB_EMAIL).exclude(source="library")
+        if q:
+            qs = qs.filter(Q(email__icontains=q) | Q(uid__icontains=q) | Q(title__icontains=q))
+        published = set(lib.values_list("uid", flat=True))
+        items = list(qs.order_by("-created_at")[:120])
+        for c in items:
+            c.published = c.uid in published
+    else:
+        qs = lib
+        if q:
+            qs = qs.filter(Q(title__icontains=q) | Q(uid__icontains=q) | Q(category__icontains=q))
+        if cat:
+            qs = qs.filter(category=cat)
+        if pf == "free":
+            qs = qs.filter(price=0)
+        elif pf == "paid":
+            qs = qs.filter(price__gt=0)
+        items = list(qs.order_by("-created_at" if sort == "recent" else "title"))
+        for m in items:
+            m.players = owners.get(m.uid, 0)
+        if sort == "popular":
+            items.sort(key=lambda m: -m.players)
+    return render(request, "admin/erp_catalogue.html", {
+        **_admin.site.each_context(request), "tab": tab, "items": items, "q": q, "cat": cat, "pf": pf,
+        "sort": sort, "cats": cats, "stats": stats, "erp_section": "catalogue"})
