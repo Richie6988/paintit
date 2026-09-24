@@ -92,7 +92,7 @@ def seed_item(it, showdir=None, log=None):
     return m
 
 
-def seed_image(src_path, title, category="", price=0, colors=24, landscape=False):
+def seed_image(src_path, title, category="", price=0, colors=24, landscape=False, in_slider=False):
     """Admin -> galerie : range l'image dans gallery/<Categorie>/ selon la convention de nommage
     (comme si on l'avait deposee a la main) puis la seed. -> fiche DigitalCanvas."""
     import shutil
@@ -111,7 +111,8 @@ def seed_image(src_path, title, category="", price=0, colors=24, landscape=False
     shutil.copyfile(src_path, dst)
     m = seed_item(item_for(dst, base, "gal-", int(colors)), media_showcase_dir())
     DigitalCanvas.objects.filter(pk=m.pk).update(title=title[:80], category=(category or "Galerie")[:40],
-                                                 price=price or 0)   # libelles exacts (accents...)
+                                                 price=price or 0,   # libelles exacts (accents...)
+                                                 in_slider=bool(in_slider))
     m.refresh_from_db()
     return m
 

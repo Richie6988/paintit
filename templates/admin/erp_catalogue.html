@@ -33,7 +33,15 @@
  .pc .acts{display:flex;gap:6px;padding:10px 14px;border-top:1px solid #ebebeb;background:#fafafa;flex-wrap:wrap}
  .drawer{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:1000;justify-content:flex-end}
  .drawer.on{display:flex}
- .drawer .pane{width:min(440px,100%);height:100%;background:#fff;padding:22px;overflow:auto;box-shadow:-10px 0 30px rgba(0,0,0,.15);display:flex;flex-direction:column;gap:12px}
+ .drawer .pane{width:min(440px,100%);height:100%;box-sizing:border-box;background:#fff;padding:22px 22px 0;overflow-y:auto;box-shadow:-10px 0 30px rgba(0,0,0,.15);display:flex;flex-direction:column;gap:12px}
+ .drawer .pane>*{flex-shrink:0}
+ .drawer .pane .drop{min-height:150px;max-height:220px}
+ .drawer .acts-bar{position:sticky;bottom:0;margin-top:auto;display:flex;gap:8px;justify-content:flex-end;background:#fff;border-top:1px solid #ebebeb;padding:12px 0 16px;z-index:2}
+ .drawer .tgl{display:flex;align-items:flex-start;gap:10px;background:#f7f7f8;border:1px solid #ebebeb;border-radius:10px;padding:10px 12px;cursor:pointer}
+ .drawer .tgl input{appearance:none;-webkit-appearance:none;width:38px !important;height:22px !important;min-height:0 !important;border-radius:999px !important;background:#d4d4d4 !important;border:0 !important;position:relative;cursor:pointer;padding:0 !important;margin:1px 0 0;flex:0 0 auto;transition:.15s}
+ .drawer .tgl input:before{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+ .drawer .tgl input:checked{background:#1a1a1a !important}.drawer .tgl input:checked:before{left:19px}
+ .drawer .tgl b{display:block;font-size:.86rem;color:#1a1a1a}.drawer .tgl small{display:block;color:#6d7175;font-size:.76rem;font-weight:500}
  .drawer h2{margin:0;font-size:1.15rem;background:none;color:#1a1a1a;padding:0;text-transform:none;letter-spacing:0}
  .drawer label{font-weight:700;font-size:.82rem;color:#303030 !important;display:block;margin-bottom:4px}
  .drawer input[type=text],.drawer input[type=number],.drawer select{width:100%;box-sizing:border-box}
@@ -135,13 +143,13 @@
   <div><label>Titre</label><input type="text" name="title" id="eTitle" maxlength="80" required></div>
   <div class="row2"><div><label>Catégorie</label><input type="text" name="category" id="eCat" list="cats" maxlength="40"></div>
   <div><label>Prix (€) — 0 = gratuit</label><input type="number" name="price" id="ePrice" min="0" step="0.01"></div></div>
-  <div style="display:flex;gap:8px;margin-top:auto;justify-content:space-between">
+  <div class="acts-bar" style="justify-content:space-between">
     <button class="pbtn" type="submit" name="op" value="delete" style="color:#b42318" onclick="return confirm('Supprimer définitivement ce modèle ?')">Supprimer</button>
     <span style="display:flex;gap:8px"><button class="pbtn" type="button" onclick="closeD()">Annuler</button><button class="pbtn pri" type="submit">Enregistrer</button></span></div>
 </form></div>
 
 <div class="drawer" id="dAdd" onclick="if(event.target===this)closeD()"><form class="pane" method="post" enctype="multipart/form-data" onsubmit="document.getElementById('ov').classList.add('on')">{% csrf_token %}
-  <h2>Nouveau modèle</h2><div class="muted">Comme <code>seed_library</code> : l'image est rangée dans <code>gallery/&lt;Catégorie&gt;/</code>, transformée en toile à peindre, publiée dans la galerie et ajoutée au slider de l'accueil.</div>
+  <h2>Nouveau modèle</h2><div class="muted">Comme <code>seed_library</code> : l'image est transformée en toile à peindre et publiée dans la galerie (source rangée dans <code>media/gallery/&lt;Catégorie&gt;/</code>).</div>
   <input type="hidden" name="op" value="add">
   <label class="drop" id="drop"><input type="file" name="image" id="aFile" accept="image/*" hidden required><span>Glissez une image<br>ou cliquez</span><img id="aThumb" hidden alt=""></label>
   <div><label>Titre</label><input type="text" name="title" maxlength="80" required placeholder="Coucher de soleil"></div>
@@ -149,7 +157,8 @@
   <div><label>Prix (€)</label><input type="number" name="price" min="0" step="0.01" value="0"></div></div>
   <div class="row2"><div><label>Couleurs</label><select name="colors"><option>12</option><option selected>24</option><option>36</option></select></div>
   <div><label>Orientation</label><select name="orientation"><option value="portrait">Portrait</option><option value="paysage">Paysage</option></select></div></div>
-  <div style="display:flex;gap:8px;margin-top:auto;justify-content:flex-end"><button class="pbtn" type="button" onclick="closeD()">Annuler</button><button class="pbtn pri" type="submit">Créer le modèle</button></div>
+  <label class="tgl"><input type="checkbox" name="in_slider" value="1"><span><b>Slider de l'accueil</b><small>En plus de la galerie, afficher ce modèle dans l'animation interactive en haut de la page d'accueil.</small></span></label>
+  <div class="acts-bar"><button class="pbtn" type="button" onclick="closeD()">Annuler</button><button class="pbtn pri" type="submit">Créer le modèle</button></div>
 </form></div>
 
 <div class="drawer" id="dPub" onclick="if(event.target===this)closeD()"><form class="pane" method="post">{% csrf_token %}
@@ -159,7 +168,8 @@
   <div class="row2"><div><label>Catégorie</label><input type="text" name="category" list="cats" maxlength="40"></div>
   <div><label>Prix (€)</label><input type="number" name="price" min="0" step="0.01" value="0"></div></div>
   <p class="muted">Vérifiez que vous avez l'accord du client avant de publier sa toile.</p>
-  <div style="display:flex;gap:8px;margin-top:auto;justify-content:flex-end"><button class="pbtn" type="button" onclick="closeD()">Annuler</button><button class="pbtn pri" type="submit">Publier</button></div>
+  <label class="tgl"><input type="checkbox" name="in_slider" value="1"><span><b>Slider de l'accueil</b><small>En plus de la galerie, afficher ce modèle dans l'animation interactive en haut de la page d'accueil.</small></span></label>
+  <div class="acts-bar"><button class="pbtn" type="button" onclick="closeD()">Annuler</button><button class="pbtn pri" type="submit">Publier</button></div>
 </form></div>
 <div class="overlay" id="ov"><div class="spin"></div>Génération de la toile… (15-40 s)</div>
 
