@@ -177,6 +177,10 @@ class OrderEvent(models.Model):
         verbose_name = "Evenement commande"
         verbose_name_plural = "Historique commandes"
 
+    @property
+    def status_label(self):
+        return dict(Order.STATUS_CHOICES).get(self.status, self.status)
+
     def __str__(self):
         return "%s %s %s" % (self.order_id, self.kind, self.status or self.text)
 
@@ -394,11 +398,22 @@ class Supplier(models.Model):
     lead_time_days = models.PositiveIntegerField("Delai production (jours)", default=5)
     incoterms = models.CharField("Incoterms / livraison", max_length=60, blank=True, default="")
     production_notes = models.TextField("Process / consignes de production", blank=True, default="")
+    # Automatisation (plug & play)
+    auto_dispatch = models.BooleanField("Transmission automatique au paiement", default=True,
+        help_text="Sinon la commande attend une validation manuelle (Centre d'actions).")
+    webhook_secret = models.CharField("Secret webhook", max_length=64, blank=True, default="",
+        help_text="Signe les envois (X-PaintIt-Signature) et authentifie les retours du fournisseur.")
     # Sante de l'integration (derniere transmission)
     last_sync_at = models.DateTimeField("Derniere transmission", null=True, blank=True)
     last_sync_ok = models.BooleanField("Derniere transmission OK", default=True)
     last_sync_error = models.CharField("Derniere erreur", max_length=300, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.webhook_secret:
+            import secrets
+            self.webhook_secret = secrets.token_urlsafe(24)
+        super().save(*args, **kwargs)
 
     def wanted_files(self, uid):
         """Noms de fichiers coches (fixes). La photo source (nom variable) est ajoutee a part."""

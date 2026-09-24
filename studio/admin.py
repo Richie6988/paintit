@@ -60,6 +60,19 @@ def _set_status(order, status, request):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        # La fiche ERP remplace le formulaire (?django=1 pour le formulaire complet)
+        from django.shortcuts import redirect
+        if request.method == "GET" and not request.GET.get("django"):
+            return redirect("studio:erp_order", pk=object_id)
+        return super().change_view(request, object_id, form_url, extra_context)
+
+    def response_change(self, request, obj):
+        from django.shortcuts import redirect
+        if "_continue" in request.POST:
+            return super().response_change(request, obj)
+        return redirect("studio:erp_order", pk=obj.pk)
+
     def get_fieldsets(self, request, obj=None):
         fs = super().get_fieldsets(request, obj)
         try:

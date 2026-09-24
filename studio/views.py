@@ -253,6 +253,11 @@ def digipaint(request, uid):
             oj = os.path.join(d, "order.json")
             try:
                 palette = json.load(open(oj, encoding="utf-8")).get("colors", []) if os.path.exists(oj) else []
+                if not palette:   # commande payee : colors.json nettoye -> couleurs de <uid>_order.json
+                    uoj = os.path.join(d, f"{uid}_order.json")
+                    if os.path.exists(uoj):
+                        palette = [{"number": c.get("number"), "hex": c.get("hex"), "rgb": c.get("rgb")}
+                                   for c in json.load(open(uoj, encoding="utf-8")).get("color_specifications", [])]
             except Exception:
                 palette = []
     # Toile de la GALERIE : payante -> exiger l'achat ; gratuite -> l'ajouter a Mes Toiles
@@ -914,75 +919,13 @@ def _build_supplier_assets(o, shipping):
 
 
 def _notify_supplier(o, shipping, sup=None, user=""):
-    """Plug & play : route la commande vers le fournisseur connecte au checkout
-    (e-mail avec liens fichiers, ou POST JSON API). Ne casse jamais la commande.
-    Trace le routage (Order.supplier), la sante de l'integration (Supplier.last_sync_*)
-    et un evenement dans le journal de la commande. Renvoie True si transmis."""
-    from django.utils import timezone
-    from .models import Supplier, OrderEvent
+    """Transmet la commande au fournisseur (voir studio/integrations.py). Ne casse jamais la commande."""
     try:
-        sup = sup or Supplier.for_checkout("kit")
+        from . import integrations
+        return integrations.dispatch(o, shipping, sup=sup, user=user)
     except Exception:
-        logger.exception("Lecture fournisseur (migration manquante ?)")
+        logger.exception("Transmission fournisseur %s", o.get("uid"))
         return False
-    if not sup:
-        return False
-    uid = o.get("uid")
-    base = settings.SITE_URL + settings.MEDIA_URL + "orders/%s/" % uid
-    files = {name: base + name for name in sup.wanted_files(uid)}
-    if getattr(sup, "want_source", False):
-        import glob as _glob
-        d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
-        for sp in _glob.glob(os.path.join(d, "%s_source_*" % uid)):
-            fn = os.path.basename(sp); files[fn] = base + fn; break
-    ok, err, channel = False, "", ""
-    if sup.integration == "api" and sup.api_url:
-        channel = "API"
-        try:
-            import json as _json, urllib.request
-            payload = _json.dumps({
-                "order": {"uid": uid, "format": o.get("format_label"), "colors": o.get("colors"),
-                          "width_cm": o.get("width_cm"), "height_cm": o.get("height_cm"),
-                          "total": o.get("total")},
-                "shipping": shipping, "files": files}).encode("utf-8")
-            req = urllib.request.Request(sup.api_url, data=payload, headers={
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + (sup.api_key or "")})
-            urllib.request.urlopen(req, timeout=15)
-            ok = True
-        except Exception as exc:
-            err = str(exc)[:300]
-            logger.exception("API fournisseur %s (%s)", sup.name, uid)
-    elif sup.email:
-        channel = "e-mail"
-        try:
-            from django.core.mail import EmailMessage
-            body = ("Nouvelle commande %s\n\nFormat : %s (%sx%s cm), %s couleurs\n\n"
-                    "Fichiers a imprimer :\n%s\n\nLivraison :\n%s\n%s\n%s %s (%s)\nTel : %s"
-                    % (uid, o.get("format_label"), o.get("width_cm"), o.get("height_cm"), o.get("colors"),
-                       "\n".join(files.values()),
-                       shipping.get("full_name", ""), shipping.get("address1", ""),
-                       shipping.get("postal_code", ""), shipping.get("city", ""),
-                       shipping.get("country", ""), shipping.get("phone", "")))
-            ok = EmailMessage("PaintIt , commande %s" % uid, body,
-                              settings.DEFAULT_FROM_EMAIL, [sup.email]).send(fail_silently=False) > 0
-        except Exception as exc:
-            err = str(exc)[:300]
-            logger.exception("Mail fournisseur %s (%s)", sup.name, uid)
-    else:
-        err = "Aucun canal configure (e-mail ou URL API manquant)"
-    try:
-        Supplier.objects.filter(pk=sup.pk).update(last_sync_at=timezone.now(), last_sync_ok=ok,
-                                                  last_sync_error="" if ok else err)
-        order = Order.objects.filter(uid=uid).first()
-        if order:
-            Order.objects.filter(pk=order.pk).update(supplier=sup)
-            OrderEvent.objects.create(order=order, kind="action", user=user or "",
-                                      text=("Transmise a %s (%s)" % (sup.name, channel)) if ok
-                                      else ("Echec transmission %s : %s" % (sup.name, err))[:300])
-    except Exception:
-        logger.exception("Trace transmission %s", uid)
-    return ok
 
 
 def _safe_export_tiff(uid):
@@ -1059,7 +1002,12 @@ def _post_order_async(o, shipping):
     except Exception:
         logger.exception("Reformat async %s", o.get("uid"))
     try:
-        _notify_supplier(o, shipping)
+        from .models import Supplier
+        sup = Supplier.for_checkout("kit")
+        if sup and sup.auto_dispatch:
+            _notify_supplier(o, shipping, sup=sup, user="auto")
+        elif sup:   # validation manuelle : la commande reste "payee" -> Centre d'actions
+            Order.objects.filter(uid=o.get("uid"), status=Order.FULFILLED).update(status=Order.PAID)
     except Exception:
         logger.exception("Notify async %s", o.get("uid"))
     try:
@@ -1936,6 +1884,20 @@ def erp_supplier(request, pk):
                 ok = _notify_supplier(_order_from_row(o), _shipping_from_row(o), sup=sup, user=user)
                 messages.success(request, "Commande %s transmise." % o.uid) if ok else \
                     messages.error(request, "Echec de transmission de %s (voir journal)." % o.uid)
+        elif op == "test":
+            from . import integrations
+            ok, channel, err = integrations.test_connection(sup, user=user)
+            (messages.success if ok else messages.error)(
+                request, ("Test réussi (%s) : le fournisseur a bien reçu l'événement « test »." % channel) if ok
+                else "Test en échec (%s) : %s" % (channel or "aucun canal", err))
+        elif op == "secret":
+            import secrets
+            sup.webhook_secret = secrets.token_urlsafe(24); sup.save(update_fields=["webhook_secret"])
+            messages.success(request, "Nouveau secret généré : transmettez la nouvelle URL de retour au fournisseur.")
+        elif op == "auto":
+            sup.auto_dispatch = not sup.auto_dispatch; sup.save(update_fields=["auto_dispatch"])
+            messages.success(request, "Transmission %s." % ("automatique au paiement" if sup.auto_dispatch
+                                                            else "manuelle (validation depuis la fiche commande)"))
         elif op == "assign":
             n = 0
             for o in erp.unassigned_orders():
@@ -1963,7 +1925,21 @@ def erp_supplier(request, pk):
     def mask(v, keep=4):
         v = v or ""
         return ("•••• " + v[-keep:]) if len(v) > keep else v
+    import json as _json
+    from . import integrations
+    last = Order.objects.filter(supplier=sup).order_by("-created_at").first() or Order.objects.order_by("-created_at").first()
+    sample_out = integrations.build_payload(sup, _order_from_row(last), _shipping_from_row(last)) if last else \
+        integrations.build_payload(sup, {"uid": "0844E1DF-6FED", "format_label": "40 x 50 cm", "width_cm": 40,
+                                         "height_cm": 50, "colors": 24, "total": 42.9}, {})
+    sample_in = {"uid": sample_out["order"]["uid"], "status": "shipped", "carrier": "Colissimo",
+                 "tracking_number": "6A12345678901", "tracking_url": "https://www.laposte.fr/outils/suivre-vos-envois?code=6A12345678901",
+                 "supplier_ref": "SUP-000123", "message": "Colis remis au transporteur"}
+    automation = {"callback": integrations.callback_url(sup), "retries": len([x for x in integrations.pending_retries()
+                                                                              if x.supplier_id == sup.pk]),
+                  "out": _json.dumps(sample_out, ensure_ascii=False, indent=2),
+                  "in": _json.dumps(sample_in, ensure_ascii=False, indent=2)}
     return render(request, "admin/erp_supplier.html", {
+        "automation": automation,
         **_admin.site.each_context(request), "sup": sup, "tab": tab, "rows": rows,
         "tabs": [(k, l, q.count()) for k, l, q in tabs], "events": events,
         "iban": mask(sup.iban), "api_key": mask(sup.api_key, 3),
@@ -1981,7 +1957,7 @@ def _supplier_form_class():
     class SupplierForm(forms.ModelForm):
         class Meta:
             model = Supplier
-            exclude = ("created_at", "last_sync_at", "last_sync_ok", "last_sync_error")
+            exclude = ("created_at", "last_sync_at", "last_sync_ok", "last_sync_error", "webhook_secret")
             widgets = {k: forms.Textarea(attrs={"rows": 3}) for k in
                        ("address", "pricing", "terms", "production_notes", "notes")}
     return SupplierForm
@@ -2010,7 +1986,7 @@ def erp_supplier_edit(request, pk=None):
     sections = [
         ("Identité", "Nom, statut et checkout servi par ce fournisseur.", ["name", "active", "checkout", "priority"]),
         ("Intégration", "Comment les commandes lui sont transmises : e-mail (liens des fichiers) ou API (POST JSON, Bearer).",
-         ["integration", "email", "api_url", "api_key"]),
+         ["integration", "auto_dispatch", "email", "api_url", "api_key"]),
         ("Fichiers transmis", "Fichiers joints à chaque commande.",
          ["want_source", "want_template_svg", "want_template_tiff", "want_preview_svg", "want_poster", "want_order_json"]),
         ("Contact", "", ["contact_name", "contact_email", "phone", "address"]),
@@ -2152,3 +2128,216 @@ def erp_catalogue(request):
     return render(request, "admin/erp_catalogue.html", {
         **_admin.site.each_context(request), "tab": tab, "items": items, "q": q, "cat": cat, "pf": pf,
         "sort": sort, "cats": cats, "stats": stats, "erp_section": "catalogue"})
+
+
+
+@csrf_exempt
+def supplier_webhook(request, secret):
+    """Retours automatiques des fournisseurs (statut, suivi). Voir studio/integrations.py."""
+    import json as _json
+    from .models import Supplier
+    from . import integrations
+    sup = Supplier.objects.filter(webhook_secret=secret).first() if secret else None
+    if not sup or not sup.active:
+        return JsonResponse({"error": "fournisseur inconnu"}, status=404)
+    if request.method != "POST":
+        return JsonResponse({"supplier": sup.name, "usage": "POST JSON {uid, status, carrier, tracking_number, "
+                             "tracking_url, supplier_ref, message}"})
+    sig = request.headers.get("X-PaintIt-Signature", "")
+    if sig and not __import__("hmac").compare_digest(sig, integrations.sign(sup, request.body)):
+        return JsonResponse({"error": "signature invalide"}, status=401)
+    try:
+        data = _json.loads(request.body.decode("utf-8") or "{}")
+    except ValueError:
+        return JsonResponse({"error": "JSON invalide"}, status=400)
+    events = data if isinstance(data, list) else [data]
+    results = []
+    for ev in events[:100]:
+        code, msg = integrations.handle_event(sup, ev if isinstance(ev, dict) else {})
+        results.append({"uid": (ev or {}).get("uid") if isinstance(ev, dict) else None, "status": code, "message": msg})
+    status = 200 if all(r["status"] == 200 for r in results) else (results[0]["status"] if len(results) == 1 else 207)
+    return JsonResponse({"results": results}, status=status)
+
+
+# ---------------- Fiche commande (ERP) ----------------
+def _order_files(o):
+    """Tous les fichiers de la commande (+ variante de jeu <uid>-G), groupes par usage."""
+    groups = [("visuals", "Visuels"), ("print", "Impression / fournisseur"), ("data", "Données"),
+              ("game", "Jeu en ligne"), ("other", "Autres")]
+    out = {k: [] for k, _ in groups}
+    for folder in (o.uid, o.uid + "-G"):
+        d = os.path.join(settings.MEDIA_ROOT, "orders", folder)
+        if not os.path.isdir(d):
+            continue
+        for name in sorted(os.listdir(d)):
+            p = os.path.join(d, name)
+            if not os.path.isfile(p):
+                continue
+            low = name.lower()
+            ext = low.rsplit(".", 1)[-1] if "." in low else ""
+            if folder.endswith("-G"):
+                g = "game"
+            elif "_digipaint" in low:
+                g = "game"
+            elif ext in ("tiff", "tif") or "_poster" in low or (ext == "svg" and "_template" in low):
+                g = "print"
+            elif ext == "json":
+                g = "data"
+            elif ext in ("png", "jpg", "jpeg", "webp", "svg"):
+                g = "visuals"
+            else:
+                g = "other"
+            label = {"_source_": "Photo originale", "_preview.": "Toile coloriée", "_template.": "Toile numérotée",
+                     "_poster": "Poster (notice + palette)", "_palette": "Palette", "_order.json": "Bon de commande (order.json)",
+                     "_colors.json": "Couleurs (JSON)", "_digipaint": "Toile jouable", "_preview_": "Aperçu"}
+            nice = next((v for k, v in label.items() if k in low), name)
+            out[g].append({"name": name, "folder": folder, "label": nice, "ext": ext.upper(),
+                           "size": os.path.getsize(p), "mtime": os.path.getmtime(p),
+                           "image": ext in ("png", "jpg", "jpeg", "webp") or (ext == "svg" and "_digipaint" not in low)})
+    return [(k, lbl, out[k]) for k, lbl in groups if out[k]]
+
+
+def _erp_order_or_404(pk):
+    o = Order.objects.select_related("supplier").filter(pk=pk).first()
+    if not o:
+        raise Http404
+    return o
+
+
+@staff_member_required
+def erp_order_file(request, pk, folder, name):
+    o = _erp_order_or_404(pk)
+    import re as _re
+    if folder not in (o.uid, o.uid + "-G") or not _re.match(r"^[A-Za-z0-9_.-]+$", name):
+        raise Http404
+    p = os.path.join(settings.MEDIA_ROOT, "orders", folder, name)
+    if not os.path.isfile(p):
+        raise Http404
+    import mimetypes
+    resp = FileResponse(open(p, "rb"), content_type=mimetypes.guess_type(name)[0] or "application/octet-stream")
+    if request.GET.get("dl"):
+        resp["Content-Disposition"] = 'attachment; filename="%s"' % name
+    return resp
+
+
+@staff_member_required
+def erp_order_receipt(request, pk):
+    o = _erp_order_or_404(pk)
+    resp = HttpResponse(receipts.build_receipt(o), content_type="application/pdf")
+    resp["Content-Disposition"] = '%s; filename="PaintIt-%s.pdf"' % ("attachment" if request.GET.get("dl") else "inline", o.uid)
+    return resp
+
+
+@staff_member_required
+def erp_order_zip(request, pk):
+    import io, zipfile
+    o = _erp_order_or_404(pk)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for _k, _l, files in _order_files(o):
+            for f in files:
+                z.write(os.path.join(settings.MEDIA_ROOT, "orders", f["folder"], f["name"]),
+                        ("jeu/" if f["folder"].endswith("-G") else "") + f["name"])
+        try:
+            z.writestr("PaintIt-%s-recu.pdf" % o.uid, receipts.build_receipt(o))
+        except Exception:
+            logger.exception("Recu zip %s", o.uid)
+    resp = HttpResponse(buf.getvalue(), content_type="application/zip")
+    resp["Content-Disposition"] = 'attachment; filename="PaintIt-%s.zip"' % o.uid
+    return resp
+
+
+@staff_member_required
+def erp_order(request, pk):
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from .models import Supplier
+    from . import erp
+    o = _erp_order_or_404(pk)
+    user = request.user.get_username()
+
+    def log(kind, text):
+        OrderEvent.objects.create(order=o, kind=kind, text=text[:300], user=user)
+    if request.method == "POST":
+        op = request.POST.get("op")
+        try:
+            if op == "status":
+                st = request.POST.get("status")
+                if st in dict(Order.STATUS_CHOICES) and st != o.status:
+                    o.status = st; o._erp_user = user
+                    o.save(update_fields=["status", "status_changed_at"])
+                    if st == Order.DELIVERED and not o.feedback_sent:
+                        emails.send_feedback_request(o)
+                        Order.objects.filter(pk=o.pk).update(feedback_sent=True)
+                        log("email", "Demande d'avis envoyée")
+                    messages.success(request, "Statut : %s." % o.get_status_display())
+            elif op == "dispatch":
+                sup = Supplier.objects.filter(pk=request.POST.get("supplier")).first() or o.supplier
+                ok = _notify_supplier(_order_from_row(o), _shipping_from_row(o), sup=sup, user=user)
+                if ok and o.status == Order.PAID:
+                    o.status = Order.FULFILLED; o._erp_user = user
+                    o.save(update_fields=["status", "status_changed_at"])
+                (messages.success if ok else messages.error)(
+                    request, "Commande transmise." if ok else "Échec de transmission : voir l'historique.")
+            elif op == "tracking":
+                for f in ("carrier", "tracking_number", "tracking_url"):
+                    setattr(o, f, (request.POST.get(f) or "").strip()[:300])
+                fields = ["carrier", "tracking_number", "tracking_url"]
+                if request.POST.get("ship") and o.status in (Order.PAID, Order.FULFILLED):
+                    o.status = Order.SHIPPED; o._erp_user = user; fields += ["status", "status_changed_at"]
+                o.save(update_fields=fields)
+                log("action", "Suivi : %s %s" % (o.carrier, o.tracking_number))
+                messages.success(request, "Suivi enregistré.")
+            elif op == "note":
+                txt = (request.POST.get("text") or "").strip()
+                if txt:
+                    log("note", txt)
+            elif op == "notes":
+                o.notes = request.POST.get("notes", ""); o.save(update_fields=["notes"])
+                messages.success(request, "Notes internes enregistrées.")
+            elif op == "tiff":
+                from .pipeline import export_tiff
+                made = export_tiff(o.uid)
+                log("action", "Fichiers TIFF générés (%d)" % len(made))
+                messages.success(request, "%d fichier(s) TIFF généré(s)." % len(made))
+            elif op == "manifest":
+                fulfillment.build(_order_from_row(o), _shipping_from_row(o))
+                log("action", "Poster + order.json régénérés")
+                messages.success(request, "Poster et order.json régénérés.")
+            elif op == "confirmation":
+                emails.send_order_confirmation(_order_from_row(o), _shipping_from_row(o))
+                log("email", "Confirmation de commande renvoyée au client")
+                messages.success(request, "E-mail de confirmation renvoyé.")
+            elif op == "feedback":
+                emails.send_feedback_request(o)
+                Order.objects.filter(pk=o.pk).update(feedback_sent=True)
+                log("email", "Demande d'avis envoyée")
+                messages.success(request, "Demande d'avis envoyée.")
+        except Exception as exc:
+            logger.exception("Fiche commande %s op=%s", o.uid, op)
+            messages.error(request, "Action impossible : %s" % exc)
+        return redirect("studio:erp_order", pk=o.pk)
+
+    files = _order_files(o)
+    from .pipeline import source_file
+    d = os.path.join(settings.MEDIA_ROOT, "orders", o.uid)
+    visuals = [(k, lbl) for k, lbl in (("source", "Photo originale"), ("preview", "Toile coloriée"),
+                                       ("template", "Toile numérotée"), ("poster", "Poster"))]
+    have = {"source": bool(source_file(d, o.uid)),
+            "preview": any(os.path.exists(os.path.join(d, "%s_preview.%s" % (o.uid, e))) for e in ("png", "svg")),
+            "template": any(os.path.exists(os.path.join(d, "%s_template.%s" % (o.uid, e))) for e in ("png", "svg")),
+            "poster": os.path.exists(os.path.join(d, "%s_poster.png" % o.uid))}
+    flags = [lbl for key, (qs, lbl, lvl, hint) in erp.action_querysets().items() if qs.filter(pk=o.pk).exists()]
+    others = Order.objects.filter(customer_email=o.customer_email).exclude(pk=o.pk).order_by("-created_at")[:5]
+    ad = None
+    if o.ad_ref:
+        from .models import MarketingAd
+        ad = MarketingAd.objects.filter(token=o.ad_ref).first()
+    return render(request, "admin/erp_order.html", {
+        **_admin.site.each_context(request), "o": o, "files": files, "visuals": visuals, "have": have,
+        "has_tiff": any(f["ext"] in ("TIFF", "TIF") for _k, _l, fs in files for f in fs),
+        "has_json": any(f["name"].endswith("_order.json") for _k, _l, fs in files for f in fs),
+        "events": o.events.all()[:60], "flags": flags, "others": others, "ad": ad,
+        "statuses": Order.STATUS_CHOICES, "suppliers": Supplier.objects.all(),
+        "age": (timezone.now() - (o.status_changed_at or o.created_at)).days,
+        "erp_section": "orders"})

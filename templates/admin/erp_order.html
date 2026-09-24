@@ -1,0 +1,164 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Commande {{ o.uid }} · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .vis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+ .vis figure{margin:0}.vis a{display:block;aspect-ratio:4/5;border:1px solid #e3e3e3;border-radius:12px;overflow:hidden;background:#f6f6f7}
+ .vis img{width:100%;height:100%;object-fit:contain;background:#fff}
+ .vis figcaption{font-size:.76rem;font-weight:700;color:#616161;text-align:center;margin-top:5px}
+ .vis .miss{display:flex;align-items:center;justify-content:center;height:100%;color:#8a8a8a;font-size:.76rem;font-weight:700;text-align:center;padding:8px}
+ .fgrp h3{font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:#6d7175;margin:14px 0 6px;font-weight:800;background:none;padding:0}
+ .frow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #ebebeb;border-radius:10px;margin-bottom:6px;background:#fff}
+ .frow .ic{width:40px;height:40px;border-radius:8px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:800;color:#fff;overflow:hidden}
+ .frow .ic img{width:100%;height:100%;object-fit:cover}
+ .frow .nm{flex:1;min-width:0}.frow .nm b{display:block;font-size:.86rem;color:#1a1a1a}
+ .frow .nm span{font-size:.74rem;color:#6d7175;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .ext-PNG,.ext-JPG,.ext-JPEG,.ext-WEBP{background:#0f9bb3}.ext-SVG{background:#7a3ff2}.ext-TIFF,.ext-TIF{background:#e8703b}.ext-JSON{background:#1e8848}.ext-PDF{background:#c0392b}
+ .side .card{padding:14px 16px}
+ .side h2{font-size:.95rem !important}
+ .side select,.side input[type=text],.side input[type=url],.side textarea{width:100%;box-sizing:border-box}
+ .side label{font-weight:700;font-size:.78rem;color:#303030 !important;display:block;margin:8px 0 3px}
+ .stack{display:flex;flex-direction:column;gap:6px}
+ .tl2{list-style:none;margin:0;padding:0;border-left:2px solid #ebebeb;margin-left:6px}
+ .tl2 li{position:relative;padding:0 0 14px 16px;font-size:.84rem}
+ .tl2 li:before{content:"";position:absolute;left:-7px;top:3px;width:12px;height:12px;border-radius:50%;background:#d4d4d4;border:2px solid #fff}
+ .tl2 li.status:before{background:#2f6bf2}.tl2 li.note:before{background:#f6b93b}.tl2 li.email:before{background:#1e8848}.tl2 li.err:before{background:#c0392b}
+ .tl2 time{display:block;font-size:.72rem;color:#6d7175}
+ .money{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:.86rem}.money .tot{font-weight:800;border-top:1px solid #ebebeb;padding-top:6px}
+</style>
+<div class="erp">
+  <a href="/admin/studio/order/" class="muted" style="font-weight:700">← Commandes</a>
+  <div class="erp-head" style="margin-top:6px">
+    <div>
+      <h1 style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">Commande {{ o.uid }} <span class="pill st-{{ o.status }}">{{ o.get_status_display }}</span></h1>
+      <div class="muted">Passée le {{ o.created_at|date:"d/m/Y à H:i" }} · statut depuis {{ age }} j · {{ o.format_label }} · {{ o.colors }} couleurs{% if o.brushes %} · pinceaux{% endif %} · langue {{ o.lang }}</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="pbtn" href="/paint/{{ o.uid }}/" target="_blank">Voir le jeu</a>
+      <a class="pbtn" href="/admin-hub/orders/{{ o.pk }}/receipt.pdf" target="_blank">Reçu PDF</a>
+      <a class="pbtn pri" href="/admin-hub/orders/{{ o.pk }}/files.zip">⬇ Tout télécharger (.zip)</a>
+    </div>
+  </div>
+
+  {% if messages %}{% for m in messages %}<div class="banner {% if m.tags == 'error' %}err{% else %}warn{% endif %}" {% if m.tags != 'error' %}style="background:#e7f6ec;border-color:#b7e4c7;color:#1e5b35"{% endif %}><span>{{ m }}</span></div>{% endfor %}{% endif %}
+  {% for f in flags %}<div class="banner warn"><span><b>À traiter :</b> {{ f }}</span></div>{% endfor %}
+
+  <div class="sp-layout">
+    <div>
+      <div class="card">
+        <div class="card-h"><h2>Visuels</h2><span class="muted">cliquer pour agrandir</span></div>
+        <div class="vis">
+          {% for k, lbl in visuals %}<figure>
+            {% if k == "source" %}{% if have.source %}<a href="/preview/img/{{ o.uid }}/source/" target="_blank"><img src="/preview/img/{{ o.uid }}/source/" alt="" loading="lazy"></a>{% else %}<a><span class="miss">Photo originale non conservée</span></a>{% endif %}
+            {% elif k == "poster" %}{% if have.poster %}<a href="/admin-hub/orders/{{ o.pk }}/f/{{ o.uid }}/{{ o.uid }}_poster.png" target="_blank"><img src="/admin-hub/orders/{{ o.pk }}/f/{{ o.uid }}/{{ o.uid }}_poster.png" alt="" loading="lazy"></a>{% else %}<a><span class="miss">Poster non généré</span></a>{% endif %}
+            {% elif k == "preview" %}{% if have.preview %}<a href="/preview/img/{{ o.uid }}/preview/" target="_blank"><img src="/preview/img/{{ o.uid }}/preview/" alt="" loading="lazy"></a>{% else %}<a><span class="miss">Absent</span></a>{% endif %}
+            {% else %}{% if have.template %}<a href="/preview/img/{{ o.uid }}/template/" target="_blank"><img src="/preview/img/{{ o.uid }}/template/" alt="" loading="lazy"></a>{% else %}<a><span class="miss">Absent</span></a>{% endif %}{% endif %}
+            <figcaption>{{ lbl }}</figcaption></figure>{% endfor %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Fichiers</h2>
+          <span style="display:flex;gap:6px;flex-wrap:wrap">
+            <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="tiff" title="Toile numérotée + aperçu en TIFF sans perte">{% if has_tiff %}Regénérer{% else %}Générer{% endif %} les TIFF</button></form>
+            <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="manifest" title="Poster A4 (notice + palette + QR) et bon de commande order.json">{% if has_json %}Regénérer{% else %}Générer{% endif %} poster + order.json</button></form>
+          </span></div>
+        <div class="fgrp">
+          <h3>Documents</h3>
+          <div class="frow"><span class="ic ext-PDF">PDF</span><span class="nm"><b>Reçu de commande (PDF)</b><span>généré à la demande · PaintIt-{{ o.uid }}.pdf</span></span>
+            <a class="pbtn sm" href="/admin-hub/orders/{{ o.pk }}/receipt.pdf" target="_blank">Ouvrir</a><a class="pbtn sm" href="/admin-hub/orders/{{ o.pk }}/receipt.pdf?dl=1">⬇</a></div>
+          {% for key, label, fs in files %}
+            <h3>{{ label }} · {{ fs|length }}</h3>
+            {% for f in fs %}
+            <div class="frow">
+              <span class="ic ext-{{ f.ext }}">{% if f.image %}<img src="/admin-hub/orders/{{ o.pk }}/f/{{ f.folder }}/{{ f.name }}" alt="" loading="lazy">{% else %}{{ f.ext|default:"?" }}{% endif %}</span>
+              <span class="nm"><b>{{ f.label }}</b><span>{{ f.name }} · {{ f.ext }} · {{ f.size|filesizeformat }}</span></span>
+              <a class="pbtn sm" href="/admin-hub/orders/{{ o.pk }}/f/{{ f.folder }}/{{ f.name }}" target="_blank">Ouvrir</a>
+              <a class="pbtn sm" href="/admin-hub/orders/{{ o.pk }}/f/{{ f.folder }}/{{ f.name }}?dl=1">⬇</a>
+            </div>
+            {% endfor %}
+          {% empty %}<p class="muted">Aucun fichier sur le serveur pour cette commande.</p>{% endfor %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Historique</h2></div>
+        <form method="post" style="display:flex;gap:8px;margin-bottom:14px">{% csrf_token %}<input type="hidden" name="op" value="note">
+          <input type="text" name="text" placeholder="Ajouter une note (appel client, relance fournisseur…)" style="flex:1" maxlength="300"><button class="pbtn">Ajouter</button></form>
+        <ul class="tl2">
+          {% for e in o.events.all|slice:":60" %}
+          <li class="{{ e.kind }}{% if 'Echec' in e.text %} err{% endif %}"><time>{{ e.at|date:"d/m/Y H:i" }}{% if e.user %} · {{ e.user }}{% endif %}</time>
+            {% if e.kind == "status" %}Statut : <b>{{ e.status_label }}</b>{% if e.text %} ({{ e.text }}){% endif %}{% else %}{{ e.text }}{% endif %}</li>
+          {% empty %}<li>Aucun événement.</li>{% endfor %}
+          <li><time>{{ o.created_at|date:"d/m/Y H:i" }}</time>Commande créée</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <div class="card-h"><h2>Statut</h2></div>
+        <form method="post" class="stack">{% csrf_token %}<input type="hidden" name="op" value="status">
+          <select name="status">{% for k, l in statuses %}<option value="{{ k }}" {% if k == o.status %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+          <button class="pbtn pri">Mettre à jour</button></form>
+        <div class="stack" style="margin-top:10px">
+          <form method="post">{% csrf_token %}<button class="pbtn" style="width:100%" name="op" value="confirmation" onclick="return confirm('Renvoyer l\'e-mail de confirmation au client ?')">Renvoyer la confirmation au client</button></form>
+          <form method="post">{% csrf_token %}<button class="pbtn" style="width:100%" name="op" value="feedback">{% if o.feedback_sent %}Renvoyer{% else %}Envoyer{% endif %} la demande d'avis</button></form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Fournisseur</h2>{% if o.supplier %}<a href="/admin-hub/suppliers/{{ o.supplier.pk }}/">{{ o.supplier.name }}</a>{% else %}<span class="bdg2 warn">Non rattachée</span>{% endif %}</div>
+        {% if o.supplier_ref %}<div class="muted">Réf. fournisseur : <b>{{ o.supplier_ref }}</b></div>{% endif %}
+        <form method="post" class="stack" style="margin-top:8px">{% csrf_token %}<input type="hidden" name="op" value="dispatch">
+          <select name="supplier">{% for s in suppliers %}<option value="{{ s.pk }}" {% if o.supplier_id == s.pk %}selected{% endif %}>{{ s.name }}{% if not s.active %} (inactif){% endif %}{% if s.auto_dispatch %} · auto{% endif %}</option>{% empty %}<option value="">Aucun fournisseur</option>{% endfor %}</select>
+          <button class="pbtn pri" {% if not suppliers %}disabled{% endif %}>{% if o.supplier %}Retransmettre{% else %}Transmettre{% endif %} au fournisseur</button></form>
+        <form method="post" style="margin-top:12px">{% csrf_token %}<input type="hidden" name="op" value="tracking">
+          <label>Transporteur</label><input type="text" name="carrier" value="{{ o.carrier }}" placeholder="Colissimo, DHL…">
+          <label>N° de suivi</label><input type="text" name="tracking_number" value="{{ o.tracking_number }}">
+          <label>Lien de suivi</label><input type="url" name="tracking_url" value="{{ o.tracking_url }}" placeholder="https://…">
+          {% if o.status == "paid" or o.status == "fulfilled" %}<label class="sw" style="margin-top:10px"><input type="checkbox" name="ship" checked style="width:auto"> Marquer comme expédiée</label>{% endif %}
+          <button class="pbtn" style="width:100%;margin-top:10px">Enregistrer le suivi</button>
+          {% if o.tracking_url %}<a class="pbtn sm" style="margin-top:6px" href="{{ o.tracking_url }}" target="_blank" rel="noopener">Suivre le colis ↗</a>{% endif %}
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Client</h2><a href="/admin-hub/customers/?q={{ o.customer_email|urlencode }}">Fiche →</a></div>
+        <dl class="kv">
+          <dt>Nom</dt><dd>{{ o.customer_name }}</dd>
+          <dt>E-mail</dt><dd><a href="mailto:{{ o.customer_email }}">{{ o.customer_email }}</a></dd>
+          <dt>Téléphone</dt><dd>{% if o.phone %}<a href="tel:{{ o.phone_code }}{{ o.phone }}">{{ o.phone_code }} {{ o.phone }}</a>{% else %}—{% endif %}</dd>
+          <dt>Livraison</dt><dd>{{ o.address1 }}{% if o.address2 %}<br>{{ o.address2 }}{% endif %}<br>{{ o.postal_code }} {{ o.city }}<br>{{ o.country }}</dd>
+        </dl>
+        {% if others %}<div class="muted" style="margin-top:10px;font-weight:700">Autres commandes</div>
+          {% for x in others %}<div style="font-size:.82rem"><a href="/admin-hub/orders/{{ x.pk }}/">{{ x.uid }}</a> · {{ x.total|floatformat:2 }} € · {{ x.get_status_display }}</div>{% endfor %}{% endif %}
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Paiement</h2></div>
+        <div class="money">
+          <span>Toile</span><span>{{ o.price|floatformat:2 }} €</span>
+          {% if o.brushes %}<span class="muted">dont pinceaux</span><span class="muted">{{ o.brushes_amount|floatformat:2 }} €</span>{% endif %}
+          {% if o.discount_amount %}<span>Remise {{ o.discount_code }}</span><span>−{{ o.discount_amount|floatformat:2 }} €</span>{% endif %}
+          <span>Livraison</span><span>offerte</span>
+          <span class="tot">Total payé</span><span class="tot">{{ o.total|floatformat:2 }} €</span>
+          <span class="muted">Coût fournisseur (estim.)</span><span class="muted">{{ o.cost|floatformat:2 }} €</span>
+          <span><b>Marge</b></span><span><b>{{ o.benefit|floatformat:2 }} €</b></span>
+        </div>
+        {% if ad %}<div class="muted" style="margin-top:10px">Vente attribuée à la pub <a href="/admin-hub/marketing/">{{ ad.variant }} · {{ ad.label }}</a>{% if ad.campaign %} ({{ ad.campaign }}){% endif %}</div>{% endif %}
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Notes internes</h2></div>
+        <form method="post">{% csrf_token %}<input type="hidden" name="op" value="notes"><textarea name="notes" rows="4">{{ o.notes }}</textarea>
+          <button class="pbtn" style="width:100%;margin-top:8px">Enregistrer</button></form>
+      </div>
+      <p class="muted" style="text-align:center"><a href="/admin/studio/order/{{ o.pk }}/change/?django=1">Formulaire complet (avancé)</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

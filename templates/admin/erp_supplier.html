@@ -58,6 +58,20 @@
       </div>
 
       <div class="card">
+        <div class="card-h"><h2>Guide d'intégration</h2><span class="muted">à transmettre à l'équipe technique du fournisseur</span></div>
+        <details open><summary style="font-weight:800;cursor:pointer;margin-bottom:6px">1 · Envoi des commandes (PaintIt → fournisseur)</summary>
+          <p class="muted" style="margin:4px 0 8px">{% if sup.integration == "api" %}POST JSON sur <code>{{ sup.api_url|default:"(URL API à renseigner)" }}</code> · en-têtes <code>Authorization: Bearer &lt;clé API&gt;</code>, <code>X-PaintIt-Event</code>, <code>X-PaintIt-Signature</code> = HMAC-SHA256 (hex) du corps avec le secret webhook.{% else %}E-mail à <code>{{ sup.email|default:"(e-mail à renseigner)" }}</code> avec le même contenu en pièce jointe <code>order_&lt;ref&gt;.json</code>. Passez en intégration API pour un traitement 100 % automatique.{% endif %}</p>
+          <pre style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px;font-size:.74rem;max-height:320px;overflow:auto">{{ automation.out }}</pre></details>
+        <details><summary style="font-weight:800;cursor:pointer;margin:10px 0 6px">2 · Retours de statut (fournisseur → PaintIt)</summary>
+          <p class="muted" style="margin:4px 0 8px">POST JSON sur l'URL de retour. <code>status</code> ∈ <code>in_production</code>, <code>shipped</code>, <code>delivered</code>, <code>failed</code>. Plusieurs commandes : envoyer une liste. Signature facultative (<code>X-PaintIt-Signature</code>, même calcul) ; si présente elle est vérifiée.</p>
+          <pre style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px;font-size:.74rem;overflow:auto">curl -X POST {{ automation.callback }} \
+  -H "Content-Type: application/json" \
+  -d '{{ automation.in|escape }}'</pre></details>
+        <details><summary style="font-weight:800;cursor:pointer;margin:10px 0 6px">3 · Relances automatiques</summary>
+          <p class="muted" style="margin:4px 0">Tâche planifiée <code>python manage.py supplier_sync</code> (toutes les 15 min) : retransmet les envois en échec (5 essais max) et envoie les commandes payées jamais transmises.</p></details>
+      </div>
+
+      <div class="card">
         <div class="card-h"><h2>Activité</h2><span class="muted">transmissions et échecs</span></div>
         <ul class="tl">{% for e in events %}<li><time>{{ e.at|date:"d/m H:i" }}</time><span><a href="/admin/studio/order/{{ e.order_id }}/change/">{{ e.order.uid }}</a> · {{ e.text }}{% if e.user %} <span class="muted">({{ e.user }})</span>{% endif %}</span></li>
         {% empty %}<li class="muted">Aucune transmission enregistrée pour l'instant.</li>{% endfor %}</ul>
@@ -73,6 +87,20 @@
           <dt>Dernier envoi</dt><dd>{% if sup.last_sync_at %}{{ sup.last_sync_at|date:"d/m/Y H:i" }} · {% if sup.last_sync_ok %}<span class="bdg2 ok">OK</span>{% else %}<span class="bdg2 err">Échec</span>{% endif %}{% else %}—{% endif %}</dd>
         </dl>
         <div style="margin-top:10px" class="files">{% for f in files %}<span class="chip">{{ f }}</span>{% empty %}<span class="muted">Aucun fichier sélectionné</span>{% endfor %}</div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Automatisation</h2>{% if sup.auto_dispatch %}<span class="bdg2 ok">Automatique</span>{% else %}<span class="bdg2 warn">Manuelle</span>{% endif %}</div>
+        <p class="muted" style="margin:0 0 10px">{% if sup.auto_dispatch %}Chaque commande payée est transmise immédiatement (API ou e-mail), puis relancée automatiquement en cas d'échec.{% else %}Les commandes payées attendent votre validation (bouton « Transmettre » de la fiche commande).{% endif %}</p>
+        <div class="stack">
+          <form method="post">{% csrf_token %}<button class="pbtn" style="width:100%" name="op" value="auto">Passer en mode {% if sup.auto_dispatch %}manuel{% else %}automatique{% endif %}</button></form>
+          <form method="post">{% csrf_token %}<button class="pbtn pri" style="width:100%" name="op" value="test">Tester la connexion</button></form>
+        </div>
+        <label style="font-weight:700;font-size:.78rem;display:block;margin:12px 0 4px">URL de retour (statuts &amp; suivi)</label>
+        <div style="display:flex;gap:6px"><input type="text" readonly value="{{ automation.callback }}" id="cbUrl" style="flex:1;font-size:.74rem" onclick="this.select()">
+          <button type="button" class="pbtn sm" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('cbUrl').value);this.textContent='Copié ✓'">Copier</button></div>
+        <p class="muted" style="margin:6px 0 0">À donner au fournisseur : il y envoie « en production », « expédiée » (+ n° de suivi), « livrée ». La commande se met à jour seule.</p>
+        <form method="post" style="margin-top:8px" onsubmit="return confirm('Générer un nouveau secret ? L\'ancienne URL de retour cessera de fonctionner.')">{% csrf_token %}<button class="pbtn sm" name="op" value="secret">Régénérer le secret</button></form>
+        {% if automation.retries %}<div class="banner warn" style="margin:10px 0 0"><span>{{ automation.retries }} commande{{ automation.retries|pluralize }} en attente de relance automatique.</span></div>{% endif %}
       </div>
       <div class="card">
         <div class="card-h"><h2>Contact</h2></div>
