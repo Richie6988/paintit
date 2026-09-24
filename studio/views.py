@@ -39,7 +39,9 @@ def _rate():
 
 def home(request):
     import json as _json
-    lib = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-").order_by("?")[:12])
+    # carrousel du home : modeles GRATUITS tires au hasard dans toute la galerie
+    lib = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-", price=0)
+               .order_by("?")[:12])
     showdir = os.path.join(settings.BASE_DIR, "studio", "static", "studio", "showcase")
     slugs = []
     if os.path.isdir(showdir):
