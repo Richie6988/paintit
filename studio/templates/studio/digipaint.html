@@ -179,6 +179,29 @@
    .bh-mobile{display:block}
    .pw-card{margin:16px;padding:22px}
  }
+ /* ===== Mobile : barre d'outils reguliere, palette sur 1 ligne defilante, HUD score/combo/zones en bas
+    (hors du plateau), zoom a gauche, mini-carte compacte a droite, logo masque ===== */
+ @media (max-width:560px){
+   body{height:100dvh}
+   .top{justify-content:space-between;padding:6px 8px}
+   .palbar{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;max-height:none;
+     padding:8px 10px 10px;gap:8px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+   .palbar::-webkit-scrollbar{display:none}
+   .reel-pot{scroll-snap-align:center}
+   .game-logo{display:none}
+   .stagewrap{margin-bottom:54px}
+   .top .stat,.top #combo{bottom:calc(10px + env(safe-area-inset-bottom));height:34px;box-shadow:0 2px 8px rgba(10,18,40,.12)}
+   .top .stat{display:flex;align-items:center;padding:0 12px;font-size:.95rem}
+   .top .stat-score{left:10px}
+   .top .stat-zones{right:10px}
+   .top #combo{margin-left:0;transform:translateX(-50%);min-width:92px}
+   .top #combo.hit{animation:none}
+   .zoomctl{left:10px;transform:none;bottom:10px;flex-direction:column;gap:8px}
+   .zoomctl button{width:40px;height:40px;font-size:1.1rem}
+   .zoomctl button:hover{transform:none}
+   .minimap{width:96px !important;right:10px;bottom:10px;border-width:2px;border-radius:8px}
+   .mini-pos{width:10px;height:10px}
+ }
 </style>{% if ANALYTICS_SRC %}<script defer data-domain="{{ ANALYTICS_DOMAIN }}" src="{{ ANALYTICS_SRC }}"></script>{% endif %}</head>
 <body>
 <div class="top">

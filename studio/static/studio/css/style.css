@@ -698,3 +698,38 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 .foot .foot-nav a:hover{color:#fff}
 .foot .foot-bottom{border-top:1px solid rgba(255,255,255,.1);padding:14px 0 0;margin-top:6px;width:100%;color:#7e8bb0;font-size:.76rem}
 @media(max-width:640px){.foot .foot-in{padding:24px 16px 18px}.foot .foot-motto{font-size:.82rem}}
+
+/* ============ MOBILE : en-tete compact (bandeau + langues + nav sur une ligne) ============ */
+@media (max-width: 640px){
+  .topbar{justify-content:space-between;gap:8px;padding:6px 10px}
+  .topbar .tb-msg{position:static;flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.7rem}
+  .topbar .tb-lang{gap:3px}
+  .nav{flex-wrap:nowrap;gap:10px;padding:8px 12px}
+  .brand-logo{gap:6px;flex:0 0 auto}
+  .brand-logo img{height:32px}
+  .nav .brand-word{font-size:1.05rem}
+  .nav-right{width:auto;flex-wrap:nowrap;justify-content:flex-end;gap:12px;min-width:0}
+  .nav-link{font-size:.84rem;white-space:nowrap}
+  .nav-cta{padding:8px 12px;font-size:.84rem;white-space:nowrap}
+}
+@media (max-width: 420px){
+  .nav .brand-word{display:none}
+  .nav-right{gap:10px}
+}
+/* Anti-debordement horizontal (mobile) : les grilles/flex ne s'elargissent jamais au-dela de l'ecran */
+.form{grid-template-columns:minmax(0,1fr)}
+.form>*,.field,.field>*{min-width:0}
+input[type=file]{max-width:100%}
+img,svg,video,canvas{max-width:100%}
+main{overflow-x:clip}
+/* Petits ecrans : champ + bouton empiles, boutons d'action pleine largeur */
+@media (max-width: 480px){
+  .code-row,.vf-row{flex-wrap:wrap}
+  .code-row input,.vf-row input{flex:1 1 100%;min-width:0}
+  .code-row button,.vf-row button{flex:1 1 100%}
+  .actions{flex-wrap:wrap}
+  .digital-offer{flex-wrap:wrap}
+  .digital-offer .digibtn{width:100%;text-align:center}
+  form .cta[type=submit]{width:100%}
+}
+.cgv-check span{font-weight:400;color:var(--muted,#5b647a);line-height:1.45}
