@@ -143,6 +143,7 @@ class Order(models.Model):
     feedback_sent = models.BooleanField(default=False)
     notes = models.TextField("Notes internes", blank=True, default="")
     status_changed_at = models.DateTimeField("Statut depuis", null=True, blank=True)
+    ad_ref = models.CharField("Pub d'origine (A/B)", max_length=24, blank=True, default="", db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -415,3 +416,36 @@ class Supplier(models.Model):
         return (cls.objects.filter(active=True)
                 .filter(models.Q(checkout=checkout) | models.Q(checkout="all"))
                 .order_by("priority", "id").first())
+
+
+class MarketingAd(models.Model):
+    """Pub produite par le Marketing Corner (galerie A/B) : textes, fichier, lien traque + compteurs.
+    Une 'variante' = une generation (meme image, textes differents) ; les pubs d'un meme
+    `image_uid` et d'un meme `kind` sont comparees entre variantes."""
+    FORMATS = [("web", "Page web animee"), ("gif", "GIF")]
+    token = models.CharField(max_length=24, unique=True)
+    image_uid = models.CharField("Image", max_length=40, db_index=True)
+    campaign = models.CharField("Campagne", max_length=80, blank=True, default="")
+    variant = models.CharField("Variante", max_length=40, default="A")
+    kind = models.CharField("Gabarit", max_length=20)
+    label = models.CharField(max_length=80, blank=True, default="")
+    fmt = models.CharField(max_length=4, choices=FORMATS, default="web")
+    file_name = models.CharField(max_length=120)
+    target_url = models.CharField("Lien cible", max_length=300, default="https://paintit.click/create/")
+    texts = models.JSONField(default=dict, blank=True)
+    views = models.PositiveIntegerField("Vues", default=0)
+    clicks = models.PositiveIntegerField("Clics", default=0)
+    active = models.BooleanField("Active", default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Pub marketing"
+        verbose_name_plural = "Pubs marketing (A/B)"
+
+    @property
+    def ctr(self):
+        return round(self.clicks / self.views * 100, 1) if self.views else None
+
+    def __str__(self):
+        return "%s %s/%s" % (self.image_uid, self.variant, self.kind)

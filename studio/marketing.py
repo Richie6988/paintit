@@ -31,6 +31,7 @@ def _assets(uid):
 
 # ---------- Promos HTML : reutilise les templates VALIDES + injecte le produit ----------
 import re as _re
+import json as _json
 
 _TPL_DIR = os.path.join(settings.BASE_DIR, "studio", "marketing_templates")
 TEMPLATES = [
@@ -83,26 +84,135 @@ def _headline(html, message):
     return html
 
 
+_CLAIM_RX = _re.compile(r'<div class="claim[^"]*"[^>]*>.*?</div>', _re.S)
+
+
 def _subtitles(html, text):
-    """Remplace les sous-titres (.claim) du gabarit par les lignes fournies (1 par ligne)."""
+    """Remplace TOUS les sous-titres (.claim, y compris 'claim c1' + style inline) par les lignes
+    fournies (1 par ligne, dernier mot en couleur). Les attributs du gabarit sont conserves."""
     if text is None:
         return html
     lines = [l.strip() for l in text.replace("\r", "").split("\n") if l.strip()]
+    olds = list(_CLAIM_RX.finditer(html))
+    heads = [_re.match(r'<div[^>]*>', m.group(0)).group(0) for m in olds] or ['<div class="claim">']
     accents = ["em", "o", "g"]
     new = ""
     for i, l in enumerate(lines):
+        head = heads[min(i, len(heads) - 1)]
         words = l.split()
         if len(words) >= 2:
-            new += '<div class="claim">%s <span class="%s">%s</span></div>' % (
-                _esc(" ".join(words[:-1])), accents[i % 3], _esc(words[-1]))
+            new += '%s%s <span class="%s">%s</span></div>' % (head, _esc(" ".join(words[:-1])), accents[i % 3], _esc(words[-1]))
         else:
-            new += '<div class="claim"><span class="%s">%s</span></div>' % (accents[i % 3], _esc(l))
-    if '<div class="claim">' in html:
-        html = _re.sub(r'<div class="claim">.*</div>(?=\s*<div class="cta">)', new, html, count=1, flags=_re.S)
-    elif new and '<div class="cta">' in html:
+            new += '%s<span class="%s">%s</span></div>' % (head, accents[i % 3], _esc(l))
+    if olds:
+        start, end = olds[0].start(), olds[-1].end()
+        return html[:start] + new + html[end:]
+    if new and '<div class="cta">' in html:
         html = html.replace('<div class="cta">', new + '<div class="cta">', 1)
     return html
 
+
+# --------------------------------------------------------------------------- #
+# TOUS les textes d'un gabarit sont editables : valeurs par defaut lues dans le gabarit
+# --------------------------------------------------------------------------- #
+SLOT_LABELS = [
+    ("title", "Titre de l'onglet (page web)", "line"),
+    ("tag", "Bandeau (au-dessus de l'image)", "line"),
+    ("cap_left", "Légende gauche (curseur)", "line"),
+    ("cap_right", "Légende droite (curseur)", "line"),
+    ("brand", "Marque", "line"),
+    ("headline", "Message (titre géant)", "big"),
+    ("claims", "Sous-titres (1 par ligne)", "multi"),
+    ("sub", "Phrase secondaire", "line"),
+    ("cta", "Bouton (CTA)", "line"),
+]
+GIF_SLOTS = [("gif_title", "Accroche du GIF", "big"), ("gif_cta", "Bouton du GIF", "line"),
+             ("gif_footer", "Texte bas du GIF (URL affichée)", "line")]
+
+
+def _txt(fragment):
+    import html as _h
+    t = _re.sub(r"<br\s*/?>", " ", fragment or "")
+    t = _re.sub(r"<[^>]+>", "", t)
+    return " ".join(_h.unescape(t).split())
+
+
+def template_defaults(key):
+    """{slot: texte} pour les emplacements presents dans le gabarit `key`."""
+    p = os.path.join(_TPL_DIR, "%s.html" % key)
+    if not os.path.exists(p):
+        return {}
+    html = open(p, encoding="utf-8").read()
+    html = _re.sub(r"<svg.*?</svg>", "", html, flags=_re.S)
+    html = _re.sub(r"<(style|script)\b.*?</\1>", "", html, flags=_re.S)
+    out = {}
+
+    def grab(slot, rx):
+        m = _re.search(rx, html, _re.S)
+        if m:
+            out[slot] = _txt(m.group(1))
+    grab("title", r"<title>(.*?)</title>")
+    grab("tag", r'<div class="tag">(.*?)</div>')
+    grab("cap_left", r'<span class="cap">(.*?)</span>')
+    grab("cap_right", r'<span class="cap r">(.*?)</span>')
+    grab("brand", r'<div class="brand">.*?<b>(.*?)</b>')
+    grab("sub", r'<div class="sub">(.*?)</div>')
+    grab("cta", r'<div class="cta">(.*?)</div>')
+    m = _re.search(r'<div class="magic">(.*?)</div>', html, _re.S)
+    if m:
+        out["headline"] = DEFAULT_MSG.get(key) or _txt(m.group(1))
+    claims = [_txt(c.group(0)) for c in _CLAIM_RX.finditer(html)]
+    if claims:
+        out["claims"] = DEFAULT_SUB.get(key) or "\n".join(claims)
+    return out
+
+
+def template_slots(key, values=None):
+    """Champs de formulaire (ordre + libelles) pour le gabarit `key`."""
+    d = template_defaults(key)
+    values = values or {}
+    return [{"slot": sl, "label": lb, "kind": kd, "value": values.get(sl, d[sl])}
+            for sl, lb, kd in SLOT_LABELS if sl in d]
+
+
+def gif_defaults(cta="Testez notre algorithme", link="https://paintit.click"):
+    return {"gif_title": DEFAULT_MSG["slider"], "gif_cta": cta,
+            "gif_footer": (link or "").replace("https://", "").replace("http://", "").rstrip("/")}
+
+
+def gif_slots(values=None):
+    d = dict(gif_defaults(), **(values or {}))
+    return [{"slot": sl, "label": lb, "kind": kd, "value": d[sl]} for sl, lb, kd in GIF_SLOTS]
+
+
+def apply_texts(html, texts):
+    """Applique tous les textes (slot -> valeur) au gabarit."""
+    t = texts or {}
+
+    def sub1(h, rx, inner):
+        return _re.sub(rx, lambda m: m.group(1) + inner + m.group(2), h, count=1, flags=_re.S)
+    if t.get("title") is not None:
+        html = sub1(html, r"(<title>).*?(</title>)", _esc(t["title"]))
+    if t.get("tag") is not None:
+        html = sub1(html, r'(<div class="tag">).*?(</div>)', _esc(t["tag"]))
+    if t.get("cap_left") is not None:
+        html = sub1(html, r'(<span class="cap">).*?(</span>)', _esc(t["cap_left"]))
+    if t.get("cap_right") is not None:
+        html = sub1(html, r'(<span class="cap r">).*?(</span>)', _esc(t["cap_right"]))
+    if t.get("brand") is not None:
+        b = t["brand"].strip()
+        # style maison "Paint<i>It</i>" conserve si la marque finit par "It", sinon texte simple
+        inner = "%s<i>It</i>" % _esc(b[:-2]) if len(b) > 2 and b.endswith("It") else _esc(b)
+        html = sub1(html, r'(<div class="brand">.*?<b>).*?(</b>)', inner)
+    if t.get("sub") is not None:
+        html = sub1(html, r'(<div class="sub">).*?(</div>)', _esc(t["sub"]))
+    if t.get("cta") is not None:
+        html = sub1(html, r'(<div class="cta">).*?(</div>)', _esc(t["cta"]))
+    if t.get("headline"):
+        html = _headline(html, t["headline"].strip())
+    if t.get("claims") is not None:
+        html = _subtitles(html, t["claims"])
+    return html
 
 
 def _read_svg(path):
@@ -123,32 +233,22 @@ def _inject(html, preview_svg, template_svg, source_b64):
 
 
 def _clickable(link):
-    """Rend le CTA du gabarit cliquable vers le lien, sans ajouter de couche visuelle."""
+    """Rend le CTA (et la carte) cliquables vers le lien traque, sans couche visuelle.
+    Selection par classe : fonctionne quel que soit le texte du bouton."""
     if not link:
         return ""
-    return ("""<script>document.addEventListener('DOMContentLoaded',function(){
-var L=%r;var rx=/Testez notre algorithme|Cr\u00e9er la mienne|Cr..er la mienne/i;
-document.querySelectorAll('a,button,div,span').forEach(function(el){
- if(el.children.length===0&&rx.test(el.textContent||'')){var t=el.closest('a,button,div')||el;
-  t.style.cursor='pointer';t.addEventListener('click',function(e){e.preventDefault();window.open(L,'_blank');});}});
-});</script>""" % link)
+    return ("""<script>document.addEventListener('DOMContentLoaded',function(){var L=%s;
+document.querySelectorAll('a.card').forEach(function(a){a.href=L;a.target='_blank';});
+document.querySelectorAll('.cta').forEach(function(el){el.style.cursor='pointer';
+ el.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();window.open(L,'_blank');});});
+});</script>""" % _json.dumps(link))
 
 
-def _texts(html, cta, tagline, link):
-    """Remplace les textes editables du gabarit (mono-couche : on edite le gabarit lui-meme)."""
-    import re as _r
-    if cta:
-        html = html.replace("Testez notre algorithme", cta)
-    if tagline:
-        html = _r.sub(r"Gratuit , en moins d'une minute", tagline, html)
-        html = _r.sub(r", en moins d'une minute", tagline, html)
-    if link:
-        html = _r.sub(r'href="https?://[^"]*paintit[^"]*"', 'href="%s"' % link, html)
-    return html
-
-
-def build_all(uid, cta="Testez notre algorithme", messages=None, subs=None, brand="PaintIt", link="https://paintit.click"):
-    """Genere les promos (templates valides + produit injecte) + le GIF."""
+def build_all(uid, texts=None, gif_texts=None, links=None, suffix=""):
+    """Genere les promos (gabarits valides + produit injecte + TOUS les textes) + les 3 GIF.
+    texts : {gabarit: {slot: texte}} ; gif_texts : {gif_title, gif_cta, gif_footer} ;
+    links : {cle de sortie: url traquee} ; suffix : distingue les fichiers d'une variante.
+    Renvoie [(cle, libelle, chemin, 'web'|'gif')]."""
     a = _assets(uid)
     if not a["preview"]:
         raise ValueError("Toile introuvable pour %s (lance la generation d'abord)." % uid)
@@ -157,10 +257,8 @@ def build_all(uid, cta="Testez notre algorithme", messages=None, subs=None, bran
     template_svg = _read_svg(os.path.join(d, "%s_template.svg" % uid))
     outdir = os.path.join(settings.MEDIA_ROOT, "marketing", uid)
     os.makedirs(outdir, exist_ok=True)
-    messages = messages or {}
-    subs = subs or {}
-    cta = (cta or "").strip()
-    click = _clickable(link)
+    texts, links = texts or {}, links or {}
+    gt = dict(gif_defaults(), **{k: v for k, v in (gif_texts or {}).items() if v is not None})
     produced = []
     for key, label in TEMPLATES:
         tpl = os.path.join(_TPL_DIR, "%s.html" % key)
@@ -168,29 +266,26 @@ def build_all(uid, cta="Testez notre algorithme", messages=None, subs=None, bran
             continue
         html = open(tpl, encoding="utf-8").read()
         html = _inject(html, preview_svg, template_svg, a["source"])
-        html = _headline(html, (messages.get(key) or DEFAULT_MSG.get(key, "")).strip())
-        html = _subtitles(html, subs.get(key) if subs.get(key) is not None else DEFAULT_SUB.get(key))
-        html = _texts(html, cta, "", link)
-        if click and "</body>" in html:
-            html = html.replace("</body>", click + "</body>", 1)
-        path = os.path.join(outdir, "promo_%s.html" % key)
+        html = apply_texts(html, dict(template_defaults(key), **(texts.get(key) or {})))
+        link = links.get(key, "")
+        if link:
+            html = _re.sub(r'href="https?://[^"]*paintit[^"]*"', 'href="%s"' % _esc(link), html)
+            html = html.replace("</body>", _clickable(link) + "</body>", 1)
+        path = os.path.join(outdir, "promo_%s%s.html" % (key, suffix))
         with open(path, "w", encoding="utf-8") as f:
             f.write(html)
-        produced.append((label, path, "web"))
-    # GIF pret-a-poster : 3 formats FB/Insta
-    gif_title = (messages.get("gif") or messages.get("slider") or DEFAULT_MSG["slider"]).strip()
-    for fmt, (ratio, flabel) in {"square": ((1, 1), "Carre , FB/Insta feed"),
+        produced.append((key, label, path, "web"))
+    for fmt, (ratio, flabel) in {"square": ((1, 1), "Carré , FB/Insta feed"),
                                  "portrait": ((4, 5), "Portrait , Insta feed"),
                                  "story": ((9, 16), "Story , 9:16")}.items():
-        gif = build_gif(uid, os.path.join(outdir, "promo_%s.gif" % fmt),
-                        brand=brand or "PaintIt", link=link or "",
-                        title=gif_title, message=(messages.get("gif_sub") or cta or ""), ratio=ratio)
+        gif = build_gif(uid, os.path.join(outdir, "promo_%s%s.gif" % (fmt, suffix)),
+                        title=gt["gif_title"], message=gt["gif_cta"], caption=gt["gif_footer"], ratio=ratio)
         if gif:
-            produced.append(("GIF " + flabel, gif, "gif"))
+            produced.append(("gif_" + fmt, "GIF " + flabel, gif, "gif"))
     return produced
 
 
-def build_gif(uid, out_path, brand="PaintIt", link="", title="", message="", ratio=(4, 5)):
+def build_gif(uid, out_path, brand="PaintIt", link="", title="", message="", ratio=(4, 5), caption=None):
     """GIF de concatenation : photo -> toile coloriee -> toile numerotee, avec fondu + logo/marque."""
     from PIL import Image, ImageDraw, ImageFont
     d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
@@ -235,7 +330,8 @@ def build_gif(uid, out_path, brand="PaintIt", link="", title="", message="", rat
             return ImageFont.truetype("DejaVuSans-Bold.ttf", int(sz))
         except Exception:
             return ImageFont.load_default()
-    caption = link.replace("https://", "").replace("http://", "") if link else ""
+    if caption is None:
+        caption = link.replace("https://", "").replace("http://", "") if link else ""
 
     def _wrap(draw, text, fnt, maxw):
         words, lines, cur = text.split(), [], ""
@@ -285,7 +381,7 @@ def build_gif(uid, out_path, brand="PaintIt", link="", title="", message="", rat
             dr.text((x, yy), l, font=ftitle, fill=(255, 255, 255, 255))
             yy += (bb[3] - bb[1]) + 8
         # CTA pill (message ou url)
-        cta_txt = (message or caption or "").strip()
+        cta_txt = (message or "").strip()
         if cta_txt:
             fc = _font(int(W / 20))
             bb = dr.textbbox((0, 0), cta_txt, font=fc)

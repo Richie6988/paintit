@@ -1,0 +1,91 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Marketing A/B · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}
+<style>
+ .grp{display:grid;grid-template-columns:150px 1fr;gap:16px}
+ .grp .thumb img{width:150px;border-radius:10px;border:1px solid #e2e8f2;display:block}
+ .vt{font-weight:800;background:#12224f;color:#fff !important;border-radius:6px;padding:1px 7px;font-size:.78rem}
+ .win{background:#fff1d6;color:#9a6300;border-radius:999px;padding:1px 8px;font-size:.72rem;font-weight:800;margin-left:6px}
+ .txt{max-width:320px;font-size:.8rem;color:#33415c}
+ .txt small{display:block;color:#8a97b4}
+ .off{opacity:.45}
+ .copy{cursor:pointer;border:1px solid #e2e8f2;background:#f7f9fd;border-radius:7px;padding:2px 7px;font-size:.74rem;font-weight:700;color:#2f4b8f}
+ .lnk{display:flex;gap:8px;flex-wrap:wrap;font-size:.78rem}
+ .ib{background:none;border:0;color:#2f6bf2;font-weight:600;cursor:pointer;padding:0;font-size:.78rem}
+ .kind-h td{background:#f7f9fd !important;font-weight:800;color:#12224f;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+ @media(max-width:860px){.grp{grid-template-columns:1fr}}
+</style>
+<div class="erp">
+  <div class="erp-head">
+    <div><h1>Marketing · galerie A/B</h1><div class="muted">Chaque génération du Marketing Corner = une variante. Vues : affichages de la pub via son lien public · Clics : passages par le lien traqué · Ventes : commandes payées attribuées au dernier clic.</div></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="seg"><a href="?show=active" class="{% if show == 'active' %}on{% endif %}">Actives</a><a href="?show=all" class="{% if show == 'all' %}on{% endif %}">Toutes</a></div>
+      <a class="btn" href="/marketing/">+ Nouvelle pub</a>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Pubs</div><div class="v">{{ tot.ads }}</div></div>
+    <div class="kpi"><div class="l">Vues</div><div class="v">{{ tot.views }}</div></div>
+    <div class="kpi"><div class="l">Clics</div><div class="v">{{ tot.clicks }}</div></div>
+    <div class="kpi"><div class="l">Taux de clic</div><div class="v">{% if tot.ctr is not None %}{{ tot.ctr }} %{% else %}—{% endif %}</div></div>
+    <div class="kpi"><div class="l">Ventes attribuées</div><div class="v">{{ tot.orders }}</div></div>
+    <div class="kpi"><div class="l">CA attribué</div><div class="v">{{ tot.revenue|floatformat:"2g" }} €</div></div>
+  </div>
+
+  {% for g in groups %}
+  <div class="card">
+    <div class="grp">
+      <div class="thumb"><img src="/preview/img/{{ g.uid }}/preview/" alt="" loading="lazy" onerror="this.style.display='none'">
+        <div class="muted" style="margin-top:6px">{{ g.created|date:"d/m/Y" }}</div>
+        <a class="btn ghost" style="margin-top:8px" href="/marketing/?from={{ g.uid }}&v={{ g.last_variant }}">+ Variante</a>
+      </div>
+      <div style="min-width:0">
+        <div class="card-h"><h2>{{ g.campaign|default:"Sans campagne" }} <span class="muted">· {{ g.uid }} · {{ g.variants|length }} variante{{ g.variants|length|pluralize }}</span></h2>
+          <span class="muted">{{ g.views }} vues · {{ g.clicks }} clics{% if g.ctr is not None %} · {{ g.ctr }} %{% endif %} · {{ g.orders }} ventes · {{ g.revenue|floatformat:"2g" }} €</span></div>
+        <div style="overflow-x:auto">
+        <table class="t">
+          <tr><th>Variante</th><th>Textes</th><th class="r">Vues</th><th class="r">Clics</th><th class="r">CTR</th><th class="r">Ventes</th><th class="r">CA</th><th>Liens</th><th></th></tr>
+          {% for k in g.kinds %}
+            <tr class="kind-h"><td colspan="9">{{ k.label }}{% if k.ads|length > 1 %} · test A/B ({{ k.ads|length }} variantes){% endif %}</td></tr>
+            {% for ad in k.ads %}
+            <tr class="{% if not ad.active %}off{% endif %}">
+              <td style="white-space:nowrap"><span class="vt">{{ ad.variant }}</span>{% if ad.winner %}<span class="win">🏆 gagnante</span>{% endif %}</td>
+              <td class="txt">{{ ad.headline|truncatechars:70 }}<small>{{ ad.cta }}</small></td>
+              <td class="r">{{ ad.views }}</td>
+              <td class="r"><b>{{ ad.clicks }}</b></td>
+              <td class="r">{% if ad.ctr is not None %}{{ ad.ctr }} %{% else %}—{% endif %}</td>
+              <td class="r">{{ ad.orders }}{% if ad.conv is not None and ad.orders %} <span class="muted">({{ ad.conv }} %)</span>{% endif %}</td>
+              <td class="r">{{ ad.revenue|floatformat:"2g" }} €</td>
+              <td><div class="lnk">
+                <a href="/marketing/file/{{ ad.image_uid }}/{{ ad.file_name }}/" target="_blank">Voir</a>
+                <a href="/marketing/file/{{ ad.image_uid }}/{{ ad.file_name }}/?dl=1">⬇</a>
+                <button type="button" class="copy" data-u="{{ ad.track_url }}" title="Lien à mettre dans la publication (compte les clics)">Lien clic</button>
+                <button type="button" class="copy" data-u="{{ ad.public_url }}" title="Adresse publique de la pub (compte les vues)">Lien pub</button>
+              </div></td>
+              <td><form method="post" style="display:flex;gap:8px">{% csrf_token %}<input type="hidden" name="ad" value="{{ ad.pk }}">
+                <button class="ib" name="op" value="toggle">{% if ad.active %}Archiver{% else %}Réactiver{% endif %}</button>
+                <button class="ib" name="op" value="reset" onclick="return confirm('Remettre les compteurs à zéro ?')">RAZ</button></form></td>
+            </tr>
+            {% endfor %}
+          {% endfor %}
+        </table>
+        </div>
+        <div class="chips">{% for v in g.variants %}<a class="chip" href="/marketing/?from={{ g.uid }}&v={{ v }}">Dupliquer {{ v }} → nouvelle variante</a>{% endfor %}</div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="card"><p class="muted">Aucune pub pour l'instant. <a href="/marketing/">Créer la première →</a></p></div>
+  {% endfor %}
+  <p class="muted">Gagnante : meilleur taux de clic parmi les variantes d'un même gabarit ayant au moins 20 vues (à défaut, le plus de clics). Les visites du staff et des robots (aperçus de liens) ne sont pas comptées ; 1 vue / 1 clic max par visiteur et par pub.</p>
+</div>
+<script>
+document.querySelectorAll('.copy').forEach(function(b){b.addEventListener('click',function(){
+  var u=b.dataset.u,t=b.textContent;function done(){b.textContent='Copié ✓';setTimeout(function(){b.textContent=t;},1400);}
+  if(navigator.clipboard)navigator.clipboard.writeText(u).then(done,function(){prompt('Lien :',u);});else prompt('Lien :',u);});});
+</script>
+{% endblock %}

@@ -6,7 +6,7 @@ from django import forms
 from django.utils.html import format_html, escape
 from django.utils.safestring import mark_safe
 
-from .models import Discount, Order, OrderEvent, ContactMessage, ContactAttachment, Pricing, DigitalCanvas, EmailCode, PrintPricing, Supplier
+from .models import Discount, Order, OrderEvent, ContactMessage, ContactAttachment, Pricing, DigitalCanvas, EmailCode, PrintPricing, Supplier, MarketingAd
 from . import emails
 
 admin.site.site_header = "PaintIt ERP"
@@ -550,3 +550,24 @@ class SupplierAdmin(admin.ModelAdmin):
                            "(consignee / order information / color specifications)."}),
         ("Notes", {"fields": ("notes",), "classes": ("collapse",)}),
     )
+
+
+@admin.register(MarketingAd)
+class MarketingAdAdmin(admin.ModelAdmin):
+    list_display = ("image_uid", "variant", "kind", "campaign", "views", "clicks", "ctr_col", "active", "created_at")
+    list_filter = ("active", "fmt", "kind", "campaign")
+    search_fields = ("image_uid", "campaign", "variant", "token")
+    list_editable = ("active",)
+    readonly_fields = ("token", "image_uid", "kind", "fmt", "file_name", "views", "clicks", "created_at", "links")
+    fields = ("links", ("image_uid", "variant", "kind", "fmt"), "campaign", "target_url", "texts",
+              ("views", "clicks"), "active", "token", "file_name", "created_at")
+
+    @admin.display(description="CTR")
+    def ctr_col(self, obj):
+        return "%s %%" % obj.ctr if obj.ctr is not None else "\u2014"
+
+    @admin.display(description="Liens")
+    def links(self, obj):
+        site = settings.SITE_URL
+        return format_html('Clic traque : <code>{}/go/{}/</code><br>Pub publique : <code>{}/m/{}/</code><br>'
+                           '<a href="/admin-hub/marketing/">Galerie A/B</a>', site, obj.token, site, obj.token)

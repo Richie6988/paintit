@@ -31,8 +31,12 @@ textarea{resize:vertical;min-height:52px}
 #overlay{position:fixed;inset:0;background:rgba(8,10,16,.82);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:50}#overlay.show{display:flex}
 .spin{width:52px;height:52px;border:4px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}#overlay p{margin-top:16px;font-weight:600}
 .hint{color:var(--mut);font-size:12px;margin-top:4px}
+.top .nav a{color:var(--txt);text-decoration:none;font-size:13px;font-weight:600;margin-left:14px;background:var(--bg3);border:1px solid var(--line);padding:7px 12px;border-radius:9px}
+.panel.ok{border-color:#3fd07a;background:#132019}.panel.ok a{color:var(--acc)}
+code{background:var(--bg3);padding:1px 5px;border-radius:5px}
 </style></head><body>
-<div class="top">Marketing <span>Corner</span><small>Un message punchy par contenu · promos web + GIF prêts Facebook / Instagram</small></div>
+<div class="top"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div>Marketing <span>Corner</span><small>Tous les textes éditables · chaque génération = une variante A/B enregistrée dans la galerie</small></div>
+<div class="nav"><a href="/admin-hub/marketing/">📊 Galerie A/B &amp; clics</a><a href="/admin-hub/">← ERP</a></div></div></div>
 <div class="wrap">
 <form method="post" enctype="multipart/form-data" id="mform">{% csrf_token %}
   <div class="panel">
@@ -41,54 +45,62 @@ textarea{resize:vertical;min-height:52px}
         <label>Image du produit</label>
         <label class="drop" id="drop"><input type="file" name="image" id="file" accept="image/*" hidden {% if not results %}required{% endif %}>
           <img id="thumb" hidden alt=""><span id="dl">Glissez une image<br><em>ou cliquez</em></span></label>
-        {% if uid %}<input type="hidden" name="reuse_uid" value="{{ uid }}"><p class="hint">Image conservée — changez les messages puis régénérez.</p>{% endif %}
+        {% if uid %}<input type="hidden" name="reuse_uid" value="{{ uid }}"><p class="hint">Image conservée — modifiez les textes puis générez une nouvelle variante (A/B).</p>{% endif %}
       </div>
       <div>
-        <label>Texte du bouton (CTA)</label><input type="text" name="cta" value="{{ cta }}">
-        <label>Lien du bouton (cliquable)</label><input type="text" name="link" value="{{ link }}">
-        <div class="row2"><div><label>Marque</label><input type="text" name="brand" value="{{ brand }}"></div>
-        <div><label>Couleurs</label><input type="number" name="colors" value="{{ colors }}" min="2" max="48"></div></div>
-        <label>Accroche du GIF (pub)</label><input type="text" name="msg_gif" class="mline" value="{{ gif_msg }}" placeholder="Votre plus belle toile, en 1 minute">
+        <label>Lien cible (où mène le clic)</label><input type="text" name="link" value="{{ link }}">
+        <p class="hint">Chaque pub reçoit son propre lien traqué <code>/go/…</code> qui compte les clics puis redirige ici (avec UTM).</p>
+        <div class="row2"><div><label>Campagne</label><input type="text" name="campaign" value="{{ campaign }}" placeholder="Fête des mères"></div>
+        <div><label>Nom de la variante</label><input type="text" name="variant" value="" placeholder="auto : A, B, C…"></div></div>
+        <label>Couleurs de la toile</label><input type="number" name="colors" value="{{ colors }}" min="2" max="48">
       </div>
     </div>
   </div>
 
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
 
+  {% if results %}
+  <div class="panel ok">
+    <b>Variante « {{ variant }} » enregistrée</b> — {{ results|length }} pubs ajoutées à la <a href="/admin-hub/marketing/">galerie A/B</a>.
+    Modifiez les textes ci-dessous puis régénérez pour créer la variante suivante (même image).
+  </div>
+  {% endif %}
+
   <div class="panel">
-    <h3 style="margin-top:0">Message par promo <span style="color:var(--mut);font-weight:400;font-size:13px">— gros, punchy, animé</span></h3>
+    <h3 style="margin-top:0">Textes par promo <span style="color:var(--mut);font-weight:400;font-size:13px">— tous les textes de chaque vue</span></h3>
     {% for pr in promos %}
       <div class="content">
         <div class="view">
-          {% if uid %}<iframe src="/marketing/file/{{ uid }}/promo_{{ pr.key }}.html/" loading="lazy"></iframe>
-          {% else %}<div class="empty" style="padding:120px 20px">Aperçu après génération</div>{% endif %}
+          {% with ad=None %}{% for r in results %}{% if r.kind == pr.key %}<iframe src="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/" loading="lazy"></iframe>{% endif %}{% empty %}<div class="empty" style="padding:120px 20px">Aperçu après génération</div>{% endfor %}{% endwith %}
         </div>
         <div>
           <h4>{{ pr.label }}</h4>
-          <div class="fmt">Page web animée · CTA cliquable</div>
-          <label>Message (titre géant)</label>
-          <textarea name="msg_{{ pr.key }}" class="mline">{{ pr.msg }}</textarea>
-          <p class="hint">Les 2 derniers mots ressortent en couleur + animation.</p>
-          <label>Sous-titres (1 par ligne)</label>
-          <textarea name="sub_{{ pr.key }}" style="min-height:74px">{{ pr.sub }}</textarea>
-          {% if uid %}<div class="acts"><a href="/marketing/file/{{ uid }}/promo_{{ pr.key }}.html/" target="_blank">↗ Ouvrir</a><a href="/marketing/file/{{ uid }}/promo_{{ pr.key }}.html/?dl=1">⬇ Télécharger</a></div>{% endif %}
+          <div class="fmt">Page web animée · CTA cliquable (lien traqué)</div>
+          {% for f in pr.slots %}
+            <label>{{ f.label }}</label>
+            {% if f.kind == "multi" %}<textarea name="t_{{ pr.key }}_{{ f.slot }}" style="min-height:74px">{{ f.value }}</textarea>
+            {% elif f.kind == "big" %}<textarea name="t_{{ pr.key }}_{{ f.slot }}" class="mline">{{ f.value }}</textarea>
+            {% else %}<input type="text" name="t_{{ pr.key }}_{{ f.slot }}" value="{{ f.value }}">{% endif %}
+            {% if f.slot == "headline" %}<p class="hint">Les 2 derniers mots ressortent en couleur + animation.</p>{% endif %}
+          {% endfor %}
+          {% for r in results %}{% if r.kind == pr.key %}<div class="acts"><a href="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/" target="_blank">↗ Ouvrir</a><a href="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/?dl=1">⬇ Télécharger</a></div>{% endif %}{% endfor %}
         </div>
       </div>
     {% endfor %}
   </div>
 
-  {% if uid %}
-    <div class="panel">
-      <h3 style="margin-top:0">GIF prêts à poster (Facebook / Instagram)</h3>
+  <div class="panel">
+    <h3 style="margin-top:0">GIF prêts à poster <span style="color:var(--mut);font-weight:400;font-size:13px">— Facebook / Instagram (3 formats)</span></h3>
+    <div class="row2">
+      <div>{% for f in gif_slots %}<label>{{ f.label }}</label>{% if f.kind == "big" %}<textarea name="{{ f.slot }}" class="mline">{{ f.value }}</textarea>{% else %}<input type="text" name="{{ f.slot }}" value="{{ f.value }}">{% endif %}{% endfor %}
+        <p class="hint">Dans la publication, utilisez le lien traqué du GIF (galerie A/B) pour compter les clics.</p></div>
       <div class="gifgrid">
-        <figure><img src="/marketing/file/{{ uid }}/promo_square.gif/"><figcaption>Carré 1:1 · feed <a href="/marketing/file/{{ uid }}/promo_square.gif/?dl=1">⬇</a></figcaption></figure>
-        <figure><img src="/marketing/file/{{ uid }}/promo_portrait.gif/"><figcaption>Portrait 4:5 · feed <a href="/marketing/file/{{ uid }}/promo_portrait.gif/?dl=1">⬇</a></figcaption></figure>
-        <figure><img src="/marketing/file/{{ uid }}/promo_story.gif/"><figcaption>Story 9:16 <a href="/marketing/file/{{ uid }}/promo_story.gif/?dl=1">⬇</a></figcaption></figure>
+        {% for r in results %}{% if r.fmt == "gif" %}<figure><img src="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/" alt=""><figcaption>{{ r.label }} <a href="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/?dl=1">⬇</a></figcaption></figure>{% endif %}{% empty %}<div class="empty">Aperçu après génération</div>{% endfor %}
       </div>
     </div>
-  {% endif %}
+  </div>
 
-  <button class="btn" type="submit" id="go">▶ {% if uid %}Régénérer avec ces messages{% else %}Générer les contenus{% endif %}</button>
+  <button class="btn" type="submit" id="go">▶ {% if uid %}Générer une nouvelle variante (même image){% else %}Générer les contenus{% endif %}</button>
 </form>
 </div>
 <div id="overlay"><div class="spin"></div><p>Génération en cours… (~15–30 s)</p></div>

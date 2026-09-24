@@ -9,7 +9,7 @@ from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.views.decorators.clickjacking import xframe_options_sameorigin, xframe_options_exempt
 from django.utils.translation import get_language, gettext as _
 from django.contrib.admin.views.decorators import staff_member_required
 
@@ -1006,6 +1006,7 @@ def _upsert_order(o, shipping, status, supplier_ref=None):
         "address1": shipping.get("address1", ""), "address2": shipping.get("address2", ""),
         "postal_code": shipping.get("postal_code", ""), "city": shipping.get("city", ""),
         "country": shipping.get("country", ""), "supplier_ref": supplier_ref,
+        **({"ad_ref": o["ad_ref"][:24]} if o.get("ad_ref") else {}),
     })
 
 
@@ -1058,6 +1059,7 @@ def place_order(request):
     discount, total = _discount_for(order, applied)
     o = dict(order); o["discount"] = discount; o["total"] = total
     o["lang"] = (get_language() or o.get("lang", "fr"))[:2]   # langue du process (achat)
+    o["ad_ref"] = request.session.get("ad_ref", "")             # A/B marketing : pub d'origine
 
     if payments.stripe_live():
         _upsert_order(o, shipping, status=Order.PENDING)
@@ -1477,46 +1479,79 @@ def marketing_file(request, uid, name):
     return resp
 
 
+def _mkt_form_texts(request, marketing):
+    """Textes saisis : {gabarit: {slot: valeur}} + textes du GIF."""
+    texts = {}
+    for key, _lbl in marketing.TEMPLATES:
+        vals = {}
+        for sl, _l, _k in marketing.SLOT_LABELS:
+            v = request.POST.get("t_%s_%s" % (key, sl))
+            if v is not None:
+                vals[sl] = v.strip() if sl != "claims" else v.replace("\r", "").strip()
+        texts[key] = vals
+    gif = {sl: (request.POST.get(sl) or "").strip() for sl, _l, _k in marketing.GIF_SLOTS
+           if request.POST.get(sl) is not None}
+    return texts, gif
+
+
+def _next_variant(image_uid):
+    from .models import MarketingAd
+    used = set(MarketingAd.objects.filter(image_uid=image_uid).values_list("variant", flat=True))
+    i = 0
+    while True:
+        n, name = i, ""
+        while True:
+            name = chr(65 + n % 26) + name
+            n = n // 26 - 1
+            if n < 0:
+                break
+        if name not in used:
+            return name
+        i += 1
+
+
 @staff_member_required
 def marketing_page(request):
     from . import marketing
-    KEYS = ["slider", "shiny", "zoom"]
-    ctx = {"results": None, "error": None,
-           "cta": request.POST.get("cta", "Testez notre algorithme"),
-           "brand": request.POST.get("brand", "PaintIt"),
-           "link": request.POST.get("link", "https://paintit.click"),
+    from .models import MarketingAd
+    import re as _re, uuid as _uuid, secrets
+    ctx = {"results": None, "error": None, "erp_section": "marketing",
+           "link": request.POST.get("link", "https://paintit.click/create/"),
            "colors": request.POST.get("colors", "24"),
-           "gif_msg": request.POST.get("msg_gif", ""),
-           "labels": dict(marketing.TEMPLATES),
-           "defaults": marketing.DEFAULT_MSG,
-           "keys": KEYS}
-    # valeurs des messages par promo (pre-remplies avec les defauts)
-    labels = dict(marketing.TEMPLATES)
-    ctx["promos"] = [{"key": k, "label": labels.get(k, k),
-                      "msg": (request.POST.get("msg_" + k) if request.method == "POST"
-                              else marketing.DEFAULT_MSG.get(k, "")),
-                      "sub": (request.POST.get("sub_" + k) if request.method == "POST"
-                              else marketing.DEFAULT_SUB.get(k, ""))} for k in KEYS]
+           "campaign": request.POST.get("campaign", ""),
+           "variant": request.POST.get("variant", "")}
+    texts, gif = ({}, {})
+    base = None
+    if request.method == "POST":
+        texts, gif = _mkt_form_texts(request, marketing)
+    elif request.GET.get("from"):
+        # "Nouvelle variante" depuis la galerie : textes + image d'une variante existante
+        ads = list(MarketingAd.objects.filter(image_uid=request.GET["from"],
+                                              variant=request.GET.get("v", "")))
+        if ads:
+            base = ads[0]
+            for ad in ads:
+                if ad.fmt == "web":
+                    texts[ad.kind] = ad.texts
+                else:
+                    gif = ad.texts
+            ctx.update(uid=base.image_uid, campaign=base.campaign, link=base.target_url)
+    ctx["promos"] = [{"key": k, "label": lbl, "slots": marketing.template_slots(k, texts.get(k))}
+                     for k, lbl in marketing.TEMPLATES]
+    ctx["gif_slots"] = marketing.gif_slots(gif)
     if request.method == "POST":
         f = request.FILES.get("image")
-        cta = (request.POST.get("cta") or "Testez notre algorithme").strip()
-        brand = (request.POST.get("brand") or "PaintIt").strip()
-        link = (request.POST.get("link") or "").strip()
+        link = (request.POST.get("link") or "").strip() or settings.SITE_URL + "/create/"
         colors = int(request.POST.get("colors") or 24)
-        messages = {k: (request.POST.get("msg_" + k) or marketing.DEFAULT_MSG.get(k, "")).strip() for k in KEYS}
-        messages["gif"] = (request.POST.get("msg_gif") or "").strip()
-        messages["gif_sub"] = cta
-        subs = {k: (request.POST.get("sub_" + k) if request.POST.get("sub_" + k) is not None
-                    else marketing.DEFAULT_SUB.get(k, "")) for k in KEYS}
-        import re as _re, uuid as _uuid
         reuse = (request.POST.get("reuse_uid") or "").strip()
-        reuse_ok = bool(reuse) and bool(_re.match(r"^mkt-[A-Za-z0-9]+$", reuse)) and             os.path.exists(os.path.join(settings.MEDIA_ROOT, "orders", reuse, "%s_preview.svg" % reuse))
+        reuse_ok = bool(reuse) and bool(_re.match(r"^mkt-[A-Za-z0-9]+$", reuse)) and \
+            os.path.exists(os.path.join(settings.MEDIA_ROOT, "orders", reuse, "%s_preview.svg" % reuse))
         if not f and not reuse_ok:
             ctx["error"] = "Ajoutez une image."
         else:
             try:
                 if reuse_ok and not f:
-                    uid = reuse                 # regenere avec la meme image, textes modifies
+                    uid = reuse                 # meme image -> nouvelle variante (A/B)
                 else:
                     uid = "mkt-" + _uuid.uuid4().hex[:10]
                     tmp = os.path.join(settings.MEDIA_ROOT, "uploads", uid + "_in.jpg")
@@ -1525,15 +1560,149 @@ def marketing_page(request):
                         for chunk in f.chunks():
                             out.write(chunk)
                     generate(tmp, colors, 40, 50, uid=uid, source_name=f.name)
-                produced = marketing.build_all(uid, cta=cta, messages=messages, subs=subs, brand=brand, link=link)
-                ctx["uid"] = uid
-                ctx["results"] = [{"label": lbl,
-                                   "url": "/marketing/file/%s/%s/" % (uid, os.path.basename(path)),
-                                   "is_gif": (kind == "gif")} for lbl, path, kind in produced]
+                variant = _re.sub(r"[^A-Za-z0-9 _-]", "", request.POST.get("variant") or "").strip()[:40] \
+                    or _next_variant(uid)
+                if MarketingAd.objects.filter(image_uid=uid, variant=variant).exists():
+                    variant = variant + "-" + _next_variant(uid)
+                suffix = "_" + _re.sub(r"[^A-Za-z0-9]", "", variant).lower()
+                keys = [k for k, _l in marketing.TEMPLATES] + ["gif_square", "gif_portrait", "gif_story"]
+                tokens = {k: secrets.token_urlsafe(9) for k in keys}
+                links = {k: "%s/go/%s/" % (settings.SITE_URL, t) for k, t in tokens.items()}
+                produced = marketing.build_all(uid, texts=texts, gif_texts=gif, links=links, suffix=suffix)
+                campaign = (request.POST.get("campaign") or "").strip()[:80]
+                for key, label, path, kind in produced:
+                    MarketingAd.objects.create(
+                        token=tokens[key], image_uid=uid, campaign=campaign, variant=variant, kind=key,
+                        label=label, fmt="gif" if kind == "gif" else "web", file_name=os.path.basename(path),
+                        target_url=link, texts=gif if kind == "gif" else
+                        dict(marketing.template_defaults(key), **texts.get(key, {})))
+                ctx.update(uid=uid, variant=variant, campaign=campaign)
+                ctx["results"] = list(MarketingAd.objects.filter(image_uid=uid, variant=variant).order_by("id"))
             except Exception as exc:
                 logger.exception("Marketing build")
                 ctx["error"] = str(exc)
     return render(request, "marketing/index.html", ctx)
+
+
+# ---------------- Suivi des pubs (public) : clics + vues, attribution des ventes ----------------
+_BOT_RX = None
+
+
+def _countable(request, ad, what):
+    """Compte 1x par session et par pub ; ignore le staff et les robots (apercus de liens)."""
+    global _BOT_RX
+    import re as _re
+    if _BOT_RX is None:
+        _BOT_RX = _re.compile(r"bot|crawl|spider|preview|facebookexternalhit|slurp|whatsapp|telegram|"
+                              r"discord|embedly|curl|wget|python-requests|headless", _re.I)
+    if getattr(request, "user", None) and request.user.is_authenticated and request.user.is_staff:
+        return False
+    if _BOT_RX.search(request.META.get("HTTP_USER_AGENT", "")):
+        return False
+    k = "ad_%s_%s" % (what, ad.pk)
+    if request.session.get(k):
+        return False
+    request.session[k] = 1
+    return True
+
+
+def ad_click(request, token):
+    from django.db.models import F
+    from urllib.parse import urlencode, urlparse, parse_qsl, urlunparse
+    from .models import MarketingAd
+    ad = MarketingAd.objects.filter(token=token).first()
+    if not ad:
+        return redirect("studio:home")
+    if _countable(request, ad, "c"):
+        MarketingAd.objects.filter(pk=ad.pk).update(clicks=F("clicks") + 1)
+    request.session["ad_ref"] = ad.token          # attribution de la vente (dernier clic)
+    u = urlparse(ad.target_url or settings.SITE_URL + "/create/")
+    q = dict(parse_qsl(u.query))
+    q.update({"utm_source": "paintit_ad", "utm_medium": ad.fmt, "utm_campaign": ad.campaign or ad.image_uid,
+              "utm_content": "%s-%s" % (ad.variant, ad.kind)})
+    return redirect(urlunparse(u._replace(query=urlencode(q))))
+
+
+@xframe_options_exempt   # une pub peut etre integree (iframe) sur un site partenaire
+def ad_view(request, token):
+    from django.db.models import F
+    from .models import MarketingAd
+    ad = MarketingAd.objects.filter(token=token).first()
+    path = ad and os.path.join(settings.MEDIA_ROOT, "marketing", ad.image_uid, ad.file_name)
+    if not ad or not os.path.exists(path):
+        raise Http404
+    if _countable(request, ad, "v"):
+        MarketingAd.objects.filter(pk=ad.pk).update(views=F("views") + 1)
+    ctype = "image/gif" if ad.fmt == "gif" else "text/html; charset=utf-8"
+    with open(path, "rb") as fh:
+        resp = HttpResponse(fh.read(), content_type=ctype)
+    resp["Cache-Control"] = "no-store"   # chaque affichage passe par le compteur
+    return resp
+
+
+@staff_member_required
+def marketing_gallery(request):
+    """Galerie A/B : pubs groupees par image, variantes comparees par gabarit."""
+    from collections import OrderedDict
+    from django.db.models import Count, Sum
+    from django.contrib import admin as _admin
+    from .models import MarketingAd, Order
+    if request.method == "POST":
+        ad = MarketingAd.objects.filter(pk=request.POST.get("ad")).first()
+        op = request.POST.get("op")
+        if ad and op == "toggle":
+            ad.active = not ad.active; ad.save(update_fields=["active"])
+        elif ad and op == "reset":
+            MarketingAd.objects.filter(pk=ad.pk).update(views=0, clicks=0)
+        return redirect(request.get_full_path())
+    show = request.GET.get("show", "active")
+    qs = MarketingAd.objects.all()
+    if show == "active":
+        qs = qs.filter(active=True)
+    conv = {r["ad_ref"]: r for r in Order.objects.filter(status__in=Order.PAID_STATUSES).exclude(ad_ref="")
+            .values("ad_ref").annotate(n=Count("id"), ca=Sum("total"))}
+    groups = OrderedDict()
+    for ad in qs.order_by("-created_at", "id"):
+        c = conv.get(ad.token, {})
+        ad.orders, ad.revenue = c.get("n", 0), round(c.get("ca") or 0, 2)
+        ad.conv = round(ad.orders / ad.clicks * 100, 1) if ad.clicks else None
+        ad.public_url = "%s/m/%s/" % (settings.SITE_URL, ad.token)
+        ad.track_url = "%s/go/%s/" % (settings.SITE_URL, ad.token)
+        ad.headline = ad.texts.get("headline") or ad.texts.get("gif_title") or ""
+        ad.cta = ad.texts.get("cta") or ad.texts.get("gif_cta") or ""
+        g = groups.setdefault(ad.image_uid, {"uid": ad.image_uid, "campaign": ad.campaign, "created": ad.created_at,
+                                              "ads": [], "variants": OrderedDict(), "views": 0, "clicks": 0,
+                                              "orders": 0, "revenue": 0.0})
+        g["ads"].append(ad)
+        g["variants"].setdefault(ad.variant, []).append(ad)
+        g["views"] += ad.views; g["clicks"] += ad.clicks; g["orders"] += ad.orders; g["revenue"] += ad.revenue
+        g["campaign"] = g["campaign"] or ad.campaign
+    # Gagnant par gabarit (au moins 2 variantes, meilleur taux de clic avec >= 20 vues, sinon plus de clics)
+    for g in groups.values():
+        by_kind = OrderedDict()
+        for ad in g["ads"]:
+            by_kind.setdefault(ad.kind, []).append(ad)
+        g["kinds"] = []
+        for kind, ads in by_kind.items():
+            ads.sort(key=lambda a: a.variant)
+            if len(ads) >= 2:
+                ranked = sorted(ads, key=lambda a: ((a.ctr or 0) if a.views >= 20 else -1, a.clicks, a.orders),
+                                reverse=True)
+                if ranked[0].clicks > 0:
+                    ranked[0].winner = True
+            g["kinds"].append({"kind": kind, "label": ads[0].label, "ads": ads})
+        order = ["slider", "shiny", "zoom", "gif_square", "gif_portrait", "gif_story"]
+        g["kinds"].sort(key=lambda k: order.index(k["kind"]) if k["kind"] in order else 99)
+        g["ctr"] = round(g["clicks"] / g["views"] * 100, 1) if g["views"] else None
+        g["last_variant"] = list(g["variants"])[-1]
+    tot = MarketingAd.objects.aggregate(v=Sum("views"), c=Sum("clicks"), n=Count("id"))
+    att = Order.objects.filter(status__in=Order.PAID_STATUSES).exclude(ad_ref="").aggregate(n=Count("id"), ca=Sum("total"))
+    return render(request, "admin/erp_marketing.html", {
+        **_admin.site.each_context(request), "groups": list(groups.values()), "show": show,
+        "tot": {"ads": tot["n"] or 0, "views": tot["v"] or 0, "clicks": tot["c"] or 0,
+                "ctr": round((tot["c"] or 0) / tot["v"] * 100, 1) if tot["v"] else None,
+                "orders": att["n"] or 0, "revenue": round(att["ca"] or 0, 2)},
+        "erp_section": "marketing"})
 
 
 # ---------------- Hub ERP (tableau de bord admin) ----------------
