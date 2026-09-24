@@ -1088,3 +1088,16 @@ msgstr "Volver al pedido"
 
 msgid "Copié !"
 msgstr "¡Copiado!"
+
+msgid "Découvrez votre toile. Donnez-lui vie."
+msgstr "Descubre tu lienzo. Dale vida."
+
+#, python-format
+msgid ""
+"Jouez-la gratuitement en ligne, puis commandez votre kit pour la peindre "
+"chez vous. Votre chef-d’œuvre digital reste accessible à tout moment dans "
+"%(t)sMes toiles%(e)s."
+msgstr ""
+"Juégalo gratis en línea y luego pide tu kit para pintarlo en casa. Tu obra "
+"maestra digital sigue disponible en cualquier momento en %(t)sMis "
+"lienzos%(e)s."

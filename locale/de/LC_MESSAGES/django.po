@@ -1109,3 +1109,16 @@ msgstr "Zurück zur Bestellung"
 
 msgid "Copié !"
 msgstr "Kopiert!"
+
+msgid "Découvrez votre toile. Donnez-lui vie."
+msgstr "Entdecken Sie Ihr Bild. Erwecken Sie es zum Leben."
+
+#, python-format
+msgid ""
+"Jouez-la gratuitement en ligne, puis commandez votre kit pour la peindre "
+"chez vous. Votre chef-d’œuvre digital reste accessible à tout moment dans "
+"%(t)sMes toiles%(e)s."
+msgstr ""
+"Spielen Sie es kostenlos online und bestellen Sie dann Ihr Set, um es zu "
+"Hause zu malen. Ihr digitales Meisterwerk bleibt jederzeit unter %(t)sMeine "
+"Bilder%(e)s verfügbar."
