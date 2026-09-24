@@ -6,7 +6,7 @@ from django import forms
 from django.utils.html import format_html, escape
 from django.utils.safestring import mark_safe
 
-from .models import Discount, Order, OrderEvent, ContactMessage, ContactAttachment, Pricing, DigitalCanvas, EmailCode, PrintPricing, Supplier, MarketingAd
+from .models import Discount, Order, OrderEvent, ContactMessage, ContactAttachment, Pricing, DigitalCanvas, EmailCode, PrintPricing, Supplier, MarketingAd, CompanyInfo
 from . import emails
 
 admin.site.site_header = "PaintIt ERP"
@@ -573,6 +573,26 @@ class EmailCodeAdmin(admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(CompanyInfo)
+class CompanyInfoAdmin(admin.ModelAdmin):
+    fieldsets = (
+        ("Entreprise", {"fields": ("legal_name", "legal_form", "capital", "address", ("siret", "rcs"), "director",
+                                   ("email", "phone"))}),
+        ("TVA et factures", {"fields": (("vat_rate", "vat_number"), "invoice_prefix")}),
+        ("Hébergeur et médiation", {"fields": ("host", "mediator")}),
+    )
+
+    def changelist_view(self, request, extra_context=None):
+        from django.shortcuts import redirect
+        return redirect("admin:studio_companyinfo_change", CompanyInfo.get().pk)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
         return False
 
 

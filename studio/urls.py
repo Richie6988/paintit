@@ -66,6 +66,8 @@ urlpatterns = [
     path("my-models/", views.my_models, name="my_models"),
     path("my-models/email/", views.my_models_email, name="my_models_email"),
     path("privacy/", views.privacy, name="privacy"),
+    path("mentions-legales/", views.legal, name="legal"),
+    path("cgv/", views.cgv, name="cgv"),
     path("dashboard/", views.finance_dashboard, name="finance"),
     path(".well-known/appspecific/com.chrome.devtools.json", views.devtools),
     path("marketing/", views.marketing_page, name="marketing"),

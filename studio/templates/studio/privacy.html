@@ -18,9 +18,20 @@
   <h2>{% trans "Partage et paiement" %}</h2>
   <p>{% trans "Le paiement est traité par Stripe ; nous ne stockons aucune donnée de carte bancaire. La fabrication est confiée à nos imprimeurs partenaires, qui ne reçoivent que le nécessaire à la production et à l'expédition. Nous ne vendons jamais vos données." %}</p>
 
+  <h2>{% trans "Sous-traitants" %}</h2>
+  <ul>
+    <li>{% trans "Stripe (paiement) : Irlande / États-Unis." %}</li>
+    <li>{% trans "Ateliers de fabrication partenaires, y compris hors de l'Union européenne (Chine) : nom, adresse et téléphone de livraison uniquement, transmis sous clauses contractuelles types de la Commission européenne." %}</li>
+    <li>{% trans "Hébergement du site et envoi des e-mails" %}{% if info.host %} : {{ info.host|linebreaksbr }}{% endif %}.</li>
+  </ul>
+
+  <h2>{% trans "Durées précises" %}</h2>
+  <p>{% trans "Aperçus jamais commandés : 30 jours. Commandes et factures : 10 ans (obligation comptable). Toiles de « Mes toiles » : jusqu'à suppression par vous." %}</p>
+
   <h2>{% trans "Vos droits (RGPD)" %}</h2>
   <p>{% trans "Vous pouvez à tout moment demander l'accès, la rectification, la portabilité ou la suppression de vos données, et retirer votre consentement. Écrivez-nous et nous répondons dans les meilleurs délais." %}</p>
 
+  <p>{% blocktrans with name=info.legal_name|default:"PaintIt" email=info.email %}Responsable du traitement : {{ name }}, {{ email }}. Vous pouvez aussi adresser une réclamation à la CNIL (cnil.fr).{% endblocktrans %}</p>
   <p style="margin-top:18px"><a class="cta" href="{% url 'studio:contact' %}">{% trans "Nous contacter" %}</a></p>
 </section>
 {% endblock %}

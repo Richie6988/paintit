@@ -1107,3 +1107,105 @@ msgstr "Demasiados intentos, inténtalo de nuevo en unos minutos."
 
 msgid "Paiement momentanément indisponible, merci de réessayer plus tard."
 msgstr "Pago no disponible temporalmente, inténtalo más tarde."
+
+msgid "Mentions légales"
+msgstr "Aviso legal"
+
+msgid "Éditeur du site"
+msgstr "Editor del sitio"
+
+msgid "N° TVA intracommunautaire"
+msgstr "N.º IVA intracomunitario"
+
+msgid "Directeur de la publication"
+msgstr "Director de la publicación"
+
+msgid "Hébergement"
+msgstr "Alojamiento"
+
+msgid "Propriété intellectuelle"
+msgstr "Propiedad intelectual"
+
+msgid ""
+"La marque PaintIt, le site, ses textes, visuels, modèles de la galerie et "
+"logiciels sont protégés. Toute reproduction sans autorisation est interdite."
+" Les photos envoyées par les clients restent leur propriété : elles ne "
+"servent qu'à produire leur toile."
+msgstr ""
+"La marca PaintIt, el sitio, sus textos, imágenes, modelos de la galería y "
+"software están protegidos. Queda prohibida toda reproducción sin "
+"autorización. Las fotos enviadas por los clientes siguen siendo de su "
+"propiedad y solo se usan para producir su lienzo."
+
+msgid "Données personnelles"
+msgstr "Datos personales"
+
+#, python-format
+msgid "Voir notre <a href=\"%(url)s\">politique de confidentialité</a>."
+msgstr "Consulta nuestra <a href=\"%(url)s\">política de privacidad</a>."
+
+msgid "Médiation de la consommation"
+msgstr "Mediación de consumo"
+
+msgid "Conditions générales de vente"
+msgstr "Condiciones generales de venta"
+
+msgid "Seule la version française de ces conditions fait foi."
+msgstr ""
+"Solo la versión francesa de estas condiciones es jurídicamente vinculante."
+
+msgid "CGV"
+msgstr "CGV"
+
+msgid "Merci d'accepter les conditions générales de vente."
+msgstr "Acepta las condiciones generales de venta."
+
+#, python-format
+msgid ""
+"J'accepte les <a href=\"%(cgv)s\" target=\"_blank\">conditions générales de "
+"vente</a>. Mon kit étant personnalisé, je reconnais qu'il n'est pas soumis "
+"au droit de rétractation."
+msgstr ""
+"Acepto las <a href=\"%(cgv)s\" target=\"_blank\">condiciones generales de "
+"venta</a>. Al ser mi kit personalizado, reconozco que no está sujeto al "
+"derecho de desistimiento."
+
+msgid "Accès immédiat : en payant, vous renoncez au droit de rétractation."
+msgstr "Acceso inmediato: al pagar, renuncias a tu derecho de desistimiento."
+
+msgid "Sous-traitants"
+msgstr "Encargados del tratamiento"
+
+msgid "Stripe (paiement) : Irlande / États-Unis."
+msgstr "Stripe (pago): Irlanda / Estados Unidos."
+
+msgid ""
+"Ateliers de fabrication partenaires, y compris hors de l'Union européenne "
+"(Chine) : nom, adresse et téléphone de livraison uniquement, transmis sous "
+"clauses contractuelles types de la Commission européenne."
+msgstr ""
+"Talleres de fabricación asociados, incluso fuera de la Unión Europea "
+"(China): solo nombre, dirección y teléfono de entrega, transmitidos bajo las"
+" cláusulas contractuales tipo de la Comisión Europea."
+
+msgid "Hébergement du site et envoi des e-mails"
+msgstr "Alojamiento del sitio y envío de correos"
+
+msgid "Durées précises"
+msgstr "Plazos de conservación"
+
+msgid ""
+"Aperçus jamais commandés : 30 jours. Commandes et factures : 10 ans "
+"(obligation comptable). Toiles de « Mes toiles » : jusqu'à suppression par "
+"vous."
+msgstr ""
+"Vistas previas nunca pedidas: 30 días. Pedidos y facturas: 10 años "
+"(obligación contable). Lienzos de «Mis lienzos»: hasta que los elimines."
+
+#, python-format
+msgid ""
+"Responsable du traitement : %(name)s, %(email)s. Vous pouvez aussi adresser "
+"une réclamation à la CNIL (cnil.fr)."
+msgstr ""
+"Responsable del tratamiento: %(name)s, %(email)s. También puedes presentar "
+"una reclamación ante la CNIL (cnil.fr)."

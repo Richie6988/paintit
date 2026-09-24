@@ -67,7 +67,9 @@ def home(request):
 
 # ---------------- Upload / preview ----------------
 def _save_upload(f):
-    ext = os.path.splitext(f.name)[1].lower() or ".jpg"
+    ext = os.path.splitext(f.name)[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".gif", ".bmp", ".tif", ".tiff"):
+        ext = ".jpg"   # jamais d'extension arbitraire (.html, .svg...) dans media/
     updir = os.path.join(settings.MEDIA_ROOT, "uploads")
     os.makedirs(updir, exist_ok=True)
     path = os.path.join(updir, uuid.uuid4().hex + ext)
@@ -606,6 +608,8 @@ def print_page(request, uid):
 def print_notify(request, uid):
     """Liste d'attente Tableau fini (commandes pas encore ouvertes)."""
     from .models import ContactMessage
+    if request.method == "POST" and security.rate_limited("notify:" + security.client_ip(request), 5, 3600):
+        return redirect("studio:print_page", uid=uid)
     if request.method == "POST":
         from django.core.validators import validate_email
         from django.core.exceptions import ValidationError
@@ -746,7 +750,8 @@ def _run_game_generation(gameuid, src, colors, w, h, detail=1.0, source_name=Non
 
 
 def digipaint_regen(request, uid):
-    if request.method != "POST":
+    # Regeneration lourde (CPU) : plus exposee aux visiteurs depuis la suppression des Reglages du jeu.
+    if request.method != "POST" or not request.user.is_staff:
         raise Http404
     from .pipeline import source_file
     src = source_file(os.path.join(settings.MEDIA_ROOT, "orders", uid), uid)
@@ -1028,6 +1033,10 @@ def _fulfill(order, shipping):
     discounts.issue(o["uid"])
     discounts.issue_referral(security.referral_code_for(o["uid"]))
     _upsert_order(o, shipping, status=Order.FULFILLED, supplier_ref=supplier_result.get("supplier_ref"))
+    try:
+        Order.objects.get(uid=o["uid"]).assign_invoice_number()
+    except Exception:
+        logger.exception("Numero de facture %s", o["uid"])
     # Lourd (regen toile au bon format + TIFF + notif fournisseur + email) -> tache de fond,
     # APRES paiement, pour repondre tout de suite (pas de lag au checkout).
     threading.Thread(target=_post_order_async, args=(dict(o), dict(shipping)), daemon=True).start()
@@ -1127,6 +1136,9 @@ def place_order(request):
 
     applied = request.session.get("applied_discount")
     discount, total = _discount_for(order, applied)
+    if not request.POST.get("accept_cgv"):
+        request.session["discount_msg"] = {"kind": "err", "text": _("Merci d'accepter les conditions générales de vente.")}
+        return redirect("studio:checkout")
     o = dict(order); o["discount"] = discount; o["total"] = total
     o["lang"] = (get_language() or o.get("lang", "fr"))[:2]   # langue du process (achat)
     o["ad_ref"] = request.session.get("ad_ref", "")             # A/B marketing : pub d'origine
@@ -1298,12 +1310,26 @@ def receipt_pdf(request, uid):
 
 # ---------------- Contact ----------------
 def privacy(request):
-    return render(request, "studio/privacy.html")
+    from .models import CompanyInfo
+    return render(request, "studio/privacy.html", {"info": CompanyInfo.get()})
+
+
+def legal(request):
+    from .models import CompanyInfo
+    return render(request, "studio/legal.html", {"info": CompanyInfo.get()})
+
+
+def cgv(request):
+    from .models import CompanyInfo
+    return render(request, "studio/cgv.html", {"info": CompanyInfo.get()})
 
 
 def contact(request):
     sent = False
     attach_error = None
+    if request.method == "POST" and (request.POST.get("website")      # champ piege invisible : robot
+                                     or security.rate_limited("contact:" + security.client_ip(request), 5, 3600)):
+        return render(request, "studio/contact.html", {"form": ContactForm(), "sent": True})
     if request.method == "POST":
         form = ContactForm(request.POST)
         files = request.FILES.getlist("attachments")

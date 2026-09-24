@@ -16,28 +16,28 @@ BLUE = (0.18, 0.42, 0.95)
 GREY = (0.36, 0.39, 0.48)
 
 STR = {
-    "fr": {"receipt": "Reçu de commande", "order": "Commande", "product": "Produit",
+    "fr": {"invoice": "Facture", "invoice_no": "Facture n°", "seller": "Vendeur", "buyer": "Client", "ht": "Total HT", "vat": "TVA", "ttc": "Total TTC", "vat_free": "TVA non applicable, art. 293 B du CGI", "paid": "Payée", "receipt": "Reçu de commande", "order": "Commande", "product": "Produit",
            "format": "Format", "dims": "Dimensions", "colors": "Couleurs",
            "brushes": "Pinceaux", "yes": "Oui", "no": "Non", "payment": "Paiement",
            "subtotal": "Sous-total", "discount": "Remise", "shipping": "Livraison",
            "free": "Offerte", "total": "Total", "delivery": "Livraison",
            "thanks": "Merci pour votre commande PaintIt.",
            "orient": {"portrait": "portrait", "paysage": "paysage"}},
-    "en": {"receipt": "Order receipt", "order": "Order", "product": "Product",
+    "en": {"invoice": "Invoice", "invoice_no": "Invoice no.", "seller": "Seller", "buyer": "Customer", "ht": "Total excl. VAT", "vat": "VAT", "ttc": "Total incl. VAT", "vat_free": "VAT not applicable, art. 293 B of the French CGI", "paid": "Paid", "receipt": "Order receipt", "order": "Order", "product": "Product",
            "format": "Format", "dims": "Dimensions", "colors": "Colors",
            "brushes": "Brushes", "yes": "Yes", "no": "No", "payment": "Payment",
            "subtotal": "Subtotal", "discount": "Discount", "shipping": "Shipping",
            "free": "Free", "total": "Total", "delivery": "Delivery",
            "thanks": "Thank you for your PaintIt order.",
            "orient": {"portrait": "portrait", "paysage": "landscape"}},
-    "de": {"receipt": "Bestellbeleg", "order": "Bestellung", "product": "Produkt",
+    "de": {"invoice": "Rechnung", "invoice_no": "Rechnung Nr.", "seller": "Verkäufer", "buyer": "Kunde", "ht": "Netto", "vat": "MwSt.", "ttc": "Brutto", "vat_free": "Keine MwSt. gemäß Art. 293 B CGI (Frankreich)", "paid": "Bezahlt", "receipt": "Bestellbeleg", "order": "Bestellung", "product": "Produkt",
            "format": "Format", "dims": "Maße", "colors": "Farben",
            "brushes": "Pinsel", "yes": "Ja", "no": "Nein", "payment": "Zahlung",
            "subtotal": "Zwischensumme", "discount": "Rabatt", "shipping": "Versand",
            "free": "Kostenlos", "total": "Gesamt", "delivery": "Lieferung",
            "thanks": "Danke für Ihre PaintIt-Bestellung.",
            "orient": {"portrait": "Hochformat", "paysage": "Querformat"}},
-    "es": {"receipt": "Recibo de pedido", "order": "Pedido", "product": "Producto",
+    "es": {"invoice": "Factura", "invoice_no": "Factura n.º", "seller": "Vendedor", "buyer": "Cliente", "ht": "Total sin IVA", "vat": "IVA", "ttc": "Total con IVA", "vat_free": "IVA no aplicable, art. 293 B del CGI francés", "paid": "Pagada", "receipt": "Recibo de pedido", "order": "Pedido", "product": "Producto",
            "format": "Formato", "dims": "Dimensiones", "colors": "Colores",
            "brushes": "Pinceles", "yes": "Sí", "no": "No", "payment": "Pago",
            "subtotal": "Subtotal", "discount": "Descuento", "shipping": "Envío",
@@ -57,8 +57,11 @@ def build_receipt(o):
 
     c.setFillColorRGB(*NAVY); c.setFont("Helvetica-Bold", 24)
     c.drawString(x, y, "PaintIt")
+    from .models import CompanyInfo
+    info = CompanyInfo.get()
+    inv = getattr(o, "invoice_number", "")
     c.setFillColorRGB(*GREY); c.setFont("Helvetica", 10)
-    c.drawRightString(W - 22 * mm, y, T["receipt"])
+    c.drawRightString(W - 22 * mm, y, ("%s %s" % (T["invoice_no"], inv)) if inv else T["receipt"])
     y -= 6 * mm
     c.setStrokeColorRGB(*BLUE); c.setLineWidth(1.5); c.line(x, y, W - 22 * mm, y)
     y -= 12 * mm
@@ -105,7 +108,19 @@ def build_receipt(o):
     if o.discount_code:
         row(f"{T['discount']} ({o.discount_code})", f"-{o.discount_amount} EUR")
     row(T["shipping"], T["free"])
-    row(T["total"], f"{o.total} EUR", bold=True)
+    rate = float(info.vat_rate or 0)
+    if rate > 0:
+        ht = round(o.total / (1 + rate / 100.0), 2)
+        row(T["ht"], "%.2f EUR" % ht)
+        row("%s %g %%" % (T["vat"], rate), "%.2f EUR" % (o.total - ht))
+        row(T["ttc"], "%.2f EUR" % o.total, bold=True)
+    else:
+        row(T["total"], "%.2f EUR" % o.total, bold=True)
+        c.setFillColorRGB(*GREY); c.setFont("Helvetica-Oblique", 8)
+        c.drawString(x, y + 2 * mm, T["vat_free"]); y -= 4 * mm
+    if inv:
+        c.setFillColorRGB(*GREY); c.setFont("Helvetica", 9)
+        c.drawString(x, y, "%s : %s (Stripe)" % (T["payment"], T["paid"])); y -= 6 * mm
     y -= 3 * mm
     c.setFillColorRGB(*NAVY); c.setFont("Helvetica-Bold", 11); c.drawString(x, y, T["delivery"]); y -= 7 * mm
     c.setFillColorRGB(*GREY); c.setFont("Helvetica", 10)
@@ -115,7 +130,19 @@ def build_receipt(o):
         if line:
             c.drawString(x, y, line); y -= 6 * mm
 
-    c.setFillColorRGB(*GREY); c.setFont("Helvetica", 8)
-    c.drawString(x, 18 * mm, T["thanks"])
+    # Vendeur (mentions obligatoires de facture)
+    c.setFillColorRGB(*GREY); c.setFont("Helvetica", 7.5)
+    seller = [info.legal_name + (" (%s)" % info.legal_form if info.legal_form else "")
+              + (", capital %s" % info.capital if info.capital else "")]
+    seller += [l.strip() for l in (info.address or "").splitlines() if l.strip()]
+    ids = " · ".join(v for v in (("SIRET " + info.siret) if info.siret else "", info.rcs,
+                                  ("TVA " + info.vat_number) if info.vat_number else "", info.email) if v)
+    if ids:
+        seller.append(ids)
+    yy = 32 * mm
+    for line in [l for l in seller if l.strip()][:5]:
+        c.drawString(x, yy, line); yy -= 3.6 * mm
+    c.setFont("Helvetica", 8)
+    c.drawString(x, 12 * mm, T["thanks"])
     c.showPage(); c.save()
     return buf.getvalue()

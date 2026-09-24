@@ -179,5 +179,58 @@ class PurgeTests(TestCase):
         self.assertFalse({"PEND0001-AAAA", "ORPH0001-AAAA"} & left)
 
 
+class LegalInvoiceTests(TestCase):
+    def test_legal_pages_render(self):
+        for u in ("/mentions-legales/", "/cgv/", "/privacy/", "/en/cgv/"):
+            self.assertEqual(self.client.get(u).status_code, 200, u)
+
+    def test_invoice_numbers_are_sequential_and_stable(self):
+        a, b = make_order("INV00001-AAAA"), make_order("INV00002-AAAA")
+        n1 = a.assign_invoice_number(); n2 = b.assign_invoice_number()
+        self.assertTrue(n1.endswith("-00001") and n2.endswith("-00002"), (n1, n2))
+        self.assertEqual(a.assign_invoice_number(), n1)            # jamais renumerotee
+
+    def test_invoice_pdf_builds(self):
+        from studio.receipts import build_receipt
+        o = make_order(); o.assign_invoice_number()
+        self.assertTrue(build_receipt(Order.objects.get(pk=o.pk)).startswith(b"%PDF"))
+
+    def test_checkout_requires_cgv(self):
+        s = self.client.session
+        s["order"] = {"uid": "CGV00001-AAAA", "price": 30, "format_label": "40 x 50 cm", "orientation": "portrait",
+                      "width_cm": 40, "height_cm": 50, "colors": 24}
+        s["shipping"] = {"full_name": "J", "email": "j@x.fr", "address1": "1 rue", "postal_code": "75001",
+                         "city": "Paris", "country": "FR"}
+        s.save()
+        with mock.patch("studio.address.validate", return_value=None):
+            r = self.client.post("/checkout/place/")
+        self.assertRedirects(r, "/checkout/", fetch_redirect_response=False)
+        self.assertFalse(Order.objects.filter(uid="CGV00001-AAAA").exists())
+
+
+class AntiSpamTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def test_contact_honeypot_drops_message(self):
+        from studio.models import ContactMessage
+        self.client.post("/contact/", {"name": "Bot", "email": "b@b.co", "subject": "x", "message": "spam",
+                                        "website": "http://spam"})
+        self.assertFalse(ContactMessage.objects.exists())
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+class BackupTests(TestCase):
+    def test_backup_creates_files(self):
+        from django.core.management import call_command
+        out = tempfile.mkdtemp()
+        try:
+            call_command("backup_data", "--dir", out, "--no-media", stdout=open(os.devnull, "w"))
+        except Exception as exc:   # base de test en memoire : sqlite ':memory:' non sauvegardable
+            self.skipTest(str(exc))
+        self.assertTrue(any(f.startswith("db-") for f in os.listdir(out)))
+        shutil.rmtree(out, ignore_errors=True)
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)

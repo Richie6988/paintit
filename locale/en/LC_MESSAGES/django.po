@@ -1100,3 +1100,103 @@ msgstr "Too many attempts, please try again in a few minutes."
 
 msgid "Paiement momentanément indisponible, merci de réessayer plus tard."
 msgstr "Payment temporarily unavailable, please try again later."
+
+msgid "Mentions légales"
+msgstr "Legal notice"
+
+msgid "Éditeur du site"
+msgstr "Site publisher"
+
+msgid "N° TVA intracommunautaire"
+msgstr "EU VAT number"
+
+msgid "Directeur de la publication"
+msgstr "Publication director"
+
+msgid "Hébergement"
+msgstr "Hosting"
+
+msgid "Propriété intellectuelle"
+msgstr "Intellectual property"
+
+msgid ""
+"La marque PaintIt, le site, ses textes, visuels, modèles de la galerie et "
+"logiciels sont protégés. Toute reproduction sans autorisation est interdite."
+" Les photos envoyées par les clients restent leur propriété : elles ne "
+"servent qu'à produire leur toile."
+msgstr ""
+"The PaintIt brand, website, texts, visuals, gallery models and software are "
+"protected. Any reproduction without permission is prohibited. Photos sent by"
+" customers remain their property and are only used to produce their canvas."
+
+msgid "Données personnelles"
+msgstr "Personal data"
+
+#, python-format
+msgid "Voir notre <a href=\"%(url)s\">politique de confidentialité</a>."
+msgstr "See our <a href=\"%(url)s\">privacy policy</a>."
+
+msgid "Médiation de la consommation"
+msgstr "Consumer mediation"
+
+msgid "Conditions générales de vente"
+msgstr "Terms and conditions of sale"
+
+msgid "Seule la version française de ces conditions fait foi."
+msgstr "Only the French version of these terms is legally binding."
+
+msgid "CGV"
+msgstr "Terms"
+
+msgid "Merci d'accepter les conditions générales de vente."
+msgstr "Please accept the terms and conditions of sale."
+
+#, python-format
+msgid ""
+"J'accepte les <a href=\"%(cgv)s\" target=\"_blank\">conditions générales de "
+"vente</a>. Mon kit étant personnalisé, je reconnais qu'il n'est pas soumis "
+"au droit de rétractation."
+msgstr ""
+"I accept the <a href=\"%(cgv)s\" target=\"_blank\">terms and conditions of "
+"sale</a>. As my kit is personalised, I acknowledge that it is not subject to"
+" the right of withdrawal."
+
+msgid "Accès immédiat : en payant, vous renoncez au droit de rétractation."
+msgstr "Immediate access: by paying, you waive your right of withdrawal."
+
+msgid "Sous-traitants"
+msgstr "Processors"
+
+msgid "Stripe (paiement) : Irlande / États-Unis."
+msgstr "Stripe (payment): Ireland / United States."
+
+msgid ""
+"Ateliers de fabrication partenaires, y compris hors de l'Union européenne "
+"(Chine) : nom, adresse et téléphone de livraison uniquement, transmis sous "
+"clauses contractuelles types de la Commission européenne."
+msgstr ""
+"Partner production workshops, including outside the European Union (China): "
+"delivery name, address and phone number only, transferred under the European"
+" Commission's standard contractual clauses."
+
+msgid "Hébergement du site et envoi des e-mails"
+msgstr "Website hosting and email delivery"
+
+msgid "Durées précises"
+msgstr "Retention periods"
+
+msgid ""
+"Aperçus jamais commandés : 30 jours. Commandes et factures : 10 ans "
+"(obligation comptable). Toiles de « Mes toiles » : jusqu'à suppression par "
+"vous."
+msgstr ""
+"Previews never ordered: 30 days. Orders and invoices: 10 years (accounting "
+"obligation). Canvases in “My canvases”: until you delete them."
+
+#, python-format
+msgid ""
+"Responsable du traitement : %(name)s, %(email)s. Vous pouvez aussi adresser "
+"une réclamation à la CNIL (cnil.fr)."
+msgstr ""
+"Data controller: %(name)s, %(email)s. You may also lodge a complaint with "
+"the CNIL (cnil.fr)."

@@ -8,6 +8,7 @@
   {% if sent %}<p class="ok-note">{% trans "Merci, votre message a bien été envoyé." %}</p>{% endif %}
   <form method="post" class="form" enctype="multipart/form-data">
     {% csrf_token %}
+    <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
     {% for field in form %}
       <label class="field">
         <span>{{ field.label }}</span>

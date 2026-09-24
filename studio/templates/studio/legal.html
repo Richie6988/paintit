@@ -1,0 +1,29 @@
+{% extends "studio/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Mentions légales" %} · PaintIt{% endblock %}
+{% block content %}
+<section class="panel prose">
+  <h1>{% trans "Mentions légales" %}</h1>
+
+  <h2>{% trans "Éditeur du site" %}</h2>
+  <p><b>{{ info.legal_name|default:"—" }}</b>{% if info.legal_form %}, {{ info.legal_form }}{% endif %}{% if info.capital %} au capital de {{ info.capital }}{% endif %}<br>
+    {{ info.address|linebreaksbr|default:"—" }}<br>
+    {% if info.siret %}SIRET : {{ info.siret }}<br>{% endif %}
+    {% if info.rcs %}{{ info.rcs }}<br>{% endif %}
+    {% if info.vat_number %}{% trans "N° TVA intracommunautaire" %} : {{ info.vat_number }}<br>{% endif %}
+    {% trans "E-mail" %} : <a href="mailto:{{ info.email }}">{{ info.email }}</a>{% if info.phone %} · {% trans "Téléphone" %} : {{ info.phone }}{% endif %}</p>
+  {% if info.director %}<p>{% trans "Directeur de la publication" %} : {{ info.director }}</p>{% endif %}
+
+  <h2>{% trans "Hébergement" %}</h2>
+  <p>{{ info.host|linebreaksbr|default:"—" }}</p>
+
+  <h2>{% trans "Propriété intellectuelle" %}</h2>
+  <p>{% trans "La marque PaintIt, le site, ses textes, visuels, modèles de la galerie et logiciels sont protégés. Toute reproduction sans autorisation est interdite. Les photos envoyées par les clients restent leur propriété : elles ne servent qu'à produire leur toile." %}</p>
+
+  <h2>{% trans "Données personnelles" %}</h2>
+  <p>{% blocktrans with url="/privacy/" %}Voir notre <a href="{{ url }}">politique de confidentialité</a>.{% endblocktrans %}</p>
+
+  {% if info.mediator %}<h2>{% trans "Médiation de la consommation" %}</h2><p>{{ info.mediator|linebreaksbr|urlize }}</p>{% endif %}
+  <p class="sub" style="margin-top:18px"><a href="{% url 'studio:cgv' %}">{% trans "Conditions générales de vente" %}</a></p>
+</section>
+{% endblock %}

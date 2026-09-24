@@ -121,10 +121,16 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024  # 25 Mo
 FILE_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Alertes : chaque erreur 500 / exception loggee est envoyee par e-mail a ADMINS.
+# DJANGO_ADMINS="Prenom:moi@exemple.com,Autre:autre@exemple.com"
+ADMINS = [tuple(x.split(":", 1)) if ":" in x else ("Admin", x) for x in env_list("DJANGO_ADMINS")]
 LOGGING = {
     "version": 1, "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "root": {"handlers": ["console"], "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO")},
+    "filters": {"prod": {"()": "django.utils.log.RequireDebugFalse"}},
+    "handlers": {"console": {"class": "logging.StreamHandler"},
+                 "mail_admins": {"class": "django.utils.log.AdminEmailHandler", "level": "ERROR",
+                                 "filters": ["prod"]}},
+    "root": {"handlers": ["console", "mail_admins"], "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO")},
 }
 
 # --- Paiement Stripe ---

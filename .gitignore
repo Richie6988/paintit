@@ -19,3 +19,6 @@ db.sqlite3-shm
 .DS_Store
 
 media/
+
+# Genere par collectstatic sur le serveur (jamais versionne)
+staticfiles/

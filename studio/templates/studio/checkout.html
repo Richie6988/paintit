@@ -33,6 +33,10 @@
   <form method="post" action="{% url 'studio:place_order' %}">
     {% csrf_token %}
     <p class="delivery-eta"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px"><path d="M2 7h11v8H2z"/><path d="M13 9h4l3 3v3h-7z"/><circle cx="6.5" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/></svg>{% blocktrans %}Livraison estimée : {{ delivery_min }} à {{ delivery_max }} jours ouvrés{% endblocktrans %}</p>
+    <label class="check cgv-check" style="display:flex;gap:8px;align-items:flex-start;margin:10px 0;font-size:.9rem">
+      <input type="checkbox" name="accept_cgv" value="1" required style="margin-top:3px">
+      <span>{% blocktrans with cgv="/cgv/" %}J'accepte les <a href="{{ cgv }}" target="_blank">conditions générales de vente</a>. Mon kit étant personnalisé, je reconnais qu'il n'est pas soumis au droit de rétractation.{% endblocktrans %}</span>
+    </label>
     <div class="actions">
       <a class="ghost" href="{% url 'studio:delivery' %}">{% trans "Retour" %}</a>
       <button class="cta" type="submit">{% trans "Valider et payer" %}</button>

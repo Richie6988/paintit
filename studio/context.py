@@ -39,9 +39,10 @@ def erp_nav(request):
         return {}
     try:
         from . import erp
-        from .models import ContactMessage
+        from .models import ContactMessage, CompanyInfo
         return {"erp_badges": {"actions": erp.action_count(),
-                               "messages": ContactMessage.objects.filter(answered=False).count()},
+                               "messages": ContactMessage.objects.filter(answered=False).count(),
+                               "legal": not CompanyInfo.get().complete},
                 "erp_path": path}
     except Exception:
         return {}

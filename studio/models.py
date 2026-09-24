@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 
 class Pricing(models.Model):
@@ -143,6 +144,22 @@ class Order(models.Model):
     tracking_number = models.CharField("N° de suivi", max_length=80, blank=True, default="")
     tracking_url = models.CharField("Lien de suivi", max_length=300, blank=True, default="")
     feedback_sent = models.BooleanField(default=False)
+    invoice_number = models.CharField("N° de facture", max_length=24, blank=True, default="", db_index=True)
+
+    def assign_invoice_number(self):
+        """Numero de facture chronologique et continu (F2026-00001...), attribue une seule fois au paiement."""
+        if self.invoice_number:
+            return self.invoice_number
+        from django.db import transaction
+        with transaction.atomic():
+            info = CompanyInfo.objects.select_for_update().get_or_create(pk=1)[0]   # verrou de numerotation
+            prefix = "%s%s-" % (info.invoice_prefix or "F", timezone.now().year)
+            last = (Order.objects.filter(invoice_number__startswith=prefix)
+                    .order_by("-invoice_number").values_list("invoice_number", flat=True).first())
+            n = int(last.rsplit("-", 1)[1]) + 1 if last else 1
+            self.invoice_number = "%s%05d" % (prefix, n)
+            Order.objects.filter(pk=self.pk, invoice_number="").update(invoice_number=self.invoice_number)
+        return self.invoice_number
     notes = models.TextField("Notes internes", blank=True, default="")
     status_changed_at = models.DateTimeField("Statut depuis", null=True, blank=True)
     ad_ref = models.CharField("Pub d'origine (A/B)", max_length=24, blank=True, default="", db_index=True)
@@ -161,6 +178,42 @@ class Order(models.Model):
 
     def __str__(self):
         return self.uid
+
+
+class CompanyInfo(models.Model):
+    """Informations legales de l'entreprise (mentions legales, CGV, factures). Singleton editable."""
+    legal_name = models.CharField("Raison sociale / nom", max_length=120, default="")
+    legal_form = models.CharField("Forme juridique", max_length=60, blank=True, default="",
+                                  help_text="ex. SAS, SARL, Entreprise individuelle (micro-entreprise)")
+    capital = models.CharField("Capital social", max_length=40, blank=True, default="")
+    address = models.TextField("Adresse du siège", blank=True, default="")
+    siret = models.CharField("SIRET", max_length=20, blank=True, default="")
+    rcs = models.CharField("RCS / RM", max_length=80, blank=True, default="", help_text="ex. RCS Paris 123 456 789")
+    vat_number = models.CharField("N° TVA intracommunautaire", max_length=20, blank=True, default="")
+    vat_rate = models.FloatField("Taux de TVA (%)", default=0.0,
+                                 help_text="0 = franchise en base (« TVA non applicable, art. 293 B du CGI »)")
+    director = models.CharField("Directeur de la publication", max_length=120, blank=True, default="")
+    email = models.EmailField("E-mail de contact", blank=True, default="contact@paintit.click")
+    phone = models.CharField("Téléphone", max_length=30, blank=True, default="")
+    host = models.TextField("Hébergeur (nom, adresse, téléphone)", blank=True, default="")
+    mediator = models.TextField("Médiateur de la consommation (nom, site)", blank=True, default="")
+    invoice_prefix = models.CharField("Préfixe des factures", max_length=10, default="F")
+
+    class Meta:
+        verbose_name = "Infos légales"
+        verbose_name_plural = "Infos légales"
+
+    def __str__(self):
+        return self.legal_name or "Infos légales"
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    @property
+    def complete(self):
+        return bool(self.legal_name and self.address and self.siret and self.host)
 
 
 class OrderEvent(models.Model):

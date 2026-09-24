@@ -1,0 +1,41 @@
+{% extends "studio/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Conditions générales de vente" %} · PaintIt{% endblock %}
+{% block content %}
+<section class="panel prose">
+  <h1>{% trans "Conditions générales de vente" %}</h1>
+  {% get_current_language as L %}{% if L != "fr" %}<p class="sub">{% trans "Seule la version française de ces conditions fait foi." %}</p>{% endif %}
+
+  <h2>1. Objet et vendeur</h2>
+  <p>Les présentes conditions régissent les ventes conclues sur paintit.click entre {{ info.legal_name|default:"le vendeur" }}{% if info.siret %} (SIRET {{ info.siret }}){% endif %}, {{ info.address|default:""|linebreaksbr }} (« PaintIt ») et toute personne physique agissant en tant que consommateur (« le Client »). Contact : <a href="mailto:{{ info.email }}">{{ info.email }}</a>.</p>
+
+  <h2>2. Produits</h2>
+  <p>PaintIt propose (a) des kits de peinture par numéros <b>personnalisés</b>, fabriqués à partir de la photo fournie par le Client (toile numérotée, peintures, et en option pinceaux), et (b) des toiles numériques à peindre en ligne (« Mes toiles »). L'aperçu affiché avant commande est indicatif : de légères différences de teintes peuvent exister entre l'écran et le produit imprimé.</p>
+  <p>Le Client garantit détenir les droits sur la photo transmise et que celle-ci ne porte atteinte à aucun droit de tiers ni à la loi. PaintIt peut refuser une commande dont le contenu est illicite.</p>
+
+  <h2>3. Prix</h2>
+  <p>Les prix sont indiqués en euros, toutes taxes comprises{% if info.vat_rate == 0 %} (TVA non applicable, art. 293 B du CGI){% endif %}. La livraison est offerte sauf mention contraire. Le prix applicable est celui affiché au moment de la validation de la commande.</p>
+
+  <h2>4. Commande et paiement</h2>
+  <p>La commande est ferme après acceptation des présentes conditions et paiement complet par carte bancaire via notre prestataire sécurisé Stripe. PaintIt ne conserve aucune donnée de carte. Une confirmation et une facture sont envoyées par e-mail.</p>
+
+  <h2>5. Fabrication et livraison</h2>
+  <p>Chaque kit est fabriqué à la demande par nos ateliers partenaires puis expédié à l'adresse indiquée. Le délai estimé est affiché lors de la commande. En cas de retard important, le Client peut, après mise en demeure restée sans effet, résoudre la vente dans les conditions de l'article L216-6 du Code de la consommation. Le Client vérifie le colis à réception et signale tout dommage sous 48 heures à <a href="mailto:{{ info.email }}">{{ info.email }}</a>, photos à l'appui.</p>
+
+  <h2>6. Absence de droit de rétractation</h2>
+  <p>Conformément à l'article L221-28, 3° du Code de la consommation, le droit de rétractation <b>ne s'applique pas</b> aux kits, confectionnés selon les spécifications du Client et nettement personnalisés à partir de sa photo.</p>
+  <p>Pour les toiles numériques, fournies immédiatement après paiement, le Client demande expressément l'exécution immédiate et reconnaît perdre son droit de rétractation (article L221-28, 13°).</p>
+
+  <h2>7. Garanties légales</h2>
+  <p>Le Client bénéficie de la garantie légale de conformité (articles L217-3 et suivants du Code de la consommation) pendant deux ans à compter de la livraison, et de la garantie des vices cachés (articles 1641 et suivants du Code civil). Un produit défectueux ou non conforme est remplacé ou remboursé. Contact : <a href="mailto:{{ info.email }}">{{ info.email }}</a>.</p>
+
+  <h2>8. Codes de réduction et parrainage</h2>
+  <p>Les codes sont personnels, non cumulables sauf mention contraire, non échangeables contre des espèces, et utilisables dans la limite de leurs conditions (durée, nombre d'utilisations).</p>
+
+  <h2>9. Données personnelles</h2>
+  <p>Les données sont traitées conformément à notre <a href="{% url 'studio:privacy' %}">politique de confidentialité</a>.</p>
+
+  <h2>10. Litiges et médiation</h2>
+  <p>En cas de réclamation, le Client contacte d'abord PaintIt. À défaut de solution, il peut recourir gratuitement au médiateur de la consommation{% if info.mediator %} : {{ info.mediator|linebreaksbr|urlize }}{% endif %}, ou à la plateforme européenne de règlement en ligne des litiges : <a href="https://ec.europa.eu/consumers/odr" rel="noopener" target="_blank">ec.europa.eu/consumers/odr</a>. Les présentes conditions sont soumises au droit français.</p>
+</section>
+{% endblock %}
