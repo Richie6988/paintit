@@ -119,7 +119,7 @@ async function run(reloadOnly = false) {
 }
 
 async function runStep(key, idx) {
-  const card = addStepCard({ title: "Étape en cours…", key }, false, true);
+  const card = addStepCard({ title: "Étape " + (idx + 2) + " en cours…", key }, false, true);
   const fd = new FormData();
   fd.append("job_id", state.jobId);
   const r = await fetch(`/pbn/api/step/${key}/`, { method: "POST", body: fd });
@@ -139,7 +139,7 @@ async function runStep(key, idx) {
 function addStepCard(step, done = false, pending = false) {
   $("placeholder")?.remove();
   const card = document.createElement("article");
-  card.className = "step" + (done ? " done" : "");
+  card.className = "lstep" + (done ? " lstep-done" : "");
   card.innerHTML = `
     <div class="step-head">
       <span class="dot"></span><h4>${step.title}</h4>
@@ -161,6 +161,8 @@ function addStepCard(step, done = false, pending = false) {
 
 function fillCard(card, step) {
   card.querySelector(".spinner")?.remove();
+  card.querySelector("h4").textContent = step.title || "Étape terminée";   // remplace "Étape en cours…"
+  card.classList.add("lstep-done");
   const prefix = step.media_prefix || "/media/";
   const img = document.createElement("img");
   img.src = prefix + step.file + "?t=" + Date.now();

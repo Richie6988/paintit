@@ -40,11 +40,13 @@
       <div class="row">
         <div class="param">
           <label>Largeur (cm)</label>
+          <small class="hint">Largeur réelle de la toile imprimée. Sert à convertir les millimètres (zones, traits) en pixels.</small>
           <div class="ctrl"><input type="range" id="widthCm" min="5" max="120" step="1" value="30">
           <output id="widthCmOut">30</output></div>
         </div>
         <div class="param">
           <label>Hauteur (cm)</label>
+          <small class="hint">« auto » = calculée d'après les proportions de la photo.</small>
           <div class="ctrl"><input type="range" id="heightCm" min="0" max="120" step="1" value="0">
           <output id="heightCmOut">auto</output></div>
         </div>
@@ -52,11 +54,13 @@
       <div class="row">
         <div class="param">
           <label>dpi</label>
+          <small class="hint">Résolution de travail. Plus haut = contours plus fins mais calcul plus lent (150 suffit pour tester).</small>
           <div class="ctrl"><input type="range" id="dpi" min="72" max="600" step="1" value="150">
           <output id="dpiOut">150</output></div>
         </div>
         <div class="param">
           <label>Plafond px</label>
+          <small class="hint">Taille max de l'image traitée (plus grand côté). Limite le temps de calcul ; ∞ = aucune limite.</small>
           <div class="ctrl"><input type="range" id="maxPx" min="0" max="4000" step="100" value="1400">
           <output id="maxPxOut">1400</output></div>
         </div>
@@ -67,11 +71,13 @@
       <h3>Couleurs</h3>
       <div class="param">
         <label>Nombre de couleurs (K)</label>
+          <small class="hint">Nombre de peintures du kit. Peu de couleurs = plus facile ; beaucoup = plus fidèle à la photo.</small>
         <div class="ctrl"><input type="range" id="colors" min="2" max="48" step="1" value="12">
         <output id="colorsOut">12</output></div>
       </div>
       <div class="param">
         <label>Seed K-means</label>
+          <small class="hint">Graine aléatoire du regroupement des couleurs. Changez-la si la palette obtenue ne vous plaît pas.</small>
         <div class="ctrl"><input type="range" id="seed" min="0" max="50" step="1" value="0">
         <output id="seedOut">0</output></div>
       </div>
@@ -81,6 +87,7 @@
       <h3>Lissage & détection des contours</h3>
       <div class="param">
         <label>Algorithme</label>
+          <small class="hint">Lissage avant l'analyse : Mean-shift unifie les aplats (recommandé), Bilateral garde plus de détails, Aucun = photo brute.</small>
         <div class="segmented" id="smoothSeg">
           <button data-v="meanshift" class="on">Mean-shift</button>
           <button data-v="bilateral">Bilateral</button>
@@ -90,6 +97,7 @@
       <div class="row">
         <div class="param">
           <label>Détail</label>
+          <small class="hint">Niveau de finesse global (lissage, filtre modal, simplification des contours) : Faible = grandes zones simples, Élevé = conserve les petits détails.</small>
           <div class="segmented" id="detailSeg">
             <button data-v="low">Faible</button>
             <button data-v="med" class="on">Moyen</button>
@@ -98,6 +106,7 @@
         </div>
         <div class="param">
           <label>Module CNN</label>
+          <small class="hint">HED : réseau de neurones qui détecte les vrais contours (visages, objets). Plus précis, plus lent.</small>
           <div class="segmented" id="cnnSeg">
             <button data-v="none" class="on">Off</button>
             <button data-v="hed">HED</button>
@@ -110,22 +119,26 @@
       <summary>Zones peignables</summary>
       <div class="param">
         <label>Zone min (mm)</label>
+          <small class="hint">Taille minimale d'une zone (un carré de ce côté) : les zones plus petites sont fusionnées avec leur voisine.</small>
         <div class="ctrl"><input type="range" id="minZoneMm" min="1" max="15" step="0.5" value="3">
         <output id="minZoneMmOut">3</output></div>
       </div>
       <div class="param">
         <label>Rayon inscrit min (mm)</label>
+          <small class="hint">Épaisseur minimale d'une zone : élimine les bandes trop fines pour y peindre au pinceau.</small>
         <div class="ctrl"><input type="range" id="minPaintMm" min="0.2" max="3" step="0.1" value="0.6">
         <output id="minPaintMmOut">0.6</output></div>
       </div>
       <div class="row">
         <div class="param">
           <label>Plafond zones</label>
+          <small class="hint">Nombre maximum de zones à peindre ; au-delà, les plus petites sont fusionnées. « auto » = calculé depuis la densité (entre 240 et 3000).</small>
           <div class="ctrl"><input type="range" id="maxZones" min="0" max="3000" step="50" value="0">
           <output id="maxZonesOut">auto</output></div>
         </div>
         <div class="param">
           <label>Densité (z/cm²)</label>
+          <small class="hint">Zones par cm² de toile, utilisé si le plafond est sur « auto ». « auto » = 0,20 + 0,01 × nombre de couleurs.</small>
           <div class="ctrl"><input type="range" id="density" min="0" max="1.5" step="0.05" value="0">
           <output id="densityOut">auto</output></div>
         </div>
@@ -136,11 +149,13 @@
       <summary>Traits & rendu</summary>
       <div class="param">
         <label>Épaisseur trait (mm)</label>
+          <small class="hint">Épaisseur des contours imprimés sur la toile.</small>
         <div class="ctrl"><input type="range" id="strokeMm" min="0.05" max="1" step="0.05" value="0.25">
         <output id="strokeMmOut">0.25</output></div>
       </div>
       <div class="param">
         <label>Échelle palette</label>
+          <small class="hint">Taille des pastilles de couleur sur la légende (poster).</small>
         <div class="ctrl"><input type="range" id="palScale" min="1" max="6" step="1" value="3">
         <output id="palScaleOut">3</output></div>
       </div>
@@ -149,14 +164,19 @@
     <details class="group adv">
       <summary>Branding & QR</summary>
       <div class="param"><label>Marque</label>
+          <small class="hint">Nom imprimé sur le poster.</small>
         <input type="text" id="brand" value="PAINT BY NUMBERS" class="text"></div>
       <div class="param"><label>Texte remise</label>
+          <small class="hint">Phrase affichée à côté du QR de fidélité.</small>
         <input type="text" id="discountText" value="-15% sur votre prochaine commande" class="text"></div>
       <div class="param"><label>URL remise</label>
+          <small class="hint">Adresse ouverte par le QR de fidélité.</small>
         <input type="text" id="discountUrl" value="https://exemple.com/remise" class="text"></div>
       <label class="check"><input type="checkbox" id="noQr">
         <span>Désactiver le QR de fidélité</span></label>
+      <small class="hint">Pas de code de réduction sur le poster généré.</small>
       <div class="param"><label>Logo (optionnel)</label>
+          <small class="hint">Logo imprimé sur le poster.</small>
         <input type="file" id="logoInput" accept="image/*"></div>
     </details>
 

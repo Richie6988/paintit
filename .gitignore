@@ -22,3 +22,6 @@ media/
 
 # Genere par collectstatic sur le serveur (jamais versionne)
 staticfiles/
+
+# Payloads recus par tools/mock_supplier.py (tests locaux)
+tools/received/

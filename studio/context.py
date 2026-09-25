@@ -3,16 +3,7 @@ from django.conf import settings
 
 
 def assets(request):
-    """Version de i18n.js (hash du mtime/taille) pour le cache-busting."""
-    v = "0"
-    for base in (getattr(settings, "STATIC_ROOT", None), os.path.join(settings.BASE_DIR, "studio", "static")):
-        if not base:
-            continue
-        p = os.path.join(base, "studio", "i18n.js")
-        if os.path.exists(p):
-            st = os.stat(p)
-            v = "%x%x" % (int(st.st_mtime), st.st_size)
-            break
+    """Contexte commun du site : URL, hreflang, menu des langues, mesure d'audience."""
     site = settings.SITE_URL
     alts = []
     lang_urls = {}
@@ -30,7 +21,7 @@ def assets(request):
     flags = {"fr": "🇫🇷", "en": "🇬🇧", "de": "🇩🇪", "es": "🇪🇸", "it": "🇮🇹"}
     lang_menu = [{"code": c, "label": native.get(c, c), "flag": flags.get(c, ""), "url": lang_urls.get(c, "/")}
                  for c, _l in settings.LANGUAGES]
-    return {"I18N_VERSION": v, "SITE_URL": site, "HREFLANGS": alts, "LANG_URLS": lang_urls, "LANG_MENU": lang_menu,
+    return {"SITE_URL": site, "HREFLANGS": alts, "LANG_URLS": lang_urls, "LANG_MENU": lang_menu,
             # Mesure d'audience sans cookie (Plausible / compatible) : pas de bandeau cookies requis
             "ANALYTICS_SRC": getattr(settings, "ANALYTICS_SRC", ""),
             "ANALYTICS_DOMAIN": getattr(settings, "ANALYTICS_DOMAIN", "")}
