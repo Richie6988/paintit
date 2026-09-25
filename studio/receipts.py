@@ -44,6 +44,13 @@ STR = {
            "free": "Gratis", "total": "Total", "delivery": "Entrega",
            "thanks": "Gracias por tu pedido PaintIt.",
            "orient": {"portrait": "vertical", "paysage": "horizontal"}},
+    "it": {"invoice": "Fattura", "invoice_no": "Fattura n.", "seller": "Venditore", "buyer": "Cliente", "ht": "Totale imponibile", "vat": "IVA", "ttc": "Totale IVA inclusa", "vat_free": "IVA non applicabile, art. 293 B del CGI francese", "paid": "Pagata", "receipt": "Ricevuta d'ordine", "order": "Ordine", "product": "Prodotto",
+           "format": "Formato", "dims": "Dimensioni", "colors": "Colori",
+           "brushes": "Pennelli", "yes": "Sì", "no": "No", "payment": "Pagamento",
+           "subtotal": "Subtotale", "discount": "Sconto", "shipping": "Spedizione",
+           "free": "Gratuita", "total": "Totale", "delivery": "Consegna",
+           "thanks": "Grazie per il tuo ordine PaintIt.",
+           "orient": {"portrait": "verticale", "paysage": "orizzontale"}},
 }
 
 

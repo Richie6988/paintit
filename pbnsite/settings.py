@@ -100,7 +100,7 @@ TEMPLATES = [{
 WSGI_APPLICATION = "pbnsite.wsgi.application"
 
 LANGUAGE_CODE = "fr"
-LANGUAGES = [("fr", "Francais"), ("en", "English"), ("de", "Deutsch"), ("es", "Espanol")]
+LANGUAGES = [("fr", "Francais"), ("en", "English"), ("de", "Deutsch"), ("es", "Espanol"), ("it", "Italiano")]
 LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "Europe/Paris"
 USE_I18N = True

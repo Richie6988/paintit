@@ -40,13 +40,13 @@
 <body>
   <div class="topbar">
     <span class="tb-msg"><span>{% trans "Livraison offerte" %}</span><span class="tb-x"> &middot; {% trans "Toile digitale offerte" %}</span><span class="tb-x2"> &middot; {% trans "Aperçu gratuit en quelques secondes" %}</span></span>
-    <div class="lang tb-lang" id="langform" data-current="{{ LANGUAGE_CODE }}">
-      {% get_current_language as LANG %}
-      <a href="{{ LANG_URLS.fr }}" data-lang="fr" class="{% if LANG == 'fr' %}active{% endif %}">FR</a>
-      <a href="{{ LANG_URLS.en }}" data-lang="en" class="{% if LANG == 'en' %}active{% endif %}">EN</a>
-      <a href="{{ LANG_URLS.de }}" data-lang="de" class="{% if LANG == 'de' %}active{% endif %}">DE</a>
-      <a href="{{ LANG_URLS.es }}" data-lang="es" class="{% if LANG == 'es' %}active{% endif %}">ES</a>
-    </div>
+    {% get_current_language as LANG %}
+    <details class="langdd" id="langform" data-current="{{ LANG }}">
+      <summary aria-label="Langue / Language">{% for l in LANG_MENU %}{% if l.code == LANG %}<span class="fl">{{ l.flag }}</span>{{ l.code|upper }}{% endif %}{% endfor %}<svg viewBox="0 0 12 12" width="10" height="10"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></summary>
+      <div class="langdd-menu" role="menu">
+        {% for l in LANG_MENU %}<a role="menuitem" href="{{ l.url }}" hreflang="{{ l.code }}" lang="{{ l.code }}" class="{% if l.code == LANG %}active{% endif %}"><span class="fl">{{ l.flag }}</span>{{ l.label }}{% if l.code == LANG %}<b>✓</b>{% endif %}</a>{% endfor %}
+      </div>
+    </details>
   </div>
   <header class="nav">
     <a class="brand-logo" href="{% url 'studio:home' %}">
@@ -74,6 +74,9 @@
       <div class="foot-bottom">&copy; {% now "Y" %} PaintIt · {% trans "Tous droits réservés." %}</div>
     </div>
   </footer>
+<script>(function(){var d=document.getElementById('langform');if(!d)return;
+  document.addEventListener('click',function(e){if(d.open&&!d.contains(e.target))d.open=false;});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')d.open=false;});})();</script>
 <script src="{% static 'studio/js/dialog.js' %}"></script>
 </body>
 </html>

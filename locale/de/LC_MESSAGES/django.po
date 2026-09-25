@@ -1249,3 +1249,53 @@ msgstr "Wer hinter PaintIt steht und wie Sie uns erreichen."
 
 msgid "Nous écrire"
 msgstr "Schreiben Sie uns"
+
+msgid "Acheter"
+msgstr "Kaufen"
+
+#, python-format
+msgid "Parrainez vos amis : %(referral_percent)s%% offerts"
+msgstr "Freunde werben: %(referral_percent)s%% Rabatt"
+
+msgid "Un code depuis un produit physique (poster) donne encore plus."
+msgstr "Ein Code von einem physischen Produkt (Poster) bringt noch mehr."
+
+#, python-format
+msgid "Votre tableau fini %(uid)s est en préparation."
+msgstr "Ihr fertiges Bild %(uid)s wird vorbereitet."
+
+msgid "Terminé !"
+msgstr "Fertig!"
+
+msgid "Œuvre certifiée"
+msgstr "Zertifiertes Kunstwerk"
+
+msgid "Bravo, votre toile est complète."
+msgstr "Bravo, Ihr Bild ist fertig."
+
+msgid "Continuer"
+msgstr "Weiter"
+
+msgid "Creation en cours"
+msgstr "Wird erstellt"
+
+msgid "Lecture de l'image"
+msgstr "Bild wird gelesen"
+
+msgid "Aperçu du cadrage"
+msgstr "Vorschau des Ausschnitts"
+
+msgid "Ajouter"
+msgstr "Hinzufügen"
+
+msgid "gratuit"
+msgstr "kostenlos"
+
+msgid "zones"
+msgstr "Zonen"
+
+msgid "Créer un design"
+msgstr "Design erstellen"
+
+msgid "Supprimer"
+msgstr "Löschen"

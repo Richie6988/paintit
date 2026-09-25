@@ -14,7 +14,8 @@
     fr: {ok: "Confirmer", cancel: "Annuler", close: "OK", copy: "Copier", copied: "Copié ✓", confirm: "Confirmation", info: "Information", danger: "Supprimer"},
     en: {ok: "Confirm", cancel: "Cancel", close: "OK", copy: "Copy", copied: "Copied ✓", confirm: "Please confirm", info: "Information", danger: "Delete"},
     de: {ok: "Bestätigen", cancel: "Abbrechen", close: "OK", copy: "Kopieren", copied: "Kopiert ✓", confirm: "Bestätigung", info: "Information", danger: "Löschen"},
-    es: {ok: "Confirmar", cancel: "Cancelar", close: "OK", copy: "Copiar", copied: "Copiado ✓", confirm: "Confirmación", info: "Información", danger: "Eliminar"}
+    es: {ok: "Confirmar", cancel: "Cancelar", close: "OK", copy: "Copiar", copied: "Copiado ✓", confirm: "Confirmación", info: "Información", danger: "Eliminar"},
+    it: {ok: "Conferma", cancel: "Annulla", close: "OK", copy: "Copia", copied: "Copiato ✓", confirm: "Conferma", info: "Informazione", danger: "Elimina"}
   }[lang] || null;
   if (!T) T = {ok: "Confirmer", cancel: "Annuler", close: "OK", copy: "Copier", copied: "Copié ✓", confirm: "Confirmation", info: "Information", danger: "Supprimer"};
 

@@ -740,3 +740,22 @@ main{overflow-x:clip}
 .topbar .tb-lang{flex:0 0 auto}
 @media (max-width: 900px){.topbar .tb-msg{padding-left:0;text-align:left}.topbar .tb-x{display:none}}
 @media (max-width: 480px){.topbar .tb-x2{display:none}}
+/* Langues : menu deroulant compact */
+.topbar .tb-msg{padding-left:70px}
+@media (max-width: 900px){.topbar .tb-msg{padding-left:0}}
+.langdd{position:relative;flex:0 0 auto;z-index:60}
+.langdd summary{list-style:none;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:999px;
+  padding:4px 10px;font-size:.78rem;font-weight:800;letter-spacing:.02em}
+.langdd summary::-webkit-details-marker{display:none}
+.langdd summary:hover,.langdd[open] summary{background:rgba(255,255,255,.28)}
+.langdd[open] summary svg{transform:rotate(180deg)}
+.langdd .fl{font-size:.95rem;line-height:1}
+.langdd-menu{position:absolute;right:0;top:calc(100% + 6px);min-width:170px;background:#fff;border-radius:12px;padding:6px;
+  box-shadow:0 12px 32px rgba(18,34,79,.22);border:1px solid #e2e8f2;animation:ddIn .14s ease}
+@keyframes ddIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.langdd-menu a{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;color:#12224f !important;
+  font-weight:600;font-size:.88rem;text-decoration:none;text-align:left;border:0;background:none}
+.langdd-menu a:hover{background:#f1f5ff}
+.langdd-menu a.active{background:#eef3ff;color:#2f6bf2 !important}
+.langdd-menu a b{margin-left:auto;color:#2f6bf2}

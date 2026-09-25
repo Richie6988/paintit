@@ -37,11 +37,14 @@ POSTER_STR = {
            "scan": "Code scannen oder eingeben", "code": "Code: "},
     "es": {"disc": "DESCUENTO FIDELIDAD", "sub": "-15% en tu proxima compra",
            "scan": "Escanea o introduce el codigo", "code": "Codigo: "},
+    "it": {"disc": "SCONTO FEDELTA", "sub": "-15% sul tuo prossimo ordine",
+           "scan": "Scansiona o inserisci il codice", "code": "Codice: "},
 }
 FRENCH_COUNTRIES = {"France", "Belgique", "Suisse", "Luxembourg", "Canada",
                     "Cote d'Ivoire", "Senegal", "Maroc", "Tunisie"}
 GERMAN_COUNTRIES = {"Allemagne", "Autriche"}
 SPANISH_COUNTRIES = {"Espagne"}
+ITALIAN_COUNTRIES = {"Italie", "Saint-Marin"}
 
 
 def lang_for_country(country):
@@ -51,6 +54,8 @@ def lang_for_country(country):
         return "de"
     if country in SPANISH_COUNTRIES:
         return "es"
+    if country in ITALIAN_COUNTRIES:
+        return "it"
     return "en"
 
 

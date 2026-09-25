@@ -26,7 +26,11 @@ def assets(request):
     except Exception:
         alts = []
         lang_urls = {}
-    return {"I18N_VERSION": v, "SITE_URL": site, "HREFLANGS": alts, "LANG_URLS": lang_urls,
+    native = {"fr": "Français", "en": "English", "de": "Deutsch", "es": "Español", "it": "Italiano"}
+    flags = {"fr": "🇫🇷", "en": "🇬🇧", "de": "🇩🇪", "es": "🇪🇸", "it": "🇮🇹"}
+    lang_menu = [{"code": c, "label": native.get(c, c), "flag": flags.get(c, ""), "url": lang_urls.get(c, "/")}
+                 for c, _l in settings.LANGUAGES]
+    return {"I18N_VERSION": v, "SITE_URL": site, "HREFLANGS": alts, "LANG_URLS": lang_urls, "LANG_MENU": lang_menu,
             # Mesure d'audience sans cookie (Plausible / compatible) : pas de bandeau cookies requis
             "ANALYTICS_SRC": getattr(settings, "ANALYTICS_SRC", ""),
             "ANALYTICS_DOMAIN": getattr(settings, "ANALYTICS_DOMAIN", "")}

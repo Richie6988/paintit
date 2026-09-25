@@ -1,329 +1,333 @@
 #
 msgid ""
 msgstr ""
-"Language: en\n"
+"Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "Créer mon tableau"
-msgstr "Create my canvas"
+msgstr "Crea il mio quadro"
 
 msgid "Peinture par numéros personnalisée, fabriquée à partir de vos photos"
-msgstr "Custom paint by numbers, made from your photos"
+msgstr "Dipinto con i numeri personalizzato, realizzato dalle tue foto"
 
 msgid "Votre souvenir, votre chef-d'œuvre"
-msgstr "Your memory, your masterpiece"
+msgstr "Il tuo ricordo, il tuo capolavoro"
 
 msgid ""
 "Laissez-vous tenter par la<br><em>peinture par numéros</em> personnalisée"
-msgstr "Treat yourself to<br><em>custom paint by numbers</em>"
+msgstr ""
+"Lasciati tentare dalla<br><em>pittura con i numeri</em> personalizzata"
 
 msgid ""
 "Envoyez une photo, on la transforme en toile à peindre : canvas, numéros et "
 "pots de couleur assortis. Livré chez vous, prêt à créer."
 msgstr ""
-"Send a photo, we turn it into a canvas to paint: outlines, numbers and "
-"matching paint pots. Delivered to your door, ready to create."
+"Invia una foto, la trasformiamo in una tela da dipingere: tela, numeri e "
+"vasetti di colore abbinati. Consegnata a casa tua, pronta da creare."
 
 msgid "Personnaliser ma peinture"
-msgstr "Customize my painting"
+msgstr "Personalizza il mio dipinto"
 
 msgid "Aperçu gratuit en quelques secondes, sans engagement"
-msgstr "Free preview in seconds, no commitment"
+msgstr "Anteprima gratuita in pochi secondi, senza impegno"
 
 msgid "Glissez pour révéler la toile"
-msgstr "Drag to reveal the canvas"
+msgstr "Scorri per svelare la tela"
 
 msgid "Vous envoyez une photo"
-msgstr "You send a photo"
+msgstr "Invii una foto"
 
 msgid "Un portrait, un animal, un paysage, tout fonctionne."
-msgstr "A portrait, a pet, a landscape, anything works."
+msgstr "Un ritratto, un animale, un paesaggio: funziona tutto."
 
 msgid "On génère l'aperçu"
-msgstr "We generate the preview"
+msgstr "Generiamo l'anteprima"
 
 msgid "Canvas et numéros calculés automatiquement."
-msgstr "Outlines and numbers computed automatically."
+msgstr "Tela e numeri calcolati automaticamente."
 
 msgid "On livre le kit"
-msgstr "We ship the kit"
+msgstr "Consegniamo il kit"
 
 msgid "Toile numérotée, palette et pinceaux à votre porte."
-msgstr "Numbered canvas, palette and brushes at your door."
+msgstr "Tela numerata, tavolozza e pennelli a casa tua."
 
 msgid "Prêt à peindre votre histoire ?"
-msgstr "Ready to paint your story?"
+msgstr "Pronto a dipingere la tua storia?"
 
 msgid "Commencer maintenant"
-msgstr "Start now"
+msgstr "Inizia ora"
 
 msgid "Personnaliser"
-msgstr "Customize"
+msgstr "Personalizza"
 
 msgid "Photo"
-msgstr "Photo"
+msgstr "Foto"
 
 msgid "Aperçu"
-msgstr "Preview"
+msgstr "Anteprima"
 
 msgid "Livraison"
-msgstr "Delivery"
+msgstr "Consegna"
 
 msgid "Paiement"
-msgstr "Payment"
+msgstr "Pagamento"
 
 msgid "Envoyez votre photo"
-msgstr "Send your photo"
+msgstr "Invia la tua foto"
 
 msgid "Choisissez une image nette et bien éclairée pour un meilleur rendu."
-msgstr "Pick a sharp, well-lit image for the best result."
+msgstr "Scegli un'immagine nitida e ben illuminata per un risultato migliore."
 
 msgid "Aucune image sélectionnée"
-msgstr "No image selected"
+msgstr "Nessuna immagine selezionata"
 
 msgid "Dimensions"
-msgstr "Dimensions"
+msgstr "Dimensioni"
 
 msgid "Prix"
-msgstr "Price"
+msgstr "Prezzo"
 
 msgid "Générer mon aperçu"
-msgstr "Generate my preview"
+msgstr "Genera la mia anteprima"
 
 msgid "Nous composons votre toile..."
-msgstr "Composing your canvas..."
+msgstr "Stiamo componendo la tua tela..."
 
 msgid "Analyse des couleurs et trace des zones"
-msgstr "Analyzing colors and tracing zones"
+msgstr "Analisi dei colori e tracciamento delle zone"
 
 msgid "Voici votre tableau"
-msgstr "Here is your painting"
+msgstr "Ecco il tuo quadro"
 
 msgid "Rendu final colorié"
-msgstr "Final colored render"
+msgstr "Risultato finale a colori"
 
 msgid "Toile numérotée à peindre"
-msgstr "Numbered canvas to paint"
+msgstr "Tela numerata da dipingere"
 
 msgid "couleurs"
-msgstr "colors"
+msgstr "colori"
 
 msgid "ref."
-msgstr "ref."
+msgstr "rif."
 
 msgid "Changer de photo"
-msgstr "Change photo"
+msgstr "Cambia foto"
 
 msgid "Je commande"
-msgstr "Order now"
+msgstr "Ordino"
 
 msgid "Où livrer votre kit ?"
-msgstr "Where to deliver your kit?"
+msgstr "Dove consegniamo il tuo kit?"
 
 msgid "Retour"
-msgstr "Back"
+msgstr "Indietro"
 
 msgid "Aller au paiement"
-msgstr "Go to payment"
+msgstr "Vai al pagamento"
 
 msgid "Récapitulatif"
-msgstr "Summary"
+msgstr "Riepilogo"
 
 msgid "Format"
-msgstr "Format"
+msgstr "Formato"
 
 msgid "Couleurs"
-msgstr "Colors"
+msgstr "Colori"
 
 msgid "Reference"
-msgstr "Reference"
+msgstr "Riferimento"
 
 msgid "Code de réduction"
-msgstr "Discount code"
+msgstr "Codice sconto"
 
 msgid "Appliquer"
-msgstr "Apply"
+msgstr "Applica"
 
 msgid "Sous-total"
-msgstr "Subtotal"
+msgstr "Subtotale"
 
 msgid "Remise"
-msgstr "Discount"
+msgstr "Sconto"
 
 msgid "Total"
-msgstr "Total"
+msgstr "Totale"
 
 msgid ""
 "Astuce : chaque poster imprimé porte un code fidélité (le QR). Scannez-le "
 "pour appliquer automatiquement la remise, ou saisissez-le ci-dessus. Usage "
 "unique."
 msgstr ""
-"Tip: each printed poster carries a loyalty code (the QR). Scan it to apply "
-"the discount automatically, or enter it above. Single use."
+"Suggerimento: ogni poster stampato riporta un codice fedeltà (il QR). "
+"Scansionalo per applicare automaticamente lo sconto, oppure inseriscilo qui "
+"sopra. Uso singolo."
 
 msgid "Valider et payer"
-msgstr "Confirm and pay"
+msgstr "Conferma e paga"
 
 msgid "Commande confirmée"
-msgstr "Order confirmed"
+msgstr "Ordine confermato"
 
 msgid "Confirmée"
-msgstr "Confirmed"
+msgstr "Confermato"
 
 msgid "Merci !"
-msgstr "Thank you!"
+msgstr "Grazie!"
 
 msgid "Votre commande %(uid)s est enregistrée."
-msgstr "Your order %(uid)s has been recorded."
+msgstr "Il tuo ordine %(uid)s è stato registrato."
 
 msgid "Commande fournisseur"
-msgstr "Supplier order"
+msgstr "Ordine fornitore"
 
 msgid "Produit"
-msgstr "Product"
+msgstr "Prodotto"
 
 msgid "Dossier de production"
-msgstr "Production folder"
+msgstr "Fascicolo di produzione"
 
 msgid "Retour à l'accueil"
-msgstr "Back to home"
+msgstr "Torna alla home"
 
 msgid "Portrait"
-msgstr "Portrait"
+msgstr "Verticale"
 
 msgid "Paysage"
-msgstr "Landscape"
+msgstr "Orizzontale"
 
 msgid "12 couleurs"
-msgstr "12 colors"
+msgstr "12 colori"
 
 msgid "24 couleurs"
-msgstr "24 colors"
+msgstr "24 colori"
 
 msgid "36 couleurs"
-msgstr "36 colors"
+msgstr "36 colori"
 
 msgid "Debutant"
-msgstr "Beginner"
+msgstr "Principiante"
 
 msgid "Moyen"
-msgstr "Intermediate"
+msgstr "Medio"
 
 msgid "Expert"
-msgstr "Expert"
+msgstr "Esperto"
 
 msgid "Votre photo"
-msgstr "Your photo"
+msgstr "La tua foto"
 
 msgid "Orientation"
-msgstr "Orientation"
+msgstr "Orientamento"
 
 msgid "Nombre de couleurs"
-msgstr "Number of colors"
+msgstr "Numero di colori"
 
 msgid "Difficulte"
-msgstr "Difficulty"
+msgstr "Difficoltà"
 
 msgid "Nom complet"
-msgstr "Full name"
+msgstr "Nome e cognome"
 
 msgid "E-mail"
-msgstr "Email"
+msgstr "E-mail"
 
 msgid "Indicatif"
-msgstr "Country code"
+msgstr "Prefisso"
 
 msgid "Téléphone"
-msgstr "Phone"
+msgstr "Telefono"
 
 msgid "Adresse"
-msgstr "Address"
+msgstr "Indirizzo"
 
 msgid "Complément"
-msgstr "Address line 2"
+msgstr "Complemento"
 
 msgid "Code postal"
-msgstr "Postal code"
+msgstr "CAP"
 
 msgid "Ville"
-msgstr "City"
+msgstr "Città"
 
 msgid "Pays"
-msgstr "Country"
+msgstr "Paese"
 
 msgid "Contact"
-msgstr "Contact"
+msgstr "Contatti"
 
 msgid "Nous contacter"
-msgstr "Contact us"
+msgstr "Contattaci"
 
 msgid "Une question ? Écrivez-nous."
-msgstr "A question? Write to us."
+msgstr "Una domanda? Scrivici."
 
 msgid "Merci, votre message a bien été envoyé."
-msgstr "Thanks, your message has been sent."
+msgstr "Grazie, il tuo messaggio è stato inviato."
 
 msgid "Envoyer"
-msgstr "Send"
+msgstr "Invia"
 
 msgid "Nom"
-msgstr "Name"
+msgstr "Nome"
 
 msgid "Sujet"
-msgstr "Subject"
+msgstr "Oggetto"
 
 msgid "Message"
-msgstr "Message"
+msgstr "Messaggio"
 
 msgid "Excellent"
-msgstr "Excellent"
+msgstr "Eccellente"
 
 msgid "sur la base de 1 200+ avis"
-msgstr "based on 1,200+ reviews"
+msgstr "sulla base di oltre 1.200 recensioni"
 
 msgid "Le rendu est bluffant, ma mère a adoré son cadeau."
-msgstr "Stunning result, my mother loved her gift."
+msgstr "Il risultato è sorprendente, mia madre ha adorato il regalo."
 
 msgid "Facile à peindre, les couleurs correspondent parfaitement."
-msgstr "Easy to paint, the colors match perfectly."
+msgstr "Facile da dipingere, i colori corrispondono perfettamente."
 
 msgid "Livraison rapide et qualité au top. Je recommande !"
-msgstr "Fast delivery and top quality. Highly recommend!"
+msgstr "Consegna rapida e qualità top. Lo consiglio!"
 
 msgid "Client vérifié"
-msgstr "Verified customer"
+msgstr "Cliente verificato"
 
 msgid "Livraison offerte"
-msgstr "Free delivery"
+msgstr "Spedizione gratuita"
 
 msgid "Aperçu gratuit en quelques secondes"
-msgstr "Free preview in seconds"
+msgstr "Anteprima gratuita in pochi secondi"
 
 msgid "Télécharger le reçu (PDF)"
-msgstr "Download receipt (PDF)"
+msgstr "Scarica la ricevuta (PDF)"
 
 msgid "Photo conservée, changez simplement les options."
-msgstr "Photo kept, just change the options."
+msgstr "Foto conservata, cambia semplicemente le opzioni."
 
 msgid "Ajouter un set de pinceaux (+%(p)s &euro;)"
-msgstr "Add a brush set (+%(p)s &euro;)"
+msgstr "Aggiungi un set di pennelli (+%(p)s &euro;)"
 
 msgid "Peinture par numéros personnalisée"
-msgstr "Personalized paint-by-numbers"
+msgstr "Dipinto con i numeri personalizzato"
 
 msgid "Apercu du cadrage"
-msgstr "Cropping preview"
+msgstr "Anteprima dell'inquadratura"
 
 msgid "Votre photo sera recadree au centre selon l'orientation choisie."
-msgstr "Your photo will be centre-cropped to the chosen orientation."
+msgstr ""
+"La tua foto verrà ritagliata al centro in base all'orientamento scelto."
 
 msgid "Confidentialité"
 msgstr "Privacy"
 
 msgid "Confidentialité et données personnelles"
-msgstr "Privacy & personal data"
+msgstr "Privacy e dati personali"
 
 msgid ""
 "Vos données (photo envoyée, informations de commande et de livraison) sont "
@@ -331,291 +335,297 @@ msgid ""
 "conservées le temps nécessaire au traitement, puis supprimées dans un délai "
 "d'un mois."
 msgstr ""
-"Your data (the photo you upload, order and delivery details) is used solely "
-"to process and deliver your order. It is kept only as long as needed to "
-"fulfil the order, then deleted within one month."
+"I tuoi dati (foto inviata, informazioni d'ordine e di consegna) sono "
+"utilizzati esclusivamente per elaborare e consegnare il tuo ordine. Sono "
+"conservati per il tempo necessario all'elaborazione, poi cancellati entro un"
+" mese."
 
 msgid ""
 "Le paiement est traité par Stripe et la fabrication par notre imprimeur "
 "partenaire ; nous ne stockons aucune donnée de carte bancaire."
 msgstr ""
-"Payment is handled by Stripe and production by our printing partner; we "
-"never store any bank card data."
+"Il pagamento è gestito da Stripe e la produzione dal nostro stampatore "
+"partner; non conserviamo alcun dato della carta di pagamento."
 
 msgid ""
 "Conformément au RGPD, vous pouvez demander l'accès, la rectification ou la "
 "suppression de vos données à tout moment en nous contactant."
 msgstr ""
-"In accordance with the GDPR, you can request access to, correction of, or "
-"deletion of your data at any time by contacting us."
+"In conformità al GDPR, puoi chiedere in qualsiasi momento l'accesso, la "
+"rettifica o la cancellazione dei tuoi dati contattandoci."
 
 msgid "Glissez l'image pour recentrer le cadrage."
-msgstr "Drag the image to reposition the crop."
+msgstr "Trascina l'immagine per ricentrare l'inquadratura."
 
 msgid "Pièces jointes (image ou PDF)"
-msgstr "Attachments (image or PDF)"
+msgstr "Allegati (immagine o PDF)"
 
 msgid "Jusqu'à 5 fichiers, 8 Mo chacun."
-msgstr "Up to 5 files, 8 MB each."
+msgstr "Fino a 5 file, 8 MB ciascuno."
 
 msgid "Ajouter un set de pinceaux"
-msgstr "Add a brush set"
+msgstr "Aggiungi un set di pennelli"
 
 msgid "Livraison estimée : %(delivery_min)s à %(delivery_max)s jours ouvrés"
 msgstr ""
-"Estimated delivery: %(delivery_min)s to %(delivery_max)s business days"
+"Consegna stimata: da %(delivery_min)s a %(delivery_max)s giorni lavorativi"
 
 msgid "Jouer en DigiPaint"
-msgstr "Play DigiPaint"
+msgstr "Gioca in DigiPaint"
 
 msgid "Photo conservée, ajustez le cadrage si besoin."
-msgstr "Photo kept, adjust the crop if needed."
+msgstr "Foto conservata, regola l'inquadratura se necessario."
 
 msgid "toile 40 x 50 cm, livraison offerte"
-msgstr "40 x 50 cm canvas, free delivery"
+msgstr "tela 40 x 50 cm, spedizione gratuita"
 
 msgid "Mes créations"
-msgstr "My creations"
+msgstr "Le mie creazioni"
 
 msgid "Retrouvez vos toiles pour rejouer en DigiPaint ou les commander."
-msgstr "Find your canvases to replay in DigiPaint or order them."
+msgstr "Ritrova le tue tele per rigiocare in DigiPaint o ordinarle."
 
 msgid "Aucune création pour l'instant. Créez votre première toile !"
-msgstr "No creations yet. Create your first canvas!"
+msgstr "Nessuna creazione per ora. Crea la tua prima tela!"
 
 msgid "Créer"
-msgstr "Create"
+msgstr "Crea"
 
 msgid "Jouer"
-msgstr "Play"
+msgstr "Gioca"
 
 msgid "Commander"
-msgstr "Order"
+msgstr "Ordina"
 
 msgid "Retirer"
-msgstr "Remove"
+msgstr "Rimuovi"
 
 msgid "Sauvegarder ma galerie"
-msgstr "Save my gallery"
+msgstr "Salva la mia galleria"
 
 msgid "M'envoyer par e-mail"
-msgstr "Email it to me"
+msgstr "Inviamela per e-mail"
 
 msgid "Recevez vos codes par e-mail pour reprendre sur un autre appareil."
-msgstr "Get your codes by email to resume on another device."
+msgstr ""
+"Ricevi i tuoi codici per e-mail per riprendere su un altro dispositivo."
 
 msgid "J'ai un code"
-msgstr "I have a code"
+msgstr "Ho un codice"
 
 msgid "Ouvrez directement votre design DigiPaint."
-msgstr "Open your DigiPaint design directly."
+msgstr "Apri direttamente il tuo design DigiPaint."
 
 msgid "Saisissez votre e-mail."
-msgstr "Enter your email."
+msgstr "Inserisci la tua e-mail."
 
 msgid "Envoyé ! Vérifiez votre boîte mail."
-msgstr "Sent! Check your inbox."
+msgstr "Inviato! Controlla la tua casella di posta."
 
 msgid "E-mail invalide."
-msgstr "Invalid email."
+msgstr "E-mail non valida."
 
 msgid "Erreur, réessayez."
-msgstr "Error, try again."
+msgstr "Errore, riprova."
 
 msgid "Cliquez sur l'image pour peindre en DigiPaint."
-msgstr "Click the image to paint in DigiPaint."
+msgstr "Clicca sull'immagine per dipingere in DigiPaint."
 
 msgid "Cliquez sur une image pour la voir en grand."
-msgstr "Click an image to view it larger."
+msgstr "Clicca su un'immagine per vederla in grande."
 
 msgid "Votre récompense : la toile numérique !"
-msgstr "Your reward: the digital canvas!"
+msgstr "La tua ricompensa: la tela digitale!"
 
 msgid ""
 "Peignez votre œuvre en ligne, gagnez des points, retrouvez-la dans Mes "
 "créations."
-msgstr "Paint your artwork online, earn points, find it in My creations."
+msgstr ""
+"Dipingi la tua opera online, guadagna punti, ritrovala in Le mie creazioni."
 
 msgid "Jouer maintenant"
-msgstr "Play now"
+msgstr "Gioca ora"
 
 msgid "%(n)s pots de peinture inclus dans l'achat"
-msgstr "%(n)s paint pots included in your purchase"
+msgstr "%(n)s vasetti di colore inclusi nell'acquisto"
 
 msgid "Ma galerie"
-msgstr "My gallery"
+msgstr "La mia galleria"
 
 msgid "Votre galerie DigiPaint"
-msgstr "Your DigiPaint gallery"
+msgstr "La tua galleria DigiPaint"
 
 msgid ""
 "Peignez vos toiles numériques, gagnez des points, revenez quand vous voulez."
-msgstr "Paint your digital canvases, earn points, come back anytime."
+msgstr "Dipingi le tue tele digitali, guadagna punti, torna quando vuoi."
 
 msgid "Ajouter une toile"
-msgstr "Add a canvas"
+msgstr "Aggiungi una tela"
 
 msgid "Créer ma toile gratuite"
-msgstr "Create my free canvas"
+msgstr "Crea la mia tela gratuita"
 
 msgid "Galerie liée à"
-msgstr "Gallery linked to"
+msgstr "Galleria collegata a"
 
 msgid "Se déconnecter"
-msgstr "Sign out"
+msgstr "Esci"
 
 msgid "Recevoir un code"
-msgstr "Get a code"
+msgstr "Ricevi un codice"
 
 msgid "Charger ma galerie"
-msgstr "Load my gallery"
+msgstr "Carica la mia galleria"
 
 msgid "Retrouvez votre galerie sur tout appareil grâce à votre e-mail."
-msgstr "Find your gallery on any device with your email."
+msgstr ""
+"Ritrova la tua galleria su qualsiasi dispositivo grazie alla tua e-mail."
 
 msgid "Aucune toile pour l'instant."
-msgstr "No canvas yet."
+msgstr "Nessuna tela per ora."
 
 msgid "offerte"
-msgstr "gift"
+msgstr "in omaggio"
 
 msgid "numérique"
-msgstr "digital"
+msgstr "digitale"
 
 msgid "Kit toile vierge"
-msgstr "Blank canvas kit"
+msgstr "Kit tela vergine"
 
 msgid "Tableau fini"
-msgstr "Finished painting"
+msgstr "Quadro finito"
 
 msgid "Commander le tableau fini"
-msgstr "Order the finished painting"
+msgstr "Ordina il quadro finito"
 
 msgid "Une impression d'art de votre œuvre, prête à accrocher."
-msgstr "A fine-art print of your artwork, ready to hang."
+msgstr "Una stampa d'arte della tua opera, pronta da appendere."
 
 msgid "Matière"
-msgstr "Material"
+msgstr "Materiale"
 
 msgid "Cadre"
-msgstr "Frame"
+msgstr "Cornice"
 
 msgid "Sous verre"
-msgstr "Under glass"
+msgstr "Sotto vetro"
 
 msgid "Valider la commande"
-msgstr "Place order"
+msgstr "Conferma l'ordine"
 
 msgid "Une impression d'art de votre oeuvre, prête à accrocher."
-msgstr "A fine-art print of your artwork, ready to hang."
+msgstr "Una stampa d'arte della tua opera, pronta da appendere."
 
 msgid "Retour à la galerie"
-msgstr "Back to gallery"
+msgstr "Torna alla galleria"
 
 msgid "Toile digitale offerte"
-msgstr "Free digital canvas"
+msgstr "Tela digitale in omaggio"
 
 msgid "Tester notre algorithme"
-msgstr "Try our algorithm"
+msgstr "Prova il nostro algoritmo"
 
 msgid "Laissez-vous tenter par la peinture par numéros personnalisée"
-msgstr "Treat yourself to custom paint by numbers"
+msgstr "Lasciati tentare dalla pittura con i numeri personalizzata"
 
 msgid "Vous jouez en digital"
-msgstr "Play digitally"
+msgstr "Giochi in digitale"
 
 msgid "ou"
-msgstr "or"
+msgstr "oppure"
 
 msgid "Une impression d'art de votre œuvre peinte, prête à accrocher."
-msgstr "A fine-art print of your painted artwork, ready to hang."
+msgstr "Una stampa d'arte della tua opera dipinta, pronta da appendere."
 
 msgid "Complément d'adresse"
-msgstr "Address line 2"
+msgstr "Complemento d'indirizzo"
 
 msgid "Jouez votre toile en digital"
-msgstr "Play your canvas digitally"
+msgstr "Gioca la tua tela in digitale"
 
 msgid ""
 "Peignez-la en ligne, gagnez des points, retrouvez-la dans votre galerie."
-msgstr "Paint it online, earn points, find it in your gallery."
+msgstr "Dipingila online, guadagna punti, ritrovala nella tua galleria."
 
 msgid "Inclus dans le kit"
-msgstr "Included in the kit"
+msgstr "Incluso nel kit"
 
 msgid "Pots de peinture assortis"
-msgstr "Matching paint pots"
+msgstr "Vasetti di colore abbinati"
 
 msgid "Emballage soigné"
-msgstr "Careful packaging"
+msgstr "Imballaggio curato"
 
 msgid "Ce que vous recevrez dans le colis"
-msgstr "What you'll receive in the parcel"
+msgstr "Cosa riceverai nel pacco"
 
 msgid "Poster"
 msgstr "Poster"
 
 msgid "Canvas et numéros calculés automatiquement en moins d'une minute."
-msgstr "Canvas and numbers computed automatically in under a minute."
+msgstr "Tela e numeri calcolati automaticamente in meno di un minuto."
 
 msgid ""
 "Toile numérotée, palette et pinceaux à votre porte, avec votre toile "
 "digitale offerte."
 msgstr ""
-"Numbered canvas, palette and brushes to your door, with your free digital "
-"canvas."
+"Tela numerata, tavolozza e pennelli a casa tua, con la tela digitale in "
+"omaggio."
 
 msgid ""
 "Toile numérique gratuite (la première), sauvegardez-la par e-mail pour la "
 "conserver."
-msgstr "Free digital canvas (your first), save it by email to keep it."
+msgstr ""
+"Tela digitale gratuita (la prima), salvala via e-mail per conservarla."
 
 msgid ""
 "La génération peut prendre jusqu'à une minute. Plus il y a de couleurs, plus"
 " c'est détaillé (et un peu plus long)."
 msgstr ""
-"Generation can take up to a minute. More colours means more detail (and a "
-"bit longer)."
+"La generazione può richiedere fino a un minuto. Più colori ci sono, più è "
+"dettagliata (e un po' più lunga)."
 
 msgid "Comment jouer"
-msgstr "How to play"
+msgstr "Come si gioca"
 
 msgid "Tapez un numéro pour choisir cette couleur (2 puis 3 = 23)."
-msgstr "Type a number to pick that colour (2 then 3 = 23)."
+msgstr "Digita un numero per scegliere quel colore (2 poi 3 = 23)."
 
 msgid ""
 "Touchez une zone de ce numéro pour la peindre : son numéro passe au vert."
-msgstr "Tap an area with that number to paint it: its number turns green."
+msgstr ""
+"Tocca una zona con quel numero per dipingerla: il numero diventa verde."
 
 msgid "Ctrl + flèches gauche/droite : couleur précédente ou suivante."
-msgstr "Ctrl + left/right arrows: previous or next colour."
+msgstr "Ctrl + frecce sinistra/destra: colore precedente o successivo."
 
 msgid "Flèches pour se déplacer, touche F pour recentrer."
-msgstr "Arrow keys to move, press F to recenter."
+msgstr "Frecce per spostarti, tasto F per ricentrare."
 
 msgid "Molette ou pincement à deux doigts pour zoomer."
-msgstr "Mouse wheel or two-finger pinch to zoom."
+msgstr "Rotellina o pizzico con due dita per zoomare."
 
 msgid "Bouton # : afficher ou masquer les numéros."
-msgstr "# button: show or hide numbers."
+msgstr "Pulsante #: mostra o nascondi i numeri."
 
 msgid "Touchez la carte (en bas à droite) pour vous déplacer."
-msgstr "Tap the map (bottom-right) to move around."
+msgstr "Tocca la mappa (in basso a destra) per spostarti."
 
 msgid "Score"
-msgstr "Score"
+msgstr "Punteggio"
 
 msgid "Zones"
-msgstr "Zones"
+msgstr "Zone"
 
 msgid "Voir ma galerie"
-msgstr "View my gallery"
+msgstr "Vedi la mia galleria"
 
 msgid "Saisissez votre e-mail pour afficher et sauvegarder vos toiles."
-msgstr "Enter your email to show and save your canvases."
+msgstr "Inserisci la tua e-mail per visualizzare e salvare le tue tele."
 
 msgid "Notre algorithme transforme votre photo en toile a peindre."
-msgstr "Our algorithm turns your photo into a canvas to paint."
+msgstr "Il nostro algoritmo trasforma la tua foto in una tela da dipingere."
 
 msgid ""
 "Vos données (photo envoyée, informations de commande et de livraison) sont "
@@ -626,31 +636,32 @@ msgid ""
 "sont conservées le temps nécessaire au traitement et à nos obligations "
 "légales."
 msgstr ""
-"Your data (uploaded photo, order and delivery information) is used only to "
-"process and deliver your order and to let you play your digital canvas. Your"
-" canvas files are kept as long as the model is in your gallery; if you "
-"remove it from your gallery, the associated files are deleted. Order "
-"information is kept as long as needed for processing and our legal "
-"obligations."
+"I tuoi dati (foto inviata, informazioni d'ordine e di consegna) sono "
+"utilizzati esclusivamente per elaborare e consegnare il tuo ordine e "
+"permetterti di giocare la tua tela digitale. I file della tua tela sono "
+"conservati finché il modello è nella tua galleria; se lo elimini dalla "
+"galleria, i file associati vengono cancellati. Le informazioni d'ordine sono"
+" conservate per il tempo necessario all'elaborazione e ai nostri obblighi di"
+" legge."
 
 msgid "Bibliothèque"
-msgstr "Library"
+msgstr "Biblioteca"
 
 msgid "Des modèles prêts à peindre, gratuitement."
-msgstr "Ready-to-paint models, for free."
+msgstr "Modelli pronti da dipingere, gratis."
 
 msgid "Galerie"
-msgstr "Gallery"
+msgstr "Galleria"
 
 msgid ""
 "Nous prenons le soin de vos données au sérieux. Voici, en clair, ce que nous"
 " collectons et pourquoi."
 msgstr ""
-"We take care of your data seriously. Here, in plain terms, is what we "
-"collect and why."
+"Prendiamo sul serio la cura dei tuoi dati. Ecco, in chiaro, cosa raccogliamo"
+" e perché."
 
 msgid "Données que nous collectons"
-msgstr "Data we collect"
+msgstr "Dati che raccogliamo"
 
 msgid ""
 "La photo que vous envoyez, le rendu généré (toile numérotée et version "
@@ -658,25 +669,25 @@ msgid ""
 "(nom, e-mail, adresse, téléphone). Si vous liez votre galerie, votre e-mail "
 "sert d'identifiant de galerie."
 msgstr ""
-"The photo you upload, the generated result (numbered canvas and colour "
-"version), and, when you order, your order and delivery details (name, email,"
-" address, phone). If you link your gallery, your email is used as your "
-"gallery identifier."
+"La foto che invii, il risultato generato (tela numerata e versione a colori)"
+" e, in caso di acquisto, le informazioni d'ordine e di consegna (nome, "
+"e-mail, indirizzo, telefono). Se colleghi la tua galleria, la tua e-mail "
+"serve da identificativo della galleria."
 
 msgid "Pourquoi nous les utilisons"
-msgstr "Why we use it"
+msgstr "Perché li utilizziamo"
 
 msgid ""
 "Uniquement pour générer votre toile, traiter et livrer votre commande, vous "
 "permettre de jouer et retrouver vos toiles numériques, et vous envoyer les "
 "e-mails liés (confirmation, reçu, code de galerie)."
 msgstr ""
-"Only to generate your canvas, process and deliver your order, let you play "
-"and find your digital canvases, and send related emails (confirmation, "
-"receipt, gallery code)."
+"Solo per generare la tua tela, elaborare e consegnare il tuo ordine, "
+"permetterti di giocare e ritrovare le tue tele digitali e inviarti le "
+"relative e-mail (conferma, ricevuta, codice galleria)."
 
 msgid "Durée de conservation"
-msgstr "Retention period"
+msgstr "Durata di conservazione"
 
 msgid ""
 "Les fichiers d'une toile sont conservés tant que le modèle figure dans votre"
@@ -684,13 +695,13 @@ msgid ""
 "effacés. Les informations de commande sont conservées le temps nécessaire au"
 " traitement et à nos obligations légales (comptabilité)."
 msgstr ""
-"A canvas's files are kept as long as the model is in your gallery. If you "
-"remove it from your gallery, the associated files are deleted. Order "
-"information is kept as long as needed for processing and our legal "
-"obligations (accounting)."
+"I file di una tela sono conservati finché il modello è nella tua galleria. "
+"Se lo elimini dalla galleria, i file associati vengono cancellati. Le "
+"informazioni d'ordine sono conservate per il tempo necessario "
+"all'elaborazione e ai nostri obblighi di legge (contabilità)."
 
 msgid "Partage et paiement"
-msgstr "Sharing and payment"
+msgstr "Condivisione e pagamento"
 
 msgid ""
 "Le paiement est traité par Stripe ; nous ne stockons aucune donnée de carte "
@@ -698,393 +709,401 @@ msgid ""
 "reçoivent que le nécessaire à la production et à l'expédition. Nous ne "
 "vendons jamais vos données."
 msgstr ""
-"Payment is handled by Stripe; we never store card data. Production is "
-"entrusted to our partner printers, who only receive what is needed to "
-"produce and ship. We never sell your data."
+"Il pagamento è gestito da Stripe; non conserviamo alcun dato della carta. La"
+" produzione è affidata ai nostri stampatori partner, che ricevono solo "
+"quanto necessario alla produzione e alla spedizione. Non vendiamo mai i tuoi"
+" dati."
 
 msgid "Vos droits (RGPD)"
-msgstr "Your rights (GDPR)"
+msgstr "I tuoi diritti (GDPR)"
 
 msgid ""
 "Vous pouvez à tout moment demander l'accès, la rectification, la portabilité"
 " ou la suppression de vos données, et retirer votre consentement. Écrivez-"
 "nous et nous répondons dans les meilleurs délais."
 msgstr ""
-"You can at any time request access, correction, portability or deletion of "
-"your data, and withdraw consent. Write to us and we reply as soon as "
-"possible."
+"Puoi chiedere in qualsiasi momento l'accesso, la rettifica, la portabilità o"
+" la cancellazione dei tuoi dati e revocare il consenso. Scrivici e "
+"risponderemo il prima possibile."
 
 msgid "Glissez pour comparer photo et toile."
-msgstr "Drag to compare photo and canvas."
+msgstr "Scorri per confrontare foto e tela."
 
 msgid "Votre toile"
-msgstr "Your canvas"
+msgstr "La tua tela"
 
 msgid "Tapez un numéro pour choisir la couleur (2 puis 3 = 23)."
-msgstr "Type a number to pick the colour (2 then 3 = 23)."
+msgstr "Digita un numero per scegliere il colore (2 poi 3 = 23)."
 
 msgid "Touchez une zone de ce numéro : son numéro passe au vert."
-msgstr "Tap an area with that number: its number turns green."
+msgstr "Tocca una zona con quel numero: il numero diventa verde."
 
 msgid "Couleur précédente / suivante."
-msgstr "Previous / next colour."
+msgstr "Colore precedente / successivo."
 
 msgid "Flèches pour se déplacer"
-msgstr "Arrows to move"
+msgstr "Frecce per spostarti"
 
 msgid "recentrer"
-msgstr "recenter"
+msgstr "ricentra"
 
 msgid "Molette ou pincement pour zoomer."
-msgstr "Wheel or pinch to zoom."
+msgstr "Rotellina o pizzico per zoomare."
 
 msgid "Afficher / masquer les numéros."
-msgstr "Show / hide numbers."
+msgstr "Mostra / nascondi i numeri."
 
 msgid "Touchez la carte (bas-droite) pour vous déplacer."
-msgstr "Tap the map (bottom-right) to move."
+msgstr "Tocca la mappa (in basso a destra) per spostarti."
 
 msgid "Pour continuer"
-msgstr "To continue"
+msgstr "Per continuare"
 
 msgid ""
 "Débloquez cette toile pour continuer à jouer et la sauvegarder dans votre "
 "galerie."
-msgstr "Unlock this canvas to keep playing and save it to your gallery."
+msgstr ""
+"Sblocca questa tela per continuare a giocare e salvarla nella tua galleria."
 
 msgid "Débloquer"
-msgstr "Unlock"
+msgstr "Sblocca"
 
 msgid "Partagez votre code. Vos amis économisent, et vous êtes récompensé."
-msgstr "Share your code. Your friends save, and you get rewarded."
+msgstr ""
+"Condividi il tuo codice. I tuoi amici risparmiano e tu vieni premiato."
 
 msgid "Copier"
-msgstr "Copy"
+msgstr "Copia"
 
 msgid "Poster et instructions"
-msgstr "Poster and instructions"
+msgstr "Poster e istruzioni"
 
 msgid "Jeu DigiPaint"
-msgstr "DigiPaint game"
+msgstr "Gioco DigiPaint"
 
 msgid "Coupon de réduction"
-msgstr "Discount coupon"
+msgstr "Buono sconto"
 
 msgid "Des modèles prêts à peindre"
-msgstr "Ready-to-paint models"
+msgstr "Modelli pronti da dipingere"
 
 msgid "Choisissez un modèle PaintIt et jouez tout de suite, gratuitement."
-msgstr "Pick a PaintIt model and play right away, for free."
+msgstr "Scegli un modello PaintIt e gioca subito, gratis."
 
 msgid "Voir tous les modèles"
-msgstr "See all models"
+msgstr "Vedi tutti i modelli"
 
 msgid "Modèles"
-msgstr "Models"
+msgstr "Modelli"
 
 msgid "Modèles PaintIt prêts à peindre"
-msgstr "Ready-to-paint PaintIt models"
+msgstr "Modelli PaintIt pronti da dipingere"
 
 msgid "Glissez pour comparer votre photo et la toile à peindre."
-msgstr "Drag to compare your photo and the canvas to paint."
+msgstr "Scorri per confrontare la tua foto e la tela da dipingere."
 
 msgid "Toile coloriée"
-msgstr "Coloured canvas"
+msgstr "Tela a colori"
 
 msgid "Toile numérotée"
-msgstr "Numbered canvas"
+msgstr "Tela numerata"
 
 msgid "Imprimer les numéros sur le tableau"
-msgstr "Print the numbers on the artwork"
+msgstr "Stampa i numeri sul quadro"
 
 msgid "Offert avec votre commande"
-msgstr "Free with your order"
+msgstr "In omaggio con il tuo ordine"
 
 msgid "Votre toile numérique est prête à peindre"
-msgstr "Your digital canvas is ready to paint"
+msgstr "La tua tela digitale è pronta da dipingere"
 
 msgid "Tous les modèles PaintIt, prêts à peindre. Certains sont gratuits."
-msgstr "All PaintIt models, ready to paint. Some are free."
+msgstr "Tutti i modelli PaintIt, pronti da dipingere. Alcuni sono gratuiti."
 
 msgid "La bibliothèque de modèles arrive bientôt."
-msgstr "The model library is coming soon."
+msgstr "La biblioteca di modelli arriva presto."
 
 msgid "vos toiles"
-msgstr "your canvases"
+msgstr "le tue tele"
 
 msgid "Peinture"
-msgstr "Paint"
+msgstr "Pittura"
 
 msgid "Bientôt disponible"
-msgstr "Coming soon"
+msgstr "Presto disponibile"
 
 msgid "Votre œuvre, imprimée et prête à accrocher"
-msgstr "Your artwork, printed and ready to hang"
+msgstr "La tua opera, stampata e pronta da appendere"
 
 msgid ""
 "Une impression d'art haut de gamme de votre toile peinte : au choix toile, "
 "aluminium ou bois, avec ou sans cadre. Nous finalisons notre atelier "
 "d'impression."
 msgstr ""
-"A premium art print of your painted canvas: choose canvas, aluminium or "
-"wood, with or without a frame. We're finalising our print studio."
+"Una stampa d'arte di alta gamma della tua tela dipinta: su tela, alluminio o"
+" legno, con o senza cornice. Stiamo ultimando il nostro laboratorio di "
+"stampa."
 
 msgid ""
 "Laissez votre e-mail pour être prévenu(e) dès l'ouverture des commandes."
-msgstr "Leave your email to be notified when orders open."
+msgstr "Lascia la tua e-mail per essere avvisato/a all'apertura degli ordini."
 
 msgid "Prévenez-moi"
-msgstr "Notify me"
+msgstr "Avvisami"
 
 msgid "Merci ! Nous vous préviendrons dès l'ouverture."
-msgstr "Thanks! We'll let you know when it opens."
+msgstr "Grazie! Ti avviseremo all'apertura."
 
 msgid "bientôt"
-msgstr "soon"
+msgstr "presto"
 
 msgid ""
 "À partir de n'importe quelle photo, votre toile disponible en quelques "
 "secondes"
-msgstr "From any photo, your canvas ready in seconds"
+msgstr "Da qualsiasi foto, la tua tela disponibile in pochi secondi"
 
 msgid "Nombre max de zones"
-msgstr "Max number of zones"
+msgstr "Numero massimo di zone"
 
 msgid "La toile coloriée et sa version à peindre par numéros"
-msgstr "The coloured canvas and its paint-by-numbers version"
+msgstr "La tela a colori e la sua versione da dipingere con i numeri"
 
 msgid "Réglages du tableau"
-msgstr "Canvas settings"
+msgstr "Impostazioni del quadro"
 
 msgid "Ajustez le rendu puis régénérez, ou retrouvez vos toiles par e-mail."
-msgstr "Tune the result then regenerate, or find your canvases by email."
+msgstr ""
+"Regola il risultato e rigenera, oppure ritrova le tue tele via e-mail."
 
 msgid "Régénérer le tableau"
-msgstr "Regenerate canvas"
+msgstr "Rigenera il quadro"
 
 msgid "Détail (couleurs)"
-msgstr "Detail (colours)"
+msgstr "Dettaglio (colori)"
 
 msgid "Difficulté"
-msgstr "Difficulty"
+msgstr "Difficoltà"
 
 msgid "Facile"
-msgstr "Easy"
+msgstr "Facile"
 
 msgid "Difficile"
-msgstr "Hard"
+msgstr "Difficile"
 
 msgid "Extrême"
-msgstr "Extreme"
+msgstr "Estremo"
 
 msgid "Taille min"
-msgstr "Min size"
+msgstr "Dimensione min"
 
 msgid "Plafond de zones"
-msgstr "Zone cap"
+msgstr "Limite di zone"
 
 msgid "Mes toiles"
-msgstr "My canvases"
+msgstr "Le mie tele"
 
 msgid "Sauvegarder pour plus tard"
-msgstr "Save for later"
+msgstr "Salva per dopo"
 
 msgid "Recevoir mon code par e-mail"
-msgstr "Email me my code"
+msgstr "Ricevi il mio codice via e-mail"
 
 msgid "Vous recevrez un code par e-mail."
-msgstr "You'll get a code by email."
+msgstr "Riceverai un codice via e-mail."
 
 msgid "Ouvrir un autre code"
-msgstr "Open another code"
+msgstr "Apri un altro codice"
 
 msgid "Ouvrir"
-msgstr "Open"
+msgstr "Apri"
 
 msgid "Fermer"
-msgstr "Close"
+msgstr "Chiudi"
 
 msgid "Code à 6 chiffres"
-msgstr "6-digit code"
+msgstr "Codice a 6 cifre"
 
 msgid ""
 "Saisissez votre e-mail : vous recevrez un code pour retrouver vos toiles sur"
 " tous vos appareils."
 msgstr ""
-"Enter your email: you'll get a code to find your canvases on any device."
+"Inserisci la tua e-mail: riceverai un codice per ritrovare le tue tele su "
+"tutti i tuoi dispositivi."
 
 msgid "Envoi…"
-msgstr "Sending…"
+msgstr "Invio…"
 
 msgid "Code envoyé à"
-msgstr "Code sent to"
+msgstr "Codice inviato a"
 
 msgid "Vérifiez votre boîte mail."
-msgstr "Check your inbox."
+msgstr "Controlla la tua casella di posta."
 
 msgid "Code invalide ou expiré."
-msgstr "Invalid or expired code."
+msgstr "Codice non valido o scaduto."
 
 msgid "Rechercher une toile…"
-msgstr "Search a canvas…"
+msgstr "Cerca una tela…"
 
 msgid "Aucun résultat."
-msgstr "No results."
+msgstr "Nessun risultato."
 
 msgid "Choisissez le format"
-msgstr "Choose the size"
+msgstr "Scegli il formato"
 
 msgid "livraison offerte"
-msgstr "free shipping"
+msgstr "spedizione gratuita"
 
 msgid "Choisissez une couleur dans la palette de gauche."
-msgstr "Pick a colour from the left palette."
+msgstr "Scegli un colore dalla tavolozza a sinistra."
 
 msgid "Glissez à 2 doigts pour déplacer, pincez pour zoomer."
-msgstr "Drag with 2 fingers to move, pinch to zoom."
+msgstr "Trascina con 2 dita per spostarti, pizzica per zoomare."
 
 msgid "Transformez vos souvenirs en chef-d'œuvre à peindre"
-msgstr "Turn your memories into a masterpiece to paint"
+msgstr "Trasforma i tuoi ricordi in un capolavoro da dipingere"
 
 msgid ""
 "Une simple photo devient une toile personnalisée, prête à peindre. Créez un "
 "tableau unique de vos propres mains, sans savoir dessiner."
 msgstr ""
-"A single photo becomes a personalised canvas, ready to paint. Create a "
-"unique artwork with your own hands , no drawing skills needed."
+"Una semplice foto diventa una tela personalizzata, pronta da dipingere. Crea"
+" un quadro unico con le tue mani, senza saper disegnare."
 
 msgid ""
 "Envie d'essayer ? Peignez un modèle en ligne, gratuitement, et ressentez la "
 "magie avant de créer le vôtre."
 msgstr ""
-"Want to try? Paint a model online, for free, and feel the magic before "
-"creating your own."
+"Vuoi provare? Dipingi un modello online, gratis, e senti la magia prima di "
+"creare il tuo."
 
 msgid "Créez de vos mains. Pour de vrai."
-msgstr "Create with your hands. For real."
+msgstr "Crea con le tue mani. Davvero."
 
 msgid ""
 "Nos amis 100% digitaux, on ne vous a pas oubliés. Une photo, une toile à "
 "peindre, et le plaisir bien réel de créer , pinceau à la main."
 msgstr ""
-"To our 100% digital friends: we haven't forgotten you. One photo, a canvas "
-"to paint, and the very real joy of creating , brush in hand."
+"Amici 100% digitali, non vi abbiamo dimenticati. Una foto, una tela da "
+"dipingere e il piacere reale di creare, pennello in mano."
 
 msgid "Votre photo, une vraie toile à peindre, livrée chez vous"
-msgstr "Your photo, a real paint-by-numbers canvas, delivered to your door"
+msgstr "La tua foto, una vera tela da dipingere, consegnata a casa tua"
 
 msgid ""
 "N'importe quelle photo devient une toile numérotée, livrée chez vous : le "
 "plaisir bien réel de peindre de vos mains. Et une surprise digitale vous "
 "attend, pour redécouvrir votre passion autrement."
 msgstr ""
-"Any photo becomes a numbered canvas, delivered to your home: the very real "
-"joy of painting with your own hands. And a digital surprise awaits, to "
-"rediscover your passion in a new way."
+"Qualsiasi foto diventa una tela numerata, consegnata a casa tua: il piacere "
+"reale di dipingere con le tue mani. E ti aspetta una sorpresa digitale, per "
+"riscoprire la tua passione in un altro modo."
 
 msgid "La peinture par numéros réinventée."
-msgstr "Paint by numbers, reinvented."
+msgstr "La pittura con i numeri reinventata."
 
 msgid ""
 "Transformez n'importe quelle image en une toile personnalisée d'une "
 "précision époustouflante. Créez, explorez et jouez avec votre œuvre en "
 "digital. Commandez votre toile et donnez-lui vie, pinceau à la main."
 msgstr ""
-"Turn any image into a personalised canvas of stunning precision. Create, "
-"explore and play with your artwork digitally. Order your canvas and bring it"
-" to life, brush in hand."
+"Trasforma qualsiasi immagine in una tela personalizzata di una precisione "
+"sorprendente. Crea, esplora e gioca con la tua opera in digitale. Ordina la "
+"tua tela e dalle vita, pennello in mano."
 
 msgid "Prêt à peindre ces numéros ?"
-msgstr "Ready to paint by numbers?"
+msgstr "Pronto a dipingere questi numeri?"
 
 msgid ""
 "Envoyez une photo, recevez votre toile à peindre par numéros en moins d'une "
 "minute. Peignez-la en ligne gratuitement, ou faites-vous livrer le kit "
 "complet à domicile."
 msgstr ""
-"Send a photo and get your paint-by-numbers canvas in under a minute. Paint "
-"it online for free, or have the complete kit delivered to your door."
+"Invia una foto, ricevi la tua tela da dipingere con i numeri in meno di un "
+"minuto. Dipingila online gratis, oppure fatti consegnare il kit completo a "
+"casa."
 
 msgid ""
 "Envie d'essayer ? Peignez un modèle en ligne, gratuitement, avant de créer "
 "le vôtre."
 msgstr ""
-"Want to try? Paint a model online, for free, before creating your own."
+"Vuoi provare? Dipingi un modello online, gratis, prima di creare il tuo."
 
 msgid "Mes Toiles"
-msgstr "My Canvases"
+msgstr "Le mie tele"
 
 msgid "Tous droits réservés."
-msgstr "All rights reserved."
+msgstr "Tutti i diritti riservati."
 
 msgid "Commencer sans compte"
-msgstr "Start without an account"
+msgstr "Inizia senza account"
 
 msgid "Gratuit, sans inscription. Aperçu en quelques secondes."
-msgstr "Free, no sign-up. Preview in seconds."
+msgstr "Gratis, senza registrazione. Anteprima in pochi secondi."
 
 msgid ""
 "Nos serveurs sont très sollicités en ce moment. Merci de réessayer dans "
 "quelques secondes."
 msgstr ""
-"Our servers are very busy right now. Please try again in a few seconds."
+"I nostri server sono molto sollecitati in questo momento. Riprova tra "
+"qualche secondo."
 
 msgid "Recommencer cette toile ?"
-msgstr "Start this canvas over?"
+msgstr "Ricominciare questa tela?"
 
 msgid "Recommencer"
-msgstr "Start over"
+msgstr "Ricomincia"
 
 msgid "Toute la peinture et le score de cette toile seront effacés."
-msgstr "All the paint and the score of this canvas will be erased."
+msgstr "Tutta la pittura e il punteggio di questa tela verranno cancellati."
 
 msgid "Supprimer ce design ?"
-msgstr "Delete this design?"
+msgstr "Eliminare questo design?"
 
 msgid "La toile et votre progression seront définitivement supprimées."
-msgstr "The canvas and your progress will be permanently deleted."
+msgstr "La tela e i tuoi progressi verranno eliminati definitivamente."
 
 msgid "Votre souvenir. Votre chef-d’œuvre."
-msgstr "Your memory. Your masterpiece."
+msgstr "Il tuo ricordo. Il tuo capolavoro."
 
 msgid "Transformez n'importe quelle photo en peinture par numéros."
-msgstr "Turn any photo into a paint-by-numbers."
+msgstr "Trasforma qualsiasi foto in un dipinto con i numeri."
 
 msgid ""
 "Envoyez votre photo et créez votre peinture personnalisée en moins d'une "
 "minute. Essayez-la gratuitement en ligne, puis commandez votre kit complet à"
 " peindre chez vous."
 msgstr ""
-"Upload your photo and create your custom painting in under a minute. Try it "
-"free online, then order your complete kit to paint at home."
+"Invia la tua foto e crea il tuo dipinto personalizzato in meno di un minuto."
+" Provalo gratis online, poi ordina il kit completo da dipingere a casa."
 
 msgid "Créer ma peinture"
-msgstr "Create my painting"
+msgstr "Crea il mio dipinto"
 
 msgid "Créer ma toile"
-msgstr "Create my canvas"
+msgstr "Crea la mia tela"
 
 msgid "Sauvegardez votre toile"
-msgstr "Save your canvas"
+msgstr "Salva la tua tela"
 
 msgid ""
 "Vous jouez depuis 5 minutes. Sauvegardez cette toile dans « Mes toiles » "
 "pour continuer à la peindre quand vous voulez."
 msgstr ""
-"You've been playing for 5 minutes. Save this canvas to “My canvases” to keep"
-" painting it whenever you like."
+"Stai giocando da 5 minuti. Salva questa tela in « Le mie tele » per "
+"continuare a dipingerla quando vuoi."
 
 msgid "Sauvegarder et continuer"
-msgstr "Save and keep playing"
+msgstr "Salva e continua"
 
 msgid "Retour à la commande"
-msgstr "Back to my order"
+msgstr "Torna all'ordine"
 
 msgid "Copié !"
-msgstr "Copied!"
+msgstr "Copiato!"
 
 msgid "Découvrez votre toile. Donnez-lui vie."
-msgstr "Discover your canvas. Bring it to life."
+msgstr "Scopri la tua tela. Dalle vita."
 
 #, python-format
 msgid ""
@@ -1092,32 +1111,32 @@ msgid ""
 "chez vous. Votre chef-d’œuvre digital reste accessible à tout moment dans "
 "%(t)sMes toiles%(e)s."
 msgstr ""
-"Play it for free online, then order your kit to paint it at home. Your "
-"digital masterpiece stays available anytime in %(t)sMy canvases%(e)s."
+"Giocala gratis online, poi ordina il kit per dipingerla a casa. Il tuo "
+"capolavoro digitale resta sempre accessibile in %(t)sLe mie tele%(e)s."
 
 msgid "Trop de tentatives, réessayez dans quelques minutes."
-msgstr "Too many attempts, please try again in a few minutes."
+msgstr "Troppi tentativi, riprova tra qualche minuto."
 
 msgid "Paiement momentanément indisponible, merci de réessayer plus tard."
-msgstr "Payment temporarily unavailable, please try again later."
+msgstr "Pagamento momentaneamente non disponibile, riprova più tardi."
 
 msgid "Mentions légales"
-msgstr "Legal notice"
+msgstr "Note legali"
 
 msgid "Éditeur du site"
-msgstr "Site publisher"
+msgstr "Editore del sito"
 
 msgid "N° TVA intracommunautaire"
-msgstr "EU VAT number"
+msgstr "Partita IVA intracomunitaria"
 
 msgid "Directeur de la publication"
-msgstr "Publication director"
+msgstr "Direttore della pubblicazione"
 
 msgid "Hébergement"
 msgstr "Hosting"
 
 msgid "Propriété intellectuelle"
-msgstr "Intellectual property"
+msgstr "Proprietà intellettuale"
 
 msgid ""
 "La marque PaintIt, le site, ses textes, visuels, modèles de la galerie et "
@@ -1125,31 +1144,32 @@ msgid ""
 " Les photos envoyées par les clients restent leur propriété : elles ne "
 "servent qu'à produire leur toile."
 msgstr ""
-"The PaintIt brand, website, texts, visuals, gallery models and software are "
-"protected. Any reproduction without permission is prohibited. Photos sent by"
-" customers remain their property and are only used to produce their canvas."
+"Il marchio PaintIt, il sito, i suoi testi, immagini, modelli della galleria "
+"e software sono protetti. È vietata qualsiasi riproduzione senza "
+"autorizzazione. Le foto inviate dai clienti restano di loro proprietà: "
+"servono solo a produrre la loro tela."
 
 msgid "Données personnelles"
-msgstr "Personal data"
+msgstr "Dati personali"
 
 #, python-format
 msgid "Voir notre <a href=\"%(url)s\">politique de confidentialité</a>."
-msgstr "See our <a href=\"%(url)s\">privacy policy</a>."
+msgstr "Consulta la nostra <a href=\"%(url)s\">informativa sulla privacy</a>."
 
 msgid "Médiation de la consommation"
-msgstr "Consumer mediation"
+msgstr "Mediazione dei consumatori"
 
 msgid "Conditions générales de vente"
-msgstr "Terms and conditions of sale"
+msgstr "Condizioni generali di vendita"
 
 msgid "Seule la version française de ces conditions fait foi."
-msgstr "Only the French version of these terms is legally binding."
+msgstr "Fa fede solo la versione francese di queste condizioni."
 
 msgid "CGV"
-msgstr "Terms"
+msgstr "CGV"
 
 msgid "Merci d'accepter les conditions générales de vente."
-msgstr "Please accept the terms and conditions of sale."
+msgstr "Accetta le condizioni generali di vendita."
 
 #, python-format
 msgid ""
@@ -1157,114 +1177,115 @@ msgid ""
 "vente</a>. Mon kit étant personnalisé, je reconnais qu'il n'est pas soumis "
 "au droit de rétractation."
 msgstr ""
-"I accept the <a href=\"%(cgv)s\" target=\"_blank\">terms and conditions of "
-"sale</a>. As my kit is personalised, I acknowledge that it is not subject to"
-" the right of withdrawal."
+"Accetto le <a href=\"%(cgv)s\" target=\"_blank\">condizioni generali di "
+"vendita</a>. Poiché il mio kit è personalizzato, riconosco che non è "
+"soggetto al diritto di recesso."
 
 msgid "Accès immédiat : en payant, vous renoncez au droit de rétractation."
-msgstr "Immediate access: by paying, you waive your right of withdrawal."
+msgstr "Accesso immediato: pagando, rinunci al diritto di recesso."
 
 msgid "Sous-traitants"
-msgstr "Processors"
+msgstr "Responsabili del trattamento"
 
 msgid "Stripe (paiement) : Irlande / États-Unis."
-msgstr "Stripe (payment): Ireland / United States."
+msgstr "Stripe (pagamento): Irlanda / Stati Uniti."
 
 msgid ""
 "Ateliers de fabrication partenaires, y compris hors de l'Union européenne "
 "(Chine) : nom, adresse et téléphone de livraison uniquement, transmis sous "
 "clauses contractuelles types de la Commission européenne."
 msgstr ""
-"Partner production workshops, including outside the European Union (China): "
-"delivery name, address and phone number only, transferred under the European"
-" Commission's standard contractual clauses."
+"Laboratori di produzione partner, anche al di fuori dell'Unione europea "
+"(Cina): solo nome, indirizzo e telefono di consegna, trasmessi in base alle "
+"clausole contrattuali tipo della Commissione europea."
 
 msgid "Hébergement du site et envoi des e-mails"
-msgstr "Website hosting and email delivery"
+msgstr "Hosting del sito e invio delle e-mail"
 
 msgid "Durées précises"
-msgstr "Retention periods"
+msgstr "Tempi di conservazione"
 
 msgid ""
 "Aperçus jamais commandés : 30 jours. Commandes et factures : 10 ans "
 "(obligation comptable). Toiles de « Mes toiles » : jusqu'à suppression par "
 "vous."
 msgstr ""
-"Previews never ordered: 30 days. Orders and invoices: 10 years (accounting "
-"obligation). Canvases in “My canvases”: until you delete them."
+"Anteprime mai ordinate: 30 giorni. Ordini e fatture: 10 anni (obbligo "
+"contabile). Tele in « Le mie tele »: fino a quando le elimini."
 
 #, python-format
 msgid ""
 "Responsable du traitement : %(name)s, %(email)s. Vous pouvez aussi adresser "
 "une réclamation à la CNIL (cnil.fr)."
 msgstr ""
-"Data controller: %(name)s, %(email)s. You may also lodge a complaint with "
-"the CNIL (cnil.fr)."
+"Titolare del trattamento: %(name)s, %(email)s. Puoi anche presentare un "
+"reclamo alla CNIL (cnil.fr) o al Garante per la protezione dei dati "
+"personali."
 
 msgid "Page introuvable"
-msgstr "Page not found"
+msgstr "Pagina non trovata"
 
 msgid "Cette page s'est effacée de la toile."
-msgstr "This page has faded from the canvas."
+msgstr "Questa pagina è svanita dalla tela."
 
 msgid "Le lien est peut-être incorrect ou la page a été déplacée."
-msgstr "The link may be wrong or the page may have moved."
+msgstr "Il link potrebbe essere errato o la pagina è stata spostata."
 
 msgid "Voir la galerie"
-msgstr "See the gallery"
+msgstr "Vedi la galleria"
 
 msgid "Qui se cache derrière PaintIt, et comment nous joindre."
-msgstr "Who is behind PaintIt, and how to reach us."
+msgstr "Chi c'è dietro PaintIt e come contattarci."
 
 msgid "Nous écrire"
-msgstr "Write to us"
+msgstr "Scrivici"
 
 msgid "Acheter"
-msgstr "Buy"
+msgstr "Acquista"
 
 #, python-format
 msgid "Parrainez vos amis : %(referral_percent)s%% offerts"
-msgstr "Refer your friends: %(referral_percent)s%% off"
+msgstr "Invita i tuoi amici: %(referral_percent)s%% di sconto"
 
 msgid "Un code depuis un produit physique (poster) donne encore plus."
-msgstr "A code from a physical product (poster) gives even more."
+msgstr "Un codice da un prodotto fisico (poster) dà ancora di più."
 
 #, python-format
 msgid "Votre tableau fini %(uid)s est en préparation."
-msgstr "Your finished artwork %(uid)s is being prepared."
+msgstr "Il tuo quadro finito %(uid)s è in preparazione."
 
 msgid "Terminé !"
-msgstr "Finished!"
+msgstr "Finito!"
 
 msgid "Œuvre certifiée"
-msgstr "Certified artwork"
+msgstr "Opera certificata"
 
 msgid "Bravo, votre toile est complète."
-msgstr "Well done, your canvas is complete."
+msgstr "Bravo, la tua tela è completa."
 
 msgid "Continuer"
-msgstr "Continue"
+msgstr "Continua"
 
 msgid "Creation en cours"
-msgstr "Creating"
+msgstr "Creazione in corso"
 
 msgid "Lecture de l'image"
-msgstr "Reading the image"
+msgstr "Lettura dell'immagine"
 
 msgid "Aperçu du cadrage"
-msgstr "Framing preview"
+msgstr "Anteprima dell'inquadratura"
 
 msgid "Ajouter"
-msgstr "Add"
+msgstr "Aggiungi"
 
 msgid "gratuit"
-msgstr "free"
+msgstr "gratis"
 
 msgid "zones"
-msgstr "zones"
+msgstr "zone"
 
 msgid "Créer un design"
-msgstr "Create a design"
+msgstr "Crea un design"
 
 msgid "Supprimer"
-msgstr "Delete"
+msgstr "Elimina"

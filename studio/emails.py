@@ -80,6 +80,15 @@ STR = {
            "phone": "Tel.", "prep": "Estamos preparando tu lienzo y los botes de pintura "
            "numerados. Recibirás el seguimiento en cuanto se envíe.",
            "team": "El equipo PaintIt", "orient": {"portrait": "vertical", "paysage": "horizontal"}},
+    "it": {"subject": "Il tuo ordine PaintIt %(uid)s è confermato",
+           "hi": "Ciao", "confirmed": "Il tuo ordine %(uid)s è confermato.",
+           "thanks": "Grazie per il tuo ordine!",
+           "product": "Prodotto", "colors": "colori", "brushes": "Set di pennelli",
+           "subtotal": "Subtotale", "discount": "Sconto", "shipping": "Spedizione",
+           "free": "Gratuita", "total": "Totale", "deliver_to": "Consegna",
+           "phone": "Tel.", "prep": "Stiamo preparando la tua tela e i vasetti di colore "
+           "numerati. Riceverai il tracciamento appena verrà spedito.",
+           "team": "Il team PaintIt", "orient": {"portrait": "verticale", "paysage": "orizzontale"}},
 }
 
 
@@ -171,9 +180,11 @@ def send_order_confirmation(order, shipping):
         "play": settings.SITE_URL + "/paint/" + uid + "/",
         "gallery": settings.SITE_URL + "/paint/",
         "play_l": {"fr": "\u25B6 Jouer en digital maintenant", "en": "\u25B6 Play the digital version",
-                   "de": "\u25B6 Jetzt digital spielen", "es": "\u25B6 Jugar la versi\u00f3n digital"}.get((order.get("lang") or "en")[:2], "\u25B6 Play"),
+                   "de": "\u25B6 Jetzt digital spielen", "es": "\u25B6 Jugar la versi\u00f3n digital",
+                   "it": "\u25B6 Gioca ora la versione digitale"}.get((order.get("lang") or "en")[:2], "\u25B6 Play"),
         "gallery_l": {"fr": "Retrouver toutes mes toiles \u2192", "en": "See all my canvases \u2192",
-                      "de": "Alle meine Bilder ansehen \u2192", "es": "Ver todos mis lienzos \u2192"}.get((order.get("lang") or "en")[:2], "My canvases \u2192"),
+                      "de": "Alle meine Bilder ansehen \u2192", "es": "Ver todos mis lienzos \u2192",
+                      "it": "Vedi tutte le mie tele \u2192"}.get((order.get("lang") or "en")[:2], "My canvases \u2192"),
         "thanks": T["thanks"], "hi": T["hi"], "name": shipping.get("full_name", ""),
         "confirmed": T["confirmed"] % {"uid": uid},
         "product": T["product"], "fmt": order["format_label"], "orient": orient,
@@ -219,6 +230,10 @@ FEEDBACK_STR = {
            "hi": "Hola", "body": "\u00a1Esperamos que te encante tu lienzo! Tu opinion nos ayuda mucho. \u00bfNos dedicas un minuto para compartirla?",
            "cta": "Dejar una opinion", "reply": "O simplemente responde a este correo.",
            "thanks": "\u00a1Gracias y feliz pintura!", "team": "El equipo PaintIt"},
+    "it": {"subject": "Com'è andato il tuo ordine PaintIt?",
+           "hi": "Ciao", "body": "Speriamo che la tua tela ti piaccia! La tua opinione conta molto per noi. Ci dedichi un minuto per condividerla?",
+           "cta": "Lascia una recensione", "reply": "Oppure rispondi semplicemente a questa e-mail.",
+           "thanks": "Grazie e buona pittura!", "team": "Il team PaintIt"},
 }
 
 
@@ -271,6 +286,10 @@ GALLERY_STR = {
            "intro": "Aqui tienes tus lienzos guardados. Vuelve a jugar en DigiPaint o pide la version real.",
            "code": "Codigo", "play": "Jugar", "note": "Consejo: en el juego, introduce tu codigo para reabrir un diseno.",
            "team": "El equipo PaintIt"},
+    "it": {"subject": "Le tue creazioni PaintIt", "hi": "Ciao",
+           "intro": "Ecco le tue tele salvate. Rigioca in DigiPaint o ordina la versione reale.",
+           "code": "Codice", "play": "Gioca", "note": "Suggerimento: nel gioco, inserisci il tuo codice per riaprire un design.",
+           "team": "Il team PaintIt"},
 }
 
 
@@ -319,11 +338,13 @@ def send_gallery(email, models, lang="fr"):
 
 def send_code(email, code, lang="fr"):
     subj = {"fr": "Votre code PaintIt", "en": "Your PaintIt code",
-            "de": "Ihr PaintIt-Code", "es": "Tu codigo PaintIt"}.get((lang or "en")[:2], "Your PaintIt code")
+            "de": "Ihr PaintIt-Code", "es": "Tu codigo PaintIt",
+            "it": "Il tuo codice PaintIt"}.get((lang or "en")[:2], "Your PaintIt code")
     body = {"fr": "Votre code de verification : %s\n\nIl est valable 15 minutes." % code,
             "en": "Your verification code: %s\n\nValid for 15 minutes." % code,
             "de": "Ihr Bestaetigungscode: %s\n\n15 Minuten gueltig." % code,
-            "es": "Tu codigo de verificacion: %s\n\nValido 15 minutos." % code}.get((lang or "en")[:2],
+            "es": "Tu codigo de verificacion: %s\n\nValido 15 minutos." % code,
+            "it": "Il tuo codice di verifica: %s\n\nValido 15 minuti." % code}.get((lang or "en")[:2],
             "Your verification code: %s" % code)
     from django.core.mail import EmailMessage
     from django.conf import settings as st
