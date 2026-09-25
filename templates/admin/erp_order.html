@@ -48,6 +48,8 @@
       <a class="pbtn" href="/paint/{{ o.uid }}/" target="_blank">Voir le jeu</a>
       <a class="pbtn" href="/admin-hub/orders/{{ o.pk }}/receipt.pdf" target="_blank">Reçu PDF</a>
       <a class="pbtn pri" href="/admin-hub/orders/{{ o.pk }}/files.zip">⬇ Tout télécharger (.zip)</a>
+      <form method="post" style="margin:0" data-confirm="Supprimer la commande {{ o.uid }} ?" data-confirm-text="{% if o.status in paid_statuses %}Commande PAYÉE : c'est une pièce comptable. {% endif %}Suppression définitive de la commande, de son journal et de ses fichiers de production." data-ok="Supprimer" data-danger>{% csrf_token %}
+        <input type="hidden" name="op" value="delete"><button class="pbtn" style="color:#b42318;border-color:#fecdca">Supprimer</button></form>
     </div>
   </div>
 

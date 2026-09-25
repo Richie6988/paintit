@@ -1897,6 +1897,12 @@ def admin_hub(request):
 @staff_member_required
 def erp_customers(request):
     from . import erp
+    if request.method == "POST" and request.POST.get("op") == "delete":
+        from django.contrib import messages
+        email = (request.POST.get("email") or "").strip()
+        n = _delete_customer(email)
+        messages.success(request, "Client %s supprimé (%d commande%s, toiles et messages)." % (email, n, "s" if n > 1 else ""))
+        return redirect(request.get_full_path())
     q = (request.GET.get("q") or "").strip()
     sort = request.GET.get("sort") or "-revenue"
     seg = request.GET.get("seg") or ""
@@ -2438,6 +2444,32 @@ def erp_order_zip(request, pk):
     return resp
 
 
+def _delete_orders(qs):
+    """Supprime des commandes (journal compris) et leurs fichiers de production.
+    Les fichiers restent s'ils servent encore a une toile de « Mes toiles »."""
+    import shutil
+    n = 0
+    for o in qs:
+        if not DigitalCanvas.objects.filter(uid=o.uid).exists():
+            for u in (o.uid, o.uid + "-G"):
+                shutil.rmtree(os.path.join(settings.MEDIA_ROOT, "orders", u), ignore_errors=True)
+        o.delete()
+        n += 1
+    return n
+
+
+def _delete_customer(email):
+    """Droit a l'effacement (RGPD) : commandes, toiles numeriques, messages et codes de connexion du client."""
+    from .models import ContactMessage
+    if not email or email == "__library__":
+        return 0
+    n = _delete_orders(Order.objects.filter(customer_email__iexact=email))
+    DigitalCanvas.objects.filter(email__iexact=email).delete()
+    EmailCode.objects.filter(email__iexact=email).delete()
+    ContactMessage.objects.filter(email__iexact=email).delete()
+    return n
+
+
 @staff_member_required
 def erp_order(request, pk):
     from django.contrib import admin as _admin
@@ -2451,6 +2483,10 @@ def erp_order(request, pk):
         OrderEvent.objects.create(order=o, kind=kind, text=text[:300], user=user)
     if request.method == "POST":
         op = request.POST.get("op")
+        if op == "delete":
+            _delete_orders(Order.objects.filter(pk=o.pk))
+            messages.success(request, "Commande %s supprimée." % o.uid)
+            return redirect("studio:erp_orders")
         try:
             if op == "status":
                 st = request.POST.get("status")
@@ -2529,7 +2565,7 @@ def erp_order(request, pk):
     if o.ad_ref:
         from .models import MarketingAd
         ad = MarketingAd.objects.filter(token=o.ad_ref).first()
-    return render(request, "admin/erp_order.html", {
+    return render(request, "admin/erp_order.html", {"paid_statuses": Order.PAID_STATUSES,
         **_admin.site.each_context(request), "o": o, "files": files, "visuals": visuals, "have": have, "sfiles": supplier_files_status(o.uid),
         "sfiles_ok": all(f["ok"] for f in supplier_files_status(o.uid)),
         "has_tiff": any(f["ext"] in ("TIFF", "TIF") for _k, _l, fs in files for f in fs),
@@ -2627,6 +2663,9 @@ def erp_orders(request):
                     except Exception:
                         logger.exception("Avis %s", o.uid)
             messages.success(request, "%d commande(s) : %s." % (n, dict(Order.STATUS_CHOICES)[op]))
+        elif op == "delete":
+            n = _delete_orders(sel)
+            messages.success(request, "%d commande(s) supprimée(s)." % n)
         elif op == "feedback":
             n = 0
             for o in sel:

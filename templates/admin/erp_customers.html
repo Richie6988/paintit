@@ -5,6 +5,7 @@
 {% block content %}
 {% include "admin/_erp_style.html" %}
 <div class="erp">
+  {% if messages %}{% for m in messages %}<div class="banner warn" style="background:#e7f6ec;border-color:#b7e4c7;color:#1e5b35;padding:10px 14px;border-radius:10px;margin-bottom:10px">{{ m }}</div>{% endfor %}{% endif %}
   <div class="erp-head">
     <div><h1>Clients</h1><div class="muted">Agrégés depuis les commandes (clé : e-mail) · CA = commandes payées</div></div>
     <form method="get" style="display:flex;gap:8px;flex-wrap:wrap">
@@ -53,7 +54,10 @@
         <td style="white-space:nowrap">
           <a href="/admin-hub/orders/?tab=all&q={{ r.customer_email|urlencode }}">Commandes</a> ·
           <a href="/admin-hub/messages/?box=all&q={{ r.customer_email|urlencode }}">Messages</a> ·
-          <a href="mailto:{{ r.customer_email }}">E-mail</a>
+          <a href="mailto:{{ r.customer_email }}">E-mail</a> ·
+          <form method="post" style="display:inline;margin:0" data-confirm="Supprimer le client {{ r.customer_email }} ?" data-confirm-text="Efface ses {{ r.attempts }} commande(s){% if r.orders %} dont {{ r.orders }} payée(s) (pièces comptables){% endif %}, ses toiles « Mes toiles » et ses messages. Définitif (droit à l'effacement RGPD)." data-ok="Supprimer" data-danger>{% csrf_token %}
+            <input type="hidden" name="op" value="delete"><input type="hidden" name="email" value="{{ r.customer_email }}">
+            <button style="background:none;border:0;padding:0;color:#b42318;font:inherit;cursor:pointer">Supprimer</button></form>
         </td>
       </tr>
       {% empty %}<tr><td colspan="9" class="muted">Aucun client.</td></tr>{% endfor %}

@@ -299,5 +299,45 @@ class ErpPagesTests(TestCase):
         self.assertContains(r, "erp-nav")
 
 
+@override_settings(MEDIA_ROOT=MEDIA)
+class DeletionTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
+        self.client.login(username="boss", password="pw-Secret-123")
+
+    def _order(self, uid, email="jane@example.com"):
+        o = make_order(uid)
+        Order.objects.filter(pk=o.pk).update(customer_email=email)
+        os.makedirs(os.path.join(MEDIA, "orders", uid), exist_ok=True)
+        return o
+
+    def test_bulk_delete_orders(self):
+        a, b, c = self._order("DEL00001-AAAA"), self._order("DEL00002-AAAA"), self._order("DEL00003-AAAA")
+        self.client.post("/admin-hub/orders/", {"op": "delete", "ids": [a.pk, b.pk]})
+        self.assertEqual(list(Order.objects.values_list("uid", flat=True)), ["DEL00003-AAAA"])
+        self.assertFalse(os.path.isdir(os.path.join(MEDIA, "orders", "DEL00001-AAAA")))
+
+    def test_delete_single_order_keeps_mes_toiles_files(self):
+        o = self._order("DEL00004-AAAA")
+        DigitalCanvas.objects.create(email="jane@example.com", uid="DEL00004-AAAA", colors=24)
+        r = self.client.post("/admin-hub/orders/%d/" % o.pk, {"op": "delete"})
+        self.assertRedirects(r, "/admin-hub/orders/", fetch_redirect_response=False)
+        self.assertFalse(Order.objects.filter(pk=o.pk).exists())
+        self.assertTrue(os.path.isdir(os.path.join(MEDIA, "orders", "DEL00004-AAAA")))   # toile du client conservee
+
+    def test_delete_customer_erases_everything(self):
+        from studio.models import ContactMessage
+        self._order("DEL00005-AAAA", "bob@example.com"); self._order("DEL00006-AAAA", "bob@example.com")
+        self._order("DEL00007-AAAA", "other@example.com")
+        DigitalCanvas.objects.create(email="bob@example.com", uid="X1", colors=24)
+        ContactMessage.objects.create(name="Bob", email="bob@example.com", subject="s", message="m")
+        self.client.post("/admin-hub/customers/", {"op": "delete", "email": "bob@example.com"})
+        self.assertFalse(Order.objects.filter(customer_email="bob@example.com").exists())
+        self.assertFalse(DigitalCanvas.objects.filter(email="bob@example.com").exists())
+        self.assertFalse(ContactMessage.objects.filter(email="bob@example.com").exists())
+        self.assertTrue(Order.objects.filter(customer_email="other@example.com").exists())
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)
