@@ -84,4 +84,29 @@
       startRot();}
   })();
 </script>
+<script>
+/* Carrousel des modeles : defilement automatique + glisser a la souris / au doigt (avec elan).
+   Un simple clic ouvre le modele ; un glisser ne l'ouvre pas. */
+(function(){
+  var car=document.querySelector('.lib-carousel'),tr=car&&car.querySelector('.lib-track');if(!tr)return;
+  car.classList.add('js-drag');
+  var x=0,v=0,half=0,drag=null,moved=false,hover=false,last=performance.now(),AUTO=-0.045; // px/ms (~45 px/s)
+  function measure(){half=tr.scrollWidth/2;}
+  function wrap(){if(!half)return;while(x<=-half)x+=half;while(x>0)x-=half;}
+  function frame(t){var dt=Math.min(50,t-last);last=t;
+    if(!drag){ if(Math.abs(v)>0.005){x+=v*dt;v*=Math.pow(0.94,dt/16);} else if(!hover){x+=AUTO*dt;} }
+    wrap();tr.style.transform='translate3d('+x+'px,0,0)';requestAnimationFrame(frame);}
+  car.addEventListener('pointerdown',function(e){if(e.button>0)return;drag={x0:e.clientX,y0:e.clientY,xs:x,lx:e.clientX,lt:performance.now(),id:e.pointerId};moved=false;v=0;});
+  car.addEventListener('pointermove',function(e){if(!drag||e.pointerId!==drag.id)return;var dx=e.clientX-drag.x0;
+    if(!moved&&Math.abs(dx)>6&&Math.abs(dx)>Math.abs(e.clientY-drag.y0)){moved=true;car.classList.add('dragging');try{car.setPointerCapture(e.pointerId);}catch(_){}}
+    if(!moved)return;var now=performance.now();v=(e.clientX-drag.lx)/Math.max(1,now-drag.lt);drag.lx=e.clientX;drag.lt=now;x=drag.xs+dx;e.preventDefault();});
+  function end(e){if(!drag||(e&&e.pointerId!==drag.id))return;drag=null;car.classList.remove('dragging');v=Math.max(-2.5,Math.min(2.5,v));}
+  car.addEventListener('pointerup',end);car.addEventListener('pointercancel',end);
+  car.addEventListener('click',function(e){if(moved){e.preventDefault();e.stopPropagation();moved=false;}},true); // pas d'ouverture apres un glisser
+  car.addEventListener('mouseenter',function(){hover=true;});car.addEventListener('mouseleave',function(){hover=false;});
+  window.addEventListener('resize',measure);window.addEventListener('load',measure);measure();
+  tr.querySelectorAll('img').forEach(function(im){im.addEventListener('load',measure);});
+  requestAnimationFrame(frame);
+})();
+</script>
 {% endblock %}
