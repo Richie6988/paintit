@@ -42,9 +42,9 @@
     <span class="tb-msg"><span>{% trans "Livraison offerte" %}</span><span class="tb-x"> &middot; {% trans "Toile digitale offerte" %}</span><span class="tb-x2"> &middot; {% trans "Aperçu gratuit en quelques secondes" %}</span></span>
     {% get_current_language as LANG %}
     <details class="langdd" id="langform" data-current="{{ LANG }}">
-      <summary aria-label="Langue / Language">{% for l in LANG_MENU %}{% if l.code == LANG %}<span class="fl">{{ l.flag }}</span>{{ l.code|upper }}{% endif %}{% endfor %}<svg viewBox="0 0 12 12" width="10" height="10"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></summary>
+      <summary aria-label="Langue / Language"><svg class="globe" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>{{ LANG|upper }}<svg viewBox="0 0 12 12" width="10" height="10"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></summary>
       <div class="langdd-menu" role="menu">
-        {% for l in LANG_MENU %}<a role="menuitem" href="{{ l.url }}" hreflang="{{ l.code }}" lang="{{ l.code }}" class="{% if l.code == LANG %}active{% endif %}"><span class="fl">{{ l.flag }}</span>{{ l.label }}{% if l.code == LANG %}<b>✓</b>{% endif %}</a>{% endfor %}
+        {% for l in LANG_MENU %}<a role="menuitem" href="{{ l.url }}" hreflang="{{ l.code }}" lang="{{ l.code }}" class="{% if l.code == LANG %}active{% endif %}"><i class="flag flag-{{ l.code }}" aria-hidden="true"></i>{{ l.label }}{% if l.code == LANG %}<b>✓</b>{% endif %}</a>{% endfor %}
       </div>
     </details>
   </div>
