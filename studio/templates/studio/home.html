@@ -36,7 +36,7 @@
 {% if library_preview %}
 <section class="lib-showcase">
   <h2>{% trans "Des modèles prêts à peindre" %}</h2>
-  <p class="sub">{% trans "Envie d'essayer ? Peignez un modèle en ligne, gratuitement, avant de créer le vôtre." %}</p>
+  <p class="sub">{% trans "Essayez nos modèles prêts à peindre !" %}</p>
   <div class="lib-carousel"><div class="lib-track">
     {% for m in library_preview %}
     <a class="lib-tile" href="{% url 'studio:digipaint' m.uid %}">

@@ -1268,3 +1268,6 @@ msgstr "Create a design"
 
 msgid "Supprimer"
 msgstr "Delete"
+
+msgid "Essayez nos modèles prêts à peindre !"
+msgstr "Try our ready-to-paint models!"
