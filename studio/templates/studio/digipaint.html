@@ -31,17 +31,19 @@
  #combo .cm{font-size:1.05rem;line-height:1.1}#combo .cs{font-size:.66rem;opacity:.9;letter-spacing:.04em;text-transform:uppercase}
  #combo .cbar{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.28)}
  #combo .cbar i{display:block;height:100%;width:0;background:#fff}
- #combo.on{background:linear-gradient(120deg,#f6b93b,#e85d75,#7a3ff2);border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(232,93,117,.4)}
- #combo.hit{animation:cHit .35s cubic-bezier(.34,1.56,.64,1)}
- @keyframes cHit{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
+ #combo.on{background:linear-gradient(120deg,#8fd3c9,#7fb2f0,#a99af0);border-color:transparent;color:#fff;box-shadow:0 3px 12px rgba(127,178,240,.35)}
+ #combo.hit{animation:cHit .6s ease}
+ #combo.fade{transition:opacity .6s ease,background .6s ease;opacity:.55}
+ #combo .cbar{opacity:.55}
+ @keyframes cHit{0%{transform:scale(1)}40%{transform:scale(1.04)}100%{transform:scale(1)}}
  #combo.lost{background:#5b647a;border-color:transparent;color:#fff;animation:cLost .5s ease}
  @keyframes cLost{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
  /* Palier de multiplicateur atteint : grande banniere */
  /* Palier de multiplicateur atteint : jaillit de la jauge combo */
- .lvlup{position:fixed;z-index:100001;pointer-events:none;font-weight:900;font-size:2.4rem;color:#fff;white-space:nowrap;
-   text-shadow:0 3px 0 #7a3ff2,0 8px 24px rgba(122,63,242,.6);-webkit-text-stroke:1.5px #7a3ff2;
-   animation:lvl 1.6s cubic-bezier(.2,1.3,.3,1) forwards}
- @keyframes lvl{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}18%{opacity:1;transform:translate(-50%,40%) scale(1.25) rotate(-4deg)}32%{transform:translate(-50%,40%) scale(1) rotate(0)}75%{opacity:1;transform:translate(-50%,40%) scale(1)}100%{opacity:0;transform:translate(-50%,120%) scale(.9)}}
+ .lvlup{position:fixed;z-index:100001;pointer-events:none;font-weight:800;font-size:1.6rem;color:#fff;white-space:nowrap;
+   text-shadow:0 2px 10px rgba(90,120,200,.55);
+   animation:lvl 2.2s ease forwards}
+ @keyframes lvl{0%{opacity:0;transform:translate(-50%,-20%) scale(.9)}20%{opacity:1;transform:translate(-50%,40%) scale(1)}75%{opacity:1;transform:translate(-50%,60%)}100%{opacity:0;transform:translate(-50%,90%)}}
  #score{display:inline-block;transition:color .2s}#score.bump{animation:sBump .45s cubic-bezier(.34,1.56,.64,1);color:#7a3ff2}
  @keyframes sBump{0%{transform:scale(1)}35%{transform:scale(1.35)}100%{transform:scale(1)}}
  .btn{background:#f4f6fb;border:1px solid #e2e8f2;color:#12224f;border-radius:10px;padding:7px 11px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
@@ -82,7 +84,7 @@
  #host svg{display:block;background:#fff;border-radius:6px}
  #host svg .z{cursor:pointer;transition:filter .1s ease}
  #host svg .z.wrong{animation:zwrong .34s ease-out}
- @keyframes zwrong{0%{fill:#ff8a8a}55%{fill:#ffc2c2}100%{fill:#eef1f6}}
+ @keyframes zwrong{0%{fill:#dfe6f3}50%{fill:#cfd9ee}100%{fill:#eef1f6}}
  #host svg .z.hovz{filter:none}
  @keyframes zpop{0%{transform:scale(1)}35%{transform:scale(1.07)}100%{transform:scale(1)}}
  #host svg .z.pop{transform-box:fill-box;transform-origin:center;animation:zpop .3s cubic-bezier(.34,1.56,.64,1)}
@@ -154,10 +156,10 @@
    .top .sp{display:none}
    .top #combo{position:fixed;bottom:78px;left:50%;margin-left:-48px;z-index:16;min-width:96px;height:30px;border-radius:999px;
      padding:0 11px;box-shadow:0 4px 14px rgba(10,18,40,.28);background:rgba(255,255,255,.95)}
-   .top #combo.on{background:linear-gradient(120deg,#f6b93b,#e85d75,#7a3ff2)}.top #combo.lost{background:#5b647a}
+   .top #combo.on{background:linear-gradient(120deg,#8fd3c9,#7fb2f0,#a99af0)}
    #combo .cm{font-size:.85rem}#combo .cs{display:none}
-   .lvlup{font-size:2rem;animation-name:lvlM}
-   @keyframes lvlM{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}18%{opacity:1;transform:translate(-50%,-160%) scale(1.25) rotate(-4deg)}32%{transform:translate(-50%,-160%) scale(1) rotate(0)}75%{opacity:1;transform:translate(-50%,-160%) scale(1)}100%{opacity:0;transform:translate(-50%,-240%) scale(.9)}}
+   .lvlup{font-size:1.4rem;animation-name:lvlM}
+   @keyframes lvlM{0%{opacity:0;transform:translate(-50%,-80%) scale(.9)}20%{opacity:1;transform:translate(-50%,-150%) scale(1)}75%{opacity:1;transform:translate(-50%,-170%)}100%{opacity:0;transform:translate(-50%,-210%)}}
    .top .stat{position:fixed;bottom:78px;z-index:16;font-size:.82rem;padding:5px 11px;border-radius:999px;
      background:rgba(255,255,255,.95);color:#12224f;box-shadow:0 4px 14px rgba(10,18,40,.28)}
    .top .stat small{color:#5b647a;margin-right:5px;font-size:.72rem}
@@ -368,26 +370,26 @@
   function restore(){var st=load();if(!st)return;score=st.score||0;var d=st.done||{};Object.keys(st.painted||{}).forEach(function(i){var z=zones[i];if(z){z.style.fill=st.painted[i];if(d[i]){z.dataset.done='1';if(z.parentNode)z.parentNode.classList.add('done');done++;}}});}
   function updateHUD(anim){if(!anim){cancelAnimationFrame(countRaf);shown=score;scoreEl.textContent=score;}zonesEl.textContent=done+'/'+total;var pb=document.getElementById('pbar');if(pb)pb.style.width=(total?Math.round(done/total*100):0)+'%';}
   function floatPts(z,pts,mult,px,py){try{var x=px,y=py;if(x==null||y==null){var bb=z.getBoundingClientRect();x=bb.left+bb.width/2;y=bb.top+bb.height/2;}var f=document.createElement('div');f.className='float'+(mult>1?' m'+mult:'');f.textContent='+'+pts;if(mult>1){var sm=document.createElement('small');sm.textContent='\u00d7'+mult;f.appendChild(sm);}f.style.left=x+'px';f.style.top=y+'px';document.body.appendChild(f);setTimeout(function(){f.remove();},1700);}catch(e){}}
-  /* COMBO = bonnes zones enchainees, chacune en moins de COMBO_MS apres la precedente.
-     Une erreur ou un temps mort casse la serie. Paliers : 3 -> x2, 6 -> x3, 10 -> x4, 15 -> x5. */
-  var COMBO_MS=4000, comboAt=0;
-  function multFor(c){return c>=15?5:c>=10?4:c>=6?3:c>=3?2:1;}
+  /* COMBO (mode detente) = bonnes zones enchainees, chacune en moins de COMBO_MS apres la precedente.
+     Une erreur ne casse PAS la serie ; seul un long temps mort la termine, en douceur (pas d'echec affiche).
+     Paliers espaces : 5 -> x2, 12 -> x3, 25 -> x4. */
+  var COMBO_MS=12000, comboAt=0, TIERS=[5,12,25];
+  function multFor(c){return c>=25?4:c>=12?3:c>=5?2:1;}
   function comboBar(){var i=comboEl.querySelector('.cbar i');i.style.transition='none';i.style.width='100%';void i.offsetWidth;i.style.transition='width '+COMBO_MS+'ms linear';i.style.width='0%';}
   function comboIdle(){comboEl.classList.remove('on','lost','hit');comboEl.querySelector('.cm').textContent='COMBO';comboEl.querySelector('.cs').textContent='\u00d71';
     var i=comboEl.querySelector('.cbar i');i.style.transition='none';i.style.width='0%';}
   function showCombo(mult,prev){clearTimeout(comboTimer);comboEl.classList.remove('lost','hit');
     if(combo<2){comboIdle();return;}
-    var nxt=[3,6,10,15].filter(function(t){return t>combo;})[0];
+    var nxt=TIERS.filter(function(t){return t>combo;})[0];
     comboEl.querySelector('.cm').textContent='COMBO \u00d7'+mult;
     comboEl.querySelector('.cs').textContent=combo+' '+(nxt?'\u2022 \u00d7'+(mult+1)+' @ '+nxt:'\u2022 MAX');
-    void comboEl.offsetWidth;comboEl.classList.add('on','hit');comboBar();
+    void comboEl.offsetWidth;comboEl.classList.add('on');if(mult>prev)comboEl.classList.add('hit');comboBar();
     comboTimer=setTimeout(function(){breakCombo();},COMBO_MS);
     if(mult>prev){var b=document.createElement('div');b.className='lvlup';b.textContent='\u00d7'+mult+'!';
-      var r=comboEl.getBoundingClientRect();b.style.left=(r.left+r.width/2)+'px';b.style.top=(r.top+r.height/2)+'px';document.body.appendChild(b);setTimeout(function(){b.remove();},1600);if(navigator.vibrate)navigator.vibrate([15,30,15]);}}
-  function breakCombo(){clearTimeout(comboTimer);var had=combo>=2;combo=0;if(!had){comboIdle();return;}
-    comboEl.classList.remove('hit');comboEl.querySelector('.cm').textContent='COMBO';comboEl.querySelector('.cs').textContent='\u2715';
-    var i=comboEl.querySelector('.cbar i');i.style.transition='none';i.style.width='0%';
-    void comboEl.offsetWidth;comboEl.classList.add('lost');comboTimer=setTimeout(comboIdle,900);}
+      var r=comboEl.getBoundingClientRect();b.style.left=(r.left+r.width/2)+'px';b.style.top=(r.top+r.height/2)+'px';document.body.appendChild(b);setTimeout(function(){b.remove();},2200);}}
+  // Fin de serie tout en douceur : la jauge s'eteint simplement, sans message d'echec.
+  function breakCombo(){clearTimeout(comboTimer);combo=0;comboEl.classList.add('fade');
+    comboTimer=setTimeout(function(){comboEl.classList.remove('fade');comboIdle();},700);}
   function countScore(){cancelAnimationFrame(countRaf);var from=shown,to=score,t0=performance.now();
     scoreEl.classList.remove('bump');void scoreEl.offsetWidth;scoreEl.classList.add('bump');
     (function step(t){var k=Math.min(1,(t-t0)/600);shown=Math.round(from+(to-from)*(1-Math.pow(1-k,3)));scoreEl.textContent=shown;if(k<1)countRaf=requestAnimationFrame(step);})(t0);}
@@ -405,7 +407,7 @@
       var a=parseFloat(z.dataset.a)||100,base=Math.max(1,Math.min(60,Math.round(520/Math.sqrt(a)))),pts=base*mult;
       z.style.fill=byN[selectedN]||'#888';z.dataset.done='1';if(z.parentNode)z.parentNode.classList.add('done');z.classList.add('pop');setTimeout(function(){z.classList.remove('pop');},320);if(navigator.vibrate)navigator.vibrate(12);score+=pts;done++;
       floatPts(z,pts,mult,px,py);showCombo(mult,prev);updateHUD(true);countScore();save();if(done>=total)win();
-    }else{breakCombo();z.classList.remove('wrong');z.getBoundingClientRect();z.classList.add('wrong');if(navigator.vibrate)navigator.vibrate(18);}
+    }else{z.classList.remove('wrong');z.getBoundingClientRect();z.classList.add('wrong');}   // erreur : simple indice visuel, la serie continue
   }
   function setMode(){var free=mode==='free';document.getElementById('lockBtn').classList.toggle('unlocked',free);document.getElementById('freecolor').style.display=free?'inline-block':'none';markSel();}
   (function(){
