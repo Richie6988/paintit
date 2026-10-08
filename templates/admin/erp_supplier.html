@@ -57,6 +57,27 @@
         </div>
       </div>
 
+      <div class="card" id="nuancier">
+        <div class="card-h"><h2>Nuancier (couleurs disponibles)</h2>
+          {% if sup.palette %}<span class="bdg2 ok">{{ sup.palette|length }} teintes</span>{% else %}<span class="bdg2 idle">Aucun · couleurs libres</span>{% endif %}</div>
+        <p class="muted" style="margin:0 0 10px">Importez la liste des peintures que ce fournisseur sait produire (CSV : <b>référence ; #hexadécimal</b>).
+          Chaque couleur calculée pour une toile est alors remplacée par la teinte disponible la plus proche (écart perçu par l'œil, CIEDE2000),
+          et la fiche JSON envoyée au fournisseur donne ses <b>références</b> au lieu des codes hexadécimaux. Le poster client ne change pas.
+          {% if sup.checkout == "print" %}<br><b>Ce fournisseur est branché sur le Tableau fini : le nuancier n'est utilisé que pour le fournisseur Kit actif.</b>{% endif %}</p>
+        <form method="post" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">{% csrf_token %}
+          <input type="file" name="csv" accept=".csv,text/csv,text/plain" required>
+          <button class="pbtn pri" name="op" value="palette_upload">{% if sup.palette %}Remplacer le nuancier{% else %}Importer le CSV{% endif %}</button>
+        </form>
+        {% if sup.palette %}
+          <div class="muted" style="margin:10px 0 6px;font-size:.78rem">Importé le {{ sup.palette_updated_at|date:"d/m/Y H:i" }} — survolez une pastille pour voir sa référence.</div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;max-height:150px;overflow:auto;padding:2px">
+            {% for c in sup.palette %}<span title="Réf. {{ c.code }} · {{ c.hex }}" style="width:16px;height:16px;border-radius:4px;background:{{ c.hex }};box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)"></span>{% endfor %}
+          </div>
+          <form method="post" style="margin-top:10px" data-confirm="Retirer le nuancier de {{ sup.name }} ?" data-confirm-text="Les prochaines toiles reviendront à des couleurs calculées librement (sans références fournisseur)." data-ok="Retirer" data-danger>{% csrf_token %}
+            <button class="pbtn sm" name="op" value="palette_clear" style="color:#b42318">Retirer le nuancier</button></form>
+        {% endif %}
+      </div>
+
       <div class="card">
         <div class="card-h"><h2>Guide d'intégration</h2><span class="muted">à transmettre à l'équipe technique du fournisseur</span></div>
         <details open><summary style="font-weight:800;cursor:pointer;margin-bottom:6px">1 · Envoi des commandes (PaintIt → fournisseur)</summary>

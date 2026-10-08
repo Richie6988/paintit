@@ -490,6 +490,10 @@ class Supplier(models.Model):
     last_sync_at = models.DateTimeField("Derniere transmission", null=True, blank=True)
     last_sync_ok = models.BooleanField("Derniere transmission OK", default=True)
     last_sync_error = models.CharField("Derniere erreur", max_length=300, blank=True, default="")
+    # Nuancier du fournisseur (import CSV) : [{"code": "1", "hex": "#FFFFFF"}, ...].
+    # S'il est rempli, chaque couleur calculee est remplacee par la teinte disponible la plus proche.
+    palette = models.JSONField("Nuancier (couleurs disponibles)", default=list, blank=True)
+    palette_updated_at = models.DateTimeField("Nuancier importe le", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):

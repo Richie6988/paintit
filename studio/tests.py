@@ -339,5 +339,30 @@ class DeletionTests(TestCase):
         self.assertTrue(Order.objects.filter(customer_email="other@example.com").exists())
 
 
+class SupplierPaletteTests(TestCase):
+    def test_csv_parsing(self):
+        from studio.palette import parse_csv
+        cols, rep = parse_csv("numéro origine;code couleur hexadecimal;;;\n1;#FFFFFF;;;\n23;#5C5D3E;;\n23;#5C5D3E;;\n"
+                              "123;#127534;;\n123;#439330;;\n9;nope;;\n".encode("cp1252"))
+        self.assertEqual([c["code"] for c in cols], ["1", "23", "123", "123"])
+        self.assertEqual(rep["duplicates"], ["23"]); self.assertEqual(rep["same_code"], ["123"]); self.assertEqual(rep["invalid"], ["9"])
+
+    def test_snap_uses_only_available_distinct_colors(self):
+        import numpy as np, pbn
+        labels = np.array([[0, 0, 1], [1, 2, 2]])
+        pal = np.array([[250, 250, 250], [10, 10, 200], [12, 12, 198]], dtype=np.uint8)   # BGR
+        av = [{"code": "W", "hex": "#FFFFFF"}, {"code": "R", "hex": "#CC0000"}, {"code": "R2", "hex": "#BB1111"}]
+        lab2, pal2, codes, de = pbn.snap_palette(labels, pal, av)
+        self.assertEqual(sorted(codes), ["R", "R2", "W"])                     # 3 teintes distinctes
+        self.assertEqual(pal2.shape, (3, 3))
+
+    def test_supplier_json_uses_codes(self):
+        from studio.fulfillment import supplier_colors
+        out = supplier_colors([{"number": 1, "hex": "#FFFFFF", "rgb": [255, 255, 255], "code": "1"},
+                               {"number": 2, "hex": "#000000", "rgb": [0, 0, 0]}])
+        self.assertEqual(out[0], {"number": 1, "supplier_code": "1"})
+        self.assertIn("hex", out[1])                                           # repli sans reference
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)

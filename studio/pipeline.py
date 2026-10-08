@@ -81,6 +81,16 @@ def source_file(outdir, uid):
     return legacy if _os.path.exists(legacy) else ""
 
 
+def supplier_palette():
+    """Nuancier du fournisseur Kit actif (vide = couleurs calculees librement)."""
+    try:
+        from .models import Supplier
+        sup = Supplier.for_checkout("kit")
+        return list(sup.palette or []) if sup else []
+    except Exception:
+        return []
+
+
 def generate(image_path, colors, width_cm, height_cm, uid=None, dpi=None, progress=None,
              focus=(0.5, 0.5), detail=1.0, source_name=None,
              max_zones=None, min_zone_mm=None, density=None):
@@ -138,6 +148,7 @@ def generate(image_path, colors, width_cm, height_cm, uid=None, dpi=None, progre
         uid=uid, no_qr=False, progress=progress,
         max_zones=(int(max_zones) if max_zones else None),
         density=(float(density) if density else None),
+        available_colors=supplier_palette(),
     )
     svg_path, prev_path, pal_path, tpl_png_path, colors_path, preview_svg_path, digipaint_path = pbn.run(ns)
 

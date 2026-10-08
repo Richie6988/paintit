@@ -2046,6 +2046,31 @@ def erp_supplier(request, pk):
             sup.auto_dispatch = not sup.auto_dispatch; sup.save(update_fields=["auto_dispatch"])
             messages.success(request, "Transmission %s." % ("automatique au paiement" if sup.auto_dispatch
                                                             else "manuelle (validation depuis la fiche commande)"))
+        elif op == "palette_upload":
+            from . import palette as _pal
+            f = request.FILES.get("csv")
+            if not f:
+                messages.error(request, "Choisissez un fichier CSV.")
+            else:
+                cols, rep = _pal.parse_csv(f.read())
+                if not cols:
+                    messages.error(request, "Aucune couleur lue : 1re colonne = référence, 2e = code hexadécimal (#RRGGBB).")
+                else:
+                    sup.palette = cols; sup.palette_updated_at = timezone.now()
+                    sup.save(update_fields=["palette", "palette_updated_at"])
+                    note = []
+                    if rep["duplicates"]:
+                        note.append("%d doublon(s) ignoré(s) (réf. %s)" % (len(rep["duplicates"]), ", ".join(rep["duplicates"][:8])))
+                    if rep["same_code"]:
+                        note.append("même référence pour 2 teintes : %s" % ", ".join(rep["same_code"][:8]))
+                    if rep["invalid"]:
+                        note.append("%d ligne(s) illisible(s)" % len(rep["invalid"]))
+                    messages.success(request, "Nuancier importé : %d couleurs disponibles.%s Les prochaines toiles "
+                                     "utiliseront uniquement ces teintes." % (len(cols), (" " + " ; ".join(note) + ".") if note else ""))
+        elif op == "palette_clear":
+            sup.palette = []; sup.palette_updated_at = None
+            sup.save(update_fields=["palette", "palette_updated_at"])
+            messages.success(request, "Nuancier retiré : les couleurs seront de nouveau calculées librement.")
         elif op == "assign":
             n = 0
             for o in erp.unassigned_orders():

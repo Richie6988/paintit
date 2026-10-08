@@ -115,6 +115,72 @@ def smooth(bgr, mode, detail, edge=None):
     return out
 
 
+def _to_lab(rgb):
+    """RGB (N,3) 0-255 -> CIELAB reel (L 0-100, a/b ~ -128..127)."""
+    x = np.asarray(rgb, dtype=np.float32).reshape(-1, 1, 3) / 255.0
+    return cv2.cvtColor(x, cv2.COLOR_RGB2LAB).reshape(-1, 3).astype(np.float64)
+
+
+def delta_e2000(lab1, lab2):
+    """CIEDE2000 entre chaque ligne de lab1 (N,3) et chaque ligne de lab2 (M,3) -> (N,M)."""
+    L1, a1, b1 = [lab1[:, i][:, None] for i in range(3)]
+    L2, a2, b2 = [lab2[:, i][None, :] for i in range(3)]
+    C1, C2 = np.hypot(a1, b1), np.hypot(a2, b2)
+    Cm = (C1 + C2) / 2.0
+    G = 0.5 * (1 - np.sqrt(Cm ** 7 / (Cm ** 7 + 25.0 ** 7)))
+    a1p, a2p = a1 * (1 + G), a2 * (1 + G)
+    C1p, C2p = np.hypot(a1p, b1), np.hypot(a2p, b2)
+    h1p = np.degrees(np.arctan2(b1, a1p)) % 360
+    h2p = np.degrees(np.arctan2(b2, a2p)) % 360
+    dLp, dCp = L2 - L1, C2p - C1p
+    dh = h2p - h1p
+    dh = np.where(dh > 180, dh - 360, np.where(dh < -180, dh + 360, dh))
+    dh = np.where(C1p * C2p == 0, 0, dh)
+    dHp = 2 * np.sqrt(C1p * C2p) * np.sin(np.radians(dh / 2))
+    Lpm, Cpm = (L1 + L2) / 2, (C1p + C2p) / 2
+    hs = h1p + h2p
+    hpm = np.where(C1p * C2p == 0, hs,
+                   np.where(np.abs(h1p - h2p) <= 180, hs / 2,
+                            np.where(hs < 360, (hs + 360) / 2, (hs - 360) / 2)))
+    T = (1 - 0.17 * np.cos(np.radians(hpm - 30)) + 0.24 * np.cos(np.radians(2 * hpm))
+         + 0.32 * np.cos(np.radians(3 * hpm + 6)) - 0.20 * np.cos(np.radians(4 * hpm - 63)))
+    dtheta = 30 * np.exp(-(((hpm - 275) / 25) ** 2))
+    Rc = 2 * np.sqrt(Cpm ** 7 / (Cpm ** 7 + 25.0 ** 7))
+    Sl = 1 + 0.015 * (Lpm - 50) ** 2 / np.sqrt(20 + (Lpm - 50) ** 2)
+    Sc, Sh = 1 + 0.045 * Cpm, 1 + 0.015 * Cpm * T
+    Rt = -np.sin(np.radians(2 * dtheta)) * Rc
+    return np.sqrt((dLp / Sl) ** 2 + (dCp / Sc) ** 2 + (dHp / Sh) ** 2 + Rt * (dCp / Sc) * (dHp / Sh))
+
+
+def snap_palette(labels, palette_bgr, available):
+    """2e passe : remplace chaque couleur calculee par la teinte DISPONIBLE la plus proche (CIEDE2000).
+    available = [{"code": .., "hex": "#RRGGBB"}, ...] (nuancier fournisseur).
+    Affectation gloutonne, les couleurs les plus presentes choisissent d'abord, sans doublon tant que le
+    nuancier le permet ; si deux couleurs tombent sur la meme teinte, leurs zones sont fusionnees.
+    -> (labels, palette_bgr, codes, delta_e) avec palette/codes compactes (k peut diminuer)."""
+    av = [a for a in (available or []) if a.get("hex")]
+    if not av:
+        return labels, palette_bgr, [None] * len(palette_bgr), [0.0] * len(palette_bgr)
+    av_rgb = np.array([[int(a["hex"][i:i + 2], 16) for i in (1, 3, 5)] for a in av])
+    k = len(palette_bgr)
+    D = delta_e2000(_to_lab(np.asarray(palette_bgr)[:, ::-1]), _to_lab(av_rgb))
+    counts = np.bincount(labels.ravel(), minlength=k)
+    choice, used = [-1] * k, set()
+    for c in np.argsort(-counts):
+        order = np.argsort(D[c])
+        pick = next((int(j) for j in order if int(j) not in used), int(order[0]))
+        choice[c] = pick
+        used.add(pick)
+    # fusion des couleurs tombees sur la meme teinte + compaction des indices
+    uniq = list(dict.fromkeys(choice))
+    remap = np.array([uniq.index(ch) for ch in choice], dtype=labels.dtype)
+    labels = remap[labels]
+    palette = np.array([av_rgb[j][::-1] for j in uniq], dtype=np.uint8)
+    codes = [str(av[j].get("code", "")) for j in uniq]
+    de = [float(min(D[c, j] for c in range(k) if choice[c] == j)) for j in uniq]
+    return labels, palette, codes, de
+
+
 def quantize(bgr, k, seed=0, sample=60000):
     """K-means en LAB. Retourne (labels HxW int, palette_bgr Kx3 uint8).
     Ajusté sur un échantillon (rapide) puis prédit sur toute l'image."""
@@ -810,6 +876,10 @@ def run(args):
 
     sm = smooth(img, args.smooth, args.detail, edge)
     labels, palette = quantize(sm, args.colors, args.seed)
+    codes, deltas = [None] * len(palette), [0.0] * len(palette)
+    if getattr(args, "available_colors", None):      # nuancier fournisseur : teintes reellement disponibles
+        labels, palette, codes, deltas = snap_palette(labels, palette, args.available_colors)
+        args.colors = len(palette)
     _p(32, "colors")
 
     # Lissage de la carte de labels (plus fort quand il y a beaucoup de couleurs).
@@ -882,7 +952,8 @@ def run(args):
     colors_path = os.path.join(outdir, base + "_colors.json")
     colors = [{"number": i + 1,
                "hex": "#%02X%02X%02X" % (int(bgr[2]), int(bgr[1]), int(bgr[0])),
-               "rgb": [int(bgr[2]), int(bgr[1]), int(bgr[0])]}
+               "rgb": [int(bgr[2]), int(bgr[1]), int(bgr[0])],
+               **({"code": codes[i], "delta_e": round(deltas[i], 1)} if codes[i] is not None else {})}
               for i, bgr in enumerate(palette)]
     with open(colors_path, "w", encoding="utf-8") as f:
         json.dump(colors, f, ensure_ascii=False, indent=2)

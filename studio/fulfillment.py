@@ -169,6 +169,18 @@ def _compose_poster(uid, d, colors, lang):
     cv2.imwrite(out, img)
 
 
+def supplier_colors(colors):
+    """Couleurs pour le FOURNISSEUR : numero de la toile -> reference de SON nuancier.
+    (Repli hex/RGB uniquement si la couleur n'a pas de reference : toile generee avant l'import du nuancier.)"""
+    out = []
+    for c in colors:
+        if c.get("code"):
+            out.append({"number": c.get("number"), "supplier_code": str(c["code"])})
+        else:
+            out.append({"number": c.get("number"), "hex": c.get("hex"), "rgb": c.get("rgb")})
+    return out
+
+
 def load_colors(uid):
     """Couleurs numerotees de la toile, sans jamais renvoyer vide si une source existe :
     <uid>_colors.json (pipeline) > order.json > supplier.json > palette deduite de l'apercu."""
@@ -184,7 +196,9 @@ def load_colors(uid):
         if os.path.exists(p):
             with open(p, encoding="utf-8") as f:
                 cols = json.load(f).get("color_specifications") or []
-            if cols:
+            cols = [dict(c, code=c["supplier_code"]) if c.get("supplier_code") and not c.get("code") else c
+                    for c in cols]
+            if cols and all(c.get("hex") for c in cols):
                 return cols
     # dernier recours : numero -> couleur relu sur la toile elle-meme : chaque numero imprime
     # sur la toile numerotee est au milieu d'une zone de SA couleur dans l'apercu (PNG sans perte).
@@ -267,7 +281,8 @@ def build(order, shipping):
             },
         },
         "color_specifications": [
-            {"number": c.get("number"), "hex": c.get("hex"), "rgb": c.get("rgb")} for c in colors],
+            {"number": c.get("number"), "hex": c.get("hex"), "rgb": c.get("rgb"),
+             **({"supplier_code": c["code"]} if c.get("code") else {})} for c in colors],
     }
     with open(os.path.join(d, "%s_order.json" % uid), "w", encoding="utf-8") as f:
         json.dump(order_json, f, ensure_ascii=False, indent=2)
@@ -285,7 +300,7 @@ def build(order, shipping):
             "files": {"template_pdf": "%s_template.pdf" % uid, "template_tiff": "%s_template.tiff" % uid,
                       "template_svg": "%s_template.svg" % uid, "poster_png": "%s_poster.png" % uid},
         },
-        "color_specifications": order_json["color_specifications"],
+        "color_specifications": supplier_colors(colors),
     }
     with open(os.path.join(d, "%s_supplier.json" % uid), "w", encoding="utf-8") as f:
         json.dump(supplier_json, f, ensure_ascii=False, indent=2)
