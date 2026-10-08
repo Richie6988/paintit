@@ -1271,3 +1271,6 @@ msgstr "Delete"
 
 msgid "Essayez nos modèles prêts à peindre !"
 msgstr "Try our ready-to-paint models!"
+
+msgid "Modifier les couleurs ou le cadrage"
+msgstr "Change colours or framing"

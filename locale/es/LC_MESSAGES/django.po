@@ -1280,3 +1280,6 @@ msgstr "Eliminar"
 
 msgid "Essayez nos modèles prêts à peindre !"
 msgstr "¡Prueba nuestros modelos listos para pintar!"
+
+msgid "Modifier les couleurs ou le cadrage"
+msgstr "Cambiar colores o encuadre"

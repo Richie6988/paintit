@@ -137,6 +137,7 @@ def upload(request):
                     fy = float(request.POST.get("focus_y", "0.5"))
                 except (TypeError, ValueError):
                     fx, fy = 0.5, 0.5
+                request.session["last_focus"] = [fx, fy]      # retour depuis l'apercu : meme cadrage
                 uid = f"{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:4].upper()}"
                 jobs.start(uid)
                 sname = request.session.get("last_photo_name") or os.path.basename(src)
@@ -156,9 +157,11 @@ def upload(request):
             initial = {"orientation": order.get("orientation"),
                        "colors": str(order.get("colors"))}
         form = UploadForm(initial=initial)
+    has_photo = bool(last_photo and os.path.exists(last_photo))
+    fx, fy = (request.session.get("last_focus") or [0.5, 0.5]) if has_photo else (0.5, 0.5)
     return render(request, "studio/upload.html", {
-        "form": form, "price_cfg": price_cfg(),
-        "has_photo": bool(last_photo and os.path.exists(last_photo)),
+        "form": form, "price_cfg": price_cfg(), "has_photo": has_photo,
+        "focus_x": "%.4f" % fx, "focus_y": "%.4f" % fy,
     })
 
 
@@ -262,6 +265,10 @@ def digipaint(request, uid):
     if uid.startswith("lib-") and not os.path.isdir(d):   # anciens modeles du home -> meme modele en galerie
         return redirect("studio:digipaint", uid="gal-" + uid[4:].removeprefix("lib-"), permanent=True)
     if not os.path.exists(os.path.join(d, f"{uid}_digipaint.svg")):
+        if uid.startswith(("gal-", "lib-")):
+            # Modele de galerie retire (ou ancienne URL indexee) : redirection permanente vers la galerie
+            # plutot qu'un 404 (Search Console : pages "Introuvable").
+            return redirect("studio:gallery", permanent=True)
         raise Http404
     import json
     order = request.session.get("order")
@@ -292,9 +299,15 @@ def digipaint(request, uid):
             _grant_gallery(request, lib, verified)   # gratuite -> arrive dans Mes Toiles
     owned = DigitalCanvas.objects.filter(uid=uid).exists()
     # Essai gratuit : "Retour a la commande" ramene a l'apercu de la commande en cours.
-    back_url = reverse("studio:preview") if (order and order.get("uid") == uid) else reverse("studio:paint_portal")
+    # Sortie du jeu (croix, fin d'essai) : retour a l'apercu de la commande en cours, sans rien perdre.
+    if order and order.get("uid") == uid:
+        back_url, back_label = reverse("studio:preview"), _("Retour à la commande")
+    elif uid.startswith(("gal-", "lib-")):
+        back_url, back_label = reverse("studio:gallery"), _("Retour à la galerie")
+    else:
+        back_url, back_label = reverse("studio:paint_portal"), _("Mes toiles")
     return render(request, "studio/digipaint.html",
-                  {"uid": uid, "palette": palette, "owned": owned, "back_url": back_url})
+                  {"uid": uid, "palette": palette, "owned": owned, "back_url": back_url, "back_label": back_label})
 
 
 def preview(request):
@@ -772,8 +785,8 @@ def robots(request):
     site = settings.SITE_URL
     body = (
         "User-agent: *\n"
-        "Disallow: /create/\nDisallow: /preview/\nDisallow: /media/\n"
-        "Disallow: /delivery/\nDisallow: /checkout/\n"
+        "Disallow: /preview/\nDisallow: /media/\nDisallow: /files/\n"
+        "Disallow: /delivery/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /admin/\nDisallow: /admin-hub/\n"
         "Allow: /llm.txt\nAllow: /llm.json\nAllow: /gallery/\n"
         "\nSitemap: %s/sitemap.xml\n"
         "\n# Infos pour les IA / LLM :\n"
@@ -1435,7 +1448,7 @@ def sitemap_xml(request):
     from .models import DigitalCanvas
     site = settings.SITE_URL
     # pages publiques uniquement (les toiles /paint/<uid>/ ne sont pas indexees)
-    paths = ["/", "/create/", "/gallery/", "/paint/", "/contact/", "/privacy/"]
+    paths = ["/", "/create/", "/gallery/", "/contact/", "/cgv/", "/mentions-legales/", "/privacy/"]
     langs = [c for c, _ in settings.LANGUAGES]
     x = ['<?xml version="1.0" encoding="UTF-8"?>',
          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
@@ -1453,7 +1466,9 @@ def sitemap_xml(request):
         for c in langs:
             x.append("<url><loc>%s</loc>%s<changefreq>weekly</changefreq></url>" % (variants[c], alts))
     x.append("</urlset>")
-    return HttpResponse("\n".join(x), content_type="application/xml")
+    resp = HttpResponse("\n".join(x), content_type="application/xml; charset=utf-8")
+    resp["Cache-Control"] = "public, max-age=3600"
+    return resp
 
 
 def shop_pricing(request):

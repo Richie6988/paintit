@@ -10,8 +10,8 @@
   <form method="post" enctype="multipart/form-data" class="form" id="pbn-form">
     {% csrf_token %}
     {% if form.non_field_errors %}<div class="err" style="background:#fdecef;border:1px solid #f5c2cf;color:#c0392b;border-radius:10px;padding:10px 14px;margin-bottom:12px">{{ form.non_field_errors|striptags }}</div>{% endif %}
-    <input type="hidden" name="focus_x" id="focus_x" value="0.5">
-    <input type="hidden" name="focus_y" id="focus_y" value="0.5">
+    <input type="hidden" name="focus_x" id="focus_x" value="{{ focus_x|default:'0.5' }}">
+    <input type="hidden" name="focus_y" id="focus_y" value="{{ focus_y|default:'0.5' }}">
     <label class="field">
       <span>{{ form.photo.label }}</span>
       <div class="drop">
@@ -55,7 +55,7 @@
     var cropbox = document.getElementById('cropbox');
     var cropimg = document.getElementById('cropimg');
     var fxIn = document.getElementById('focus_x'), fyIn = document.getElementById('focus_y');
-    var px = 50, py = 50, dragging = false, sx = 0, sy = 0, spx = 50, spy = 50;
+    var px = (parseFloat(document.getElementById('focus_x').value)||0.5)*100, py = (parseFloat(document.getElementById('focus_y').value)||0.5)*100, dragging = false, sx = 0, sy = 0, spx = 50, spy = 50;
     function applyPos(){ if(cropimg) cropimg.style.objectPosition = px+'% '+py+'%';
       fxIn.value=(px/100).toFixed(4); fyIn.value=(py/100).toFixed(4); }
     function resetFocus(){ px=50; py=50; applyPos(); }

@@ -1292,3 +1292,6 @@ msgstr "Elimina"
 
 msgid "Essayez nos modèles prêts à peindre !"
 msgstr "Prova i nostri modelli pronti da dipingere!"
+
+msgid "Modifier les couleurs ou le cadrage"
+msgstr "Modifica colori o inquadratura"

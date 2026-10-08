@@ -3,10 +3,11 @@
 {% block title %}{% trans "Aperçu" %} · PaintIt{% endblock %}
 {% block content %}
 <section class="panel wide" id="protected">
-  <div class="progress"><span>1. {% trans "Photo" %}</span><b>2. {% trans "Aperçu" %}</b><span>3. {% trans "Livraison" %}</span><span>4. {% trans "Paiement" %}</span></div>
+  <div class="progress"><a href="{% url 'studio:upload' %}" style="color:inherit">1. {% trans "Photo" %}</a><b>2. {% trans "Aperçu" %}</b><span>3. {% trans "Livraison" %}</span><span>4. {% trans "Paiement" %}</span></div>
   <h1>{% trans "Voici votre tableau" %}</h1>
 
   <p class="sub">{% trans "Cliquez sur une image pour la voir en grand." %}</p>
+  <a class="ghost back-edit" href="{% url 'studio:upload' %}">&larr; {% trans "Modifier les couleurs ou le cadrage" %}</a>
 
   <div class="reveal-hero">
     <div class="reveal" id="prevReveal" style="--pos:55%;aspect-ratio:{{ order.width_cm|unlocalize }}/{{ order.height_cm|unlocalize }}">
