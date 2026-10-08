@@ -74,6 +74,7 @@
           {% else %}<span class="bdg2 warn">À traiter</span>
             <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="close" title="Sans envoyer d'e-mail">Marquer traité</button></form>{% endif %}
           <form method="post" data-confirm="Supprimer ce message ?" data-confirm-text="Le message et ses pièces jointes seront supprimés." data-danger>{% csrf_token %}<button class="pbtn sm" name="op" value="delete" style="color:#b42318">Supprimer</button></form>
+          <form method="post" data-confirm="Supprimer toute la conversation avec {{ cur.email }} ?" data-confirm-text="Tous les messages de cette adresse, leurs réponses et pièces jointes seront supprimés définitivement." data-ok="Tout supprimer" data-danger>{% csrf_token %}<button class="pbtn sm" name="op" value="delete_thread" style="color:#b42318">Supprimer la conversation</button></form>
         </div>
       </div>
       <div class="thread">

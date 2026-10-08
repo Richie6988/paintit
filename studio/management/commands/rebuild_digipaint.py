@@ -10,7 +10,7 @@ import pbn
 
 
 class Command(BaseCommand):
-    help = ("Regenere les <uid>_digipaint.svg (jeu /paint) avec la geometrie a aretes partagees "
+    help = ("Regenere les <uid>_digipaint.svg (jeu /paint) et <uid>_preview.svg (apercu colorie) avec la geometrie a aretes partagees "
             "(plus de trous entre zones, coins de toile carres). Les zones sont reconstruites a "
             "partir de <uid>_preview.png + <uid>_colors.json : aucun recalcul du pipeline, "
             "numerotation et ordre des zones inchanges (progression des joueurs conservee).")
@@ -28,14 +28,18 @@ class Command(BaseCommand):
             svg_p = os.path.join(d, f"{uid}_digipaint.svg")
             prev_p = os.path.join(d, f"{uid}_preview.png")
             col_p = os.path.join(d, f"{uid}_colors.json")
-            if not all(os.path.exists(p) for p in (svg_p, prev_p, col_p)):
+            if not all(os.path.exists(p) for p in (svg_p, prev_p)):
                 skip += 1
                 continue
             try:
                 old = open(svg_p, encoding="utf-8").read()
                 m = re.search(r'viewBox="0 0 ([\d.]+) ([\d.]+)"', old[:400])
                 w_mm, h_mm = float(m.group(1)), float(m.group(2))
-                colors = json.load(open(col_p, encoding="utf-8"))
+                from studio.fulfillment import load_colors   # colors.json, sinon order.json / supplier.json / toile
+                colors = json.load(open(col_p, encoding="utf-8")) if os.path.exists(col_p) else load_colors(uid)
+                if not colors:
+                    skip += 1
+                    continue
                 img = cv2.imread(prev_p, cv2.IMREAD_COLOR)
                 H, W = img.shape[:2]
                 pal = np.array([[c["rgb"][2], c["rgb"][1], c["rgb"][0]] for c in colors], np.int32)
@@ -52,6 +56,11 @@ class Command(BaseCommand):
                 self.stdout.write(f"{uid}: {W}x{H}px, {len(colors)} couleurs")
                 if opts["dry_run"]:
                     continue
+                # Apercu colorie : meme geometrie a aretes partagees (plus de liseres blancs)
+                pv = pbn.build_preview_svg(labels, pal, mmx, mmy, w_mm, h_mm, eps)
+                with open(os.path.join(d, f"{uid}_preview.svg") + ".tmp", "w", encoding="utf-8") as f:
+                    f.write(pv)
+                os.replace(os.path.join(d, f"{uid}_preview.svg") + ".tmp", os.path.join(d, f"{uid}_preview.svg"))
                 svg = pbn.build_digipaint_svg(labels, pal, mmx, mmy, w_mm, h_mm, eps)
                 n_old, n_new = old.count('class="z"'), svg.count('class="z"')
                 if n_old != n_new:   # la progression des joueurs est indexee par zone

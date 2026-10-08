@@ -1283,3 +1283,15 @@ msgstr "¡Prueba nuestros modelos listos para pintar!"
 
 msgid "Modifier les couleurs ou le cadrage"
 msgstr "Cambiar colores o encuadre"
+
+msgid "Modifier"
+msgstr "Editar"
+
+msgid "utilisées pour votre toile, un pot de peinture numéroté par couleur."
+msgstr "para tu lienzo, un bote de pintura numerado por color."
+
+#, python-format
+msgid "%(n)s couleur"
+msgid_plural "%(n)s couleurs"
+msgstr[0] "%(n)s color"
+msgstr[1] "%(n)s colores"

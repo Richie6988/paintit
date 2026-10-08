@@ -1274,3 +1274,15 @@ msgstr "Try our ready-to-paint models!"
 
 msgid "Modifier les couleurs ou le cadrage"
 msgstr "Change colours or framing"
+
+msgid "Modifier"
+msgstr "Edit"
+
+msgid "utilisées pour votre toile, un pot de peinture numéroté par couleur."
+msgstr "used for your canvas, one numbered paint pot per colour."
+
+#, python-format
+msgid "%(n)s couleur"
+msgid_plural "%(n)s couleurs"
+msgstr[0] "%(n)s colour"
+msgstr[1] "%(n)s colours"

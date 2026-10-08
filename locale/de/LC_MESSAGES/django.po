@@ -1305,3 +1305,15 @@ msgstr "Probieren Sie unsere Motive zum Sofort-Malen aus!"
 
 msgid "Modifier les couleurs ou le cadrage"
 msgstr "Farben oder Ausschnitt ändern"
+
+msgid "Modifier"
+msgstr "Bearbeiten"
+
+msgid "utilisées pour votre toile, un pot de peinture numéroté par couleur."
+msgstr "für Ihr Bild, ein nummerierter Farbtopf pro Farbe."
+
+#, python-format
+msgid "%(n)s couleur"
+msgid_plural "%(n)s couleurs"
+msgstr[0] "%(n)s Farbe"
+msgstr[1] "%(n)s Farben"

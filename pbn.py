@@ -652,52 +652,27 @@ def render_preview(labels, palette_bgr):
 
 
 def build_preview_svg(labels, palette_bgr, mmx, mmy, w_mm, h_mm, eps=1.0):
-    """Apercu colorie VECTORIEL (zones remplies) : net a toute echelle."""
-    k = len(palette_bgr)
+    """Apercu colorie VECTORIEL, comme une toile peinte : zones construites sur les aretes PARTAGEES
+    du graphe des frontieres (meme geometrie que le jeu) -> aucun liseré blanc entre deux zones.
+    Un trait de la couleur de la zone masque les joints d'anticrenelage."""
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{w_mm:.1f}mm" '
            f'height="{h_mm:.1f}mm" viewBox="0 0 {w_mm:.2f} {h_mm:.2f}" '
-           f'shape-rendering="geometricPrecision">',
-           f'<rect x="0" y="0" width="{w_mm:.2f}" height="{h_mm:.2f}" fill="#ffffff"/>']
-    ap = max(0.6, eps * 0.5)
-    for c in range(k):
+           f'shape-rendering="geometricPrecision">']
+    rings, comp4, _n4 = _zone_rings(labels, max(0.8, eps))
+    sw = max(mmx, mmy) * 0.9
+    for c in range(len(palette_bgr)):
         m = (labels == c).astype(np.uint8)
         if not m.any():
             continue
-        cnts, _ = cv2.findContours(m, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        b = palette_bgr[c]
+        hexc = "#%02X%02X%02X" % (int(b[2]), int(b[1]), int(b[0]))
         segs = []
-        for cnt in cnts:
-            cnt = cv2.approxPolyDP(cnt, ap, True)
-            if len(cnt) < 3:
-                continue
-            pts = cnt.reshape(-1, 2)
-            segs.append("M " + " L ".join(f"{x*mmx:.2f} {y*mmy:.2f}" for x, y in pts) + " Z")
+        for cid in np.unique(comp4[m.astype(bool)]).tolist():
+            for pts in _link_rings(rings.get(cid, [])):
+                segs.append("M " + " L ".join(f"{x*mmx:.2f} {y*mmy:.2f}" for x, y in pts) + " Z")
         if segs:
-            b = palette_bgr[c]
-            hexc = "#%02X%02X%02X" % (int(b[2]), int(b[1]), int(b[0]))
-            out.append(f'<path fill="{hexc}" fill-rule="evenodd" d="{" ".join(segs)}"/>')
-    # UN SEUL trait (frontieres tracees une fois), lisse et assez epais pour couvrir le joint
-    eps_px = max(0.8, eps)
-    lines = []
-    for poly in _trace_boundaries(labels):
-        closed = len(poly) > 2 and poly[0] == poly[-1]
-        pts = poly[:-1] if closed else poly
-        if len(pts) < 2:
-            continue
-        arr = np.array(pts, dtype=np.int32).reshape(-1, 1, 2)
-        approx = cv2.approxPolyDP(arr, eps_px, closed)
-        base = [(float(pp[0][0]), float(pp[0][1])) for pp in approx]
-        if len(base) < 2:
-            continue
-        sm = _chaikin(base, closed, iters=3) if len(base) >= 3 else base
-        d = "M " + " L ".join(f"{x*mmx:.2f} {y*mmy:.2f}" for x, y in sm)
-        if closed:
-            d += " Z"
-        lines.append(d)
-    if lines:
-        out.append('<g class="lines" fill="none" stroke="#141414" stroke-width="0.34" '
-                   'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke">')
-        out += [f'<path d="{d}"/>' for d in lines]
-        out.append('</g>')
+            out.append(f'<path fill="{hexc}" stroke="{hexc}" stroke-width="{sw:.2f}" stroke-linejoin="round" '
+                       f'fill-rule="evenodd" d="{" ".join(segs)}"/>')
     out.append("</svg>")
     return "\n".join(out)
 

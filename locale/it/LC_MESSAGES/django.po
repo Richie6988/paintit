@@ -1295,3 +1295,15 @@ msgstr "Prova i nostri modelli pronti da dipingere!"
 
 msgid "Modifier les couleurs ou le cadrage"
 msgstr "Modifica colori o inquadratura"
+
+msgid "Modifier"
+msgstr "Modifica"
+
+msgid "utilisées pour votre toile, un pot de peinture numéroté par couleur."
+msgstr "per la tua tela, un vasetto di colore numerato per colore."
+
+#, python-format
+msgid "%(n)s couleur"
+msgid_plural "%(n)s couleurs"
+msgstr[0] "%(n)s colore"
+msgstr[1] "%(n)s colori"

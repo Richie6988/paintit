@@ -2810,6 +2810,10 @@ def erp_inbox(request, pk=None):
             cur.delete()
             flash.success(request, "Message supprimé.")
             return redirect("studio:erp_inbox")
+        elif op == "delete_thread":
+            n, _ = ContactMessage.objects.filter(email__iexact=cur.email).delete()
+            flash.success(request, "Conversation avec %s supprimée." % cur.email)
+            return redirect("studio:erp_inbox")
         return redirect("studio:erp_inbox_msg", pk=cur.pk)
 
     box = request.GET.get("box", "open")
