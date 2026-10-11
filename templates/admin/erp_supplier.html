@@ -57,22 +57,6 @@
         </div>
       </div>
 
-      <div class="card" id="nuancier">
-        <div class="card-h"><h2>Nuancier (couleurs disponibles)</h2>
-          {% if sup.palette %}<span class="bdg2 ok">{{ sup.palette|length }} teintes</span>{% else %}<span class="bdg2 idle">Aucun · couleurs libres</span>{% endif %}</div>
-        <p class="muted" style="margin:0 0 10px">Importez la liste des peintures que ce fournisseur sait produire (CSV : <b>référence ; #hexadécimal</b>).
-          Chaque couleur calculée pour une toile est alors remplacée par la teinte disponible la plus proche (écart perçu par l'œil, CIEDE2000),
-          et la fiche JSON envoyée au fournisseur donne ses <b>références</b> au lieu des codes hexadécimaux. Le poster client ne change pas.
-          {% if sup.checkout == "print" %}<br><b>Ce fournisseur est branché sur le Tableau fini : le nuancier n'est utilisé que pour le fournisseur Kit actif.</b>{% endif %}</p>
-        <a class="pbtn sm" href="/admin-hub/suppliers/{{ sup.pk }}/edit/#nuancier-edit">{% if sup.palette %}Remplacer / retirer{% else %}Importer le CSV{% endif %} depuis la fiche</a>
-        {% if sup.palette %}
-          <div class="muted" style="margin:10px 0 6px;font-size:.78rem">Importé le {{ sup.palette_updated_at|date:"d/m/Y H:i" }} — survolez une pastille pour voir sa référence.</div>
-          <div style="display:flex;flex-wrap:wrap;gap:3px;max-height:150px;overflow:auto;padding:2px">
-            {% for c in sup.palette %}<span title="Réf. {{ c.code }} · {{ c.hex }}" style="width:16px;height:16px;border-radius:4px;background:{{ c.hex }};box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)"></span>{% endfor %}
-          </div>
-        {% endif %}
-      </div>
-
       <div class="card">
         <div class="card-h"><h2>Guide d'intégration</h2><span class="muted">à transmettre à l'équipe technique du fournisseur</span></div>
         <details open><summary style="font-weight:800;cursor:pointer;margin-bottom:6px">1 · Envoi des commandes (PaintIt → fournisseur)</summary>
@@ -133,6 +117,7 @@
         <table style="width:100%;font-size:.82rem;border-collapse:collapse">
           {% for cat, lbl, on, cost in rows %}{% if on %}<tr><td class="muted" style="padding:3px 0">{{ cat }}</td><td>{{ lbl }}</td><td style="text-align:right;font-weight:700">{% if cost is not None %}{{ cost|floatformat:2 }} €{% else %}—{% endif %}</td></tr>{% endif %}{% endfor %}
         </table>{% else %}<div class="muted">Aucune offre saisie.</div>{% endif %}{% endwith %}
+        <div class="muted" style="margin-top:8px;font-size:.8rem">Nuancier : {% if sup.palette %}<b>{{ sup.palette|length }} teintes</b> (importé le {{ sup.palette_updated_at|date:"d/m/Y" }}){% else %}aucun, couleurs libres{% endif %}</div>
       </div>
       <div class="card">
         <div class="card-h"><h2>Pièces jointes</h2><a class="muted" href="/admin-hub/suppliers/{{ sup.pk }}/edit/">Ajouter</a></div>
