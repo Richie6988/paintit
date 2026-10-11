@@ -350,8 +350,14 @@ def preview(request):
         order["width_cm"], order["height_cm"], order["format_label"] = cf["w"], cf["h"], cf["label"]
         order["price"] = round(cf["price"] + order.get("brushes_amount", 0.0), 2)
         request.session["order"] = order
+    # Difficulte reelle de CETTE toile (zones + couleurs), comme les etoiles de la page Jouer
+    from .models import difficulty_level
+    if not order.get("zones"):
+        order["zones"] = _count_zones(order.get("uid", ""))
+        request.session["order"] = order
+    level = difficulty_level(order.get("zones"), colors)
     return render(request, "studio/preview.html",
-                  {"order": order, "brushes_price": p.brushes_price, "formats": formats,
+                  {"order": order, "brushes_price": p.brushes_price, "formats": formats, "level": level,
                    "current_format": current_format,
                    "brushes_available": p.av_brushes})
 

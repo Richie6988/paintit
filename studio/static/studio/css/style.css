@@ -876,3 +876,7 @@ main{overflow-x:clip}
 .foot .foot-nav a:hover{color:var(--accent)}
 .foot .foot-nav a+a{border-left-color:var(--ring)}
 .foot .foot-bottom{border-top-color:var(--ring);color:#8a93a8}
+.ci-level{display:block;margin-top:6px;font-weight:700;color:var(--ink)}
+.ci-level small{color:var(--muted);font-weight:600}
+.ci-level em{display:block;font-style:normal;font-weight:600;color:var(--muted);margin-top:2px}
+.ci-level em.ci-age{color:#1e8848}

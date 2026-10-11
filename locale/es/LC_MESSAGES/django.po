@@ -1507,3 +1507,15 @@ msgstr "desde"
 
 msgid "ans"
 msgstr "años"
+
+msgid "Facile, dès 4 ans : idéal pour les enfants et les seniors."
+msgstr "Fácil, desde los 4 años: ideal para niños y mayores."
+
+msgid "Intermédiaire : quelques heures de peinture relaxante."
+msgstr "Intermedio: unas horas de pintura relajante."
+
+msgid "Expert : beaucoup de détails, pour les peintres patients."
+msgstr "Experto: mucho detalle, para pintores pacientes."
+
+msgid "Facile : grandes zones, idéal pour débuter."
+msgstr "Fácil: zonas grandes, ideal para empezar."

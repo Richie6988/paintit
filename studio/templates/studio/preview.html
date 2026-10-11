@@ -32,7 +32,12 @@
     <div class="colors-info">
       <b>{% blocktrans count n=order.colors_list|length|default:order.colors %}{{ n }} couleur{% plural %}{{ n }} couleurs{% endblocktrans %}</b>
       <span>{% trans "utilisées pour votre toile, un pot de peinture numéroté par couleur." %}</span>
-      {% if order.colors == 12 %}<span class="ci-age">{% trans "Très accessible, dès 4 ans : idéal pour les enfants et les seniors." %}</span>{% endif %}
+      <span class="ci-level">{% trans "Difficulté" %} <span class="g-stars">{% for i in "123" %}<i class="{% if forloop.counter <= level %}on{% endif %}">★</i>{% endfor %}</span>
+        {% if order.zones %}<small>· {{ order.zones }} {% trans "zones" %}</small>{% endif %}
+        {% if level == 1 and order.colors <= 12 %}<em class="ci-age">{% trans "Facile, dès 4 ans : idéal pour les enfants et les seniors." %}</em>
+        {% elif level == 1 %}<em class="ci-age">{% trans "Facile : grandes zones, idéal pour débuter." %}</em>
+        {% elif level == 2 %}<em>{% trans "Intermédiaire : quelques heures de peinture relaxante." %}</em>
+        {% else %}<em>{% trans "Expert : beaucoup de détails, pour les peintres patients." %}</em>{% endif %}</span>
       {% if order.colors_list %}<div class="ci-chips">{% for c in order.colors_list %}<i style="background:{{ c.hex }}" title="{{ c.number }}"></i>{% endfor %}</div>{% endif %}
     </div>
     {% if formats %}

@@ -347,9 +347,7 @@ class DigitalCanvas(models.Model):
 
     @property
     def difficulty(self):
-        """Difficulte 1 a 3 etoiles : nombre de zones + poids du nombre de couleurs."""
-        score = (self.zones or 0) + 10 * (self.colors or 0)
-        return 1 if score < 500 else 2 if score < 1200 else 3
+        return difficulty_level(self.zones, self.colors)
 
     class Meta:
         unique_together = ("email", "uid")
@@ -437,6 +435,12 @@ class PrintPricing(models.Model):
                 "materials": {m["key"]: m["price"] for m in self.materials()},
                 "frames": {f["key"]: f["price"] for f in self.frames()},
                 "glass": self.glass_price if self.av_glass else None}
+
+
+def difficulty_level(zones, colors):
+    """Difficulte 1 a 3 etoiles : nombre de zones + poids du nombre de couleurs."""
+    score = (zones or 0) + 10 * (colors or 0)
+    return 1 if score < 500 else 2 if score < 1200 else 3
 
 
 def format_key(w, h):

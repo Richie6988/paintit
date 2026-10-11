@@ -1496,3 +1496,15 @@ msgstr "from"
 
 msgid "ans"
 msgstr "yrs"
+
+msgid "Facile, dès 4 ans : idéal pour les enfants et les seniors."
+msgstr "Easy, from age 4: ideal for children and seniors."
+
+msgid "Intermédiaire : quelques heures de peinture relaxante."
+msgstr "Intermediate: a few hours of relaxing painting."
+
+msgid "Expert : beaucoup de détails, pour les peintres patients."
+msgstr "Expert: lots of detail, for patient painters."
+
+msgid "Facile : grandes zones, idéal pour débuter."
+msgstr "Easy: large areas, ideal for beginners."
