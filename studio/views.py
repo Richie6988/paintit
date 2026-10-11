@@ -146,6 +146,10 @@ def upload(request):
                     fx, fy = 0.5, 0.5
                 request.session["last_focus"] = [fx, fy]      # retour depuis l'apercu : meme cadrage
                 uid = f"{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:4].upper()}"
+                if request.POST.get("trial"):
+                    request.session["digital_trial"] = True    # « Ajouter · 0,99 € » depuis Mes toiles
+                else:
+                    request.session.pop("digital_trial", None)
                 jobs.start(uid)
                 sname = request.session.get("last_photo_name") or os.path.basename(src)
                 try:
@@ -217,9 +221,13 @@ def gen_finalize(request):
         u = request.session.get("my_uids", []);
         if uid not in u: u.append(uid); request.session["my_uids"] = u[-60:]
     if request.session.pop("digital_mode", False):
+        request.session.pop("digital_trial", None)
         _save_digital(); _track()
         request.session["free_used"] = True
         return redirect("studio:digipaint", uid=uid)   # toile numerique -> le jeu
+    if request.session.pop("digital_trial", False):
+        request.session["digital_trial_uid"] = uid      # essai payant : jeu direct, sauvegarde a 0,99 EUR
+        return redirect("studio:digipaint", uid=uid)
 
     # Flux de creation classique : la 1re toile est aussi enregistree comme
     # toile numerique GRATUITE de l'utilisateur (nouvel utilisateur).
@@ -310,7 +318,9 @@ def digipaint(request, uid):
     owned = DigitalCanvas.objects.filter(uid=uid).exists()
     # Essai gratuit : "Retour a la commande" ramene a l'apercu de la commande en cours.
     # Sortie du jeu (croix, fin d'essai) : retour a l'apercu de la commande en cours, sans rien perdre.
-    if order and order.get("uid") == uid:
+    if request.session.get("digital_trial_uid") == uid and not owned:
+        back_url, back_label = reverse("studio:paint_portal"), _("Mes toiles")
+    elif order and order.get("uid") == uid:
         back_url, back_label = reverse("studio:preview"), _("Retour à la commande")
     elif uid.startswith(("gal-", "lib-")):
         back_url, back_label = reverse("studio:gallery"), _("Retour aux modèles")
@@ -536,8 +546,9 @@ def paint_new(request):
         request.session["paid_credits"] = credits - 1
         request.session["digital_mode"] = True
         return redirect("studio:upload")
-    # Toiles suivantes : parcours normal (jeu gratuit 5 min, sauvegarde a 0,99 EUR via le mur de paiement).
-    return redirect("studio:upload")
+    # Toiles suivantes (« Ajouter · 0,99 € ») : apres generation on va DIRECT au jeu (pas l'apercu de commande) ;
+    # la toile n'entre dans Mes toiles qu'apres paiement (mur 0,99 EUR dans le jeu).
+    return redirect(reverse("studio:upload") + "?trial=1")
 
 
 def paint_pay(request):
