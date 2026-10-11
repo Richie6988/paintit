@@ -436,8 +436,10 @@
 
   function zoomAt(mx,my,f){var ns=Math.max(.2,Math.min(16,sc*f));tx=mx-(mx-tx)*(ns/sc);ty=my-(my-ty)*(ns/sc);sc=ns;apply();}
   boardEl.addEventListener('wheel',function(e){if(document.getElementById('modal').classList.contains('show'))return;e.preventDefault();
-    if(e.ctrlKey){var r=boardEl.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:1/1.12);}
-    else{tx-=e.deltaX;ty-=e.deltaY;apply();}},{passive:false});
+    // Molette = zoom direct (sans Ctrl) ; balayage horizontal du pave tactile = deplacement
+    if(!e.ctrlKey&&Math.abs(e.deltaX)>Math.abs(e.deltaY)){tx-=e.deltaX;ty-=e.deltaY;apply();return;}
+    var d=e.deltaY*(e.deltaMode===1?33:e.deltaMode===2?400:1),r=boardEl.getBoundingClientRect();
+    zoomAt(e.clientX-r.left,e.clientY-r.top,Math.exp(-Math.max(-120,Math.min(120,d))*(e.ctrlKey?.01:.0015)));},{passive:false});
   var pts={},panStart=null,moved=false,pinchD=0;
   function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
   boardEl.addEventListener('pointerdown',function(e){if(isCtl(e.target))return;boardEl.setPointerCapture&&boardEl.setPointerCapture(e.pointerId);pts[e.pointerId]={x:e.clientX,y:e.clientY};
