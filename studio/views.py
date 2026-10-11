@@ -60,8 +60,9 @@ def home(request):
                         slides.append({"p": url_for(f), "t": url_for(f[:-8] + "_template.png")})
                     except ValueError:   # absent du manifest (collectstatic pas encore passe)
                         pass
+    from . import seo
     return render(request, "studio/home.html",
-                  {"library_preview": lib, "showcase_slides": _json.dumps(slides),
+                  {"ld_product": seo.dump(seo.product()), "library_preview": lib, "showcase_slides": _json.dumps(slides),
                    "first_slide": next((x for x in slides if "moto" in x["p"]), slides[0] if slides else None)})
 
 
@@ -159,7 +160,9 @@ def upload(request):
         form = UploadForm(initial=initial)
     has_photo = bool(last_photo and os.path.exists(last_photo))
     fx, fy = (request.session.get("last_focus") or [0.5, 0.5]) if has_photo else (0.5, 0.5)
+    from . import seo
     return render(request, "studio/upload.html", {
+        "ld_product": seo.dump(seo.product()),
         "form": form, "price_cfg": price_cfg(), "has_photo": has_photo,
         "focus_x": "%.4f" % fx, "focus_y": "%.4f" % fy,
     })
@@ -239,7 +242,7 @@ def digipaint_buy(request, uid):
     if m:
         w, h = round(float(m.group(1)) / 10, 1), round(float(m.group(2)) / 10, 1)
         orientation = "paysage" if w > h else "portrait"
-    canvas = compute_price("40x50", colors if colors in (12, 24, 36) else 24)
+    canvas = compute_price("40x50", colors if colors in (12, 24, 36, 48) else 24)
     request.session["order"] = {
         "uid": uid, "colors": colors, "width_cm": w, "height_cm": h,
         "orientation": orientation, "format_label": "40 x 50 cm",
@@ -416,7 +419,12 @@ def paint_portal(request):
 def gallery(request):
     """Onglet Gallery : toutes les toiles PaintIt en vrac, filtrables par recherche."""
     models = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-").order_by("category", "title"))
-    return render(request, "studio/gallery.html", {"models": models})
+    from . import seo
+    from django.utils.translation import gettext as _t
+    return render(request, "studio/gallery.html", {
+        "models": models,
+        "ld_list": seo.dump(seo.item_list(models, lambda m: reverse("studio:digipaint", args=[m.uid]))),
+        "ld_crumb": seo.dump(seo.breadcrumb((_t("Accueil"), "/"), (_t("Galerie"), request.path)))})
 
 
 def paint_send_code(request):
@@ -696,7 +704,7 @@ def digipaint_order(request, uid):
         if m and float(m.group(1)) > float(m.group(2)):
             orientation = "paysage"
     request.session["order"] = {"orientation": orientation,
-                                "colors": colors if colors in (12, 24, 36) else 24}
+                                "colors": colors if colors in (12, 24, 36, 48) else 24}
     request.session["buy_mode"] = True
     return redirect("studio:upload")
 
@@ -1289,6 +1297,15 @@ def privacy(request):
     return render(request, "studio/privacy.html", {"info": CompanyInfo.get()})
 
 
+def faq_page(request):
+    from . import faq, seo
+    from django.utils.translation import gettext as _t
+    items = faq.faq_items()
+    return render(request, "studio/faq.html", {
+        "items": items, "ld_faq": seo.dump(seo.faq(items)),
+        "ld_crumb": seo.dump(seo.breadcrumb((_t("Accueil"), "/"), (_t("Questions fréquentes"), request.path)))})
+
+
 def legal(request):
     from .models import CompanyInfo
     return render(request, "studio/legal.html", {"info": CompanyInfo.get()})
@@ -1448,7 +1465,7 @@ def sitemap_xml(request):
     from .models import DigitalCanvas
     site = settings.SITE_URL
     # pages publiques uniquement (les toiles /paint/<uid>/ ne sont pas indexees)
-    paths = ["/", "/create/", "/gallery/", "/contact/", "/cgv/", "/mentions-legales/", "/privacy/"]
+    paths = ["/", "/create/", "/gallery/", "/faq/", "/contact/", "/cgv/", "/mentions-legales/", "/privacy/"]
     langs = [c for c, _ in settings.LANGUAGES]
     x = ['<?xml version="1.0" encoding="UTF-8"?>',
          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
@@ -1500,8 +1517,8 @@ def shop_pricing(request):
                               "sort": KitFormat.objects.count()})
             except Exception:
                 pass
-        kit.c_12 = f("c_12"); kit.c_24 = f("c_24"); kit.c_36 = f("c_36")
-        kit.av_c12 = bb("av_c12"); kit.av_c24 = bb("av_c24"); kit.av_c36 = bb("av_c36")
+        kit.c_12 = f("c_12"); kit.c_24 = f("c_24"); kit.c_36 = f("c_36"); kit.c_48 = f("c_48", kit.c_48)
+        kit.av_c12 = bb("av_c12"); kit.av_c24 = bb("av_c24"); kit.av_c36 = bb("av_c36"); kit.av_c48 = bb("av_c48")
         kit.brushes_price = f("brushes_price", kit.brushes_price); kit.av_brushes = bb("av_brushes")
         kit.delivery_days_min = int(f("delivery_days_min", 5)); kit.delivery_days_max = int(f("delivery_days_max", 9))
         kit.discount_rate = f("discount_rate", kit.discount_rate)
@@ -1524,7 +1541,8 @@ def shop_pricing(request):
         "kit_formats": KitFormat.objects.all(),
         "kit_colors": [{"key":"12","price":kit.c_12,"av":kit.av_c12},
                        {"key":"24","price":kit.c_24,"av":kit.av_c24},
-                       {"key":"36","price":kit.c_36,"av":kit.av_c36}],
+                       {"key":"36","price":kit.c_36,"av":kit.av_c36},
+                       {"key":"48","price":kit.c_48,"av":kit.av_c48}],
         "tab_dims": [{"key":k,"price":getattr(tab,"d_"+k),"av":getattr(tab,"av_"+k)}
                      for k in ["30x40","40x50","50x70","60x80","70x100","80x120"]],
         "tab_materials": [{"key":"toile","label":"Toile","price":tab.m_toile,"av":tab.av_m_toile},

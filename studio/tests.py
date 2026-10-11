@@ -364,5 +364,49 @@ class SupplierPaletteTests(TestCase):
         self.assertIn("hex", out[1])                                           # repli sans reference
 
 
+class InboxTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
+        self.client.login(username="boss", password="pw-Secret-123")
+
+    def test_default_conversation_actions_target_the_message(self):
+        from studio.models import ContactMessage
+        m = ContactMessage.objects.create(name="A", email="a@x.fr", subject="s", message="m")
+        html = self.client.get("/admin-hub/messages/").content.decode()   # 1re conversation affichee par defaut
+        self.assertIn('action="/admin-hub/messages/%d/"' % m.pk, html)
+        self.client.post("/admin-hub/messages/%d/" % m.pk, {"op": "close"})
+        self.assertTrue(ContactMessage.objects.get(pk=m.pk).answered)
+        self.client.post("/admin-hub/messages/%d/" % m.pk, {"op": "delete_thread"})
+        self.assertFalse(ContactMessage.objects.filter(email="a@x.fr").exists())
+
+
+class SeoTests(TestCase):
+    def _ld(self, url):
+        import json, re
+        html = self.client.get(url).content.decode()
+        out = []
+        for b in re.findall(r'<script type="application/ld\+json">(.*?)</script>', html, re.S):
+            d = json.loads(b)
+            out += [g["@type"] for g in d["@graph"]] if "@graph" in d else [d["@type"]]
+        return out
+
+    def test_structured_data(self):
+        self.assertIn("Product", self._ld("/"))
+        self.assertIn("FAQPage", self._ld("/faq/"))
+        self.assertIn("FAQPage", self._ld("/it/faq/"))
+        self.assertIn("BreadcrumbList", self._ld("/gallery/"))
+
+    def test_faq_in_footer_and_sitemap(self):
+        self.assertContains(self.client.get("/"), 'href="/faq/"')
+        self.assertContains(self.client.get("/sitemap.xml"), "/faq/")
+
+    def test_48_colors_only_when_enabled(self):
+        from studio.models import Pricing
+        self.assertNotContains(self.client.get("/create/"), 'value="48"')
+        p = Pricing.get(); p.av_c48 = True; p.save()
+        self.assertContains(self.client.get("/create/"), 'value="48"')
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)

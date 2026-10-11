@@ -14,7 +14,7 @@ FORMATS = {
 }
 FORMAT_CHOICES = [(k, v[2]) for k, v in FORMATS.items()]
 ORIENTATION_CHOICES = [("portrait", _("Portrait")), ("paysage", _("Paysage"))]
-COLOR_CHOICES = [("12", _("12 couleurs")), ("24", _("24 couleurs")), ("36", _("36 couleurs"))]
+COLOR_CHOICES = [("12", _("12 couleurs")), ("24", _("24 couleurs")), ("36", _("36 couleurs")), ("48", _("48 couleurs"))]
 
 PHONE_CODES = [
     ("+33", "France (+33)"), ("+32", "Belgique (+32)"), ("+41", "Suisse (+41)"),
@@ -48,7 +48,8 @@ class UploadForm(forms.Form):
         super().__init__(*args, **kwargs)
         from .models import Pricing
         p = Pricing.get()
-        cols = [n for n in (12, 24, 36) if getattr(p, "av_c%d" % n, True)] or [24]
+        from .models import COLOR_COUNTS
+        cols = [n for n in COLOR_COUNTS if getattr(p, "av_c%d" % n, True)] or [24]
         self.fields["colors"].choices = [(v, l) for (v, l) in COLOR_CHOICES if int(v) in cols]
 
 

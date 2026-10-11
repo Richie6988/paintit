@@ -70,11 +70,11 @@
           <div class="muted">{{ cur.name }} · <a href="mailto:{{ cur.email }}">{{ cur.email }}</a> · reçu {{ cur.created_at|timesince }}</div></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           {% if cur.answered %}<span class="bdg2 ok">Traité</span>
-            <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="reopen">Rouvrir</button></form>
+            <form method="post" action="/admin-hub/messages/{{ cur.pk }}/">{% csrf_token %}<button class="pbtn sm" name="op" value="reopen">Rouvrir</button></form>
           {% else %}<span class="bdg2 warn">À traiter</span>
-            <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="close" title="Sans envoyer d'e-mail">Marquer traité</button></form>{% endif %}
-          <form method="post" data-confirm="Supprimer ce message ?" data-confirm-text="Le message et ses pièces jointes seront supprimés." data-danger>{% csrf_token %}<button class="pbtn sm" name="op" value="delete" style="color:#b42318">Supprimer</button></form>
-          <form method="post" data-confirm="Supprimer toute la conversation avec {{ cur.email }} ?" data-confirm-text="Tous les messages de cette adresse, leurs réponses et pièces jointes seront supprimés définitivement." data-ok="Tout supprimer" data-danger>{% csrf_token %}<button class="pbtn sm" name="op" value="delete_thread" style="color:#b42318">Supprimer la conversation</button></form>
+            <form method="post" action="/admin-hub/messages/{{ cur.pk }}/">{% csrf_token %}<button class="pbtn sm" name="op" value="close" title="Sans envoyer d'e-mail">Marquer traité</button></form>{% endif %}
+          <form method="post" action="/admin-hub/messages/{{ cur.pk }}/" data-confirm="Supprimer ce message ?" data-confirm-text="Le message et ses pièces jointes seront supprimés." data-danger>{% csrf_token %}<button class="pbtn sm" name="op" value="delete" style="color:#b42318">Supprimer</button></form>
+          <form method="post" action="/admin-hub/messages/{{ cur.pk }}/" data-confirm="Supprimer toute la conversation avec {{ cur.email }} ?" data-confirm-text="Tous les messages de cette adresse, leurs réponses et pièces jointes seront supprimés définitivement." data-ok="Tout supprimer" data-danger>{% csrf_token %}<button class="pbtn sm" name="op" value="delete_thread" style="color:#b42318">Supprimer la conversation</button></form>
         </div>
       </div>
       <div class="thread">
@@ -86,7 +86,7 @@
           {% endif %}
         {% endfor %}
       </div>
-      <form class="reply" method="post" enctype="multipart/form-data" onsubmit="this.querySelector('.send').disabled=true;this.querySelector('.send').textContent='Envoi…'">{% csrf_token %}<input type="hidden" name="op" value="reply">
+      <form class="reply" method="post" action="/admin-hub/messages/{{ cur.pk }}/" enctype="multipart/form-data" onsubmit="this.querySelector('.send').disabled=true;this.querySelector('.send').textContent='Envoi…'">{% csrf_token %}<input type="hidden" name="op" value="reply">
         <div class="canned"><span class="muted" style="font-size:.74rem;align-self:center">Réponses types :</span>{% for title, body in canned %}<button type="button" data-body="{{ body }}">{{ title }}</button>{% endfor %}</div>
         <textarea name="body" id="rbody" placeholder="Répondre à {{ cur.name|default:cur.email }}…"></textarea>
         <div class="bar">

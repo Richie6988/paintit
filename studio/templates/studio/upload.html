@@ -1,6 +1,7 @@
 {% extends "studio/base.html" %}
 {% load i18n l10n %}
 {% block title %}{% trans "Personnaliser" %} · PaintIt{% endblock %}
+{% block jsonld %}<script type="application/ld+json">{{ ld_product }}</script>{% endblock %}
 {% block content %}
 <section class="panel">
   <div class="progress"><b>1. {% trans "Photo" %}</b><span>2. {% trans "Aperçu" %}</span><span>3. {% trans "Livraison" %}</span><span>4. {% trans "Paiement" %}</span></div>

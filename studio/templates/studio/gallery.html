@@ -1,6 +1,7 @@
 {% extends "studio/base.html" %}
 {% load i18n %}
 {% block title %}Gallery · PaintIt{% endblock %}
+{% block jsonld %}{% if models %}<script type="application/ld+json">{{ ld_list }}</script>{% endif %}<script type="application/ld+json">{{ ld_crumb }}</script>{% endblock %}
 {% block content %}
 <section class="panel wide">
   <h1>{% trans "Galerie" %}</h1>

@@ -2,6 +2,9 @@ from django.db import models
 from django.utils import timezone
 
 
+COLOR_COUNTS = (12, 24, 36, 48)
+
+
 class Pricing(models.Model):
     """Grille tarifaire editable (tour de controle) :
     un prix par format, un supplement par palette de couleurs, le prix des pinceaux."""
@@ -16,6 +19,7 @@ class Pricing(models.Model):
     c_12 = models.FloatField("12 couleurs (+)", default=0.0)
     c_24 = models.FloatField("24 couleurs (+)", default=8.0)
     c_36 = models.FloatField("36 couleurs (+)", default=16.0)
+    c_48 = models.FloatField("48 couleurs (+)", default=24.0)
     # Options
     brushes_price = models.FloatField("Set de pinceaux", default=3.0)
     # Remise & livraison
@@ -40,6 +44,7 @@ class Pricing(models.Model):
     av_c12 = models.BooleanField("12 couleurs dispo", default=True)
     av_c24 = models.BooleanField("24 couleurs dispo", default=True)
     av_c36 = models.BooleanField("36 couleurs dispo", default=True)
+    av_c48 = models.BooleanField("48 couleurs dispo", default=False)   # a activer dans Tarifs
     av_brushes = models.BooleanField("Pinceaux dispo", default=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -67,7 +72,7 @@ class Pricing(models.Model):
         return keys or list(FORMATS)          # jamais vide
 
     def available_colors(self):
-        cols = [n for n in (12, 24, 36) if getattr(self, "av_c%d" % n, True)]
+        cols = [n for n in COLOR_COUNTS if getattr(self, "av_c%d" % n, True)]
         return cols or [24]
 
     def __str__(self):

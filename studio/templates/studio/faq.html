@@ -1,0 +1,30 @@
+{% extends "studio/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Questions fréquentes" %} · PaintIt{% endblock %}
+{% block meta_description %}{% trans "Tout savoir sur la peinture par numéros personnalisée PaintIt : photos, kit, formats, couleurs, délais, paiement." %}{% endblock %}
+{% block jsonld %}<script type="application/ld+json">{{ ld_faq }}</script>
+  <script type="application/ld+json">{{ ld_crumb }}</script>{% endblock %}
+{% block content %}
+<style>
+ .faq{max-width:780px;margin:0 auto}
+ .faq details{background:#fff;border:1px solid var(--ring,#e2e8f2);border-radius:14px;margin:10px 0;transition:box-shadow .15s}
+ .faq details[open]{box-shadow:0 6px 20px rgba(18,34,79,.07)}
+ .faq summary{list-style:none;cursor:pointer;padding:16px 46px 16px 18px;font-weight:700;color:var(--ink,#12224f);position:relative;font-size:1.02rem}
+ .faq summary::-webkit-details-marker{display:none}
+ .faq summary::after{content:"+";position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:1.4rem;color:var(--accent,#2f6bf2);transition:transform .2s}
+ .faq details[open] summary::after{transform:translateY(-50%) rotate(45deg)}
+ .faq .ans{padding:0 18px 16px;color:var(--muted,#5b647a);line-height:1.6;margin:0}
+ .faq-cta{text-align:center;margin:26px 0 6px}
+</style>
+<section class="panel faq">
+  <h1>{% trans "Questions fréquentes" %}</h1>
+  <p class="sub">{% trans "Tout ce qu'il faut savoir avant de transformer votre photo en peinture par numéros." %}</p>
+  {% for it in items %}
+  <details{% if forloop.first %} open{% endif %}><summary>{{ it.q }}</summary><p class="ans">{{ it.a }}</p></details>
+  {% endfor %}
+  <div class="faq-cta">
+    <a class="cta" href="{% url 'studio:upload' %}">{% trans "Créer ma toile" %}</a>
+    <p class="sub" style="margin-top:12px">{% trans "Une autre question ?" %} <a href="{% url 'studio:contact' %}">{% trans "Écrivez-nous" %}</a></p>
+  </div>
+</section>
+{% endblock %}

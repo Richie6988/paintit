@@ -1,5 +1,6 @@
 {% extends "studio/base.html" %}
 {% load static i18n %}
+{% block jsonld %}<script type="application/ld+json">{{ ld_product }}</script>{% endblock %}
 {% block content %}
 <section class="hero">
   <div class="hero-text">

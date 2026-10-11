@@ -1286,3 +1286,35 @@ msgid "%(n)s couleur"
 msgid_plural "%(n)s couleurs"
 msgstr[0] "%(n)s colour"
 msgstr[1] "%(n)s colours"
+
+msgid "48 couleurs"
+msgstr "48 colours"
+
+msgid "FAQ"
+msgstr "FAQ"
+
+msgid "Questions fréquentes"
+msgstr "Frequently asked questions"
+
+msgid ""
+"Tout savoir sur la peinture par numéros personnalisée PaintIt : photos, kit,"
+" formats, couleurs, délais, paiement."
+msgstr ""
+"Everything about PaintIt custom paint by numbers: photos, kit, sizes, "
+"colours, delivery, payment."
+
+msgid ""
+"Tout ce qu'il faut savoir avant de transformer votre photo en peinture par "
+"numéros."
+msgstr ""
+"Everything you need to know before turning your photo into a paint-by-"
+"numbers canvas."
+
+msgid "Une autre question ?"
+msgstr "Another question?"
+
+msgid "Écrivez-nous"
+msgstr "Write to us"
+
+msgid "Accueil"
+msgstr "Home"

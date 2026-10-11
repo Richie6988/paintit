@@ -54,7 +54,7 @@ def _dynamic_min_zone(width_cm, height_cm, colors):
     canvas (plus grand -> zones un peu plus fines car il y a plus de place).
     Renvoie (min_zone_mm, min_paint_mm) ; l'aire mini = min_zone_mm**2."""
     import math
-    base = {12: 2.3, 24: 1.8, 36: 1.5}.get(int(colors), 1.8)   # mm, cote mini de zone
+    base = {12: 2.3, 24: 1.8, 36: 1.5, 48: 1.3}.get(int(colors), 1.8)   # mm, cote mini de zone
     diag = math.hypot(float(width_cm), float(height_cm))
     scale = (64.0 / diag) ** 0.5                                # 40x50 (~64cm) = reference
     min_zone = max(1.4, min(3.6, base * scale))                # borne : 1.4 a 3.6 mm
@@ -181,7 +181,8 @@ def price_cfg():
     from .forms import FORMATS
     p = pricing()
     keys = [k for k in FORMATS if p.format_available(k)] or list(FORMATS)
-    cols = [n for n in (12, 24, 36) if getattr(p, "av_c%d" % n, True)] or [24]
+    from .models import COLOR_COUNTS
+    cols = [n for n in COLOR_COUNTS if getattr(p, "av_c%d" % n, True)] or [24]
     return {"formats": {k: p.format_price(k) for k in keys},
             "colors": {str(n): p.color_price(n) for n in cols},
             "brushes": p.brushes_price}

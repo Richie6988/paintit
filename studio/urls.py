@@ -70,6 +70,7 @@ urlpatterns = [
     path("privacy/", views.privacy, name="privacy"),
     path("mentions-legales/", views.legal, name="legal"),
     path("cgv/", views.cgv, name="cgv"),
+    path("faq/", views.faq_page, name="faq"),
     path("dashboard/", views.finance_dashboard, name="finance"),
     path(".well-known/appspecific/com.chrome.devtools.json", views.devtools),
     path("marketing/", views.marketing_page, name="marketing"),
