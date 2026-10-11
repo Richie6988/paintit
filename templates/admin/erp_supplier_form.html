@@ -95,6 +95,24 @@
         <span class="hlp wide" style="grid-column:1/-1">Les coûts produit saisis ci-dessus s'entendent <b>hors taxes</b>.</span>
       </div>
     </div>
+    <div class="pf-sec" id="erp-excel">
+      <div><h2>ERP du fournisseur (Excel)</h2><p>Pour un fournisseur qui travaille avec un ERP (MangoERP / 芒果店长…) <b>sans passer par Shopify</b> : il crée chez lui un « magasin personnalisé » (自定义店铺) et importe nos commandes avec « Excel导入手工订单 ». Téléversez son modèle Excel : PaintIt le remplira à chaque commande.</p></div>
+      <div class="pf-box one">
+        {% if xl.template %}
+          <div><b>Modèle : {{ xl.name }}</b> <span class="muted">· {{ xl.headers|length }} colonnes (en-têtes ligne {{ xl.header_row }})</span></div>
+          <table class="of"><tr><th>Colonne du modèle</th><th>Rempli avec</th></tr>
+            {% for c in xcols %}<tr><td>{{ c.header|default:"(sans titre)" }}</td><td><select name="xmap_{{ c.i }}"><option value="">— laisser vide —</option>
+              {% for k, lbl, kw in xfields %}<option value="{{ k }}" {% if c.field == k %}selected{% endif %}>{{ lbl }}</option>{% endfor %}</select></td></tr>{% endfor %}
+          </table>
+          <div class="pf-f"><label>Modèle de SKU</label><input type="text" name="xlsx_sku" value="{{ xl.sku|default:xsku_default }}">
+            <span class="hlp">Doit correspondre au SKU créé par le fournisseur dans son ERP. Variables : {format} (ex. 40x50), {colors} (ex. 24), {brushes} (B si pinceaux).</span></div>
+          <label class="sw"><input type="checkbox" name="xlsx_attach" {% if xl.attach %}checked{% endif %}> Joindre ce fichier Excel à chaque commande envoyée par e-mail</label>
+          <label class="sw"><input type="checkbox" name="xlsx_remove" value="1"> Retirer le modèle</label>
+        {% else %}<div class="muted">Aucun modèle : l'export utilisera un format standard (une colonne par champ, libellés FR + clés).</div>{% endif %}
+        <div class="pf-f"><label>{% if xl.template %}Remplacer le modèle{% else %}Modèle Excel du fournisseur (.xlsx){% endif %}</label><input type="file" name="xlsx_template" accept=".xlsx,.xlsm">
+          <span class="hlp">Dans MangoERP : Commandes (订单) → Créer une commande manuelle (手工创建订单) → télécharger « Excel模板 ». Les colonnes sont associées automatiquement (chinois, anglais, français), vérifiez-les ensuite.</span></div>
+      </div>
+    </div>
     <div class="pf-sec" id="nuancier-edit">
       <div><h2>Nuancier</h2><p>CSV des couleurs disponibles : 1re colonne = référence fournisseur, 2e = code hexadécimal (#RRGGBB). Chaque couleur calculée sera remplacée par la teinte disponible la plus proche.</p></div>
       <div class="pf-box one">

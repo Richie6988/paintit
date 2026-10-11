@@ -130,6 +130,8 @@ class Order(models.Model):
     brushes_amount = models.FloatField(default=0.0)
     price = models.FloatField()          # sous-total produit (toile + pinceaux)
     cost = models.FloatField(default=0.0)
+    supplier_paid_at = models.DateTimeField("Reglee au fournisseur le", null=True, blank=True)
+    supplier_payment_ref = models.CharField("Reference du reglement fournisseur", max_length=80, blank=True, default="")
     discount_code = models.CharField(max_length=32, null=True, blank=True)
     discount_amount = models.FloatField(default=0.0)
     total = models.FloatField()

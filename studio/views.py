@@ -1021,7 +1021,7 @@ def _upsert_order(o, shipping, status, supplier_ref=None):
         "width_cm": o["width_cm"], "height_cm": o["height_cm"], "colors": o["colors"],
         "difficulty": o.get("difficulty", "auto"),
         "brushes": bool(o.get("brushes")), "brushes_amount": o.get("brushes_amount", 0.0),
-        "price": o["price"], "cost": supplier.estimate_cost(o),
+        "price": o["price"], "cost": supplier.estimate_cost(o, shipping),
         "discount_code": d["code"] if d else None, "discount_amount": d["amount"] if d else 0.0,
         "total": o.get("total", o["price"]),
         "customer_name": shipping["full_name"], "customer_email": shipping["email"],
@@ -2165,6 +2165,26 @@ def erp_supplier(request, pk):
             sup.palette = []; sup.palette_updated_at = None
             sup.save(update_fields=["palette", "palette_updated_at"])
             messages.success(request, "Nuancier retiré : les couleurs seront de nouveau calculées librement.")
+        elif op == "tracking_import":
+            from . import xlsx_bridge
+            f = request.FILES.get("tracking")
+            if not f:
+                messages.error(request, "Choisissez le fichier de suivi (.xlsx ou .csv) exporté par le fournisseur.")
+            else:
+                n, errs = xlsx_bridge.import_tracking(sup, f.name, f.read())
+                (messages.success if n else messages.error)(
+                    request, "%d commande(s) passée(s) en « Expédiée » avec leur n° de suivi.%s" % (
+                        n, (" Ignorées : " + " ; ".join(errs[:6])) if errs else ""))
+        elif op == "pay_mark":
+            ids = [int(x) for x in request.POST.getlist("oid") if x.isdigit()]
+            ref = (request.POST.get("ref") or "").strip()[:80]
+            qs = Order.objects.filter(supplier=sup, pk__in=ids, supplier_paid_at__isnull=True)
+            n = qs.count()
+            qs.update(supplier_paid_at=timezone.now(), supplier_payment_ref=ref)
+            messages.success(request, "%d commande(s) marquée(s) réglée(s)%s." % (n, (" (réf. %s)" % ref) if ref else ""))
+        elif op == "pay_undo":
+            Order.objects.filter(supplier=sup, pk=request.POST.get("oid")).update(supplier_paid_at=None, supplier_payment_ref="")
+            messages.success(request, "Règlement annulé.")
         elif op == "assign":
             n = 0
             for o in erp.unassigned_orders():
@@ -2205,8 +2225,12 @@ def erp_supplier(request, pk):
                                                                               if x.supplier_id == sup.pk]),
                   "out": _json.dumps(sample_out, ensure_ascii=False, indent=2),
                   "in": _json.dumps(sample_in, ensure_ascii=False, indent=2)}
+    due = list(Order.objects.filter(supplier=sup, status__in=(Order.FULFILLED, Order.SHIPPED, Order.DELIVERED),
+                                    supplier_paid_at__isnull=True).order_by("created_at"))
+    paid = list(Order.objects.filter(supplier=sup, supplier_paid_at__isnull=False).order_by("-supplier_paid_at")[:8])
     return render(request, "admin/erp_supplier.html", {
-        "automation": automation,
+        "automation": automation, "due": due, "due_total": round(sum(o.cost or 0 for o in due), 2), "paid": paid,
+        "xl": (sup.offer or {}).get("xlsx") or {},
         **_admin.site.each_context(request), "sup": sup, "tab": tab, "rows": rows,
         "tabs": [(k, l, q.count()) for k, l, q in tabs], "events": events,
         "iban": mask(sup.iban), "api_key": mask(sup.api_key, 3),
@@ -2242,8 +2266,10 @@ def erp_supplier_edit(request, pk=None):
         raise Http404
     Form = _supplier_form_class()
     if request.method == "POST" and request.POST.get("op") == "delete" and sup:
-        name = sup.name
+        name, spk = sup.name, sup.pk
         sup.delete()
+        import shutil   # pieces jointes + modele Excel du fournisseur
+        shutil.rmtree(os.path.join(settings.MEDIA_ROOT, "private", "suppliers", str(spk)), ignore_errors=True)
         messages.success(request, "Fournisseur %s supprime." % name)
         return redirect("studio:erp_suppliers")
     form = Form(request.POST or None, instance=sup)
@@ -2274,8 +2300,12 @@ def erp_supplier_edit(request, pk=None):
              "brushes": g("extras", "brushes"),
              "options": list(o.get("options") or []) + [{} for _ in range(3)],
              "shipping": o.get("shipping") or {}, "taxes": o.get("taxes") or {"vat_recoverable": True}}
+    from . import xlsx_bridge
+    xl = o.get("xlsx") or {}
+    xcols = [{"i": i, "header": h, "field": (xl.get("map") or {}).get(str(i), "")} for i, h in enumerate(xl.get("headers") or [])]
     return render(request, "admin/erp_supplier_form.html", {
         **_admin.site.each_context(request), "form": form, "sup": sup, "sections": sec, "offer": offer,
+        "xl": xl, "xcols": xcols, "xfields": xlsx_bridge.FIELDS, "xsku_default": xlsx_bridge.DEFAULT_SKU,
         "erp_section": "suppliers"})
 
 
@@ -2297,6 +2327,7 @@ def _save_supplier_extras(request, sup):
         if n:
             opts.append({"name": n, "cost": cost("opt_cost_%d" % i)})
     from .models import Supplier as _S
+    xl = dict((sup.offer or {}).get("xlsx") or {})
     sup.offer = {
         "formats": {k: {"on": bool(P.get("fmt_on_" + k)), "cost": cost("fmt_cost_" + k)} for k, _l in _S.offer_formats()},
         "colors": {str(n): {"on": bool(P.get("col_on_%d" % n)), "cost": cost("col_cost_%d" % n)} for n in COLOR_COUNTS},
@@ -2305,6 +2336,38 @@ def _save_supplier_extras(request, sup):
         "shipping": {k: cost("ship_" + k) for k in ("fr", "eu", "world", "handling")},
         "taxes": {"vat_rate": cost("tax_vat_rate") or 0.0, "vat_recoverable": bool(P.get("tax_vat_recoverable")),
                   "duties_rate": cost("tax_duties_rate") or 0.0, "customs_fee": cost("tax_customs_fee") or 0.0}}
+    # Pont Excel (ERP du fournisseur : MangoERP...) : modele, correspondance des colonnes, SKU
+    tf = request.FILES.get("xlsx_template")
+    if P.get("xlsx_remove"):
+        xl = {}
+        notes.append("Modèle Excel retiré.")
+    elif tf:
+        from . import xlsx_bridge
+        rel = "private/suppliers/%d/erp_template.xlsx" % sup.pk
+        dst = os.path.join(settings.MEDIA_ROOT, rel)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, "wb") as out:
+            for chunk in tf.chunks():
+                out.write(chunk)
+        try:
+            headers, hrow = xlsx_bridge.read_template(dst)
+        except Exception:
+            headers, hrow = [], 1
+        if headers:
+            xl = {"template": rel, "name": tf.name[:120], "headers": headers, "header_row": hrow,
+                  "map": {str(i): k for i, k in xlsx_bridge.auto_map(headers).items()},
+                  "sku": xl.get("sku") or xlsx_bridge.DEFAULT_SKU, "attach": xl.get("attach", True)}
+            notes.append("Modèle Excel lu : %d colonnes, %d associées automatiquement (vérifiez la correspondance)."
+                         % (len(headers), len(xl["map"])))
+        else:
+            notes.append("Modèle Excel illisible (.xlsx attendu, avec une ligne d'en-têtes).")
+    elif xl:
+        xl["map"] = {str(i): P.get("xmap_%d" % i, "") for i in range(len(xl.get("headers") or []))
+                     if P.get("xmap_%d" % i)}
+        xl["sku"] = (P.get("xlsx_sku") or "").strip()[:80] or xl.get("sku") or ""
+        xl["attach"] = bool(P.get("xlsx_attach"))
+    if xl:
+        sup.offer["xlsx"] = xl
     fields = ["offer"]
     if P.get("palette_clear"):
         sup.palette, sup.palette_updated_at = [], None
@@ -2334,6 +2397,45 @@ def _save_supplier_extras(request, sup):
     if n:
         notes.append("%d pièce(s) jointe(s) ajoutée(s)." % n)
     return notes
+
+
+@staff_member_required
+def erp_supplier_export(request, pk, kind):
+    """Excel au format de l'ERP du fournisseur (commandes a traiter) ou releve des montants dus."""
+    from .models import Supplier
+    from . import xlsx_bridge
+    sup = Supplier.objects.filter(pk=pk).first()
+    if not sup:
+        raise Http404
+    qs = Order.objects.filter(supplier=sup)
+    stamp = timezone.now().strftime("%Y%m%d-%H%M")
+    if kind == "orders":
+        ids = [int(x) for x in request.GET.getlist("o") if x.isdigit()]
+        qs = qs.filter(pk__in=ids) if ids else qs.filter(status__in=(Order.PAID, Order.FULFILLED))
+        data = xlsx_bridge.build_xlsx(sup, list(qs.order_by("created_at")))
+        name = "paintit-commandes-%s.xlsx" % stamp
+    elif kind == "statement":
+        import openpyxl
+        wb = openpyxl.Workbook(); ws = wb.active; ws.title = "releve"
+        ws.append(["Commande", "Date", "Produit", "Statut", "Suivi", "Montant dû (EUR)"])
+        rows = qs.filter(status__in=(Order.FULFILLED, Order.SHIPPED, Order.DELIVERED),
+                         supplier_paid_at__isnull=True).order_by("created_at")
+        tot = 0.0
+        for o in rows:
+            ws.append([o.uid, o.created_at.strftime("%Y-%m-%d"), "%s · %d couleurs%s" % (o.format_label, o.colors, " · pinceaux" if o.brushes else ""),
+                       o.get_status_display(), o.tracking_number or "", round(o.cost or 0, 2)])
+            tot += o.cost or 0
+        ws.append([]); ws.append(["", "", "", "", "TOTAL", round(tot, 2)])
+        for col, w in zip("ABCDEF", (18, 12, 34, 22, 20, 16)):
+            ws.column_dimensions[col].width = w
+        import io as _io
+        buf = _io.BytesIO(); wb.save(buf); data = buf.getvalue()
+        name = "paintit-releve-%s-%s.xlsx" % (_slug(sup.name), stamp)
+    else:
+        raise Http404
+    resp = HttpResponse(data, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    resp["Content-Disposition"] = 'attachment; filename="%s"' % name
+    return resp
 
 
 @staff_member_required

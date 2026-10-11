@@ -16,7 +16,25 @@ except ImportError:
     requests = None
 
 
-def estimate_cost(order):
+EU = {"BE", "LU", "DE", "ES", "IT", "PT", "NL", "AT", "IE", "DK", "SE", "FI", "PL", "CZ", "SK", "SI", "HR", "HU",
+      "RO", "BG", "GR", "CY", "MT", "EE", "LV", "LT"}
+
+
+def estimate_cost(order, shipping=None):
+    """Cout de revient : offre du fournisseur Kit actif si elle tarife ce format, sinon estimation generique."""
+    try:
+        from .models import Supplier
+        from . import address
+        sup = Supplier.for_checkout("kit")
+        if sup:
+            iso = (address.COUNTRIES.get((shipping or {}).get("country") or "France") or ("FR",))[0]
+            zone = "fr" if iso == "FR" else "eu" if iso in EU else "world"
+            c = sup.order_cost("%dx%d" % (int(float(order["width_cm"])), int(float(order["height_cm"]))),
+                               int(order["colors"]), bool(order.get("brushes")), zone)
+            if c is not None:
+                return c
+    except Exception:
+        pass
     p = Pricing.get()
     area = float(order["width_cm"]) * float(order["height_cm"])
     c = (p.cost_base + area * p.cost_per_cm2

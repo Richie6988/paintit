@@ -98,6 +98,15 @@ def _send(sup, payload):
                                settings.DEFAULT_FROM_EMAIL, [sup.email])
             msg.attach("order_%s.json" % (o.get("uid") or "test"), json.dumps(payload, ensure_ascii=False, indent=2),
                        "application/json")
+            xl = (sup.offer or {}).get("xlsx") or {}
+            if o.get("uid") and xl.get("attach"):
+                # Fichier pret a importer dans l'ERP du fournisseur (MangoERP : Excel导入手工订单)
+                from .models import Order
+                from . import xlsx_bridge
+                row = Order.objects.filter(uid=o["uid"]).first()
+                if row:
+                    msg.attach("paintit_%s.xlsx" % o["uid"], xlsx_bridge.build_xlsx(sup, [row]),
+                               "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             return msg.send(fail_silently=False) > 0, "e-mail", ""
         except Exception as exc:
             return False, "e-mail", str(exc)[:300]

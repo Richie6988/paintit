@@ -58,6 +58,44 @@
       </div>
 
       <div class="card">
+        <div class="card-h"><h2>ERP du fournisseur (Excel)</h2>{% if xl.template %}<span class="bdg2 ok">Modèle {{ xl.headers|length }} col.</span>{% else %}<span class="bdg2 idle">Format standard</span>{% endif %}</div>
+        <p class="muted" style="margin:0 0 10px">Sans Shopify : le fournisseur importe ce fichier dans son ERP (MangoERP → 自定义店铺 → Excel导入手工订单), puis nous renvoie son export d'expédition avec les n° de suivi.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <a class="pbtn pri" href="/admin-hub/suppliers/{{ sup.pk }}/export/orders.xlsx">Télécharger les commandes à traiter (.xlsx)</a>
+          <a class="pbtn" href="/admin-hub/suppliers/{{ sup.pk }}/edit/#erp-excel">{% if xl.template %}Modifier le modèle{% else %}Ajouter son modèle Excel{% endif %}</a>
+        </div>
+        <form method="post" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px">{% csrf_token %}
+          <b style="font-size:.84rem">Retour de suivi :</b><input type="file" name="tracking" accept=".xlsx,.xlsm,.csv,text/csv" required>
+          <button class="pbtn" name="op" value="tracking_import">Importer les n° de suivi</button>
+        </form>
+        <div class="muted" style="font-size:.76rem;margin-top:6px">Colonnes reconnues : n° de commande (订单号 / order no), n° de suivi (跟踪号 / 运单号 / tracking), transporteur (物流方式 / carrier). Les commandes passent en « Expédiée » et le client est notifié comme avec l'API.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Règlements fournisseur</h2><span class="bdg2 {% if due_total %}warn{% else %}ok{% endif %}">{{ due_total|floatformat:2 }} € à régler</span></div>
+        <p class="muted" style="margin:0 0 10px">Commandes transmises non encore réglées (coût de revient calculé avec son offre). Payez par virement (IBAN de la fiche, ou Wise / Payoneer pour un fournisseur hors zone euro), puis cochez-les comme réglées.</p>
+        {% if due %}
+        <form method="post">{% csrf_token %}
+          <div style="max-height:260px;overflow:auto">
+          <table style="width:100%;font-size:.84rem;border-collapse:collapse">
+            {% for o in due %}<tr style="border-bottom:1px solid #f3f3f3"><td style="padding:4px 0;width:24px"><input type="checkbox" name="oid" value="{{ o.pk }}" checked style="width:auto"></td>
+              <td><a href="/admin-hub/orders/{{ o.pk }}/">{{ o.uid }}</a> <span class="muted">{{ o.created_at|date:"d/m" }} · {{ o.get_status_display }}</span></td>
+              <td style="text-align:right;font-weight:700">{{ o.cost|floatformat:2 }} €</td></tr>{% endfor %}
+          </table></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
+            <input type="text" name="ref" placeholder="Réf. du virement (facultatif)" style="flex:1;min-width:160px">
+            <button class="pbtn pri" name="op" value="pay_mark" data-confirm="Marquer les commandes cochées comme réglées ?" data-ok="Marquer réglées">Marquer réglées</button>
+            <a class="pbtn" href="/admin-hub/suppliers/{{ sup.pk }}/export/statement.xlsx">Relevé (.xlsx)</a>
+          </div>
+        </form>
+        {% else %}<div class="muted">Rien à régler.</div>{% endif %}
+        {% if paid %}<div class="muted" style="margin-top:12px;font-weight:700;font-size:.8rem">Derniers règlements</div>
+          {% for o in paid %}<form method="post" style="display:flex;justify-content:space-between;gap:8px;font-size:.8rem;padding:2px 0">{% csrf_token %}<input type="hidden" name="oid" value="{{ o.pk }}">
+            <span>{{ o.uid }} · {{ o.cost|floatformat:2 }} € · {{ o.supplier_paid_at|date:"d/m/Y" }}{% if o.supplier_payment_ref %} · {{ o.supplier_payment_ref }}{% endif %}</span>
+            <button class="pbtn sm" name="op" value="pay_undo" style="padding:1px 8px">annuler</button></form>{% endfor %}{% endif %}
+      </div>
+
+      <div class="card">
         <div class="card-h"><h2>Guide d'intégration</h2><span class="muted">à transmettre à l'équipe technique du fournisseur</span></div>
         <details open><summary style="font-weight:800;cursor:pointer;margin-bottom:6px">1 · Envoi des commandes (PaintIt → fournisseur)</summary>
           <p class="muted" style="margin:4px 0 8px">{% if sup.integration == "api" %}POST JSON sur <code>{{ sup.api_url|default:"(URL API à renseigner)" }}</code> · en-têtes <code>Authorization: Bearer &lt;clé API&gt;</code>, <code>X-PaintIt-Event</code>, <code>X-PaintIt-Signature</code> = HMAC-SHA256 (hex) du corps avec le secret webhook.{% else %}E-mail à <code>{{ sup.email|default:"(e-mail à renseigner)" }}</code> avec le même contenu en pièce jointe <code>order_&lt;ref&gt;.json</code>. Passez en intégration API pour un traitement 100 % automatique.{% endif %}</p>

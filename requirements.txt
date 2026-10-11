@@ -14,3 +14,4 @@ gunicorn
 psycopg2-binary
 redis
 pillow-heif
+openpyxl>=3.1
