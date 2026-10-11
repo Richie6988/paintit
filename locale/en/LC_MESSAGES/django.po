@@ -1318,3 +1318,128 @@ msgstr "Write to us"
 
 msgid "Accueil"
 msgstr "Home"
+
+msgid "Fabriqué en Europe"
+msgstr "Made in Europe"
+
+#, python-format
+msgid "Fabriqué en %(o)s"
+msgstr "Made in %(o)s"
+
+msgid "Europe"
+msgstr "Europe"
+
+msgid "Testez gratuitement avant d'acheter"
+msgstr "Try it free before you buy"
+
+msgid "Testez notre jeu de peinture par numéros en ligne"
+msgstr "Try our online paint-by-numbers game"
+
+msgid ""
+"Peignez gratuitement un modèle en ligne et découvrez la précision de notre "
+"algorithme avant de créer votre propre toile à partir de votre photo."
+msgstr ""
+"Paint a model online for free and discover our algorithm's precision before "
+"creating your own canvas from your photo."
+
+msgid "Testez notre jeu"
+msgstr "Try our game"
+
+msgid ""
+"Peignez gratuitement un modèle en ligne et découvrez la précision de notre "
+"algorithme. Ensuite, créez la vôtre à partir de votre propre photo."
+msgstr ""
+"Paint a model online for free and discover our algorithm's precision. Then "
+"create yours from your own photo."
+
+msgid "Peinture par numéros personnalisée à partir de votre photo"
+msgstr "Custom paint by numbers from your photo"
+
+msgid ""
+"Transformez votre photo en peinture par numéros personnalisée. Aperçu et jeu"
+" en ligne gratuits avant d'acheter, algorithme de précision, kit de qualité "
+"livré gratuitement. Dès 4 ans."
+msgstr ""
+"Turn your photo into a custom paint-by-numbers kit. Free preview and online "
+"game before you buy, precision algorithm, quality kit with free shipping. "
+"From age 4."
+
+msgid "Jouer gratuitement"
+msgstr "Play for free"
+
+msgid "Pourquoi PaintIt ?"
+msgstr "Why PaintIt?"
+
+msgid "100 % personnalisé"
+msgstr "100% personalised"
+
+msgid ""
+"Votre photo, votre toile. Pas un modèle de catalogue : chaque kit est "
+"unique, calculé pour votre image."
+msgstr ""
+"Your photo, your canvas. Not a catalogue design: every kit is unique, "
+"computed for your image."
+
+msgid "Testez avant d'acheter"
+msgstr "Try before you buy"
+
+msgid ""
+"Aperçu gratuit, jeu en ligne gratuit, prix affichés dès le départ : vous "
+"savez exactement ce que vous recevrez."
+msgstr ""
+"Free preview, free online game, prices shown upfront: you know exactly what "
+"you will receive."
+
+msgid "Un algorithme de précision"
+msgstr "A precision algorithm"
+
+msgid ""
+"Zones réellement peignables, numéros lisibles, couleurs choisies parmi de "
+"vraies peintures disponibles."
+msgstr ""
+"Truly paintable zones, readable numbers, colours picked from real available "
+"paints."
+
+msgid "Qualité premium"
+msgstr "Premium quality"
+
+msgid ""
+"Toile et peintures de qualité, contrôlées et livrées gratuitement chez vous."
+msgstr "Quality canvas and paints, checked and delivered free to your door."
+
+msgid "Pour tous, dès 4 ans"
+msgstr "For everyone, from age 4"
+
+msgid ""
+"Choisissez le niveau de détail : plus il y a de couleurs, plus la toile est "
+"fine."
+msgstr "Choose the level of detail: the more colours, the finer the canvas."
+
+#, python-format
+msgid "%(n)s couleurs"
+msgstr "%(n)s colours"
+
+msgid "Très accessible, dès 4 ans : idéal pour les enfants et les seniors."
+msgstr "Very accessible, from age 4: ideal for children and seniors."
+
+msgid "Le bon équilibre entre détail et plaisir."
+msgstr "The right balance between detail and fun."
+
+msgid "Pour les passionnés qui aiment les détails."
+msgstr "For enthusiasts who love detail."
+
+msgid "Le défi des experts."
+msgstr "The experts' challenge."
+
+msgid "dès 4 ans"
+msgstr "from age 4"
+
+msgid "Retour aux modèles"
+msgstr "Back to models"
+
+msgid ""
+"Ateliers de fabrication partenaires en Europe : nom, adresse et téléphone de"
+" livraison uniquement."
+msgstr ""
+"Partner production workshops in Europe: delivery name, address and phone "
+"number only."

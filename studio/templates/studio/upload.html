@@ -40,7 +40,7 @@
     <div class="field">
       <span>{{ form.colors.label }}</span>
       <div class="segmented">
-        {% for r in form.colors %}<label class="seg">{{ r.tag }}<span>{{ r.choice_label }}</span></label>{% endfor %}
+        {% for r in form.colors %}<label class="seg">{{ r.tag }}<span>{{ r.choice_label }}{% if r.data.value == "12" %}<small class="seg-hint">{% trans "dès 4 ans" %}</small>{% endif %}</span></label>{% endfor %}
       </div>
     </div>
 

@@ -1339,3 +1339,129 @@ msgstr "Scrivici"
 
 msgid "Accueil"
 msgstr "Home"
+
+msgid "Fabriqué en Europe"
+msgstr "Prodotto in Europa"
+
+#, python-format
+msgid "Fabriqué en %(o)s"
+msgstr "Prodotto in %(o)s"
+
+msgid "Europe"
+msgstr "Europa"
+
+msgid "Testez gratuitement avant d'acheter"
+msgstr "Provalo gratis prima di acquistare"
+
+msgid "Testez notre jeu de peinture par numéros en ligne"
+msgstr "Prova il nostro gioco di pittura con i numeri online"
+
+msgid ""
+"Peignez gratuitement un modèle en ligne et découvrez la précision de notre "
+"algorithme avant de créer votre propre toile à partir de votre photo."
+msgstr ""
+"Dipingi gratis un modello online e scopri la precisione del nostro algoritmo"
+" prima di creare la tua tela dalla tua foto."
+
+msgid "Testez notre jeu"
+msgstr "Prova il nostro gioco"
+
+msgid ""
+"Peignez gratuitement un modèle en ligne et découvrez la précision de notre "
+"algorithme. Ensuite, créez la vôtre à partir de votre propre photo."
+msgstr ""
+"Dipingi gratis un modello online e scopri la precisione del nostro "
+"algoritmo. Poi crea il tuo dalla tua foto."
+
+msgid "Peinture par numéros personnalisée à partir de votre photo"
+msgstr "Dipinto con i numeri personalizzato dalla tua foto"
+
+msgid ""
+"Transformez votre photo en peinture par numéros personnalisée. Aperçu et jeu"
+" en ligne gratuits avant d'acheter, algorithme de précision, kit de qualité "
+"livré gratuitement. Dès 4 ans."
+msgstr ""
+"Trasforma la tua foto in un dipinto con i numeri personalizzato. Anteprima e"
+" gioco online gratuiti prima di acquistare, algoritmo di precisione, kit di "
+"qualità con spedizione gratuita. Dai 4 anni."
+
+msgid "Jouer gratuitement"
+msgstr "Gioca gratis"
+
+msgid "Pourquoi PaintIt ?"
+msgstr "Perché PaintIt?"
+
+msgid "100 % personnalisé"
+msgstr "100% personalizzato"
+
+msgid ""
+"Votre photo, votre toile. Pas un modèle de catalogue : chaque kit est "
+"unique, calculé pour votre image."
+msgstr ""
+"La tua foto, la tua tela. Non un modello da catalogo: ogni kit è unico, "
+"calcolato per la tua immagine."
+
+msgid "Testez avant d'acheter"
+msgstr "Prova prima di acquistare"
+
+msgid ""
+"Aperçu gratuit, jeu en ligne gratuit, prix affichés dès le départ : vous "
+"savez exactement ce que vous recevrez."
+msgstr ""
+"Anteprima gratuita, gioco online gratuito, prezzi visibili fin dall'inizio: "
+"sai esattamente cosa riceverai."
+
+msgid "Un algorithme de précision"
+msgstr "Un algoritmo di precisione"
+
+msgid ""
+"Zones réellement peignables, numéros lisibles, couleurs choisies parmi de "
+"vraies peintures disponibles."
+msgstr ""
+"Zone davvero dipingibili, numeri leggibili, colori scelti tra veri colori "
+"disponibili."
+
+msgid "Qualité premium"
+msgstr "Qualità premium"
+
+msgid ""
+"Toile et peintures de qualité, contrôlées et livrées gratuitement chez vous."
+msgstr "Tela e colori di qualità, controllati e consegnati gratis a casa tua."
+
+msgid "Pour tous, dès 4 ans"
+msgstr "Per tutti, dai 4 anni"
+
+msgid ""
+"Choisissez le niveau de détail : plus il y a de couleurs, plus la toile est "
+"fine."
+msgstr ""
+"Scegli il livello di dettaglio: più colori ci sono, più la tela è fine."
+
+#, python-format
+msgid "%(n)s couleurs"
+msgstr "%(n)s colori"
+
+msgid "Très accessible, dès 4 ans : idéal pour les enfants et les seniors."
+msgstr "Molto accessibile, dai 4 anni: ideale per bambini e anziani."
+
+msgid "Le bon équilibre entre détail et plaisir."
+msgstr "Il giusto equilibrio tra dettaglio e divertimento."
+
+msgid "Pour les passionnés qui aiment les détails."
+msgstr "Per gli appassionati dei dettagli."
+
+msgid "Le défi des experts."
+msgstr "La sfida degli esperti."
+
+msgid "dès 4 ans"
+msgstr "dai 4 anni"
+
+msgid "Retour aux modèles"
+msgstr "Torna ai modelli"
+
+msgid ""
+"Ateliers de fabrication partenaires en Europe : nom, adresse et téléphone de"
+" livraison uniquement."
+msgstr ""
+"Laboratori di produzione partner in Europa: solo nome, indirizzo e telefono "
+"di consegna."

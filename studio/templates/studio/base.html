@@ -19,7 +19,7 @@
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[
-    {"@type":"Organization","@id":"{{ SITE_URL }}/#org","name":"PaintIt","url":"{{ SITE_URL }}/","logo":"{{ SITE_URL }}{% static 'studio/img/logo.png' %}","image":"{{ SITE_URL }}{% static 'studio/img/og.jpg' %}","contactPoint":{"@type":"ContactPoint","contactType":"customer service","email":"contact@paintit.click","url":"{{ SITE_URL }}/contact/","availableLanguage":["fr","en","de","es","it"]}},
+    {"@type":"Organization","@id":"{{ SITE_URL }}/#org","name":"PaintIt","slogan":"Votre souvenir. Votre chef-d’œuvre.","description":"Peinture par numéros personnalisée à partir de vos photos : testez gratuitement avant d'acheter, algorithme de précision, kits de qualité{% if MADE_IN %} fabriqués en {{ MADE_IN }}{% endif %}.","url":"{{ SITE_URL }}/","logo":"{{ SITE_URL }}{% static 'studio/img/logo.png' %}","image":"{{ SITE_URL }}{% static 'studio/img/og.jpg' %}","contactPoint":{"@type":"ContactPoint","contactType":"customer service","email":"contact@paintit.click","url":"{{ SITE_URL }}/contact/","availableLanguage":["fr","en","de","es","it"]}},
     {"@type":"WebSite","@id":"{{ SITE_URL }}/#site","url":"{{ SITE_URL }}/","name":"PaintIt","publisher":{"@id":"{{ SITE_URL }}/#org"},"inLanguage":"{{ LANGUAGE_CODE }}"}]}</script>
   {% block jsonld %}{% endblock %}
   {% if ANALYTICS_SRC %}<script defer data-domain="{{ ANALYTICS_DOMAIN }}" src="{{ ANALYTICS_SRC }}"></script>{% endif %}
@@ -40,7 +40,7 @@
 </head>
 <body>
   <div class="topbar">
-    <span class="tb-msg"><span>{% trans "Livraison offerte" %}</span><span class="tb-x"> &middot; {% trans "Toile digitale offerte" %}</span><span class="tb-x2"> &middot; {% trans "Aperçu gratuit en quelques secondes" %}</span></span>
+    <span class="tb-msg"><span>{% trans "Livraison offerte" %}</span>{% if MADE_IN_LABEL %}<span class="tb-x"> &middot; {{ MADE_IN_LABEL }}</span>{% endif %}<span class="tb-x2"> &middot; {% trans "Testez gratuitement avant d'acheter" %}</span></span>
     {% get_current_language as LANG %}
     <details class="langdd" id="langform" data-current="{{ LANG }}">
       <summary aria-label="Langue / Language"><svg class="globe" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>{{ LANG|upper }}<svg viewBox="0 0 12 12" width="10" height="10"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></summary>
@@ -55,7 +55,7 @@
       <span class="brand-word" data-noi18n translate="no"><span class="p">Paint</span><span class="it">It</span></span>
     </a>
     <div class="nav-right">
-      <a class="nav-link" href="{% url 'studio:gallery' %}">{% trans "Galerie" %}</a>
+      <a class="nav-link" href="{% url 'studio:gallery' %}">{% trans "Jouer" %}</a>
       <a class="nav-link" href="{% url 'studio:paint_portal' %}">{% trans "Mes Toiles" %}</a>
       <a class="nav-cta" href="{% url 'studio:upload' %}">{% trans "Créer ma toile" %}</a>
     </div>

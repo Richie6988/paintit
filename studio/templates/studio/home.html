@@ -1,6 +1,8 @@
 {% extends "studio/base.html" %}
 {% load static i18n %}
 {% block jsonld %}<script type="application/ld+json">{{ ld_product }}</script>{% endblock %}
+{% block title %}PaintIt · {% trans "Peinture par numéros personnalisée à partir de votre photo" %}{% endblock %}
+{% block meta_description %}{% trans "Transformez votre photo en peinture par numéros personnalisée. Aperçu et jeu en ligne gratuits avant d'acheter, algorithme de précision, kit de qualité livré gratuitement. Dès 4 ans." %}{% endblock %}
 {% block content %}
 <section class="hero">
   <div class="hero-text">
@@ -34,9 +36,34 @@
   <p class="reassure">{% trans "Gratuit, sans inscription. Aperçu en quelques secondes." %}</p>
 </section>
 
+<section class="why">
+  <h2>{% trans "Pourquoi PaintIt ?" %}</h2>
+  <div class="why-grid">
+    <div class="why-c"><span class="wi">&#9733;</span><h3>{% trans "100 % personnalisé" %}</h3>
+      <p>{% trans "Votre photo, votre toile. Pas un modèle de catalogue : chaque kit est unique, calculé pour votre image." %}</p></div>
+    <div class="why-c"><span class="wi">&#10003;</span><h3>{% trans "Testez avant d'acheter" %}</h3>
+      <p>{% trans "Aperçu gratuit, jeu en ligne gratuit, prix affichés dès le départ : vous savez exactement ce que vous recevrez." %}</p></div>
+    <div class="why-c"><span class="wi">&#9670;</span><h3>{% trans "Un algorithme de précision" %}</h3>
+      <p>{% trans "Zones réellement peignables, numéros lisibles, couleurs choisies parmi de vraies peintures disponibles." %}</p></div>
+    <div class="why-c"><span class="wi">&#10022;</span><h3>{% trans "Qualité premium" %}</h3>
+      <p>{% if MADE_IN_LABEL %}{{ MADE_IN_LABEL }}. {% endif %}{% trans "Toile et peintures de qualité, contrôlées et livrées gratuitement chez vous." %}</p></div>
+  </div>
+</section>
+
+<section class="ages">
+  <h2>{% trans "Pour tous, dès 4 ans" %}</h2>
+  <p class="sub">{% trans "Choisissez le niveau de détail : plus il y a de couleurs, plus la toile est fine." %}</p>
+  <div class="ages-grid">
+    {% for n in colors_available %}
+    <div class="age-c{% if n == 12 %} hl{% endif %}"><b>{% blocktrans %}{{ n }} couleurs{% endblocktrans %}</b>
+      <span>{% if n == 12 %}{% trans "Très accessible, dès 4 ans : idéal pour les enfants et les seniors." %}{% elif n == 24 %}{% trans "Le bon équilibre entre détail et plaisir." %}{% elif n == 36 %}{% trans "Pour les passionnés qui aiment les détails." %}{% else %}{% trans "Le défi des experts." %}{% endif %}</span></div>
+    {% endfor %}
+  </div>
+</section>
+
 {% if library_preview %}
 <section class="lib-showcase">
-  <h2>{% trans "Des modèles prêts à peindre" %}</h2>
+  <h2>{% trans "Testez notre jeu" %}</h2>
   <div class="lib-carousel"><div class="lib-track">
     {% for m in library_preview %}
     <a class="lib-tile" href="{% url 'studio:digipaint' m.uid %}">
@@ -51,7 +78,7 @@
     </a>
     {% endfor %}
   </div></div>
-  <a class="cta" style="margin-top:52px" href="{% url 'studio:gallery' %}">{% trans "Voir tous les modèles" %}</a>
+  <a class="cta" style="margin-top:52px" href="{% url 'studio:gallery' %}">{% trans "Jouer gratuitement" %}</a>
 </section>
 {% endif %}
 

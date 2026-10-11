@@ -1349,3 +1349,128 @@ msgstr "Schreiben Sie uns"
 
 msgid "Accueil"
 msgstr "Startseite"
+
+msgid "Fabriqué en Europe"
+msgstr "Hergestellt in Europa"
+
+#, python-format
+msgid "Fabriqué en %(o)s"
+msgstr "Hergestellt in %(o)s"
+
+msgid "Europe"
+msgstr "Europa"
+
+msgid "Testez gratuitement avant d'acheter"
+msgstr "Vor dem Kauf kostenlos testen"
+
+msgid "Testez notre jeu de peinture par numéros en ligne"
+msgstr "Testen Sie unser Online-Malen-nach-Zahlen-Spiel"
+
+msgid ""
+"Peignez gratuitement un modèle en ligne et découvrez la précision de notre "
+"algorithme avant de créer votre propre toile à partir de votre photo."
+msgstr ""
+"Malen Sie kostenlos ein Motiv online und entdecken Sie die Präzision unseres"
+" Algorithmus, bevor Sie Ihr eigenes Bild aus Ihrem Foto erstellen."
+
+msgid "Testez notre jeu"
+msgstr "Testen Sie unser Spiel"
+
+msgid ""
+"Peignez gratuitement un modèle en ligne et découvrez la précision de notre "
+"algorithme. Ensuite, créez la vôtre à partir de votre propre photo."
+msgstr ""
+"Malen Sie kostenlos ein Motiv online und entdecken Sie die Präzision unseres"
+" Algorithmus. Dann erstellen Sie Ihres aus Ihrem eigenen Foto."
+
+msgid "Peinture par numéros personnalisée à partir de votre photo"
+msgstr "Personalisiertes Malen nach Zahlen aus Ihrem Foto"
+
+msgid ""
+"Transformez votre photo en peinture par numéros personnalisée. Aperçu et jeu"
+" en ligne gratuits avant d'acheter, algorithme de précision, kit de qualité "
+"livré gratuitement. Dès 4 ans."
+msgstr ""
+"Verwandeln Sie Ihr Foto in ein personalisiertes Malen-nach-Zahlen-Set. "
+"Kostenlose Vorschau und Online-Spiel vor dem Kauf, präziser Algorithmus, "
+"hochwertiges Set mit kostenlosem Versand. Ab 4 Jahren."
+
+msgid "Jouer gratuitement"
+msgstr "Kostenlos spielen"
+
+msgid "Pourquoi PaintIt ?"
+msgstr "Warum PaintIt?"
+
+msgid "100 % personnalisé"
+msgstr "100 % personalisiert"
+
+msgid ""
+"Votre photo, votre toile. Pas un modèle de catalogue : chaque kit est "
+"unique, calculé pour votre image."
+msgstr ""
+"Ihr Foto, Ihr Bild. Kein Katalogmotiv: Jedes Set ist einzigartig und für Ihr"
+" Bild berechnet."
+
+msgid "Testez avant d'acheter"
+msgstr "Testen vor dem Kauf"
+
+msgid ""
+"Aperçu gratuit, jeu en ligne gratuit, prix affichés dès le départ : vous "
+"savez exactement ce que vous recevrez."
+msgstr ""
+"Kostenlose Vorschau, kostenloses Online-Spiel, Preise von Anfang an "
+"sichtbar: Sie wissen genau, was Sie erhalten."
+
+msgid "Un algorithme de précision"
+msgstr "Ein präziser Algorithmus"
+
+msgid ""
+"Zones réellement peignables, numéros lisibles, couleurs choisies parmi de "
+"vraies peintures disponibles."
+msgstr ""
+"Wirklich malbare Felder, lesbare Zahlen, Farben aus echten verfügbaren "
+"Farbtöpfen."
+
+msgid "Qualité premium"
+msgstr "Premium-Qualität"
+
+msgid ""
+"Toile et peintures de qualité, contrôlées et livrées gratuitement chez vous."
+msgstr "Hochwertige Leinwand und Farben, geprüft und kostenlos geliefert."
+
+msgid "Pour tous, dès 4 ans"
+msgstr "Für alle, ab 4 Jahren"
+
+msgid ""
+"Choisissez le niveau de détail : plus il y a de couleurs, plus la toile est "
+"fine."
+msgstr "Wählen Sie den Detailgrad: Je mehr Farben, desto feiner das Bild."
+
+#, python-format
+msgid "%(n)s couleurs"
+msgstr "%(n)s Farben"
+
+msgid "Très accessible, dès 4 ans : idéal pour les enfants et les seniors."
+msgstr "Sehr zugänglich, ab 4 Jahren: ideal für Kinder und Senioren."
+
+msgid "Le bon équilibre entre détail et plaisir."
+msgstr "Die richtige Balance zwischen Detail und Spaß."
+
+msgid "Pour les passionnés qui aiment les détails."
+msgstr "Für Enthusiasten, die Details lieben."
+
+msgid "Le défi des experts."
+msgstr "Die Herausforderung für Experten."
+
+msgid "dès 4 ans"
+msgstr "ab 4 Jahren"
+
+msgid "Retour aux modèles"
+msgstr "Zurück zu den Motiven"
+
+msgid ""
+"Ateliers de fabrication partenaires en Europe : nom, adresse et téléphone de"
+" livraison uniquement."
+msgstr ""
+"Partner-Produktionswerkstätten in Europa: nur Name, Lieferadresse und "
+"Telefonnummer."

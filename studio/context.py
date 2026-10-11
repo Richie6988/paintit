@@ -22,6 +22,7 @@ def assets(request):
                  for c, _l in settings.LANGUAGES]
     return {"SITE_URL": site, "HREFLANGS": alts, "LANG_URLS": lang_urls, "LANG_MENU": lang_menu,
             # Mesure d'audience sans cookie (Plausible / compatible) : pas de bandeau cookies requis
+            "MADE_IN": _made_in(), "MADE_IN_LABEL": _made_in_label(),
             "ANALYTICS_SRC": getattr(settings, "ANALYTICS_SRC", ""),
             "ANALYTICS_DOMAIN": getattr(settings, "ANALYTICS_DOMAIN", "")}
 
@@ -44,3 +45,19 @@ def erp_nav(request):
                 "erp_path": path}
     except Exception:
         return {}
+
+
+def _made_in():
+    try:
+        from .models import CompanyInfo
+        return CompanyInfo.get().production_origin or ""
+    except Exception:
+        return ""
+
+
+def _made_in_label():
+    from django.utils.translation import gettext as _
+    o = _made_in()
+    if not o:
+        return ""
+    return _("Fabriqué en Europe") if o.strip().lower() == "europe" else _("Fabriqué en %(o)s") % {"o": o}

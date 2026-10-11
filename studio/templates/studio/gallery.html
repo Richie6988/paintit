@@ -1,10 +1,12 @@
 {% extends "studio/base.html" %}
 {% load i18n %}
-{% block title %}Gallery · PaintIt{% endblock %}
+{% block title %}{% trans "Testez notre jeu de peinture par numéros en ligne" %} · PaintIt{% endblock %}
+{% block meta_description %}{% trans "Peignez gratuitement un modèle en ligne et découvrez la précision de notre algorithme avant de créer votre propre toile à partir de votre photo." %}{% endblock %}
 {% block jsonld %}{% if models %}<script type="application/ld+json">{{ ld_list }}</script>{% endif %}<script type="application/ld+json">{{ ld_crumb }}</script>{% endblock %}
 {% block content %}
 <section class="panel wide">
-  <h1>{% trans "Galerie" %}</h1>
+  <h1>{% trans "Testez notre jeu" %}</h1>
+  <p class="sub">{% trans "Peignez gratuitement un modèle en ligne et découvrez la précision de notre algorithme. Ensuite, créez la vôtre à partir de votre propre photo." %}</p>
   <input type="search" id="gsearch" class="g-search" placeholder="{% trans 'Rechercher une toile…' %}" autocomplete="off">
   {% if models %}
     <div class="models-grid" id="ggrid">

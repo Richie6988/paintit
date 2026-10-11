@@ -21,7 +21,8 @@
   <h2>{% trans "Sous-traitants" %}</h2>
   <ul>
     <li>{% trans "Stripe (paiement) : Irlande / États-Unis." %}</li>
-    <li>{% trans "Ateliers de fabrication partenaires, y compris hors de l'Union européenne (Chine) : nom, adresse et téléphone de livraison uniquement, transmis sous clauses contractuelles types de la Commission européenne." %}</li>
+    {% if MADE_IN|lower == "europe" %}<li>{% trans "Ateliers de fabrication partenaires en Europe : nom, adresse et téléphone de livraison uniquement." %}</li>
+    {% else %}<li>{% trans "Ateliers de fabrication partenaires, y compris hors de l'Union européenne (Chine) : nom, adresse et téléphone de livraison uniquement, transmis sous clauses contractuelles types de la Commission européenne." %}</li>{% endif %}
     <li>{% trans "Hébergement du site et envoi des e-mails" %}{% if info.host %} : {{ info.host|linebreaksbr }}{% endif %}.</li>
   </ul>
 

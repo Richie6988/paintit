@@ -20,8 +20,13 @@ def product(request=None):
     return {
         "@context": "https://schema.org", "@type": "Product",
         "name": "Peinture par numéros personnalisée PaintIt",
-        "description": "Kit de peinture par numéros fabriqué à partir de votre photo : toile numérotée, "
-                       "peintures numérotées et poster de référence. Aperçu gratuit en ligne.",
+        "description": ("Kit de peinture par numéros 100 % personnalisé, calculé à partir de votre photo par un "
+                        "algorithme de précision : toile numérotée, peintures numérotées et poster de référence. "
+                        "Aperçu et jeu en ligne gratuits avant d'acheter. Dès 4 ans en 12 couleurs."
+                        + (" Fabriqué en %s." % origin() if origin() else "")),
+        "audience": {"@type": "PeopleAudience", "suggestedMinAge": 4},
+        "additionalProperty": [{"@type": "PropertyValue", "name": "Nombre de couleurs",
+                                "value": ", ".join(str(n) for n in p.available_colors())}],
         "image": site + "/static/studio/img/og.jpg",
         "brand": {"@type": "Brand", "name": "PaintIt"},
         "category": "Arts & Crafts > Painting Kits",
@@ -42,6 +47,14 @@ def product(request=None):
                                                "returnPolicyCategory": "https://schema.org/MerchantReturnNotPermitted",
                                                "applicableCountry": "FR"}},
     }
+
+
+def origin():
+    try:
+        from .models import CompanyInfo
+        return CompanyInfo.get().production_origin or ""
+    except Exception:
+        return ""
 
 
 def faq(items):

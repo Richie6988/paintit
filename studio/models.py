@@ -203,6 +203,10 @@ class CompanyInfo(models.Model):
     host = models.TextField("Hébergeur (nom, adresse, téléphone)", blank=True, default="")
     mediator = models.TextField("Médiateur de la consommation (nom, site)", blank=True, default="")
     invoice_prefix = models.CharField("Préfixe des factures", max_length=10, default="F")
+    production_origin = models.CharField(
+        "Lieu de fabrication des kits", max_length=60, blank=True, default="Europe",
+        help_text="Affiché sur le site (« Fabriqué en Europe »), la FAQ et les données SEO. Videz-le si la "
+                  "fabrication n'est pas garantie dans cette zone : l'allégation doit rester exacte.")
 
     class Meta:
         verbose_name = "Infos légales"

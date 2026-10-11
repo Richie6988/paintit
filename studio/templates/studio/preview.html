@@ -32,6 +32,7 @@
     <div class="colors-info">
       <b>{% blocktrans count n=order.colors_list|length|default:order.colors %}{{ n }} couleur{% plural %}{{ n }} couleurs{% endblocktrans %}</b>
       <span>{% trans "utilisées pour votre toile, un pot de peinture numéroté par couleur." %}</span>
+      {% if order.colors == 12 %}<span class="ci-age">{% trans "Très accessible, dès 4 ans : idéal pour les enfants et les seniors." %}</span>{% endif %}
       {% if order.colors_list %}<div class="ci-chips">{% for c in order.colors_list %}<i style="background:{{ c.hex }}" title="{{ c.number }}"></i>{% endfor %}</div>{% endif %}
     </div>
     {% if formats %}

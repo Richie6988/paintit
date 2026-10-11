@@ -62,7 +62,8 @@ def home(request):
                         pass
     from . import seo
     return render(request, "studio/home.html",
-                  {"ld_product": seo.dump(seo.product()), "library_preview": lib, "showcase_slides": _json.dumps(slides),
+                  {"ld_product": seo.dump(seo.product()), "colors_available": Pricing.get().available_colors(),
+                   "library_preview": lib, "showcase_slides": _json.dumps(slides),
                    "first_slide": next((x for x in slides if "moto" in x["p"]), slides[0] if slides else None)})
 
 
@@ -306,7 +307,7 @@ def digipaint(request, uid):
     if order and order.get("uid") == uid:
         back_url, back_label = reverse("studio:preview"), _("Retour à la commande")
     elif uid.startswith(("gal-", "lib-")):
-        back_url, back_label = reverse("studio:gallery"), _("Retour à la galerie")
+        back_url, back_label = reverse("studio:gallery"), _("Retour aux modèles")
     else:
         back_url, back_label = reverse("studio:paint_portal"), _("Mes toiles")
     return render(request, "studio/digipaint.html",
@@ -424,7 +425,7 @@ def gallery(request):
     return render(request, "studio/gallery.html", {
         "models": models,
         "ld_list": seo.dump(seo.item_list(models, lambda m: reverse("studio:digipaint", args=[m.uid]))),
-        "ld_crumb": seo.dump(seo.breadcrumb((_t("Accueil"), "/"), (_t("Galerie"), request.path)))})
+        "ld_crumb": seo.dump(seo.breadcrumb((_t("Accueil"), "/"), (_t("Testez notre jeu"), request.path)))})
 
 
 def paint_send_code(request):
@@ -1371,90 +1372,85 @@ def finance_dashboard(request):
     return redirect("studio:admin_hub")
 
 
+def _geo_facts():
+    """Faits verifiables (prix, delais, couleurs, origine) pour les moteurs IA (GEO) et le SEO."""
+    from .models import KitFormat, CompanyInfo
+    from . import faq as _faq
+    p = Pricing.get()
+    fmts = list(KitFormat.objects.filter(available=True))
+    prices = [float(f.price) for f in fmts] or [p.format_price("40x50")]
+    return {
+        "site": settings.SITE_URL, "origin": CompanyInfo.get().production_origin or "",
+        "formats": [f.label for f in fmts], "price_from": min(prices),
+        "colors": p.available_colors(), "dmin": p.delivery_days_min, "dmax": p.delivery_days_max,
+        "faq": _faq.faq_items("fr"),
+    }
+
+
 def llm_txt(request):
     from django.http import HttpResponse
-    site = settings.SITE_URL
-    body = """# PaintIt , la peinture par numeros reinventee (a partir de vos photos)
-
-PaintIt transforme n'importe quelle photo en une toile a peindre par numeros, personnalisee,
-d'une precision epoustouflante. Apercu gratuit en moins d'une minute. Toile physique livree chez
-vous + une toile numerique jouable en ligne offerte.
-
-## Mots-cles
-peinture par numeros personnalisee, toile a peindre a partir d'une photo, paint by numbers custom,
-peinture par numero adulte, cadeau personnalise photo, tableau a peindre soi-meme, kit peinture
-par numeros, toile numerotee, peinture par numeros sur mesure, transformer photo en peinture,
-custom paint by numbers from photo, peinture par numeros enfant, idee cadeau original, deco murale
-personnalisee, loisir creatif anti-stress, peinture numerique en ligne.
-
-## Proposition de valeur
-- Le meilleur algorithme de generation de peinture par numeros du marche (rendu net, zones propres).
-- Apercu genere GRATUITEMENT en moins d'une minute a partir de votre image.
-- Kit physique livre : toile numerotee, pots de peinture assortis, pinceaux, emballage soigne.
-- Bonus digital : une toile numerique jouable en ligne (peindre, score, recompenses).
-- Formats multiples (30x40, 40x40, 40x50...) et nombre de couleurs ajustable.
-- Livraison offerte.
-
-## Cas d'usage
-- Cadeau personnalise (anniversaire, mariage, naissance, Noel, fete des meres/peres).
-- Portrait de famille, animal de compagnie, paysage, souvenir de voyage.
-- Activite relaxante / anti-stress, loisir creatif adulte et enfant.
-- Deco murale unique a partir d'une photo qui compte.
-
-## FAQ (questions frequentes)
-Q: Comment transformer une photo en peinture par numeros ? R: Envoyez votre photo sur PaintIt, l'algorithme genere une toile numerotee personnalisee en moins d'une minute.
-Q: Est-ce gratuit ? R: L'apercu est gratuit et une toile numerique est offerte.
-Q: Quels formats ? R: Plusieurs formats (30x40, 40x40, 40x50 cm et plus), avec un nombre de couleurs ajustable.
-Q: Que contient le kit ? R: Une toile numerotee, des pots de peinture assortis, des pinceaux, un poster/instructions, et la toile numerique jouable.
-Q: Peut-on peindre en ligne ? R: Oui, chaque creation donne une toile numerique jouable (mode digital) avec score.
-Q: Faut-il savoir dessiner ? R: Non, il suffit de peindre les zones numerotees avec les bonnes couleurs.
-Q: Combien de temps pour recevoir ? R: Livraison offerte, delais indiques au checkout.
-Q: Bon cadeau ? R: Oui, ideal comme cadeau personnalise a partir d'une photo qui compte.
-Q: Peut-on commander une impression finie ? R: Oui, l'option \"Tableau fini\" imprime votre oeuvre, prete a accrocher.
-
-## Liens
-- Accueil: %(s)s/
-- Creer votre toile (gratuit): %(s)s/create/
-- Galerie de modeles: %(s)s/gallery/
-- Mes toiles / jeu digital: %(s)s/paint/
-- Contact: %(s)s/contact/
-- Confidentialite: %(s)s/privacy/
-- Sitemap: %(s)s/sitemap.xml
-""" % {"s": site}
-    return HttpResponse(body, content_type="text/plain; charset=utf-8")
+    f = _geo_facts()
+    site = f["site"]
+    made = (" Les kits sont fabriqués en %s." % f["origin"]) if f["origin"] else ""
+    lines = [
+        "# PaintIt : peinture par numéros personnalisée à partir de votre photo",
+        "",
+        "> PaintIt transforme une photo personnelle en kit de peinture par numéros unique. "
+        "Le client teste gratuitement avant d'acheter (aperçu + jeu en ligne), puis reçoit chez lui "
+        "un kit de qualité livré gratuitement." + made,
+        "",
+        "## Positionnement",
+        "- 100 % personnalisé : chaque toile est calculée pour la photo du client (pas de catalogue de modèles).",
+        "- Testez avant d'acheter : aperçu gratuit en moins d'une minute, jeu de peinture en ligne gratuit, prix affichés d'emblée.",
+        "- Algorithme de précision : zones réellement peignables, numéros lisibles, couleurs choisies parmi de vraies peintures disponibles chez l'atelier.",
+        "- Qualité premium" + ((" fabriquée en %s" % f["origin"]) if f["origin"] else "") + ", livraison offerte.",
+        "- Accessible à tous : dès 4 ans en 12 couleurs (enfants, seniors) ; 24 couleurs équilibré ; 36 couleurs et plus pour les passionnés.",
+        "",
+        "## Faits",
+        "- Formats : %s." % ", ".join(f["formats"]),
+        "- Nombre de couleurs : %s." % ", ".join(str(c) for c in f["colors"]),
+        "- Prix : à partir de %.2f EUR, livraison offerte." % f["price_from"],
+        "- Délai de livraison : %d à %d jours ouvrés (fabrication à la demande)." % (f["dmin"], f["dmax"]),
+        "- Contenu du kit : toile numérotée, pots de peinture numérotés, poster de référence ; pinceaux en option.",
+        "- Paiement sécurisé par carte (Stripe). Langues : français, anglais, allemand, espagnol, italien.",
+        "",
+        "## Cas d'usage",
+        "Cadeau personnalisé (anniversaire, fête des mères/pères, Noël, naissance, mariage), portrait d'enfant ou d'animal, "
+        "souvenir de voyage, activité créative relaxante en famille, activité pour seniors, décoration murale unique.",
+        "",
+        "## Questions fréquentes",
+    ]
+    lines += ["Q: %s\nR: %s" % (it["q"], it["a"]) for it in f["faq"]]
+    lines += ["", "## Liens",
+              "- Créer une toile : %s/create/" % site, "- Tester le jeu : %s/gallery/" % site,
+              "- FAQ : %s/faq/" % site, "- Contact : %s/contact/" % site,
+              "- Données structurées : %s/llm.json" % site, "- Plan du site : %s/sitemap.xml" % site]
+    return HttpResponse("\n".join(lines) + "\n", content_type="text/plain; charset=utf-8")
 
 
 def llm_json(request):
     from django.http import JsonResponse
-    site = settings.SITE_URL
+    f = _geo_facts()
+    site = f["site"]
     data = {
         "name": "PaintIt",
-        "tagline": "La peinture par numeros reinventee, a partir de vos photos.",
-        "description": "PaintIt transforme n'importe quelle photo en toile a peindre par numeros "
-                       "personnalisee, livree chez vous, avec une toile numerique jouable offerte.",
-        "keywords": ["peinture par numeros personnalisee", "toile a peindre a partir d'une photo",
-                     "custom paint by numbers from photo", "cadeau personnalise photo",
-                     "peinture par numero adulte", "kit peinture par numeros", "toile numerotee",
-                     "transformer photo en peinture", "deco murale personnalisee",
-                     "loisir creatif anti-stress", "peinture numerique en ligne"],
-        "value_props": ["Meilleur algorithme du marche", "Apercu gratuit en moins d'une minute",
-                        "Kit physique livre (toile + peinture + pinceaux)",
-                        "Toile numerique jouable offerte", "Livraison offerte",
-                        "Formats et couleurs ajustables"],
-        "use_cases": ["cadeau personnalise", "portrait de famille", "animal de compagnie",
-                      "souvenir de voyage", "deco murale", "activite anti-stress"],
-        "faq": [
-            {"q": "Comment transformer une photo en peinture par numeros ?",
-             "a": "Envoyez votre photo, l'algorithme genere une toile numerotee en moins d'une minute."},
-            {"q": "Est-ce gratuit ?", "a": "L'apercu est gratuit et une toile numerique est offerte."},
-            {"q": "Quels formats ?", "a": "30x40, 40x40, 40x50 cm et plus, couleurs ajustables."},
-            {"q": "Que contient le kit ?", "a": "Toile numerotee, pots de peinture, pinceaux, poster, toile numerique."},
-            {"q": "Faut-il savoir dessiner ?", "a": "Non, il suffit de peindre les zones numerotees."},
-            {"q": "Peut-on peindre en ligne ?", "a": "Oui, chaque creation donne une toile numerique jouable."},
-        ],
-        "links": {"home": site + "/", "create": site + "/create/", "gallery": site + "/gallery/",
-                  "paint": site + "/paint/", "contact": site + "/contact/",
-                  "privacy": site + "/privacy/", "sitemap": site + "/sitemap.xml"},
+        "tagline": "Votre souvenir. Votre chef-d’œuvre.",
+        "description": "Peinture par numéros 100 % personnalisée à partir de votre photo : testez gratuitement "
+                       "avant d'acheter, algorithme de précision, kit de qualité livré gratuitement"
+                       + ((", fabriqué en %s." % f["origin"]) if f["origin"] else "."),
+        "positioning": ["personnalisation totale (pas de catalogue)", "tester avant d'acheter (aperçu et jeu gratuits)",
+                        "transparence des prix", "algorithme de précision (vraies peintures disponibles)",
+                        "qualité premium" + ((" fabriquée en %s" % f["origin"]) if f["origin"] else "")],
+        "audience": {"min_age": 4, "note": "12 couleurs : très accessible pour les enfants et les seniors"},
+        "offer": {"formats": f["formats"], "colors": f["colors"], "price_from_eur": round(f["price_from"], 2),
+                  "shipping": "offerte", "delivery_days": [f["dmin"], f["dmax"]],
+                  "kit": ["toile numérotée", "pots de peinture numérotés", "poster de référence", "pinceaux (option)"]},
+        "use_cases": ["cadeau personnalisé", "portrait d'enfant ou d'animal", "souvenir de voyage",
+                      "activité créative en famille", "activité pour seniors", "décoration murale"],
+        "languages": ["fr", "en", "de", "es", "it"],
+        "faq": f["faq"],
+        "links": {"home": site + "/", "create": site + "/create/", "play": site + "/gallery/",
+                  "faq": site + "/faq/", "contact": site + "/contact/", "sitemap": site + "/sitemap.xml"},
     }
     return JsonResponse(data, json_dumps_params={"ensure_ascii": False, "indent": 2})
 
@@ -3027,6 +3023,8 @@ def erp_legal(request):
         ("Contact", "Adresse affichée aux clients pour le SAV et les réclamations.", ["email", "phone"]),
         ("TVA et factures", "Taux 0 = micro-entreprise en franchise (mention art. 293 B du CGI sur la facture).",
          ["vat_rate", "vat_number", "invoice_prefix"]),
+        ("Fabrication", "Argument de communication affiché sur le site : il doit correspondre à votre fournisseur réel.",
+         ["production_origin"]),
         ("Hébergeur et médiation", "Obligatoires : nom, adresse et téléphone de l'hébergeur, médiateur de la consommation.",
          ["host", "mediator"]),
     ]

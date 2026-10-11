@@ -47,9 +47,9 @@ DEFAULT_MSG = {
     "zoom": "Chaque d\u00e9tail, une \u00e9motion",
 }
 DEFAULT_SUB = {
-    "slider": "Cr\u00e9\u00e9 \u00e0 partir de VOTRE photo\nUn tableau unique \u00e0 offrir ou garder\nLe plaisir de peindre, sans savoir dessiner",
-    "shiny": "De la photo \u00e0 la toile en 1 minute\nPr\u00eat \u00e0 peindre, num\u00e9ro par num\u00e9ro\nAper\u00e7u gratuit",
-    "zoom": "Une pr\u00e9cision qui capture l'\u00e9motion\nQualit\u00e9 galerie\nAper\u00e7u gratuit",
+    "slider": "Cr\u00e9\u00e9 \u00e0 partir de VOTRE photo\nTestez gratuitement avant d'acheter\nD\u00e8s 4 ans, sans savoir dessiner",
+    "shiny": "De la photo \u00e0 la toile en 1 minute\nAper\u00e7u et jeu en ligne gratuits\nQualit\u00e9 premium, livraison offerte",
+    "zoom": "Une pr\u00e9cision qui capture l'\u00e9motion\nDe vraies peintures, de vraies couleurs\nAper\u00e7u gratuit",
 }
 
 _ANIM_CSS = ('<style>.magic{animation:mgin .8s cubic-bezier(.2,1.2,.3,1) both}'
