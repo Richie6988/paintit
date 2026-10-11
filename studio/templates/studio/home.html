@@ -46,20 +46,12 @@
     <div class="why-c"><span class="wi">&#9670;</span><h3>{% trans "Un algorithme de précision" %}</h3>
       <p>{% trans "Zones réellement peignables, numéros lisibles, couleurs choisies parmi de vraies peintures disponibles." %}</p></div>
     <div class="why-c"><span class="wi">&#10022;</span><h3>{% trans "Qualité premium" %}</h3>
-      <p>{% if MADE_IN_LABEL %}{{ MADE_IN_LABEL }}. {% endif %}{% trans "Toile et peintures de qualité, contrôlées et livrées gratuitement chez vous." %}</p></div>
+      <p>{{ MADE_IN_LABEL }}. {% trans "Toile et peintures de qualité, contrôlées et livrées gratuitement chez vous." %}</p></div>
   </div>
+  <p class="why-age">{% trans "Accessible à tous, dès 4 ans : en 12 couleurs, c'est idéal pour les enfants et les seniors." %}</p>
 </section>
 
-<section class="ages">
-  <h2>{% trans "Pour tous, dès 4 ans" %}</h2>
-  <p class="sub">{% trans "Choisissez le niveau de détail : plus il y a de couleurs, plus la toile est fine." %}</p>
-  <div class="ages-grid">
-    {% for n in colors_available %}
-    <div class="age-c{% if n == 12 %} hl{% endif %}"><b>{% blocktrans %}{{ n }} couleurs{% endblocktrans %}</b>
-      <span>{% if n == 12 %}{% trans "Très accessible, dès 4 ans : idéal pour les enfants et les seniors." %}{% elif n == 24 %}{% trans "Le bon équilibre entre détail et plaisir." %}{% elif n == 36 %}{% trans "Pour les passionnés qui aiment les détails." %}{% else %}{% trans "Le défi des experts." %}{% endif %}</span></div>
-    {% endfor %}
-  </div>
-</section>
+
 
 {% if library_preview %}
 <section class="lib-showcase">

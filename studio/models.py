@@ -205,8 +205,8 @@ class CompanyInfo(models.Model):
     invoice_prefix = models.CharField("Préfixe des factures", max_length=10, default="F")
     production_origin = models.CharField(
         "Lieu de fabrication des kits", max_length=60, blank=True, default="Europe",
-        help_text="Affiché sur le site (« Fabriqué en Europe »), la FAQ et les données SEO. Videz-le si la "
-                  "fabrication n'est pas garantie dans cette zone : l'allégation doit rester exacte.")
+        help_text="Zone de fabrication réelle (ex. Europe) : sert à la politique de confidentialité. "
+                  "Le site affiche « Fabriqué dans nos ateliers ».")
 
     class Meta:
         verbose_name = "Infos légales"

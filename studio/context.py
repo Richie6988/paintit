@@ -57,7 +57,4 @@ def _made_in():
 
 def _made_in_label():
     from django.utils.translation import gettext as _
-    o = _made_in()
-    if not o:
-        return ""
-    return _("Fabriqué en Europe") if o.strip().lower() == "europe" else _("Fabriqué en %(o)s") % {"o": o}
+    return _("Fabriqué dans nos ateliers")

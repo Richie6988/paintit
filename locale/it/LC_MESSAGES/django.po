@@ -1465,3 +1465,26 @@ msgid ""
 msgstr ""
 "Laboratori di produzione partner in Europa: solo nome, indirizzo e telefono "
 "di consegna."
+
+msgid "Fabriqué dans nos ateliers"
+msgstr "Prodotto nei nostri laboratori"
+
+msgid ""
+"Accessible à tous, dès 4 ans : en 12 couleurs, c'est idéal pour les enfants "
+"et les seniors."
+msgstr ""
+"Accessibile a tutti dai 4 anni: con 12 colori è ideale per bambini e "
+"anziani."
+
+msgid "Découvrez votre toile avant de commander"
+msgstr "Scopri la tua tela prima di ordinare"
+
+msgid ""
+"Testez-la en peignant quelques zones en ligne, gratuitement : vous voyez le "
+"rendu réel avant de passer commande."
+msgstr ""
+"Provala dipingendo qualche zona online, gratis: vedi il risultato reale "
+"prima di ordinare."
+
+msgid "Tester ma toile"
+msgstr "Prova la mia tela"

@@ -1391,7 +1391,7 @@ def llm_txt(request):
     from django.http import HttpResponse
     f = _geo_facts()
     site = f["site"]
-    made = (" Les kits sont fabriqués en %s." % f["origin"]) if f["origin"] else ""
+    made = " Les kits sont fabriqués dans nos ateliers."
     lines = [
         "# PaintIt : peinture par numéros personnalisée à partir de votre photo",
         "",
@@ -1403,7 +1403,7 @@ def llm_txt(request):
         "- 100 % personnalisé : chaque toile est calculée pour la photo du client (pas de catalogue de modèles).",
         "- Testez avant d'acheter : aperçu gratuit en moins d'une minute, jeu de peinture en ligne gratuit, prix affichés d'emblée.",
         "- Algorithme de précision : zones réellement peignables, numéros lisibles, couleurs choisies parmi de vraies peintures disponibles chez l'atelier.",
-        "- Qualité premium" + ((" fabriquée en %s" % f["origin"]) if f["origin"] else "") + ", livraison offerte.",
+        "- Qualité premium : kits fabriqués dans nos ateliers, livraison offerte.",
         "- Accessible à tous : dès 4 ans en 12 couleurs (enfants, seniors) ; 24 couleurs équilibré ; 36 couleurs et plus pour les passionnés.",
         "",
         "## Faits",
@@ -1436,11 +1436,10 @@ def llm_json(request):
         "name": "PaintIt",
         "tagline": "Votre souvenir. Votre chef-d’œuvre.",
         "description": "Peinture par numéros 100 % personnalisée à partir de votre photo : testez gratuitement "
-                       "avant d'acheter, algorithme de précision, kit de qualité livré gratuitement"
-                       + ((", fabriqué en %s." % f["origin"]) if f["origin"] else "."),
+                       "avant d'acheter, algorithme de précision, kit de qualité fabriqué dans nos ateliers et livré gratuitement.",
         "positioning": ["personnalisation totale (pas de catalogue)", "tester avant d'acheter (aperçu et jeu gratuits)",
                         "transparence des prix", "algorithme de précision (vraies peintures disponibles)",
-                        "qualité premium" + ((" fabriquée en %s" % f["origin"]) if f["origin"] else "")],
+                        "qualité premium, fabrication dans nos ateliers"],
         "audience": {"min_age": 4, "note": "12 couleurs : très accessible pour les enfants et les seniors"},
         "offer": {"formats": f["formats"], "colors": f["colors"], "price_from_eur": round(f["price_from"], 2),
                   "shipping": "offerte", "delivery_days": [f["dmin"], f["dmax"]],
@@ -3023,7 +3022,7 @@ def erp_legal(request):
         ("Contact", "Adresse affichée aux clients pour le SAV et les réclamations.", ["email", "phone"]),
         ("TVA et factures", "Taux 0 = micro-entreprise en franchise (mention art. 293 B du CGI sur la facture).",
          ["vat_rate", "vat_number", "invoice_prefix"]),
-        ("Fabrication", "Argument de communication affiché sur le site : il doit correspondre à votre fournisseur réel.",
+        ("Fabrication", "Zone de fabrication réelle : utilisée uniquement pour la politique de confidentialité (transferts de données). Le site affiche « Fabriqué dans nos ateliers ».",
          ["production_origin"]),
         ("Hébergeur et médiation", "Obligatoires : nom, adresse et téléphone de l'hébergeur, médiateur de la consommation.",
          ["host", "mediator"]),

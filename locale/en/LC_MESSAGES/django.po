@@ -1443,3 +1443,26 @@ msgid ""
 msgstr ""
 "Partner production workshops in Europe: delivery name, address and phone "
 "number only."
+
+msgid "Fabriqué dans nos ateliers"
+msgstr "Made in our workshops"
+
+msgid ""
+"Accessible à tous, dès 4 ans : en 12 couleurs, c'est idéal pour les enfants "
+"et les seniors."
+msgstr ""
+"Accessible to everyone from age 4: with 12 colours it's ideal for children "
+"and seniors."
+
+msgid "Découvrez votre toile avant de commander"
+msgstr "Discover your canvas before ordering"
+
+msgid ""
+"Testez-la en peignant quelques zones en ligne, gratuitement : vous voyez le "
+"rendu réel avant de passer commande."
+msgstr ""
+"Try it by painting a few zones online, for free: see the real result before "
+"you order."
+
+msgid "Tester ma toile"
+msgstr "Try my canvas"

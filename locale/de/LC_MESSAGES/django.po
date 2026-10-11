@@ -1474,3 +1474,26 @@ msgid ""
 msgstr ""
 "Partner-Produktionswerkstätten in Europa: nur Name, Lieferadresse und "
 "Telefonnummer."
+
+msgid "Fabriqué dans nos ateliers"
+msgstr "Hergestellt in unseren Werkstätten"
+
+msgid ""
+"Accessible à tous, dès 4 ans : en 12 couleurs, c'est idéal pour les enfants "
+"et les seniors."
+msgstr ""
+"Für alle zugänglich, ab 4 Jahren: Mit 12 Farben ideal für Kinder und "
+"Senioren."
+
+msgid "Découvrez votre toile avant de commander"
+msgstr "Entdecken Sie Ihr Bild vor der Bestellung"
+
+msgid ""
+"Testez-la en peignant quelques zones en ligne, gratuitement : vous voyez le "
+"rendu réel avant de passer commande."
+msgstr ""
+"Testen Sie es, indem Sie online kostenlos ein paar Felder malen: Sie sehen "
+"das echte Ergebnis vor der Bestellung."
+
+msgid "Tester ma toile"
+msgstr "Mein Bild testen"

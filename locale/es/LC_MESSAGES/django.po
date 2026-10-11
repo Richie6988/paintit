@@ -1453,3 +1453,26 @@ msgid ""
 msgstr ""
 "Talleres de fabricación asociados en Europa: solo nombre, dirección y "
 "teléfono de entrega."
+
+msgid "Fabriqué dans nos ateliers"
+msgstr "Fabricado en nuestros talleres"
+
+msgid ""
+"Accessible à tous, dès 4 ans : en 12 couleurs, c'est idéal pour les enfants "
+"et les seniors."
+msgstr ""
+"Accesible para todos desde los 4 años: con 12 colores es ideal para niños y "
+"mayores."
+
+msgid "Découvrez votre toile avant de commander"
+msgstr "Descubre tu lienzo antes de pedir"
+
+msgid ""
+"Testez-la en peignant quelques zones en ligne, gratuitement : vous voyez le "
+"rendu réel avant de passer commande."
+msgstr ""
+"Pruébalo pintando algunas zonas en línea, gratis: ves el resultado real "
+"antes de pedir."
+
+msgid "Tester ma toile"
+msgstr "Probar mi lienzo"
