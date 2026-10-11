@@ -1508,3 +1508,9 @@ msgstr "Expert: lots of detail, for patient painters."
 
 msgid "Facile : grandes zones, idéal pour débuter."
 msgstr "Easy: large areas, ideal for beginners."
+
+msgid "N°1 de la peinture par numéros sur-mesure"
+msgstr "#1 in tailor-made paint by numbers"
+
+msgid "Essayez-la en ligne"
+msgstr "Try it online"

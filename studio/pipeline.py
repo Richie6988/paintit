@@ -149,6 +149,7 @@ def generate(image_path, colors, width_cm, height_cm, uid=None, dpi=None, progre
         max_zones=(int(max_zones) if max_zones else None),
         density=(float(density) if density else None),
         available_colors=supplier_palette(),
+        cache_dir=os.path.join(settings.MEDIA_ROOT, "cache", "pbn"),
     )
     svg_path, prev_path, pal_path, tpl_png_path, colors_path, preview_svg_path, digipaint_path = pbn.run(ns)
 

@@ -1540,3 +1540,9 @@ msgstr "Experte: viele Details, für geduldige Maler."
 
 msgid "Facile : grandes zones, idéal pour débuter."
 msgstr "Leicht: große Felder, ideal für Einsteiger."
+
+msgid "N°1 de la peinture par numéros sur-mesure"
+msgstr "Nr. 1 für Malen nach Zahlen nach Maß"
+
+msgid "Essayez-la en ligne"
+msgstr "Online ausprobieren"

@@ -880,3 +880,4 @@ main{overflow-x:clip}
 .ci-level small{color:var(--muted);font-weight:600}
 .ci-level em{display:block;font-style:normal;font-weight:600;color:var(--muted);margin-top:2px}
 .ci-level em.ci-age{color:#1e8848}
+@media (max-width:900px){.topbar .tb-msg{text-align:center}}

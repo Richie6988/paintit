@@ -813,6 +813,49 @@ def render_palette(palette_bgr, brand="PAINT BY NUMBERS", logo_path=None,
 # --------------------------------------------------------------------------- #
 # Pipeline
 # --------------------------------------------------------------------------- #
+def _cache_path(cache_dir, key, kind):
+    import os
+    return os.path.join(cache_dir, "%s_%s.npz" % (key, kind))
+
+
+def _cache_get(cache_dir, key, kind):
+    import os
+    p = _cache_path(cache_dir, key, kind)
+    if not os.path.exists(p):
+        return None
+    try:
+        with np.load(p, allow_pickle=False) as z:
+            data = {k: z[k] for k in z.files}
+        os.utime(p, None)
+        print("[i] cache %s reutilise" % kind)
+        return data["a"] if kind == "sm" else data
+    except Exception:
+        return None
+
+
+def _cache_put(cache_dir, key, kind, value):
+    """Ecrit le cache (+ menage des entrees de plus de 24 h). Ne casse jamais la generation."""
+    import os, time
+    if not (cache_dir and key):
+        return
+    try:
+        os.makedirs(cache_dir, exist_ok=True)
+        p = _cache_path(cache_dir, key, kind)
+        tmp = p + ".tmp.npz"
+        if kind == "sm":
+            np.savez(tmp, a=value)
+        else:
+            np.savez(tmp, **value)
+        os.replace(tmp, p)
+        now = time.time()
+        for f in os.listdir(cache_dir):
+            fp = os.path.join(cache_dir, f)
+            if now - os.path.getmtime(fp) > 86400:
+                os.remove(fp)
+    except Exception:
+        pass
+
+
 def run(args):
     src = cv2.imread(args.image)
     if src is None:
@@ -849,12 +892,39 @@ def run(args):
     if args.cnn == "hed":
         edge = hed_edges(img, args.hed_model_dir)
 
-    sm = smooth(img, args.smooth, args.detail, edge)
-    labels, palette = quantize(sm, args.colors, args.seed)
-    codes, deltas = [None] * len(palette), [0.0] * len(palette)
-    if getattr(args, "available_colors", None):      # nuancier fournisseur : teintes reellement disponibles
-        labels, palette, codes, deltas = snap_palette(labels, palette, args.available_colors)
-        args.colors = len(palette)
+    # Cache : meme image + meme cadrage -> lissage (le plus long) et analyse des couleurs reutilises
+    # quand on ne change que la densite, le format... (aucun recalcul inutile).
+    cache_dir = getattr(args, "cache_dir", None)
+    base_key = None
+    if cache_dir and edge is None:
+        import hashlib
+        base_key = hashlib.sha1(img.tobytes() + repr((img.shape, args.smooth, args.detail)).encode()).hexdigest()[:24]
+    sm = _cache_get(cache_dir, base_key, "sm") if base_key else None
+    if sm is None:
+        sm = smooth(img, args.smooth, args.detail, edge)
+        _cache_put(cache_dir, base_key, "sm", sm)
+    _p(20, "read")
+    avail = getattr(args, "available_colors", None) or []
+    qkey = None
+    if base_key:
+        import hashlib
+        qkey = hashlib.sha1((base_key + repr((args.colors, args.seed, [(c.get("code"), c.get("hex")) for c in avail]))
+                             ).encode()).hexdigest()[:24]
+    q = _cache_get(cache_dir, qkey, "q") if qkey else None
+    if q is not None:
+        labels, palette = q["labels"], q["palette"]
+        codes = [c if c != "" else None for c in q["codes"].tolist()]
+        deltas = q["deltas"].tolist()
+        if avail:
+            args.colors = len(palette)
+    else:
+        labels, palette = quantize(sm, args.colors, args.seed)
+        codes, deltas = [None] * len(palette), [0.0] * len(palette)
+        if avail:      # nuancier fournisseur : teintes reellement disponibles
+            labels, palette, codes, deltas = snap_palette(labels, palette, avail)
+            args.colors = len(palette)
+        _cache_put(cache_dir, qkey, "q", {"labels": labels, "palette": np.asarray(palette),
+                                         "codes": np.asarray([c or "" for c in codes]), "deltas": np.asarray(deltas, float)})
     _p(32, "colors")
 
     # Lissage de la carte de labels (plus fort quand il y a beaucoup de couleurs).

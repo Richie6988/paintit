@@ -1531,3 +1531,9 @@ msgstr "Esperto: tanti dettagli, per pittori pazienti."
 
 msgid "Facile : grandes zones, idéal pour débuter."
 msgstr "Facile: zone grandi, ideale per iniziare."
+
+msgid "N°1 de la peinture par numéros sur-mesure"
+msgstr "N°1 della pittura con i numeri su misura"
+
+msgid "Essayez-la en ligne"
+msgstr "Provala online"
