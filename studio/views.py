@@ -1519,6 +1519,22 @@ def shop_pricing(request):
         from django.contrib.auth.views import redirect_to_login
         return redirect_to_login(request.get_full_path())
     kit = Pricing.get(); tab = PrintPricing.get()
+    from .models import Supplier, CompanyInfo, KitFormat as _KF
+    sup = Supplier.for_checkout("kit")
+    if request.method == "POST" and request.POST.get("op") == "align" and sup:
+        if not any(sup.offer_get("formats", kf.key).get("on") for kf in _KF.objects.all()):
+            messages.error(request, "L'offre de %s ne contient aucun format : saisissez-la d'abord sur sa fiche "
+                                    "(Modifier → Offre & tarifs)." % sup.name)
+            return redirect("studio:shop_pricing")
+        # Disponibilites du Kit = ce que le fournisseur actif propose
+        for kf in _KF.objects.all():
+            kf.available = bool(sup.offer_get("formats", kf.key).get("on")); kf.save(update_fields=["available"])
+        for n in (12, 24, 36, 48):
+            setattr(kit, "av_c%d" % n, bool(sup.offer_get("colors", n).get("on")))
+        kit.av_brushes = bool(sup.offer_get("extras", "brushes").get("on"))
+        kit.save()
+        messages.success(request, "Disponibilités alignées sur l'offre de %s." % sup.name)
+        return redirect("studio:shop_pricing")
     if request.method == "POST":
         def f(name, d=0.0):
             try: return float(request.POST.get(name, d))
@@ -1558,14 +1574,36 @@ def shop_pricing(request):
         tab.save()
         messages.success(request, "Tarifs enregistres.")
         return redirect("studio:shop_pricing")
-    from .models import KitFormat
+    vat = float(CompanyInfo.get().vat_rate or 0)
+    ht = lambda ttc: float(ttc) / (1 + vat / 100.0)
+    kfs = list(_KF.objects.all())
+    kit_colors = [{"key": str(n), "price": kit.color_price(n), "av": getattr(kit, "av_c%d" % n)} for n in (12, 24, 36, 48)]
+    margins, mcols = [], [c for c in kit_colors if c["av"]]
+    if sup:
+        for kf in kfs:
+            d = sup.offer_get("formats", kf.key)
+            kf.sup_on, kf.sup_cost = bool(d.get("on")), d.get("cost")
+        for c in kit_colors:
+            d = sup.offer_get("colors", c["key"])
+            c["sup_on"], c["sup_cost"] = bool(d.get("on")), d.get("cost")
+        for kf in kfs:
+            if not kf.available:
+                continue
+            cells = []
+            for c in mcols:
+                sale = ht(float(kf.price) + c["price"])
+                cost = sup.order_cost(kf.key, int(c["key"])) if c.get("sup_on") else None
+                cells.append({"sale": round(sale, 2), "cost": cost,
+                              "margin": None if cost is None else round(sale - cost, 2),
+                              "pct": None if cost is None or not sale else round((sale - cost) / sale * 100)})
+            margins.append({"label": kf.label, "cells": cells})
+    b = sup.offer_get("extras", "brushes") if sup else {}
     ctx = {
-        "kit": kit,
-        "kit_formats": KitFormat.objects.all(),
-        "kit_colors": [{"key":"12","price":kit.c_12,"av":kit.av_c12},
-                       {"key":"24","price":kit.c_24,"av":kit.av_c24},
-                       {"key":"36","price":kit.c_36,"av":kit.av_c36},
-                       {"key":"48","price":kit.c_48,"av":kit.av_c48}],
+        "kit": kit, "sup": sup, "vat": vat, "margins": margins, "mcols": mcols,
+        "sup_brushes": b, "sup_taxes": sup.taxes() if sup else None,
+        "sup_ship": ((sup.offer or {}).get("shipping") or {}) if sup else {},
+        "kit_formats": kfs,
+        "kit_colors": kit_colors,
         "tab_dims": [{"key":k,"price":getattr(tab,"d_"+k),"av":getattr(tab,"av_"+k)}
                      for k in ["30x40","40x50","50x70","60x80","70x100","80x120"]],
         "tab_materials": [{"key":"toile","label":"Toile","price":tab.m_toile,"av":tab.av_m_toile},
@@ -2228,13 +2266,14 @@ def erp_supplier_edit(request, pk=None):
         ("Notes internes", "", ["notes"]),
     ]
     sec = [{"title": t, "help": h, "fields": [f[n] for n in names if n in f.fields]} for t, h, names in sections]
-    from .forms import FORMATS
-    from .models import COLOR_COUNTS
+    from .models import COLOR_COUNTS, Supplier as _S
     o = (sup.offer if sup else None) or {}
-    offer = {"formats": [{"key": k, "label": v[2], **((o.get("formats") or {}).get(k) or {})} for k, v in FORMATS.items()],
-             "colors": [{"key": str(n), "label": "%d couleurs" % n, **((o.get("colors") or {}).get(str(n)) or {})}
-                        for n in COLOR_COUNTS],
-             "options": list(o.get("options") or []) + [{} for _ in range(3)]}
+    g = lambda grp, k: ((o.get(grp) or {}).get(str(k)) or {})
+    offer = {"formats": [{"key": k, "label": lbl, **g("formats", k)} for k, lbl in _S.offer_formats()],
+             "colors": [{"key": str(n), "label": "%d couleurs" % n, **g("colors", n)} for n in COLOR_COUNTS],
+             "brushes": g("extras", "brushes"),
+             "options": list(o.get("options") or []) + [{} for _ in range(3)],
+             "shipping": o.get("shipping") or {}, "taxes": o.get("taxes") or {"vat_recoverable": True}}
     return render(request, "admin/erp_supplier_form.html", {
         **_admin.site.each_context(request), "form": form, "sup": sup, "sections": sec, "offer": offer,
         "erp_section": "suppliers"})
@@ -2242,7 +2281,6 @@ def erp_supplier_edit(request, pk=None):
 
 def _save_supplier_extras(request, sup):
     """Offre (formats / couleurs / options + couts), nuancier CSV et pieces jointes du formulaire fournisseur."""
-    from .forms import FORMATS
     from .models import COLOR_COUNTS, SupplierFile
     P = request.POST
     notes = []
@@ -2258,10 +2296,15 @@ def _save_supplier_extras(request, sup):
         n = (P.get("opt_name_%d" % i) or "").strip()[:80]
         if n:
             opts.append({"name": n, "cost": cost("opt_cost_%d" % i)})
+    from .models import Supplier as _S
     sup.offer = {
-        "formats": {k: {"on": bool(P.get("fmt_on_" + k)), "cost": cost("fmt_cost_" + k)} for k in FORMATS},
+        "formats": {k: {"on": bool(P.get("fmt_on_" + k)), "cost": cost("fmt_cost_" + k)} for k, _l in _S.offer_formats()},
         "colors": {str(n): {"on": bool(P.get("col_on_%d" % n)), "cost": cost("col_cost_%d" % n)} for n in COLOR_COUNTS},
-        "options": opts}
+        "extras": {"brushes": {"on": bool(P.get("brushes_on")), "cost": cost("brushes_cost")}},
+        "options": opts,
+        "shipping": {k: cost("ship_" + k) for k in ("fr", "eu", "world", "handling")},
+        "taxes": {"vat_rate": cost("tax_vat_rate") or 0.0, "vat_recoverable": bool(P.get("tax_vat_recoverable")),
+                  "duties_rate": cost("tax_duties_rate") or 0.0, "customs_fee": cost("tax_customs_fee") or 0.0}}
     fields = ["offer"]
     if P.get("palette_clear"):
         sup.palette, sup.palette_updated_at = [], None

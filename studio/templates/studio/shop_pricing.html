@@ -19,23 +19,37 @@
  .sp-wrap input[type=checkbox]{width:20px;height:20px}
  .sp-save{margin-top:18px}
  .sp-save button{padding:12px 22px;font-size:1rem;font-weight:800}
+ .sup-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#f3f7ff;border:1px solid #d6e2fb;border-radius:12px;padding:12px 16px;margin:0 0 16px}
+ .sup-bar .muted,.sp-wrap .muted{color:#6d7175;font-weight:400}
+ .supc{font-size:.84rem;font-weight:700;color:#334;white-space:nowrap}
+ .bad{color:#b42318 !important;font-weight:700}.warn{color:#b54708 !important;font-weight:700}.good{color:#067647}
+ .mg td{white-space:nowrap}
 </style>
 <div class="sp-wrap">
   <h1>Grille tarifaire : Kit &amp; Tableau fini</h1>
   <p style="color:#5b647a">Choisissez ce qui est disponible et a quel prix pour chaque produit.
     Le Kit a peindre gere ses propres formats (ci-dessous, ajout/suppression libre). Le Tableau fini (impression d'art) a ses formats a part.</p>
 
+  <div class="sup-bar">
+    {% if sup %}
+      <div><b>Fournisseur Kit actif : <a href="/admin-hub/suppliers/{{ sup.pk }}/">{{ sup.name }}</a></b>
+        <span class="muted">· coûts HT de son offre · TVA PaintIt {{ vat|floatformat:"-2" }} %{% if sup_ship.fr is not None %} · livraison France {{ sup_ship.fr|floatformat:2 }} €{% endif %}{% if sup_ship.handling %} · frais fixes {{ sup_ship.handling|floatformat:2 }} €{% endif %}{% if sup_taxes.duties_rate %} · douane {{ sup_taxes.duties_rate|floatformat:"-2" }} %{% endif %}{% if sup_taxes.customs_fee %} + {{ sup_taxes.customs_fee|floatformat:2 }} €{% endif %}{% if sup_taxes.vat_rate and not sup_taxes.vat_recoverable %} · TVA fournisseur {{ sup_taxes.vat_rate|floatformat:"-2" }} % non récupérable{% endif %}</span>
+        {% if not sup.offer.formats %}<div class="warn" style="margin-top:4px">Offre non saisie : <a href="/admin-hub/suppliers/{{ sup.pk }}/edit/">renseignez formats, couleurs, livraison et taxes</a> pour voir les marges.</div>{% endif %}</div>
+      <form method="post" data-confirm="Aligner les disponibilités sur l'offre de {{ sup.name }} ?" data-confirm-text="Formats, nombres de couleurs et pinceaux non proposés par le fournisseur seront désactivés (et inversement)." data-ok="Aligner">{% csrf_token %}<button class="button" name="op" value="align">Aligner les disponibilités sur le fournisseur</button></form>
+    {% else %}<div><b>Aucun fournisseur Kit actif.</b> <span class="muted">Activez un fournisseur (checkout Kit) dans l'ERP pour voir coûts et marges.</span></div>{% endif %}
+  </div>
   <form method="post" action="{% url 'studio:shop_pricing' %}">{% csrf_token %}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
 
       <div style="background:#fff;border:1px solid #e2e8f2;border-radius:14px;padding:18px">
         <h2 style="margin-top:0">Kit a peindre</h2>
         <h3>Formats disponibles</h3>
-        <table><tr><th>Format</th><th>Prix (&euro;)</th><th>Dispo</th><th></th></tr>
+        <table><tr><th>Format</th><th>Prix TTC (&euro;)</th><th>Dispo</th>{% if sup %}<th>Coût fourn.</th>{% endif %}<th></th></tr>
         {% for kf in kit_formats %}<tr>
           <td><b>{{ kf.width_cm }} &times; {{ kf.height_cm }} cm</b></td>
           <td><span class="eur"><input type="number" step="0.01" name="fmt_price_{{ kf.id }}" value="{{ kf.price|unlocalize }}" style="width:100px"></span></td>
           <td style="text-align:center"><input type="checkbox" name="fmt_av_{{ kf.id }}" {% if kf.available %}checked{% endif %}></td>
+          {% if sup %}<td class="supc">{% if kf.sup_on %}{% if kf.sup_cost is not None %}{{ kf.sup_cost|floatformat:2 }} €{% else %}<span class="warn">prix ?</span>{% endif %}{% else %}<span class="{% if kf.available %}bad{% else %}muted{% endif %}">non proposé</span>{% endif %}</td>{% endif %}
           <td style="text-align:center"><label style="color:#c0392b;font-weight:600;font-size:.78rem;margin:0"><input type="checkbox" name="del_fmt_{{ kf.id }}"> suppr.</label></td>
         </tr>{% endfor %}
         <tr style="background:#f7f9fd">
@@ -45,15 +59,17 @@
         </tr>
         </table><br>
         <h3>Couleurs (supplement)</h3>
-        <table><tr><th>Couleurs</th><th>Prix (+)</th><th>Dispo</th></tr>
+        <table><tr><th>Couleurs</th><th>Prix (+)</th><th>Dispo</th>{% if sup %}<th>Coût fourn.</th>{% endif %}</tr>
         {% for c in kit_colors %}<tr>
           <td>{{ c.key }}</td>
           <td><input type="number" step="0.01" name="c_{{ c.key }}" value="{{ c.price|unlocalize }}" style="width:90px"></td>
           <td style="text-align:center"><input type="checkbox" name="av_c{{ c.key }}" {% if c.av %}checked{% endif %}></td>
+          {% if sup %}<td class="supc">{% if c.sup_on %}{% if c.sup_cost is not None %}+{{ c.sup_cost|floatformat:2 }} €{% else %}+0 €{% endif %}{% else %}<span class="{% if c.av %}bad{% else %}muted{% endif %}">non proposé</span>{% endif %}</td>{% endif %}
         </tr>{% endfor %}</table>
         <h3>Options</h3>
         <label>Pinceaux (prix)</label> <span class="eur"><input type="number" step="0.01" name="brushes_price" value="{{ kit.brushes_price|unlocalize }}" style="width:90px"></span>
-        <input type="checkbox" name="av_brushes" {% if kit.av_brushes %}checked{% endif %}> dispo<br><br>
+        <input type="checkbox" name="av_brushes" {% if kit.av_brushes %}checked{% endif %}> dispo
+        {% if sup %}<span class="supc" style="margin-left:8px">{% if sup_brushes.on %}coût fourn. {{ sup_brushes.cost|default:0|floatformat:2 }} €{% else %}<span class="{% if kit.av_brushes %}bad{% else %}muted{% endif %}">non proposé par le fournisseur</span>{% endif %}</span>{% endif %}<br><br>
         <label>Livraison (jours min / max)</label><br>
         <input type="number" name="delivery_days_min" value="{{ kit.delivery_days_min|unlocalize }}" style="width:70px">
         <input type="number" name="delivery_days_max" value="{{ kit.delivery_days_max|unlocalize }}" style="width:70px"><br><br>
@@ -90,6 +106,16 @@
     </div>
     <div style="margin-top:18px"><button type="submit" class="default" style="padding:10px 18px">Enregistrer</button></div>
   </form>
+  {% if sup and margins %}
+  <div style="background:#fff;border:1px solid #e2e8f2;border-radius:14px;padding:18px;margin-top:22px">
+    <h2>Marge estimée par commande (livraison France, sans pinceaux)</h2>
+    <p class="muted" style="margin:0 0 8px">Prix de vente HT − coût de revient fournisseur (produit + douane + livraison + frais fixes{% if sup_taxes.vat_rate and not sup_taxes.vat_recoverable %} + TVA non récupérable{% endif %}). Hors frais de paiement Stripe et remises.</p>
+    <table class="mg"><tr><th>Format</th>{% for c in mcols %}<th>{{ c.key }} couleurs</th>{% endfor %}</tr>
+      {% for r in margins %}<tr><td><b>{{ r.label }}</b></td>{% for x in r.cells %}<td>{% if x.margin is None %}<span class="warn">coût inconnu</span>{% else %}
+        <b class="{% if x.margin < 0 %}bad{% elif x.pct < 30 %}warn{% else %}good{% endif %}">{{ x.margin|floatformat:2 }} €</b> <span class="muted">({{ x.pct }} %)</span>
+        <div class="muted" style="font-size:.74rem">{{ x.sale|floatformat:2 }} HT − {{ x.cost|floatformat:2 }}</div>{% endif %}</td>{% endfor %}</tr>{% endfor %}
+    </table>
+  </div>{% endif %}
 </div>
 <style>
  .shop th,.shop td{padding:4px 8px}

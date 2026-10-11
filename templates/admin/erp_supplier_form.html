@@ -59,7 +59,7 @@
     </div>
     {% endfor %}
     <div class="pf-sec">
-      <div><h2>Offre &amp; tarifs</h2><p>Ce que ce fournisseur sait produire et son prix d'achat HT par option (€). Formats et nombres de couleurs non cochés = non proposés.</p></div>
+      <div><h2>Offre &amp; tarifs</h2><p>Ce que ce fournisseur sait produire et son prix d'achat HT par option (€). Les formats sont ceux de l'onglet <a href="/admin-tarifs/">Tarifs</a> : ajoutez-y un format pour le voir ici. Non coché = non proposé.</p></div>
       <div class="pf-box one">
         <table class="of"><tr><th>Format</th><th class="c">Proposé</th><th class="p">Coût (€)</th></tr>
           {% for r in offer.formats %}<tr><td>{{ r.label }}</td><td class="c"><label class="sw" style="justify-content:center"><input type="checkbox" name="fmt_on_{{ r.key }}" {% if r.on %}checked{% endif %}></label></td>
@@ -69,11 +69,30 @@
           {% for r in offer.colors %}<tr><td>{{ r.label }}</td><td class="c"><label class="sw" style="justify-content:center"><input type="checkbox" name="col_on_{{ r.key }}" {% if r.on %}checked{% endif %}></label></td>
             <td class="p"><input type="number" step="0.01" min="0" name="col_cost_{{ r.key }}" value="{{ r.cost|default_if_none:''|stringformat:'s' }}" placeholder="—"></td></tr>{% endfor %}
         </table>
-        <table class="of"><tr><th>Option (pinceaux, cadre, emballage cadeau…)</th><th class="p">Coût (€)</th></tr>
+        <table class="of"><tr><th>Option du kit</th><th class="c">Proposé</th><th class="p">Coût (€)</th></tr>
+          <tr><td>Set de pinceaux</td><td class="c"><label class="sw" style="justify-content:center"><input type="checkbox" name="brushes_on" {% if offer.brushes.on %}checked{% endif %}></label></td>
+            <td class="p"><input type="number" step="0.01" min="0" name="brushes_cost" value="{{ offer.brushes.cost|default_if_none:''|stringformat:'s' }}" placeholder="—"></td></tr>
+        </table>
+        <table class="of"><tr><th>Autre option (cadre, emballage cadeau…)</th><th class="p">Coût (€)</th></tr>
           {% for r in offer.options %}<tr><td><input type="text" maxlength="80" name="opt_name_{{ forloop.counter0 }}" value="{{ r.name|default:'' }}" placeholder="Nouvelle option"></td>
             <td class="p"><input type="number" step="0.01" min="0" name="opt_cost_{{ forloop.counter0 }}" value="{{ r.cost|default_if_none:''|stringformat:'s' }}" placeholder="—"></td></tr>{% endfor %}
         </table>
         <span class="hlp" style="color:#6d7175;font-size:.74rem">Videz le nom d'une option pour la supprimer. 3 lignes vides sont proposées à chaque ouverture.</span>
+      </div>
+    </div>
+    <div class="pf-sec">
+      <div><h2>Livraison &amp; taxes</h2><p>Frais facturés par le fournisseur pour chaque commande. Sert au calcul du coût de revient et de la marge dans l'onglet Tarifs.</p></div>
+      <div class="pf-box">
+        <div class="pf-f"><label>Livraison France (€ / commande)</label><input type="number" step="0.01" min="0" name="ship_fr" value="{{ offer.shipping.fr|default_if_none:''|stringformat:'s' }}" placeholder="—"></div>
+        <div class="pf-f"><label>Livraison Union européenne (€)</label><input type="number" step="0.01" min="0" name="ship_eu" value="{{ offer.shipping.eu|default_if_none:''|stringformat:'s' }}" placeholder="—"></div>
+        <div class="pf-f"><label>Livraison Monde (€)</label><input type="number" step="0.01" min="0" name="ship_world" value="{{ offer.shipping.world|default_if_none:''|stringformat:'s' }}" placeholder="—"></div>
+        <div class="pf-f"><label>Frais fixes par commande (€)</label><input type="number" step="0.01" min="0" name="ship_handling" value="{{ offer.shipping.handling|default_if_none:''|stringformat:'s' }}" placeholder="emballage, manutention…"></div>
+        <div class="pf-f"><label>TVA facturée par le fournisseur (%)</label><input type="number" step="0.01" min="0" name="tax_vat_rate" value="{{ offer.taxes.vat_rate|default_if_none:''|stringformat:'s' }}" placeholder="0"></div>
+        <div class="pf-f"><label>Droits de douane (% de la valeur)</label><input type="number" step="0.01" min="0" name="tax_duties_rate" value="{{ offer.taxes.duties_rate|default_if_none:''|stringformat:'s' }}" placeholder="0"></div>
+        <div class="pf-f"><label>Frais de dédouanement (€ / commande)</label><input type="number" step="0.01" min="0" name="tax_customs_fee" value="{{ offer.taxes.customs_fee|default_if_none:''|stringformat:'s' }}" placeholder="0"></div>
+        <div class="pf-f" style="justify-content:flex-end"><label class="sw"><input type="checkbox" name="tax_vat_recoverable" {% if offer.taxes.vat_recoverable %}checked{% endif %}> TVA récupérable</label>
+          <span class="hlp">Décochez si la TVA payée au fournisseur ne peut pas être déduite : elle est alors ajoutée au coût.</span></div>
+        <span class="hlp wide" style="grid-column:1/-1">Les coûts produit saisis ci-dessus s'entendent <b>hors taxes</b>.</span>
       </div>
     </div>
     <div class="pf-sec" id="nuancier-edit">

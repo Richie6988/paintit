@@ -517,20 +517,64 @@ class Supplier(models.Model):
     offer = models.JSONField("Offre et tarifs", default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    @staticmethod
+    def offer_formats():
+        """Formats proposables = formats du Kit geres dans l'onglet Tarifs (KitFormat), sinon la liste fixe."""
+        fm = [(k.key, k.label) for k in KitFormat.objects.all()]
+        if not fm:
+            from .forms import FORMATS
+            fm = [(k, v[2]) for k, v in FORMATS.items()]
+        return fm
+
+    def offer_get(self, group, key):
+        return ((self.offer or {}).get(group) or {}).get(str(key)) or {}
+
+    def offer_cost(self, group, key):
+        d = self.offer_get(group, key)
+        return d.get("cost") if d.get("on") else None
+
     def offer_rows(self):
         """Offre lisible : [(categorie, libelle, disponible, cout)] pour la fiche."""
-        from .forms import FORMATS
         o = self.offer or {}
         rows = []
-        for k, v in FORMATS.items():
-            d = (o.get("formats") or {}).get(k) or {}
-            rows.append(("Format", v[2], bool(d.get("on")), d.get("cost")))
+        for k, lbl in self.offer_formats():
+            d = self.offer_get("formats", k)
+            rows.append(("Format", lbl, bool(d.get("on")), d.get("cost")))
         for n in COLOR_COUNTS:
-            d = (o.get("colors") or {}).get(str(n)) or {}
+            d = self.offer_get("colors", n)
             rows.append(("Couleurs", "%d couleurs" % n, bool(d.get("on")), d.get("cost")))
+        d = self.offer_get("extras", "brushes")
+        rows.append(("Option", "Set de pinceaux", bool(d.get("on")), d.get("cost")))
         for d in o.get("options") or []:
             rows.append(("Option", d.get("name", ""), True, d.get("cost")))
+        sh = o.get("shipping") or {}
+        for k, lbl in (("fr", "France"), ("eu", "Union européenne"), ("world", "Monde")):
+            if sh.get(k) is not None:
+                rows.append(("Livraison", lbl, True, sh.get(k)))
+        if sh.get("handling") is not None:
+            rows.append(("Frais", "Frais fixes par commande", True, sh.get("handling")))
         return rows
+
+    def taxes(self):
+        t = (self.offer or {}).get("taxes") or {}
+        return {"vat_rate": float(t.get("vat_rate") or 0), "vat_recoverable": bool(t.get("vat_recoverable", True)),
+                "duties_rate": float(t.get("duties_rate") or 0), "customs_fee": float(t.get("customs_fee") or 0)}
+
+    def order_cost(self, fmt_key, colors, brushes=False, zone="fr"):
+        """Cout de revient d'une commande chez ce fournisseur (EUR) : produit + droits + livraison + frais
+        (+ TVA fournisseur si non recuperable). None si le format n'est pas tarife."""
+        f = self.offer_cost("formats", fmt_key)
+        if f is None:
+            return None
+        c = self.offer_cost("colors", colors) or 0.0
+        b = (self.offer_cost("extras", "brushes") or 0.0) if brushes else 0.0
+        goods = f + c + b
+        t = self.taxes()
+        sh = (self.offer or {}).get("shipping") or {}
+        cost = goods * (1 + t["duties_rate"] / 100.0) + t["customs_fee"] + float(sh.get(zone) or 0) + float(sh.get("handling") or 0)
+        if not t["vat_recoverable"]:
+            cost *= 1 + t["vat_rate"] / 100.0
+        return round(cost, 2)
 
     def save(self, *args, **kwargs):
         if not self.webhook_secret:
