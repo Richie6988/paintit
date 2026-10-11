@@ -1497,3 +1497,12 @@ msgstr ""
 
 msgid "Tester ma toile"
 msgstr "Mein Bild testen"
+
+msgid ""
+"Créez votre peinture personnalisée en ligne à partir d'une photo, en moins "
+"d'une minute. Testez votre toile en ligne. Commandez votre kit complet à "
+"peindre chez vous."
+msgstr ""
+"Erstellen Sie Ihr personalisiertes Gemälde online aus einem Foto, in weniger"
+" als einer Minute. Testen Sie Ihre Leinwand online. Bestellen Sie Ihr "
+"komplettes Set zum Malen zu Hause."
