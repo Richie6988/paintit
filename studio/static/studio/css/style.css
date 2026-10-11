@@ -832,3 +832,9 @@ main{overflow-x:clip}
 .knob::after{right:11px;transform:translateY(-50%) rotate(135deg)}
 .reveal:hover .knob,.reveal:active .knob{transform:translate(-50%,-50%) scale(1.08);
   box-shadow:0 0 0 4px rgba(255,255,255,.35),0 10px 26px -6px rgba(18,34,79,.55)}
+
+/* Ecrans tres larges : contenu contenu (1240px), fonds pleine largeur */
+.hero{max-width:1240px;margin-left:auto;margin-right:auto;box-sizing:border-box}
+.nav{padding-left:max(clamp(20px,5vw,64px),calc((100% - 1240px)/2 + clamp(20px,5vw,64px)));
+  padding-right:max(clamp(20px,5vw,64px),calc((100% - 1240px)/2 + clamp(20px,5vw,64px)))}
+@media (min-width:1400px){.topbar{padding-right:calc((100% - 1240px)/2 + 40px)}}
