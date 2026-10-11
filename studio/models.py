@@ -704,11 +704,12 @@ class Community(models.Model):
     rules = models.TextField("Règles (résumé / texte)", blank=True, default="")
     angle = models.TextField("Angle conseillé", blank=True, default="")
     notes = models.TextField(blank=True, default="")
+    priority = models.PositiveSmallIntegerField("Priorité (1 = haute)", default=2)
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["region", "-members", "name"]
+        ordering = ["priority", "region", "-members", "name"]
         verbose_name = "Communauté"
         verbose_name_plural = "Communautés"
 

@@ -3443,7 +3443,8 @@ def erp_communities(request):
         op = request.POST.get("op")
         try:
             if op == "seed":
-                messages.success(request, "%d communauté(s) ajoutée(s) à l'annuaire." % cm.seed())
+                n, d = cm.seed()
+                messages.success(request, "Audit chargé : %d nouvelle(s) communauté(s), %d brouillon(s) de publication." % (n, d))
             elif op == "add_comm":
                 Community.objects.create(platform=request.POST.get("platform", "reddit"),
                                          name=request.POST.get("name", "").strip()[:120] or "Communauté",
@@ -3458,6 +3459,8 @@ def erp_communities(request):
                 for f in ("name", "url", "region", "lang", "promo", "angle", "notes", "rules"):
                     if f in request.POST:
                         setattr(c, f, request.POST.get(f, "").strip())
+                if (request.POST.get("priority") or "").isdigit():
+                    c.priority = int(request.POST["priority"])
                 c.active = bool(request.POST.get("active"))
                 c.save()
                 messages.success(request, "Communauté mise à jour.")
@@ -3513,6 +3516,9 @@ def erp_communities(request):
     conv = {r["ad_ref"]: r for r in Order.objects.filter(status__in=Order.PAID_STATUSES, ad_ref__startswith="c:")
             .values("ad_ref").annotate(n=Count("id"), ca=Sum("total"))}
     posts = list(Outreach.objects.select_related("community")[:200])
+    # brouillons d'abord, par priorite du canal ; puis publications, les plus recentes en premier
+    posts.sort(key=lambda o: (bool(o.posted_url), (o.community.priority if o.community else 9) if not o.posted_url else 0,
+                              -(o.posted_at.timestamp() if o.posted_at else 0)))
     for o in posts:
         r = conv.get("c:" + o.code) or {}
         o.orders, o.revenue = r.get("n", 0), round(r.get("ca") or 0, 2)

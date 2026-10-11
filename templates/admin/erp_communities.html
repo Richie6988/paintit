@@ -11,6 +11,8 @@
  .angle{font-size:.8rem;color:#33415c;max-width:420px}
  .rules{font-size:.74rem;color:#6d7175;white-space:pre-line;max-height:120px;overflow:auto;margin-top:4px}
  .copy{cursor:pointer;border:1px solid #e2e8f2;background:#f7f9fd;border-radius:7px;padding:2px 7px;font-size:.74rem;font-weight:700;color:#2f4b8f}
+ .prio{border-radius:999px;padding:1px 8px;font-size:.72rem;font-weight:800;white-space:nowrap}
+ .prio.p1{background:#2f6bf2;color:#fff}.prio.p2{background:#e0f0ff;color:#00527c}.prio.p3{background:#f1f1f1;color:#616161}
  .new{background:#2f6bf2;color:#fff;border-radius:999px;padding:1px 7px;font-size:.72rem;font-weight:800}
  .ethic{background:#f3f7ff;border:1px solid #d6e2fb;border-radius:12px;padding:12px 16px;font-size:.84rem;color:#33415c;margin-bottom:14px}
  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -57,7 +59,7 @@
         <td>{{ o.community.name|default:"—" }}{% if o.removed %}<div><span class="pr forbidden">retirée</span></div>{% endif %}</td>
         <td style="max-width:320px"><b>{{ o.title|default:"(sans titre)"|truncatechars:80 }}</b>
           {% if o.posted_url %}<div><a href="{{ o.posted_url }}" target="_blank">voir la publication ↗</a> · {{ o.posted_at|date:"d/m" }}</div>
-          {% else %}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">{% if o.submit %}<a class="pbtn sm" href="{{ o.submit }}" target="_blank" rel="noopener">Ouvrir Reddit pré-rempli ↗</a>{% elif o.community %}<a class="pbtn sm" href="{{ o.community.url }}" target="_blank" rel="noopener">Ouvrir la communauté ↗</a>{% endif %}
+          {% else %}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">{% if o.submit %}<a class="pbtn sm" href="{{ o.submit }}" target="_blank" rel="noopener">Ouvrir pré-rempli ↗</a>{% elif o.community %}<a class="pbtn sm" href="{{ o.community.url }}" target="_blank" rel="noopener">Ouvrir la communauté ↗</a>{% endif %}
             <button type="button" class="copy" data-copy="{{ o.title }}&#10;&#10;{{ o.body }}&#10;&#10;{{ o.link }}">Copier le texte</button></div>
             <form method="post" style="display:flex;gap:6px;margin-top:6px">{% csrf_token %}<input type="hidden" name="op" value="mark_posted"><input type="hidden" name="id" value="{{ o.pk }}">
               <input type="url" name="posted_url" placeholder="URL une fois publié" required style="flex:1;min-width:140px"><button class="pbtn sm">Publié</button></form>{% endif %}</td>
@@ -69,28 +71,30 @@
           <form method="post" style="display:inline">{% csrf_token %}<input type="hidden" name="id" value="{{ o.pk }}"><button class="copy" name="op" value="seen" title="Marquer comme lu">lu</button></form>{% endif %}
           {% if o.last_checked %}<div class="muted">{{ o.last_checked|timesince }}</div>{% endif %}</td>
         <td><form method="post" data-confirm="Supprimer cette publication du suivi ?" data-danger>{% csrf_token %}<input type="hidden" name="id" value="{{ o.pk }}"><button class="pbtn sm" name="op" value="del_post">×</button></form></td>
-      </tr>{% empty %}<tr><td colspan="8" class="muted">Aucune publication pour l'instant.</td></tr>{% endfor %}
+      </tr>{% empty %}<tr><td colspan="8" class="muted">Aucune publication : cliquez sur « Charger l'audit des canaux » (annuaire, plus bas) pour obtenir des brouillons prêts à relire.</td></tr>{% endfor %}
     </table></div>
   </div>
 
   <div class="card">
     <div class="card-h"><h2>Annuaire</h2>
       <form method="post" style="display:flex;gap:6px;flex-wrap:wrap">{% csrf_token %}
-        {% if not comms %}<button class="pbtn pri sm" name="op" value="seed">Charger la liste de départ</button>{% endif %}
+        <button class="pbtn pri sm" name="op" value="seed">{% if comms %}Mettre à jour l'audit{% else %}Charger l'audit des canaux{% endif %}</button>
         <button class="pbtn sm" name="op" value="refresh_reddit">Actualiser membres + règles (Reddit)</button></form></div>
     <div style="overflow-x:auto"><table class="t">
-      <tr><th>Communauté</th><th>Zone</th><th class="r">Membres</th><th>Autopromo</th><th>Angle conseillé / règles</th></tr>
+      <tr><th>Communauté</th><th>Priorité</th><th>Zone</th><th class="r">Membres</th><th>Autopromo</th><th>Audit : angle, format, règles</th></tr>
       {% for c in comms %}<tr class="{% if not c.active %}off{% endif %}">
         <td><a href="{{ c.url }}" target="_blank" rel="noopener"><b>{{ c.name }}</b> ↗</a><div class="muted">{{ c.get_platform_display }} · {{ c.lang|upper }}</div></td>
+        <td><span class="prio p{{ c.priority }}">{% if c.priority == 1 %}Haute{% elif c.priority == 2 %}Moyenne{% else %}Basse{% endif %}</span></td>
         <td>{{ c.get_region_display }}</td>
         <td class="r">{% if c.members %}{{ c.members|floatformat:"0g" }}{% else %}—{% endif %}{% if c.members_checked_at %}<div class="muted">{{ c.members_checked_at|date:"d/m" }}</div>{% elif c.members %}<div class="muted">estimé</div>{% endif %}</td>
         <td><span class="pr {{ c.promo }}">{{ c.get_promo_display }}</span></td>
-        <td><div class="angle">{{ c.angle }}</div>{% if c.rules %}<div class="rules">{{ c.rules }}</div>{% endif %}
+        <td><div class="angle">{{ c.angle }}</div>{% if c.notes %}<div class="angle" style="color:#6d7175;margin-top:4px">💡 {{ c.notes }}</div>{% endif %}{% if c.rules %}<div class="rules">{{ c.rules }}</div>{% endif %}
           <details class="ed"><summary>modifier</summary>
             <form method="post" class="grid2" style="margin-top:6px">{% csrf_token %}<input type="hidden" name="op" value="edit_comm"><input type="hidden" name="id" value="{{ c.pk }}">
               <input type="text" name="name" value="{{ c.name }}"><input type="url" name="url" value="{{ c.url }}">
               <select name="region">{% for k, l in regions %}<option value="{{ k }}" {% if c.region == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
               <select name="promo">{% for k, l in promos %}<option value="{{ k }}" {% if c.promo == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+              <select name="priority">{% for k in "123" %}<option value="{{ k }}" {% if c.priority|stringformat:"s" == k %}selected{% endif %}>Priorité {{ k }}</option>{% endfor %}</select>
               <textarea name="angle" rows="2" style="grid-column:1/-1">{{ c.angle }}</textarea>
               <textarea name="notes" rows="2" style="grid-column:1/-1" placeholder="Notes (modérateurs, jour d'autopromo…)">{{ c.notes }}</textarea>
               <label class="sw"><input type="checkbox" name="active" {% if c.active %}checked{% endif %}> Active</label>
