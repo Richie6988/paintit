@@ -42,7 +42,7 @@ FIELDS = [
     ("sender_tax", "Votre n° de TVA (Légal)", ["寄件人税号", "sender tax", "vat"]),
     ("logistics", "Transporteur choisi (réglage)", ["买家所选物流", "物流方式", "shipping method", "logistics"]),
     ("note", "Note (fichiers de production)", ["备注", "买家留言", "留言", "remark", "note", "memo", "comment"]),
-    ("files", "Lien du fichier toile (PDF)", ["图片", "链接", "附件", "image", "file", "url", "link", "fichier"]),
+    ("files", "Lien ZIP des fichiers de production", ["图片", "链接", "附件", "image", "file", "url", "link", "fichier"]),
 ]
 FIELD_LABELS = dict((k, l) for k, l, _ in FIELDS)
 
@@ -113,12 +113,6 @@ def order_values(sup, order, sku_pattern=None):
         cost += (sup.offer_cost("colors", order.colors) or 0) + \
                 ((sup.offer_cost("extras", "brushes") or 0) if order.brushes else 0)
     pdf = "%s_template.pdf" % order.uid
-    links = []
-    try:
-        from .integrations import order_files
-        links = list(order_files(sup, order.uid).values())
-    except Exception:
-        pass
     variant = "%s · %d couleurs%s" % (order.format_label or fmt, order.colors or 0, " · pinceaux" if order.brushes else "")
     from .models import CompanyInfo
     cfg = (sup.offer or {}).get("xlsx") or {}
@@ -136,8 +130,10 @@ def order_values(sup, order, sku_pattern=None):
         "email": order.customer_email, "address1": order.address1, "address2": order.address2,
         "postal_code": order.postal_code, "city": order.city, "state": order.city or "",   # province obligatoire chez certains ERP
         "country": order.country, "country_code": (address.COUNTRIES.get(order.country) or ("",))[0],
-        "note": ("PaintIt %s · %s | fichiers : %s" % (order.uid, variant, " ".join(links)))[:1000],
-        "files": file_url(order.uid, pdf),
+        # 1 lien ZIP (tous les fichiers) + le PDF direct : Mango n'accepte pas de piece jointe a l'import
+        "note": ("PaintIt %s · %s | ZIP : %s | PDF : %s" % (order.uid, variant, file_url(order.uid, "production.zip"),
+                                                          file_url(order.uid, pdf)))[:1000],
+        "files": file_url(order.uid, "production.zip"),
     }
 
 

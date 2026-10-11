@@ -416,6 +416,26 @@ def order_file(request, uid, name):
         raise Http404
     if not (request.user.is_staff or security.check_file_token(uid, name, request.GET.get("t", ""))):
         raise Http404
+    if name == "production.zip":
+        # Tous les fichiers de production d'une commande en un seul lien (fournisseur / ERP) - sans prix
+        import io, zipfile
+        from .models import Supplier
+        from .integrations import order_files
+        o = Order.objects.filter(uid=uid).first()
+        sup = (o.supplier if o and o.supplier_id else None) or Supplier.for_checkout("kit")
+        names = list(order_files(sup, uid)) if sup else []
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for n in names:
+                fp = os.path.join(settings.MEDIA_ROOT, "orders", uid, n)
+                if os.path.isfile(fp):
+                    z.write(fp, n)
+        if not names:
+            raise Http404
+        resp = HttpResponse(buf.getvalue(), content_type="application/zip")
+        resp["Content-Disposition"] = 'attachment; filename="PaintIt-%s.zip"' % uid
+        resp["X-Robots-Tag"] = "noindex, nofollow"
+        return resp
     path = os.path.join(settings.MEDIA_ROOT, "orders", uid, name)
     if not os.path.isfile(path):
         raise Http404
