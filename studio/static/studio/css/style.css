@@ -838,3 +838,16 @@ main{overflow-x:clip}
 .nav{padding-left:max(clamp(20px,5vw,64px),calc((100% - 1240px)/2 + clamp(20px,5vw,64px)));
   padding-right:max(clamp(20px,5vw,64px),calc((100% - 1240px)/2 + clamp(20px,5vw,64px)))}
 @media (min-width:1400px){.topbar{padding-right:calc((100% - 1240px)/2 + 40px)}}
+
+/* Selecteur de langue dans l'en-tete (sticky, toujours visible) ; bandeau bleu = message seul */
+.topbar{justify-content:center}
+.topbar .tb-msg{padding-left:0;text-align:center}
+@media (min-width:1400px){.topbar{padding-right:0}}
+.nav .langdd summary{background:#fff;border:1px solid var(--ring);color:var(--ink);padding:7px 11px;font-size:.8rem}
+.nav .langdd summary:hover,.nav .langdd[open] summary{background:#f1f5ff;border-color:#cdd8ea}
+@media (max-width:560px){
+  .nav .langdd{order:1;margin-left:6px}
+  .nav .nav-cta{max-width:calc(100% - 130px)}
+  .nav .langdd summary{padding:6px 9px}
+  .topbar .tb-msg{text-align:center}
+}
