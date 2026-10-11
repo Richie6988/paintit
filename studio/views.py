@@ -2236,7 +2236,7 @@ def _slug(text):
 
 
 def _create_gallery_model(title, category="", price=0, colors=24, orientation="portrait",
-                          image_path=None, from_uid=None, in_slider=False):
+                          image_path=None, from_uid=None, in_slider=False, zones=(None, 1.0)):
     """Ajout a la galerie = exactement `seed_library` : l'image est rangee dans
     studio/static/studio/gallery/<Categorie>/ (convention de nommage) puis seedee
     (toile gal-..., fiche bibliotheque, assets du home). Source : image_path, ou la photo
@@ -2248,7 +2248,7 @@ def _create_gallery_model(title, category="", price=0, colors=24, orientation="p
         if not image_path:
             raise ValueError("photo originale de cette toile non conservée : impossible de la seeder")
     m = seed_image(image_path, title, category, price, colors=int(colors or 24), landscape=(orientation == "paysage"),
-                   in_slider=in_slider)
+                   in_slider=in_slider, density=zones[0], detail=zones[1])
     if from_uid:
         DigitalCanvas.objects.filter(pk=m.pk).update(origin_uid=from_uid)
     return m
@@ -2265,6 +2265,14 @@ def erp_catalogue(request):
     if request.method == "POST":
         op = request.POST.get("op")
         m = lib.filter(pk=request.POST.get("id")).first()
+
+        def density():
+            """'densite|detail' (ex. '0.7|0.75') -> (densite zones/cm2, finesse des zones) ; vide = auto."""
+            try:
+                d, _, det = (request.POST.get("density") or "").replace(",", ".").partition("|")
+                return min(5.0, max(0.02, float(d))), (min(2.0, max(0.4, float(det))) if det else 1.0)
+            except ValueError:
+                return None, 1.0
 
         def price(v):
             try:
@@ -2309,7 +2317,7 @@ def erp_catalogue(request):
                     m = _create_gallery_model((request.POST.get("title") or c.title or "Nouveau modèle").strip(),
                                               request.POST.get("category") or c.category, price(request.POST.get("price")),
                                               colors=c.colors or 24, orientation=orient, from_uid=c.uid,
-                                              in_slider=bool(request.POST.get("in_slider")))
+                                              in_slider=bool(request.POST.get("in_slider")), zones=density())
                     messages.success(request, "Toile publiée dans la galerie : modèle « %s » (%s)." % (m.title, m.uid))
                 except Exception as exc:
                     logger.exception("Publication galerie %s", c.uid)
@@ -2330,7 +2338,7 @@ def erp_catalogue(request):
                     _create_gallery_model(title, request.POST.get("category", "").strip(), price(request.POST.get("price")),
                                           colors=int(request.POST.get("colors") or 24),
                                           orientation=request.POST.get("orientation", "portrait"),
-                                          image_path=tmp, in_slider=bool(request.POST.get("in_slider")))
+                                          image_path=tmp, in_slider=bool(request.POST.get("in_slider")), zones=density())
                     os.remove(tmp)
                     messages.success(request, "Modèle « %s » créé et publié%s." % (
                         title, " (galerie + slider de l'accueil)" if request.POST.get("in_slider") else " dans la galerie"))

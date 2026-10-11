@@ -74,7 +74,7 @@ def seed_item(it, showdir=None, log=None):
     """Genere le modele + fiche bibliotheque + assets du home. Titre, categorie et prix ne sont
     fixes qu'a la creation : les modifications faites dans l'admin survivent a un nouveau seed."""
     w, h = (50, 40) if it.get("landscape") else (40, 50)
-    generate(it["path"], it["colors"], w, h, uid=it["uid"])
+    generate(it["path"], it["colors"], w, h, uid=it["uid"], density=it.get("density"), detail=it.get("detail") or 1.0)
     m, _ = DigitalCanvas.objects.update_or_create(
         email=LIB, uid=it["uid"],
         defaults=dict(colors=it["colors"], orientation="paysage" if it.get("landscape") else "portrait",
@@ -92,7 +92,7 @@ def seed_item(it, showdir=None, log=None):
     return m
 
 
-def seed_image(src_path, title, category="", price=0, colors=24, landscape=False, in_slider=False):
+def seed_image(src_path, title, category="", price=0, colors=24, landscape=False, in_slider=False, density=None, detail=1.0):
     """Admin -> galerie : range l'image dans gallery/<Categorie>/ selon la convention de nommage
     (comme si on l'avait deposee a la main) puis la seed. -> fiche DigitalCanvas."""
     import shutil
@@ -109,7 +109,9 @@ def seed_image(src_path, title, category="", price=0, colors=24, landscape=False
             uid=item_for(dst, base)["uid"]).exists():
         dst = os.path.join(folder, "%s-%d%s%s" % (stem, n, suffix, ext)); n += 1
     shutil.copyfile(src_path, dst)
-    m = seed_item(item_for(dst, base, "gal-", int(colors)), media_showcase_dir())
+    it = item_for(dst, base, "gal-", int(colors))
+    it["density"], it["detail"] = density, detail
+    m = seed_item(it, media_showcase_dir())
     DigitalCanvas.objects.filter(pk=m.pk).update(title=title[:80], category=(category or "Galerie")[:40],
                                                  price=price or 0,   # libelles exacts (accents...)
                                                  in_slider=bool(in_slider))

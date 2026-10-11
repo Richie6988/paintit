@@ -155,8 +155,13 @@
   <div><label>Titre</label><input type="text" name="title" maxlength="80" required placeholder="Coucher de soleil"></div>
   <div class="row2"><div><label>Catégorie</label><input type="text" name="category" list="cats" maxlength="40" placeholder="Paysages"></div>
   <div><label>Prix (€)</label><input type="number" name="price" min="0" step="0.01" value="0"></div></div>
-  <div class="row2"><div><label>Couleurs</label><select name="colors"><option>12</option><option selected>24</option><option>36</option></select></div>
+  <div class="row2"><div><label>Couleurs</label><select name="colors"><option>12</option><option selected>24</option><option>36</option><option>48</option></select></div>
   <div><label>Orientation</label><select name="orientation"><option value="portrait">Portrait</option><option value="paysage">Paysage</option></select></div></div>
+  <div><label>Densité de zones <small class="muted">(zones / cm²)</small></label><select name="density">
+    <option value="">Auto (selon les couleurs)</option><option value="0.25|1.35">Faible · zones larges, facile</option>
+    <option value="0.45|1.0">Moyenne</option><option value="0.7|0.75">Élevée · plus de détails</option>
+    <option value="1.0|0.6">Très élevée · expert</option></select>
+    <small class="muted">Agit sur le plafond de zones (toile 40×50 = 2 000 cm²) et sur la finesse des zones. Auto = réglage standard selon les couleurs. Une image simple (aplats, dessin) produira toujours moins de zones qu'une photo détaillée.</small></div>
   <label class="tgl"><input type="checkbox" name="in_slider" value="1"><span><b>Slider de l'accueil</b><small>En plus de la galerie, afficher ce modèle dans l'animation interactive en haut de la page d'accueil.</small></span></label>
   <div class="acts-bar"><button class="pbtn" type="button" onclick="closeD()">Annuler</button><button class="pbtn pri" type="submit">Créer le modèle</button></div>
 </form></div>
@@ -167,6 +172,11 @@
   <div><label>Titre</label><input type="text" name="title" id="pTitle" maxlength="80" required></div>
   <div class="row2"><div><label>Catégorie</label><input type="text" name="category" list="cats" maxlength="40"></div>
   <div><label>Prix (€)</label><input type="number" name="price" min="0" step="0.01" value="0"></div></div>
+  <div><label>Densité de zones <small class="muted">(zones / cm²)</small></label><select name="density">
+    <option value="">Auto (selon les couleurs)</option><option value="0.25|1.35">Faible · zones larges, facile</option>
+    <option value="0.45|1.0">Moyenne</option><option value="0.7|0.75">Élevée · plus de détails</option>
+    <option value="1.0|0.6">Très élevée · expert</option></select>
+    <small class="muted">Agit sur le plafond de zones (toile 40×50 = 2 000 cm²) et sur la finesse des zones. Auto = réglage standard selon les couleurs. Une image simple (aplats, dessin) produira toujours moins de zones qu'une photo détaillée.</small></div>
   <p class="muted">Vérifiez que vous avez l'accord du client avant de publier sa toile.</p>
   <label class="tgl"><input type="checkbox" name="in_slider" value="1"><span><b>Slider de l'accueil</b><small>En plus de la galerie, afficher ce modèle dans l'animation interactive en haut de la page d'accueil.</small></span></label>
   <div class="acts-bar"><button class="pbtn" type="button" onclick="closeD()">Annuler</button><button class="pbtn pri" type="submit">Publier</button></div>
