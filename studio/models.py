@@ -439,6 +439,12 @@ class PrintPricing(models.Model):
                 "glass": self.glass_price if self.av_glass else None}
 
 
+def format_key(w, h):
+    """Cle de format independante de l'orientation : 50x40 (paysage) -> '40x50' (cle de KitFormat)."""
+    a, b = sorted((int(round(float(w or 0))), int(round(float(h or 0)))))
+    return "%dx%d" % (a, b)
+
+
 class KitFormat(models.Model):
     """Formats du kit (peinture par numeros) gerables depuis /admin-tarifs/ :
     dimensions + prix de base + disponibilite. Ajout/suppression libre."""
@@ -458,7 +464,7 @@ class KitFormat(models.Model):
 
     @property
     def key(self):
-        return "%dx%d" % (self.width_cm, self.height_cm)
+        return format_key(self.width_cm, self.height_cm)
 
     def __str__(self):
         return self.label

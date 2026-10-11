@@ -248,7 +248,8 @@ def push_order(sup, order, files):
     if order.shopify_order_id:
         return "deja creee (%s)" % order.shopify_order_id
     c = cfg(sup)
-    fmt = "%dx%d" % (int(order.width_cm), int(order.height_cm))
+    from .models import format_key
+    fmt = format_key(order.width_cm, order.height_cm)
     sku = sku_for(fmt, order.colors)
     variant = (c.get("variants") or {}).get(sku)
     cur = c.get("currency") or "EUR"

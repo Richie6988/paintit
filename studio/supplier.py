@@ -29,7 +29,8 @@ def estimate_cost(order, shipping=None):
         if sup:
             iso = (address.COUNTRIES.get((shipping or {}).get("country") or "France") or ("FR",))[0]
             zone = "fr" if iso == "FR" else "eu" if iso in EU else "world"
-            c = sup.order_cost("%dx%d" % (int(float(order["width_cm"])), int(float(order["height_cm"]))),
+            from .models import format_key
+            c = sup.order_cost(format_key(order["width_cm"], order["height_cm"]),
                                int(order["colors"]), bool(order.get("brushes")), zone)
             if c is not None:
                 return c

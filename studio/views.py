@@ -2409,6 +2409,8 @@ def _save_supplier_extras(request, sup):
                      if P.get("xmap_%d" % i)}
         xl["sku"] = (P.get("xlsx_sku") or "").strip()[:80] or xl.get("sku") or ""
         xl["attach"] = bool(P.get("xlsx_attach"))
+        xl["ioss"] = (P.get("xlsx_ioss") or "").strip()[:30]
+        xl["logistics"] = (P.get("xlsx_logistics") or "").strip()[:60]
     if xl:
         sup.offer["xlsx"] = xl
     fields = ["offer"]

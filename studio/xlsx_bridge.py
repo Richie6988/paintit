@@ -18,22 +18,29 @@ from django.conf import settings
 FIELDS = [
     ("uid", "N° de commande PaintIt", ["订单号", "订单编号", "平台订单", "order no", "order number", "order id", "commande", "参考号", "reference"]),
     ("date", "Date de commande", ["日期", "下单时间", "付款时间", "date", "time"]),
+    ("sku_qty", "SKU*quantité (MangoERP : sku*1;sku*1)", ["sku编码和数量", "sku and qty", "sku*"]),
     ("sku", "SKU (modèle ci-dessous)", ["sku", "商品编码", "产品编码", "货号", "seller sku"]),
+    ("amount", "Montant de la commande (payé TTC)", ["订单金额", "订单总额", "order amount", "order total", "montant"]),
     ("product", "Nom du produit", ["商品名称", "产品名称", "品名", "标题", "title", "product name", "product", "item name"]),
     ("variant", "Variante (format · couleurs)", ["属性", "规格", "变体", "variant", "variation", "option"]),
     ("qty", "Quantité (1)", ["数量", "qty", "quantity", "quantité"]),
     ("unit_cost", "Prix unitaire (coût fournisseur)", ["单价", "价格", "售价", "unit price", "price", "prix"]),
     ("currency", "Devise (EUR)", ["币种", "货币", "currency", "devise"]),
     ("name", "Destinataire", ["收件人", "收货人", "买家姓名", "姓名", "recipient", "receiver", "consignee", "name", "nom"]),
-    ("phone", "Téléphone", ["电话", "手机", "联系电话", "phone", "tel", "mobile", "téléphone"]),
+    ("phone", "Téléphone", ["电话", "联系电话", "phone", "tel", "téléphone"]),
+    ("mobile", "Mobile (même numéro)", ["手机", "mobile", "portable"]),
     ("email", "E-mail", ["邮箱", "email", "e-mail", "mail"]),
-    ("address1", "Adresse ligne 1", ["地址1", "街道1", "详细地址", "address1", "address 1", "address line 1", "street", "地址"]),
+    ("address_full", "Adresse complète (ligne 1 + 2)", ["详细地址", "full address", "adresse complète"]),
+    ("address1", "Adresse ligne 1", ["地址1", "街道1", "address1", "address 1", "address line 1", "street", "地址"]),
     ("address2", "Adresse ligne 2", ["地址2", "街道2", "address2", "address 2", "address line 2", "complément"]),
     ("postal_code", "Code postal", ["邮编", "邮政编码", "zip", "postal", "postcode", "code postal"]),
     ("city", "Ville", ["城市", "city", "ville"]),
     ("state", "Région / État", ["省", "州", "province", "state", "region", "région"]),
     ("country", "Pays (nom)", ["国家名", "country name", "pays", "country"]),
     ("country_code", "Pays (code ISO2)", ["国家二字码", "国家代码", "国家简码", "二字码", "country code", "countrycode", "iso"]),
+    ("ioss", "N° IOSS (réglage)", ["ioss"]),
+    ("sender_tax", "Votre n° de TVA (Légal)", ["寄件人税号", "sender tax", "vat"]),
+    ("logistics", "Transporteur choisi (réglage)", ["买家所选物流", "物流方式", "shipping method", "logistics"]),
     ("note", "Note (fichiers de production)", ["备注", "买家留言", "留言", "remark", "note", "memo", "comment"]),
     ("files", "Lien du fichier toile (PDF)", ["图片", "链接", "附件", "image", "file", "url", "link", "fichier"]),
 ]
@@ -94,7 +101,8 @@ def order_values(sup, order, sku_pattern=None):
     """Valeurs d'une commande (modele Order) pour chaque champ PaintIt."""
     from . import address
     from .security import file_url
-    fmt = "%dx%d" % (int(order.width_cm or 0), int(order.height_cm or 0))
+    from .models import format_key
+    fmt = format_key(order.width_cm, order.height_cm)
     pattern = sku_pattern or DEFAULT_SKU
     try:
         sku = pattern.format(format=fmt, colors=order.colors, brushes="B" if order.brushes else "")
@@ -112,15 +120,23 @@ def order_values(sup, order, sku_pattern=None):
     except Exception:
         pass
     variant = "%s · %d couleurs%s" % (order.format_label or fmt, order.colors or 0, " · pinceaux" if order.brushes else "")
+    from .models import CompanyInfo
+    cfg = (sup.offer or {}).get("xlsx") or {}
+    phone = ("%s %s" % (order.phone_code or "", order.phone or "")).strip()
+    sku_qty = "%s*1" % sku + (";%s*1" % (cfg.get("brush_sku") or "PBN-BRUSHES") if order.brushes else "")
     return {
+        "sku_qty": sku_qty, "amount": round(float(order.total or order.price or 0), 2), "mobile": phone,
+        "address_full": ", ".join(x for x in (order.address1, order.address2) if x),
+        "ioss": cfg.get("ioss", ""), "logistics": cfg.get("logistics", ""),
+        "sender_tax": getattr(CompanyInfo.get(), "vat_number", "") or "",
         "uid": order.uid, "date": order.created_at.strftime("%Y-%m-%d %H:%M") if order.created_at else "",
         "sku": sku, "product": "PaintIt - peinture par numéros personnalisée", "variant": variant,
         "qty": 1, "unit_cost": round(cost, 2) if cost is not None else "", "currency": "EUR",
-        "name": order.customer_name, "phone": ("%s %s" % (order.phone_code or "", order.phone or "")).strip(),
+        "name": order.customer_name, "phone": phone,
         "email": order.customer_email, "address1": order.address1, "address2": order.address2,
-        "postal_code": order.postal_code, "city": order.city, "state": "",
+        "postal_code": order.postal_code, "city": order.city, "state": order.city or "",   # province obligatoire chez certains ERP
         "country": order.country, "country_code": (address.COUNTRIES.get(order.country) or ("",))[0],
-        "note": ("%s | fichiers : %s" % (variant, " ".join(links)))[:1000],
+        "note": ("PaintIt %s · %s | fichiers : %s" % (order.uid, variant, " ".join(links)))[:1000],
         "files": file_url(order.uid, pdf),
     }
 

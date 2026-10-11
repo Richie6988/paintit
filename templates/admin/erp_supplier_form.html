@@ -119,6 +119,10 @@
           </table>
           <div class="pf-f"><label>Modèle de SKU</label><input type="text" name="xlsx_sku" value="{{ xl.sku|default:xsku_default }}">
             <span class="hlp">Doit correspondre au SKU créé par le fournisseur dans son ERP. Variables : {format} (ex. 40x50), {colors} (ex. 24), {brushes} (B si pinceaux).</span></div>
+          <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="pf-f"><label>N° IOSS (envois hors UE → UE ≤ 150 €)</label><input type="text" name="xlsx_ioss" value="{{ xl.ioss|default:'' }}" placeholder="IM2500000000"></div>
+            <div class="pf-f"><label>Transporteur à demander</label><input type="text" name="xlsx_logistics" value="{{ xl.logistics|default:'' }}" placeholder="ex. YunExpress, laisser vide = au choix"></div>
+          </div>
           <label class="sw"><input type="checkbox" name="xlsx_attach" {% if xl.attach %}checked{% endif %}> Joindre ce fichier Excel à chaque commande envoyée par e-mail</label>
           <label class="sw"><input type="checkbox" name="xlsx_remove" value="1"> Retirer le modèle</label>
         {% else %}<div class="muted">Aucun modèle : l'export utilisera un format standard (une colonne par champ, libellés FR + clés).</div>{% endif %}
