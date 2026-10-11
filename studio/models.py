@@ -1,3 +1,4 @@
+import os
 from django.db import models
 from django.utils import timezone
 
@@ -510,7 +511,26 @@ class Supplier(models.Model):
     # S'il est rempli, chaque couleur calculee est remplacee par la teinte disponible la plus proche.
     palette = models.JSONField("Nuancier (couleurs disponibles)", default=list, blank=True)
     palette_updated_at = models.DateTimeField("Nuancier importe le", null=True, blank=True)
+    # Offre du fournisseur : formats et nombres de couleurs proposes + cout d'achat, options payantes.
+    # {"formats": {"40x50": {"on": true, "cost": 12.5}}, "colors": {"24": {"on": true, "cost": 0}},
+    #  "options": [{"name": "Set de pinceaux", "cost": 1.2}]}
+    offer = models.JSONField("Offre et tarifs", default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def offer_rows(self):
+        """Offre lisible : [(categorie, libelle, disponible, cout)] pour la fiche."""
+        from .forms import FORMATS
+        o = self.offer or {}
+        rows = []
+        for k, v in FORMATS.items():
+            d = (o.get("formats") or {}).get(k) or {}
+            rows.append(("Format", v[2], bool(d.get("on")), d.get("cost")))
+        for n in COLOR_COUNTS:
+            d = (o.get("colors") or {}).get(str(n)) or {}
+            rows.append(("Couleurs", "%d couleurs" % n, bool(d.get("on")), d.get("cost")))
+        for d in o.get("options") or []:
+            rows.append(("Option", d.get("name", ""), True, d.get("cost")))
+        return rows
 
     def save(self, *args, **kwargs):
         if not self.webhook_secret:
@@ -578,3 +598,27 @@ class MarketingAd(models.Model):
 
     def __str__(self):
         return "%s %s/%s" % (self.image_uid, self.variant, self.kind)
+
+
+def _supplier_file_path(instance, filename):
+    import secrets
+    base, ext = os.path.splitext(os.path.basename(filename))
+    # media/private/ : bloque par nginx ; prefixe aleatoire = URL non devinable
+    return "private/suppliers/%s/%s_%s%s" % (instance.supplier_id, secrets.token_hex(6), base[:60], ext[:10])
+
+
+class SupplierFile(models.Model):
+    """Piece jointe d'un fournisseur (contrat, catalogue, grille PDF...). Servie uniquement au staff."""
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name="files")
+    file = models.FileField(upload_to=_supplier_file_path, max_length=255)
+    name = models.CharField(max_length=160)
+    size = models.PositiveIntegerField(default=0)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-uploaded_at"]
+        verbose_name = "Piece jointe fournisseur"
+        verbose_name_plural = "Pieces jointes fournisseur"
+
+    def __str__(self):
+        return self.name

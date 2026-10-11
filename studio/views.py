@@ -2181,7 +2181,8 @@ def _supplier_form_class():
     class SupplierForm(forms.ModelForm):
         class Meta:
             model = Supplier
-            exclude = ("created_at", "last_sync_at", "last_sync_ok", "last_sync_error", "webhook_secret")
+            exclude = ("created_at", "last_sync_at", "last_sync_ok", "last_sync_error", "webhook_secret",
+                       "palette", "palette_updated_at", "offer")
             widgets = {k: forms.Textarea(attrs={"rows": 3}) for k in
                        ("address", "pricing", "terms", "production_notes", "notes")}
     return SupplierForm
@@ -2204,7 +2205,8 @@ def erp_supplier_edit(request, pk=None):
     form = Form(request.POST or None, instance=sup)
     if request.method == "POST" and form.is_valid():
         sup = form.save()
-        messages.success(request, "Fournisseur enregistre.")
+        notes = _save_supplier_extras(request, sup)
+        messages.success(request, "Fournisseur enregistré." + ("" if not notes else " " + " ".join(notes)))
         return redirect("studio:erp_supplier", pk=sup.pk)
     f = form
     sections = [
@@ -2220,9 +2222,81 @@ def erp_supplier_edit(request, pk=None):
         ("Notes internes", "", ["notes"]),
     ]
     sec = [{"title": t, "help": h, "fields": [f[n] for n in names if n in f.fields]} for t, h, names in sections]
+    from .forms import FORMATS
+    from .models import COLOR_COUNTS
+    o = (sup.offer if sup else None) or {}
+    offer = {"formats": [{"key": k, "label": v[2], **((o.get("formats") or {}).get(k) or {})} for k, v in FORMATS.items()],
+             "colors": [{"key": str(n), "label": "%d couleurs" % n, **((o.get("colors") or {}).get(str(n)) or {})}
+                        for n in COLOR_COUNTS],
+             "options": list(o.get("options") or []) + [{} for _ in range(3)]}
     return render(request, "admin/erp_supplier_form.html", {
-        **_admin.site.each_context(request), "form": form, "sup": sup, "sections": sec,
+        **_admin.site.each_context(request), "form": form, "sup": sup, "sections": sec, "offer": offer,
         "erp_section": "suppliers"})
+
+
+def _save_supplier_extras(request, sup):
+    """Offre (formats / couleurs / options + couts), nuancier CSV et pieces jointes du formulaire fournisseur."""
+    from .forms import FORMATS
+    from .models import COLOR_COUNTS, SupplierFile
+    P = request.POST
+    notes = []
+
+    def cost(name):
+        try:
+            v = (P.get(name) or "").replace(",", ".").strip()
+            return round(float(v), 2) if v else None
+        except ValueError:
+            return None
+    opts = []
+    for i in range(50):
+        n = (P.get("opt_name_%d" % i) or "").strip()[:80]
+        if n:
+            opts.append({"name": n, "cost": cost("opt_cost_%d" % i)})
+    sup.offer = {
+        "formats": {k: {"on": bool(P.get("fmt_on_" + k)), "cost": cost("fmt_cost_" + k)} for k in FORMATS},
+        "colors": {str(n): {"on": bool(P.get("col_on_%d" % n)), "cost": cost("col_cost_%d" % n)} for n in COLOR_COUNTS},
+        "options": opts}
+    fields = ["offer"]
+    if P.get("palette_clear"):
+        sup.palette, sup.palette_updated_at = [], None
+        fields += ["palette", "palette_updated_at"]
+        notes.append("Nuancier retiré.")
+    f = request.FILES.get("palette_csv")
+    if f:
+        from . import palette as _pal
+        cols, rep = _pal.parse_csv(f.read())
+        if cols:
+            sup.palette, sup.palette_updated_at = cols, timezone.now()
+            fields += ["palette", "palette_updated_at"]
+            notes.append("Nuancier importé : %d teintes%s." % (len(cols), (" (%d doublon(s) ignoré(s))" % len(rep["duplicates"]))
+                                                               if rep["duplicates"] else ""))
+        else:
+            notes.append("Nuancier non importé : 1re colonne = référence, 2e = code #RRGGBB.")
+    sup.save(update_fields=list(dict.fromkeys(fields)))
+    for fid in P.getlist("file_delete"):
+        sf = SupplierFile.objects.filter(pk=fid, supplier=sup).first()
+        if sf:
+            sf.file.delete(save=False); sf.delete()
+    n = 0
+    for up in request.FILES.getlist("attachments")[:10]:
+        if up.size > 20 * 1024 * 1024:
+            notes.append("%s ignoré (> 20 Mo)." % up.name); continue
+        SupplierFile.objects.create(supplier=sup, file=up, name=up.name[:160], size=up.size); n += 1
+    if n:
+        notes.append("%d pièce(s) jointe(s) ajoutée(s)." % n)
+    return notes
+
+
+@staff_member_required
+def erp_supplier_file(request, pk, fid):
+    from .models import SupplierFile
+    sf = SupplierFile.objects.filter(pk=fid, supplier_id=pk).first()
+    if not sf or not sf.file:
+        raise Http404
+    try:
+        return FileResponse(sf.file.open("rb"), as_attachment=False, filename=sf.name)
+    except OSError:
+        raise Http404
 
 
 # ---------------- Catalogue (galerie de modeles + toiles clients) ----------------

@@ -64,17 +64,12 @@
           Chaque couleur calculée pour une toile est alors remplacée par la teinte disponible la plus proche (écart perçu par l'œil, CIEDE2000),
           et la fiche JSON envoyée au fournisseur donne ses <b>références</b> au lieu des codes hexadécimaux. Le poster client ne change pas.
           {% if sup.checkout == "print" %}<br><b>Ce fournisseur est branché sur le Tableau fini : le nuancier n'est utilisé que pour le fournisseur Kit actif.</b>{% endif %}</p>
-        <form method="post" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">{% csrf_token %}
-          <input type="file" name="csv" accept=".csv,text/csv,text/plain" required>
-          <button class="pbtn pri" name="op" value="palette_upload">{% if sup.palette %}Remplacer le nuancier{% else %}Importer le CSV{% endif %}</button>
-        </form>
+        <a class="pbtn sm" href="/admin-hub/suppliers/{{ sup.pk }}/edit/#nuancier-edit">{% if sup.palette %}Remplacer / retirer{% else %}Importer le CSV{% endif %} depuis la fiche</a>
         {% if sup.palette %}
           <div class="muted" style="margin:10px 0 6px;font-size:.78rem">Importé le {{ sup.palette_updated_at|date:"d/m/Y H:i" }} — survolez une pastille pour voir sa référence.</div>
           <div style="display:flex;flex-wrap:wrap;gap:3px;max-height:150px;overflow:auto;padding:2px">
             {% for c in sup.palette %}<span title="Réf. {{ c.code }} · {{ c.hex }}" style="width:16px;height:16px;border-radius:4px;background:{{ c.hex }};box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)"></span>{% endfor %}
           </div>
-          <form method="post" style="margin-top:10px" data-confirm="Retirer le nuancier de {{ sup.name }} ?" data-confirm-text="Les prochaines toiles reviendront à des couleurs calculées librement (sans références fournisseur)." data-ok="Retirer" data-danger>{% csrf_token %}
-            <button class="pbtn sm" name="op" value="palette_clear" style="color:#b42318">Retirer le nuancier</button></form>
         {% endif %}
       </div>
 
@@ -131,6 +126,19 @@
           <dt>Téléphone</dt><dd>{% if sup.phone %}<a href="tel:{{ sup.phone }}">{{ sup.phone }}</a>{% else %}—{% endif %}</dd>
           <dt>Adresse</dt><dd>{{ sup.address|default:"—"|linebreaksbr }}</dd>
         </dl>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Offre &amp; tarifs</h2><a class="muted" href="/admin-hub/suppliers/{{ sup.pk }}/edit/">Modifier</a></div>
+        {% with rows=sup.offer_rows %}{% if sup.offer %}
+        <table style="width:100%;font-size:.82rem;border-collapse:collapse">
+          {% for cat, lbl, on, cost in rows %}{% if on %}<tr><td class="muted" style="padding:3px 0">{{ cat }}</td><td>{{ lbl }}</td><td style="text-align:right;font-weight:700">{% if cost is not None %}{{ cost|floatformat:2 }} €{% else %}—{% endif %}</td></tr>{% endif %}{% endfor %}
+        </table>{% else %}<div class="muted">Aucune offre saisie.</div>{% endif %}{% endwith %}
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Pièces jointes</h2><a class="muted" href="/admin-hub/suppliers/{{ sup.pk }}/edit/">Ajouter</a></div>
+        {% with fs=sup.files.all %}{% if fs %}{% for x in fs %}<div style="display:flex;justify-content:space-between;gap:8px;font-size:.84rem;padding:4px 0">
+          <a href="/admin-hub/suppliers/{{ sup.pk }}/files/{{ x.pk }}/" target="_blank" style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ x.name }}</a><span class="muted">{{ x.size|filesizeformat }}</span></div>{% endfor %}
+        {% else %}<div class="muted">Aucune pièce jointe.</div>{% endif %}{% endwith %}
       </div>
       <div class="card">
         <div class="card-h"><h2>Conditions &amp; paiement</h2></div>

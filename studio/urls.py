@@ -22,6 +22,7 @@ urlpatterns = [
     path("admin-hub/suppliers/<int:pk>/", views.erp_supplier, name="erp_supplier"),
     path("admin-hub/suppliers/new/", views.erp_supplier_edit, name="erp_supplier_new"),
     path("admin-hub/suppliers/<int:pk>/edit/", views.erp_supplier_edit, name="erp_supplier_edit"),
+    path("admin-hub/suppliers/<int:pk>/files/<int:fid>/", views.erp_supplier_file, name="erp_supplier_file"),
     path("admin-tarifs/", views.shop_pricing, name="shop_pricing"),
     path("llm.txt", views.llm_txt, name="llm_txt"),
     path("llm.json", views.llm_json, name="llm_json"),
