@@ -43,3 +43,13 @@ class Command(BaseCommand):
             else:
                 ko += 1
         self.stdout.write(self.style.SUCCESS("%d transmise(s), %d echec(s), %d a traiter." % (ok, ko, len(todo))))
+        # Boutiques Shopify relais : relit les expeditions (au cas ou un webhook serait perdu)
+        from studio import shopify
+        for sup in Supplier.objects.filter(active=True, integration="shopify"):
+            if dry or not shopify.configured(sup):
+                continue
+            try:
+                n = shopify.poll_tracking(sup)
+                self.stdout.write("Shopify %s : %d suivi(s) mis a jour" % (sup.name, n))
+            except Exception as exc:
+                self.stdout.write(self.style.ERROR("Shopify %s : %s" % (sup.name, exc)))

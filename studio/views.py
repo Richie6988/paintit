@@ -2087,7 +2087,8 @@ def _sup_card(sup):
     sup.stats = erp.supplier_stats(sup)
     sup.color = _sup_color(sup.name)
     sup.initials = "".join(w[0] for w in (sup.name or "?").split()[:2]).upper()
-    sup.channel = ("API" if sup.integration == "api" and sup.api_url else
+    sup.channel = ("Shopify" if sup.integration == "shopify" and (sup.shopify or {}).get("domain") else
+                   "API" if sup.integration == "api" and sup.api_url else
                    "E-mail" if sup.email else None)
     sup.health = ("off" if not sup.active else "err" if not sup.channel or not sup.last_sync_ok
                   else "ok" if sup.last_sync_at else "idle")
@@ -2176,6 +2177,35 @@ def erp_supplier(request, pk):
             sup.palette = []; sup.palette_updated_at = None
             sup.save(update_fields=["palette", "palette_updated_at"])
             messages.success(request, "Nuancier retiré : les couleurs seront de nouveau calculées librement.")
+        elif op in ("shop_test", "shop_catalog", "shop_webhooks", "shop_poll", "shop_push"):
+            from . import shopify
+            try:
+                if op == "shop_test":
+                    shop = shopify.test(sup)
+                    messages.success(request, "Connexion Shopify OK : %s (%s, %s)." % (
+                        shop.get("name"), shop.get("myshopifyDomain"), shop.get("currencyCode")))
+                elif op == "shop_catalog":
+                    n = shopify.sync_catalogue(sup)
+                    messages.success(request, "Catalogue publié dans Shopify : %d variante(s) avec SKU. "
+                                     "Le fournisseur les associe à ses produits dans son ERP (配对 SKU)." % n)
+                elif op == "shop_webhooks":
+                    t = shopify.install_webhooks(sup)
+                    messages.success(request, "Retours automatiques activés : %s." % ", ".join(t))
+                elif op == "shop_poll":
+                    n = shopify.poll_tracking(sup)
+                    messages.success(request, "%d commande(s) mises à jour depuis Shopify." % n)
+                elif op == "shop_push":
+                    n = ko = 0
+                    for o in Order.objects.filter(supplier=sup, shopify_order_id="",
+                                                  status__in=(Order.PAID, Order.FULFILLED)):
+                        if _notify_supplier(_order_from_row(o), _shipping_from_row(o), sup=sup, user=user):
+                            n += 1
+                        else:
+                            ko += 1
+                    (messages.success if not ko else messages.error)(
+                        request, "%d commande(s) créée(s) dans Shopify%s." % (n, (", %d échec(s) (voir journal)" % ko) if ko else ""))
+            except Exception as exc:
+                messages.error(request, "Shopify : %s" % exc)
         elif op == "tracking_import":
             from . import xlsx_bridge
             f = request.FILES.get("tracking")
@@ -2242,6 +2272,8 @@ def erp_supplier(request, pk):
     return render(request, "admin/erp_supplier.html", {
         "automation": automation, "due": due, "due_total": round(sum(o.cost or 0 for o in due), 2), "paid": paid,
         "xl": (sup.offer or {}).get("xlsx") or {},
+        "shop": sup.shopify or {}, "shop_hook": __import__("studio.shopify", fromlist=["x"]).webhook_url(sup),
+        "shop_pending": Order.objects.filter(supplier=sup, shopify_order_id="", status__in=(Order.PAID, Order.FULFILLED)).count(),
         **_admin.site.each_context(request), "sup": sup, "tab": tab, "rows": rows,
         "tabs": [(k, l, q.count()) for k, l, q in tabs], "events": events,
         "iban": mask(sup.iban), "api_key": mask(sup.api_key, 3),
@@ -2380,6 +2412,22 @@ def _save_supplier_extras(request, sup):
     if xl:
         sup.offer["xlsx"] = xl
     fields = ["offer"]
+    if "shop_domain" in P:
+        sh = dict(sup.shopify or {})
+        new = {"domain": P.get("shop_domain", "").strip()[:120], "client_id": P.get("shop_client_id", "").strip()[:120],
+               "api_version": P.get("shop_api_version", "").strip()[:12]}
+        for k in ("client_secret", "static_token"):   # champs secrets : vides = inchanges
+            v = P.get("shop_" + k, "").strip()
+            if v:
+                new[k] = v[:200]
+            if P.get("shop_clear_" + k):
+                new[k] = ""
+        if (new["domain"], new["client_id"]) != (sh.get("domain"), sh.get("client_id")) or new.get("client_secret") \
+                or "static_token" in new:
+            sh.pop("token", None); sh.pop("token_exp", None)
+        sh.update(new)
+        sup.shopify = sh
+        fields.append("shopify")
     if P.get("palette_clear"):
         sup.palette, sup.palette_updated_at = [], None
         fields += ["palette", "palette_updated_at"]
@@ -2642,6 +2690,31 @@ def erp_catalogue(request):
         "sort": sort, "cats": cats, "stats": stats, "slider": request.GET.get("slider", ""),
         "erp_section": "catalogue"})
 
+
+
+@csrf_exempt
+def shopify_webhook(request, secret):
+    """Webhooks de la boutique Shopify relais (expeditions poussees par l'ERP du fournisseur)."""
+    import json as _json
+    from .models import Supplier
+    from . import shopify
+    sup = Supplier.objects.filter(webhook_secret=secret).first() if secret else None
+    if not sup:
+        return JsonResponse({"error": "inconnu"}, status=404)
+    if request.method != "POST":
+        return JsonResponse({"ok": True})
+    if not shopify.verify_webhook(sup, request.body, request.headers.get("X-Shopify-Hmac-Sha256", "")):
+        return JsonResponse({"error": "signature invalide"}, status=401)
+    try:
+        data = _json.loads(request.body.decode("utf-8") or "{}")
+    except ValueError:
+        return JsonResponse({"error": "JSON invalide"}, status=400)
+    try:
+        code, msg = shopify.handle_webhook(sup, request.headers.get("X-Shopify-Topic", ""), data)
+    except Exception:
+        logger.exception("Webhook Shopify")
+        code, msg = 200, "erreur interne journalisee"   # 200 : evite les relances en boucle cote Shopify
+    return JsonResponse({"message": msg}, status=200 if code in (200, 404) else code)
 
 
 @csrf_exempt

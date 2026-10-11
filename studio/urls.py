@@ -83,6 +83,7 @@ urlpatterns = [
     path("admin-hub/marketing/", views.marketing_gallery, name="marketing_gallery"),
     path("go/<str:token>/", views.ad_click, name="ad_click"),
     path("api/suppliers/<str:secret>/events/", views.supplier_webhook, name="supplier_webhook"),
+    path("api/shopify/<str:secret>/webhook/", views.shopify_webhook, name="shopify_webhook"),
     path("m/<str:token>/", views.ad_view, name="ad_view"),
     path("marketing/file/<str:uid>/<str:name>/", views.marketing_file, name="marketing_file"),
     path("pbn/", views.pbn_lab_page, name="pbn_lab"),

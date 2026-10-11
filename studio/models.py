@@ -131,6 +131,7 @@ class Order(models.Model):
     price = models.FloatField()          # sous-total produit (toile + pinceaux)
     cost = models.FloatField(default=0.0)
     supplier_paid_at = models.DateTimeField("Reglee au fournisseur le", null=True, blank=True)
+    shopify_order_id = models.CharField("Commande Shopify (id)", max_length=40, blank=True, default="", db_index=True)
     supplier_payment_ref = models.CharField("Reference du reglement fournisseur", max_length=80, blank=True, default="")
     discount_code = models.CharField(max_length=32, null=True, blank=True)
     discount_amount = models.FloatField(default=0.0)
@@ -467,7 +468,7 @@ class Supplier(models.Model):
     """Fournisseur plug-and-play : connecte a un checkout, avec grille tarifaire,
     conditions de partenariat et integration (e-mail ou API)."""
     CHECKOUTS = [("kit", "Kit a peindre"), ("print", "Tableau fini"), ("all", "Tous les checkouts")]
-    INTEGRATIONS = [("email", "E-mail"), ("api", "API (webhook)")]
+    INTEGRATIONS = [("email", "E-mail"), ("api", "API (webhook)"), ("shopify", "Shopify (MangoERP / ERP fournisseur)")]
     name = models.CharField("Nom", max_length=120)
     active = models.BooleanField("Actif", default=True)
     checkout = models.CharField("Checkout connecte", max_length=10, choices=CHECKOUTS, default="kit")
@@ -517,6 +518,10 @@ class Supplier(models.Model):
     # {"formats": {"40x50": {"on": true, "cost": 12.5}}, "colors": {"24": {"on": true, "cost": 0}},
     #  "options": [{"name": "Set de pinceaux", "cost": 1.2}]}
     offer = models.JSONField("Offre et tarifs", default=dict, blank=True)
+    # Boutique Shopify relais (le fournisseur y branche son ERP, ex. MangoERP) :
+    # {"domain", "client_id", "client_secret", "static_token", "token", "token_exp", "api_version",
+    #  "product_id", "variants": {sku: gid}, "webhooks": [...], "last_check": ...}
+    shopify = models.JSONField("Shopify", default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     @staticmethod

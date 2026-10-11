@@ -68,6 +68,22 @@ def build_payload(sup, o, shipping, event="order.created"):
 
 def _send(sup, payload):
     """Envoie le payload par le canal du fournisseur. -> (ok, canal, erreur)"""
+    if sup.integration == "shopify":
+        # Boutique Shopify relais : l'ERP du fournisseur (MangoERP...) y recupere la commande
+        from . import shopify
+        from .models import Order
+        try:
+            uid = (payload.get("order") or {}).get("uid")
+            if not uid:
+                shop = shopify.test(sup)
+                return True, "Shopify", "" if shop else "boutique introuvable"
+            row = Order.objects.filter(uid=uid).first()
+            if not row:
+                return False, "Shopify", "commande %s introuvable" % uid
+            name = shopify.push_order(sup, row, payload.get("files") or {})
+            return True, "Shopify %s" % name, ""
+        except Exception as exc:
+            return False, "Shopify", str(exc)[:300]
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     if sup.integration == "api" and sup.api_url:
         import urllib.request

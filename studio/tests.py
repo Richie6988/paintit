@@ -408,5 +408,54 @@ class SeoTests(TestCase):
         self.assertContains(self.client.get("/create/"), 'value="48"')
 
 
+@override_settings(MEDIA_ROOT=MEDIA, EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class ShopifyBridgeTests(TestCase):
+    """Boutique Shopify relais (MangoERP) : creation de commande + retours d'expedition signes."""
+    def setUp(self):
+        from studio.models import Supplier
+        self.sup = Supplier.objects.create(name="Yingsa", checkout="kit", integration="shopify",
+                                           shopify={"domain": "pi", "client_id": "cid", "client_secret": "sec"})
+        self.calls = []
+
+    def fake(self, url, data=None, headers=None, form=False, timeout=25):
+        self.calls.append((url, data))
+        if url.endswith("/admin/oauth/access_token"):
+            return 200, {"access_token": "tok", "expires_in": 86399}, {}
+        if "orderCreate" in (data or {}).get("query", ""):
+            return 200, {"data": {"orderCreate": {"order": {"id": "gid://shopify/Order/77", "name": "#1001",
+                                                            "legacyResourceId": "77"}, "userErrors": []}}}, {}
+        return 200, {"data": {}}, {}
+
+    def test_push_order_once_with_client_credentials(self):
+        from studio import shopify
+        o = make_order(status=Order.PAID)
+        with mock.patch("studio.shopify._http", side_effect=self.fake):
+            self.assertEqual(shopify.push_order(self.sup, o, {"X_template.pdf": "https://f/x.pdf"}), "#1001")
+            o.refresh_from_db()
+            self.assertEqual(o.shopify_order_id, "77")
+            self.assertTrue(shopify.push_order(self.sup, o, {}).startswith("deja"))   # pas de doublon
+        self.assertTrue(self.calls[0][0].startswith("https://pi.myshopify.com/admin/oauth/access_token"))
+        order_in = [d for u, d in self.calls if "orderCreate" in (d or {}).get("query", "")][0]["variables"]["order"]
+        self.assertEqual(order_in["financialStatus"], "PAID")
+        self.assertEqual(order_in["shippingAddress"]["countryCode"], "FR")
+
+    def test_signed_fulfillment_webhook_marks_shipped(self):
+        import base64, hashlib, hmac, json
+        o = make_order(status=Order.FULFILLED)
+        Order.objects.filter(pk=o.pk).update(shopify_order_id="77", supplier=self.sup)
+        body = json.dumps({"order_id": 77, "status": "success", "tracking_company": "YunExpress",
+                           "tracking_number": "YT1"}).encode()
+        url = "/api/shopify/%s/webhook/" % self.sup.webhook_secret
+        bad = self.client.post(url, body, content_type="application/json", HTTP_X_SHOPIFY_HMAC_SHA256="x",
+                               HTTP_X_SHOPIFY_TOPIC="fulfillments/create")
+        self.assertEqual(bad.status_code, 401)
+        sig = base64.b64encode(hmac.new(b"sec", body, hashlib.sha256).digest()).decode()
+        ok = self.client.post(url, body, content_type="application/json", HTTP_X_SHOPIFY_HMAC_SHA256=sig,
+                              HTTP_X_SHOPIFY_TOPIC="fulfillments/create")
+        self.assertEqual(ok.status_code, 200)
+        o.refresh_from_db()
+        self.assertEqual((o.status, o.tracking_number), (Order.SHIPPED, "YT1"))
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)

@@ -57,6 +57,26 @@
         </div>
       </div>
 
+      {% if sup.integration == "shopify" %}
+      <div class="card">
+        <div class="card-h"><h2>Shopify → ERP du fournisseur</h2>{% if shop.domain and shop.last_check %}<span class="bdg2 ok">Connecté</span>{% elif shop.domain %}<span class="bdg2 warn">À tester</span>{% else %}<span class="bdg2 err">Non configuré</span>{% endif %}</div>
+        <ol class="muted" style="margin:0 0 12px;padding-left:18px;font-size:.84rem;line-height:1.7">
+          <li>{% if shop.domain %}✅{% else %}⬜{% endif %} Boutique : <b>{{ shop.shop_name|default:shop.domain|default:"—" }}</b> <a href="/admin-hub/suppliers/{{ sup.pk }}/edit/#shopify">configurer</a></li>
+          <li>{% if shop.catalogue_synced %}✅{% else %}⬜{% endif %} Catalogue publié (SKU <code>PBN-40x50-24C</code>…){% if shop.variants %} · {{ shop.variants|length }} variantes{% endif %} — à associer par le fournisseur dans son ERP</li>
+          <li>{% if shop.webhooks %}✅{% else %}⬜{% endif %} Retours d'expédition automatiques{% if shop.webhooks %} ({{ shop.webhooks|length }} webhooks){% endif %}</li>
+          <li>Le fournisseur autorise sa connexion MangoERP sur votre boutique (côté Shopify : installer l'app MangoERP et lui donner l'accès).</li>
+        </ol>
+        <form method="post" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">{% csrf_token %}
+          <button class="pbtn" name="op" value="shop_test">Tester la connexion</button>
+          <button class="pbtn" name="op" value="shop_catalog">Publier le catalogue</button>
+          <button class="pbtn" name="op" value="shop_webhooks">Activer les retours</button>
+          <button class="pbtn" name="op" value="shop_poll">Synchroniser les suivis</button>
+          {% if shop_pending %}<button class="pbtn pri" style="grid-column:1/-1" name="op" value="shop_push" data-confirm="Créer {{ shop_pending }} commande(s) dans Shopify ?" data-ok="Envoyer">Envoyer {{ shop_pending }} commande(s) en attente vers Shopify</button>{% endif %}
+        </form>
+        <div class="muted" style="font-size:.74rem;margin-top:8px;word-break:break-all">Webhook : {{ shop_hook }}{% if shop.last_check %} · vérifié le {{ shop.last_check|slice:":10" }}{% endif %}</div>
+      </div>
+      {% endif %}
+
       <div class="card">
         <div class="card-h"><h2>ERP du fournisseur (Excel)</h2>{% if xl.template %}<span class="bdg2 ok">Modèle {{ xl.headers|length }} col.</span>{% else %}<span class="bdg2 idle">Format standard</span>{% endif %}</div>
         <p class="muted" style="margin:0 0 10px">Sans Shopify : le fournisseur importe ce fichier dans son ERP (MangoERP → 自定义店铺 → Excel导入手工订单), puis nous renvoie son export d'expédition avec les n° de suivi.</p>
