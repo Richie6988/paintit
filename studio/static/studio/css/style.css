@@ -851,3 +851,4 @@ main{overflow-x:clip}
   .nav .langdd summary{padding:6px 9px}
   .topbar .tb-msg{text-align:center}
 }
+.field-hint{display:block;margin-top:6px;font-weight:400;color:var(--muted);font-size:.8rem;line-height:1.4}

@@ -14,6 +14,9 @@ FORMATS = {
 }
 FORMAT_CHOICES = [(k, v[2]) for k, v in FORMATS.items()]
 ORIENTATION_CHOICES = [("portrait", _("Portrait")), ("paysage", _("Paysage"))]
+DENSITY_CHOICES = [("auto", _("Auto")), ("easy", _("Facile")), ("medium", _("Moyen")), ("expert", _("Expert"))]
+# niveau -> (densite zones/cm2, finesse des zones) ; auto = reglage standard selon les couleurs
+DENSITY_LEVELS = {"auto": (None, 1.0), "easy": (0.25, 1.35), "medium": (0.45, 1.0), "expert": (1.0, 0.6)}
 COLOR_CHOICES = [("12", _("12 couleurs")), ("24", _("24 couleurs")), ("36", _("36 couleurs")), ("48", _("48 couleurs"))]
 
 PHONE_CODES = [
@@ -43,6 +46,8 @@ class UploadForm(forms.Form):
                                     widget=forms.RadioSelect, label=_("Orientation"))
     colors = forms.ChoiceField(choices=COLOR_CHOICES, initial="24",
                                widget=forms.RadioSelect, label=_("Nombre de couleurs"))
+    density = forms.ChoiceField(choices=DENSITY_CHOICES, initial="auto", required=False,
+                                widget=forms.RadioSelect, label=_("Densité de zones"))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

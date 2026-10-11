@@ -44,6 +44,14 @@
       </div>
     </div>
 
+    <div class="field">
+      <span>{{ form.density.label }} <small class="muted">({% trans "zones / cm²" %})</small></span>
+      <div class="segmented">
+        {% for r in form.density %}<label class="seg">{{ r.tag }}<span>{{ r.choice_label }}</span></label>{% endfor %}
+      </div>
+      <small class="field-hint">{% trans "Auto : réglage idéal selon le nombre de couleurs. Facile : grandes zones. Expert : plus de zones, plus de détails." %}</small>
+    </div>
+
     <p class="gen-note"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>{% trans "La génération peut prendre jusqu'à une minute. Plus il y a de couleurs, plus c'est détaillé (et un peu plus long)." %}</p>
     <button class="cta" type="submit">{% trans "Générer mon aperçu" %}</button>
   </form>

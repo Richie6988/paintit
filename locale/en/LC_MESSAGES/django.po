@@ -1474,3 +1474,19 @@ msgid ""
 msgstr ""
 "Create your personalised painting live from a photo, in under a minute. Test"
 " your canvas online. Order your complete kit to paint at home."
+
+msgid "Densité de zones"
+msgstr "Area density"
+
+msgid "Auto"
+msgstr "Auto"
+
+msgid "zones / cm²"
+msgstr "areas / cm²"
+
+msgid ""
+"Auto : réglage idéal selon le nombre de couleurs. Facile : grandes zones. "
+"Expert : plus de zones, plus de détails."
+msgstr ""
+"Auto: ideal setting for the number of colours. Easy: large areas. Expert: "
+"more areas, more detail."

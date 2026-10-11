@@ -90,17 +90,21 @@ def _save_upload(f):
     return path
 
 
-def _run_generation(uid, src, colors, w, h, fmt, orientation, lang, focus=(0.5, 0.5), source_name=None):
+def _run_generation(uid, src, colors, w, h, fmt, orientation, lang, focus=(0.5, 0.5), source_name=None,
+                    level="auto"):
     def cb(pct, label):
         jobs.update(uid, pct=int(pct), label=label)
 
     try:
-        result = generate(src, colors, w, h, uid=uid, progress=cb, focus=focus, source_name=source_name)
+        from .forms import DENSITY_LEVELS
+        dens, det = DENSITY_LEVELS.get(level, DENSITY_LEVELS["auto"])
+        result = generate(src, colors, w, h, uid=uid, progress=cb, focus=focus, source_name=source_name,
+                          density=dens, detail=det)
         canvas_price = compute_price(fmt, colors)
         order = {
             **result, "colors": colors, "width_cm": w, "height_cm": h,
             "orientation": orientation, "format_label": FORMATS[fmt][2],
-            "difficulty": "auto", "lang": lang,
+            "difficulty": level, "lang": lang,
             "canvas_price": canvas_price, "brushes": False, "brushes_amount": 0.0,
             "price": canvas_price,
         }
@@ -132,6 +136,7 @@ def upload(request):
                 p = Pricing.get()
                 fmt = "40x50" if p.format_available("40x50") else p.available_formats()[0]
                 colors = int(form.cleaned_data["colors"])
+                level = form.cleaned_data.get("density") or "auto"
                 orientation = form.cleaned_data["orientation"]
                 w, h = dimensions(fmt, orientation)
                 try:
@@ -146,7 +151,7 @@ def upload(request):
                 try:
                     genqueue.submit(_run_generation, uid, src, colors, w, h, fmt,
                                     orientation, get_language() or "fr", (fx, fy),
-                                    source_name=sname)
+                                    source_name=sname, level=level)
                 except genqueue.QueueFull:
                     jobs.pop(uid)
                     form.add_error(None, _("Nos serveurs sont très sollicités en ce moment. "
@@ -157,7 +162,8 @@ def upload(request):
         initial = {}
         if order:
             initial = {"orientation": order.get("orientation"),
-                       "colors": str(order.get("colors"))}
+                       "colors": str(order.get("colors")),
+                       "density": order.get("difficulty") if order.get("difficulty") in ("easy", "medium", "expert") else "auto"}
         form = UploadForm(initial=initial)
     has_photo = bool(last_photo and os.path.exists(last_photo))
     fx, fy = (request.session.get("last_focus") or [0.5, 0.5]) if has_photo else (0.5, 0.5)

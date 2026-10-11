@@ -1506,3 +1506,19 @@ msgstr ""
 "Erstellen Sie Ihr personalisiertes Gemälde live aus einem Foto, in weniger "
 "als einer Minute. Testen Sie Ihre Leinwand online. Bestellen Sie Ihr "
 "komplettes Set zum Malen zu Hause."
+
+msgid "Densité de zones"
+msgstr "Felderdichte"
+
+msgid "Auto"
+msgstr "Auto"
+
+msgid "zones / cm²"
+msgstr "Felder / cm²"
+
+msgid ""
+"Auto : réglage idéal selon le nombre de couleurs. Facile : grandes zones. "
+"Expert : plus de zones, plus de détails."
+msgstr ""
+"Auto: ideale Einstellung je nach Farbanzahl. Leicht: große Felder. Experte: "
+"mehr Felder, mehr Details."

@@ -1485,3 +1485,19 @@ msgstr ""
 "Crea tu pintura personalizada en directo a partir de una foto, en menos de "
 "un minuto. Prueba tu lienzo en línea. Pide tu kit completo para pintar en "
 "casa."
+
+msgid "Densité de zones"
+msgstr "Densidad de zonas"
+
+msgid "Auto"
+msgstr "Auto"
+
+msgid "zones / cm²"
+msgstr "zonas / cm²"
+
+msgid ""
+"Auto : réglage idéal selon le nombre de couleurs. Facile : grandes zones. "
+"Expert : plus de zones, plus de détails."
+msgstr ""
+"Auto: ajuste ideal según el número de colores. Fácil: zonas grandes. "
+"Experto: más zonas, más detalle."

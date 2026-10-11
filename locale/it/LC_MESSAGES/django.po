@@ -1497,3 +1497,19 @@ msgstr ""
 "Crea il tuo dipinto personalizzato dal vivo da una foto, in meno di un "
 "minuto. Prova la tua tela online. Ordina il kit completo da dipingere a "
 "casa."
+
+msgid "Densité de zones"
+msgstr "Densità delle zone"
+
+msgid "Auto"
+msgstr "Auto"
+
+msgid "zones / cm²"
+msgstr "zone / cm²"
+
+msgid ""
+"Auto : réglage idéal selon le nombre de couleurs. Facile : grandes zones. "
+"Expert : plus de zones, plus de détails."
+msgstr ""
+"Auto: impostazione ideale in base al numero di colori. Facile: zone grandi. "
+"Esperto: più zone, più dettagli."
