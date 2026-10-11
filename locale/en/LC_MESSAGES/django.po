@@ -1490,3 +1490,9 @@ msgid ""
 msgstr ""
 "Auto: ideal setting for the number of colours. Easy: large areas. Expert: "
 "more areas, more detail."
+
+msgid "dès"
+msgstr "from"
+
+msgid "ans"
+msgstr "yrs"

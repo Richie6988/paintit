@@ -14,6 +14,7 @@
   </div>
 
   <div class="hero-visual">
+    <span class="age-badge" title="{% trans "Accessible à tous, dès 4 ans : en 12 couleurs, c'est idéal pour les enfants et les seniors." %}"><small>{% trans "dès" %}</small><b>4</b><small>{% trans "ans" %}</small></span>
     <div class="reveal" id="reveal" style="--pos:50%">
       <img class="reveal-img" id="revealBase" src="{% if first_slide %}{{ first_slide.t }}{% else %}{% static 'studio/img/demo_template.svg' %}{% endif %}" alt="" draggable="false" onerror="this.dataset.bad=1">
       <div class="reveal-top" id="revealTop">
@@ -48,7 +49,6 @@
     <div class="why-c"><span class="wi">&#10022;</span><h3>{% trans "Qualité premium" %}</h3>
       <p>{{ MADE_IN_LABEL }}. {% trans "Toile et peintures de qualité, contrôlées et livrées gratuitement chez vous." %}</p></div>
   </div>
-  <p class="why-age">{% trans "Accessible à tous, dès 4 ans : en 12 couleurs, c'est idéal pour les enfants et les seniors." %}</p>
 </section>
 
 

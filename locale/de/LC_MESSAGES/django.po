@@ -1522,3 +1522,9 @@ msgid ""
 msgstr ""
 "Auto: ideale Einstellung je nach Farbanzahl. Leicht: große Felder. Experte: "
 "mehr Felder, mehr Details."
+
+msgid "dès"
+msgstr "ab"
+
+msgid "ans"
+msgstr "Jahren"

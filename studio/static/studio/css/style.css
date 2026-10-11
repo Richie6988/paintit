@@ -852,3 +852,27 @@ main{overflow-x:clip}
   .topbar .tb-msg{text-align:center}
 }
 .field-hint{display:block;margin-top:6px;font-weight:400;color:var(--muted);font-size:.8rem;line-height:1.4}
+
+/* Macaron "des 4 ans" sur le visuel du hero */
+.hero-visual{position:relative}
+.age-badge{position:absolute;top:-18px;left:-18px;z-index:3;width:84px;height:84px;border-radius:50%;
+  background:var(--g1);color:#12224f;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  line-height:1;transform:rotate(-12deg);box-shadow:0 10px 22px -8px rgba(18,34,79,.45),inset 0 0 0 3px rgba(255,255,255,.55);
+  border:3px dashed rgba(255,255,255,.75);font-family:Fraunces,Georgia,serif;pointer-events:auto;cursor:default}
+.age-badge b{font-size:2rem;font-weight:800;margin:1px 0}
+.age-badge small{font-family:Inter,system-ui,sans-serif;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+@media (max-width:560px){.age-badge{width:66px;height:66px;top:-12px;left:-6px}.age-badge b{font-size:1.55rem}.age-badge small{font-size:.58rem}}
+
+/* DA : bandeau = bleu vif du logo, footer clair (fini le bleu marine) */
+.topbar{background:linear-gradient(90deg,#2f6bf2,#23a6f0)}
+.nav-cta{background:var(--accent)}
+.nav-cta:hover{background:var(--accent-d)}
+.foot{background:#fff;color:var(--muted);border-top:0;position:relative}
+.foot::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;
+  background:linear-gradient(90deg,var(--g1) 0 33.3%,var(--g2) 33.3% 66.6%,var(--g3) 66.6%)}
+.foot .foot-logo span{color:var(--ink)}
+.foot .foot-motto{color:var(--muted)}
+.foot .foot-nav a{color:var(--ink)}
+.foot .foot-nav a:hover{color:var(--accent)}
+.foot .foot-nav a+a{border-left-color:var(--ring)}
+.foot .foot-bottom{border-top-color:var(--ring);color:#8a93a8}

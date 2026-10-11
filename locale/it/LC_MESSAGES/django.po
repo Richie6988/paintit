@@ -1513,3 +1513,9 @@ msgid ""
 msgstr ""
 "Auto: impostazione ideale in base al numero di colori. Facile: zone grandi. "
 "Esperto: più zone, più dettagli."
+
+msgid "dès"
+msgstr "dai"
+
+msgid "ans"
+msgstr "anni"
