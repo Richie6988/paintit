@@ -683,3 +683,69 @@ class SupplierFile(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Community(models.Model):
+    """Communaute ou PaintIt peut participer (sous compte de marque assume) : regles d'autopromotion, audience."""
+    PLATFORMS = [("reddit", "Reddit"), ("facebook", "Groupe Facebook"), ("forum", "Forum"), ("discord", "Discord"),
+                 ("social", "Réseau social (hashtag)"), ("launch", "Plateforme de lancement"), ("other", "Autre")]
+    REGIONS = [("global", "Monde (anglais)"), ("eu", "Europe"), ("fr", "France"), ("de", "Allemagne/Autriche"),
+               ("es", "Espagne"), ("it", "Italie"), ("us", "États-Unis"), ("au", "Australie")]
+    PROMO = [("unknown", "À vérifier"), ("forbidden", "Interdite"), ("limited", "Encadrée (jour/fil dédié)"),
+             ("allowed", "Autorisée (avec transparence)")]
+    platform = models.CharField(max_length=10, choices=PLATFORMS, default="reddit")
+    name = models.CharField("Nom", max_length=120)
+    url = models.URLField(max_length=300)
+    region = models.CharField(max_length=8, choices=REGIONS, default="global")
+    lang = models.CharField("Langue", max_length=5, default="en")
+    members = models.PositiveIntegerField("Membres", null=True, blank=True)
+    members_checked_at = models.DateTimeField(null=True, blank=True)
+    promo = models.CharField("Autopromotion", max_length=10, choices=PROMO, default="unknown")
+    rules = models.TextField("Règles (résumé / texte)", blank=True, default="")
+    angle = models.TextField("Angle conseillé", blank=True, default="")
+    notes = models.TextField(blank=True, default="")
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["region", "-members", "name"]
+        verbose_name = "Communauté"
+        verbose_name_plural = "Communautés"
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def subreddit(self):
+        import re
+        m = re.search(r"reddit\.com/r/([A-Za-z0-9_]+)", self.url or "")
+        return m.group(1) if m else ""
+
+
+class Outreach(models.Model):
+    """Une publication (ou reponse) dans une communaute, avec son lien traque /go/<code>/ et ses statistiques."""
+    community = models.ForeignKey(Community, null=True, blank=True, on_delete=models.SET_NULL, related_name="posts")
+    code = models.CharField(max_length=16, unique=True)
+    title = models.CharField("Titre", max_length=300, blank=True, default="")
+    body = models.TextField("Texte", blank=True, default="")
+    target_url = models.CharField("Lien cible", max_length=300, default="https://paintit.click/create/")
+    posted_url = models.URLField("URL de la publication", max_length=400, blank=True, default="")
+    posted_at = models.DateTimeField(null=True, blank=True)
+    clicks = models.PositiveIntegerField(default=0)
+    unique_clicks = models.PositiveIntegerField(default=0)
+    last_click_at = models.DateTimeField(null=True, blank=True)
+    score = models.IntegerField(null=True, blank=True)
+    comments = models.PositiveIntegerField(null=True, blank=True)
+    comments_seen = models.PositiveIntegerField(default=0)
+    last_checked = models.DateTimeField(null=True, blank=True)
+    removed = models.BooleanField("Retirée par la modération", default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Publication communauté"
+        verbose_name_plural = "Publications communautés"
+
+    @property
+    def new_replies(self):
+        return max(0, (self.comments or 0) - (self.comments_seen or 0))

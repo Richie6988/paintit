@@ -81,6 +81,8 @@ urlpatterns = [
     path(".well-known/appspecific/com.chrome.devtools.json", views.devtools),
     path("marketing/", views.marketing_page, name="marketing"),
     path("admin-hub/marketing/", views.marketing_gallery, name="marketing_gallery"),
+    path("admin-hub/communities/", views.erp_communities, name="erp_communities"),
+    path("go/<str:code>/", views.go_link, name="go_link"),
     path("go/<str:token>/", views.ad_click, name="ad_click"),
     path("api/suppliers/<str:secret>/events/", views.supplier_webhook, name="supplier_webhook"),
     path("api/shopify/<str:secret>/webhook/", views.shopify_webhook, name="shopify_webhook"),

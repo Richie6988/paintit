@@ -1,0 +1,117 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Communautés · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .pr{display:inline-block;border-radius:999px;padding:1px 8px;font-size:.72rem;font-weight:800}
+ .pr.forbidden{background:#fedad9;color:#8e1f0b}.pr.limited{background:#ffef9d;color:#4f4700}
+ .pr.allowed{background:#cdfee1;color:#0c5132}.pr.unknown{background:#f1f1f1;color:#616161}
+ .angle{font-size:.8rem;color:#33415c;max-width:420px}
+ .rules{font-size:.74rem;color:#6d7175;white-space:pre-line;max-height:120px;overflow:auto;margin-top:4px}
+ .copy{cursor:pointer;border:1px solid #e2e8f2;background:#f7f9fd;border-radius:7px;padding:2px 7px;font-size:.74rem;font-weight:700;color:#2f4b8f}
+ .new{background:#2f6bf2;color:#fff;border-radius:999px;padding:1px 7px;font-size:.72rem;font-weight:800}
+ .ethic{background:#f3f7ff;border:1px solid #d6e2fb;border-radius:12px;padding:12px 16px;font-size:.84rem;color:#33415c;margin-bottom:14px}
+ .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .grid2 input,.grid2 select,.grid2 textarea,.f1 input,.f1 textarea,.f1 select{width:100%;box-sizing:border-box}
+ details.ed summary{cursor:pointer;color:#2f6bf2;font-weight:700;font-size:.78rem}
+ @media(max-width:860px){.grid2{grid-template-columns:1fr}}
+</style>
+<div class="erp">
+  <div class="erp-head">
+    <div><h1>Communautés</h1><div class="muted">Annuaire des communautés (UE · US · Australie), publications sous le compte de marque PaintIt, liens traqués et retours.</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="seg"><a href="?" class="{% if not region %}on{% endif %}">Toutes</a>{% for k, l in regions %}<a href="?region={{ k }}" class="{% if region == k %}on{% endif %}">{{ k|upper }}</a>{% endfor %}</div>
+    </div>
+  </div>
+
+  <div class="ethic">✅ <b>Règles du jeu</b> : un seul compte, celui de la marque (ex. u/PaintIt_Official), présenté comme tel (« je suis le fondateur de PaintIt »). Respecter les règles de chaque communauté, environ 1 message promotionnel pour 10 contributions utiles, jamais de faux avis ni de faux utilisateurs (interdit en UE, aux US et en Australie, et motif de bannissement du domaine).
+    {% if not reddit_oauth %}<br>ℹ️ Suivi Reddit en mode public. Pour plus de fiabilité, créez une app « script » sur reddit.com/prefs/apps et ajoutez <code>REDDIT_CLIENT_ID</code> / <code>REDDIT_CLIENT_SECRET</code> au fichier .env.{% endif %}</div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Communautés</div><div class="v">{{ comms|length }}</div></div>
+    <div class="kpi"><div class="l">Publications</div><div class="v">{{ posts|length }}</div></div>
+    <div class="kpi"><div class="l">Visiteurs (liens traqués)</div><div class="v">{{ tot.clicks }}</div></div>
+    <div class="kpi"><div class="l">Ventes attribuées</div><div class="v">{{ tot.orders }}</div><div class="muted">{{ tot.revenue|floatformat:"2g" }} €</div></div>
+    <div class="kpi"><div class="l">Nouvelles réponses</div><div class="v">{% if tot.replies %}<span class="new">{{ tot.replies }}</span>{% else %}0{% endif %}</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>Publications</h2>
+      <form method="post" style="display:flex;gap:6px">{% csrf_token %}<button class="pbtn sm" name="op" value="refresh_posts">Actualiser les stats Reddit</button></form></div>
+    <details {% if not posts %}open{% endif %}><summary style="cursor:pointer;font-weight:700;margin-bottom:10px">+ Préparer une publication</summary>
+      <form method="post" class="f1" style="display:grid;gap:8px;margin:8px 0 16px">{% csrf_token %}<input type="hidden" name="op" value="new_post">
+        <div class="grid2">
+          <select name="community" required><option value="">Communauté…</option>{% for c in comms %}<option value="{{ c.pk }}">{{ c.name }} ({{ c.get_promo_display }})</option>{% endfor %}</select>
+          <input type="text" name="target" placeholder="Lien cible (défaut : https://paintit.click/create/)">
+        </div>
+        <input type="text" name="title" maxlength="300" placeholder="Titre (ex. I turned my late dog's photo into a paint by numbers, here's the result)">
+        <textarea name="body" rows="5" placeholder="Texte : histoire vraie, photo avant/après, et la transparence (« I'm the founder of PaintIt, happy to answer questions »). Le lien traqué est ajouté automatiquement."></textarea>
+        <div><button class="pbtn pri">Créer la publication + lien traqué</button></div>
+      </form>
+    </details>
+    <div style="overflow-x:auto"><table class="t">
+      <tr><th>Communauté</th><th>Publication</th><th>Lien traqué</th><th class="r">Visiteurs</th><th class="r">Ventes</th><th class="r">Score</th><th class="r">Commentaires</th><th></th></tr>
+      {% for o in posts %}<tr>
+        <td>{{ o.community.name|default:"—" }}{% if o.removed %}<div><span class="pr forbidden">retirée</span></div>{% endif %}</td>
+        <td style="max-width:320px"><b>{{ o.title|default:"(sans titre)"|truncatechars:80 }}</b>
+          {% if o.posted_url %}<div><a href="{{ o.posted_url }}" target="_blank">voir la publication ↗</a> · {{ o.posted_at|date:"d/m" }}</div>
+          {% else %}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">{% if o.submit %}<a class="pbtn sm" href="{{ o.submit }}" target="_blank" rel="noopener">Ouvrir Reddit pré-rempli ↗</a>{% elif o.community %}<a class="pbtn sm" href="{{ o.community.url }}" target="_blank" rel="noopener">Ouvrir la communauté ↗</a>{% endif %}
+            <button type="button" class="copy" data-copy="{{ o.title }}&#10;&#10;{{ o.body }}&#10;&#10;{{ o.link }}">Copier le texte</button></div>
+            <form method="post" style="display:flex;gap:6px;margin-top:6px">{% csrf_token %}<input type="hidden" name="op" value="mark_posted"><input type="hidden" name="id" value="{{ o.pk }}">
+              <input type="url" name="posted_url" placeholder="URL une fois publié" required style="flex:1;min-width:140px"><button class="pbtn sm">Publié</button></form>{% endif %}</td>
+        <td><button type="button" class="copy" data-copy="{{ o.link }}">{{ o.code }} ⧉</button></td>
+        <td class="r"><b>{{ o.unique_clicks }}</b>{% if o.clicks != o.unique_clicks %}<div class="muted">{{ o.clicks }} clics</div>{% endif %}</td>
+        <td class="r">{{ o.orders }}{% if o.revenue %}<div class="muted">{{ o.revenue|floatformat:"2g" }} €</div>{% endif %}</td>
+        <td class="r">{{ o.score|default_if_none:"—" }}</td>
+        <td class="r">{{ o.comments|default_if_none:"—" }}{% if o.new_replies %} <span class="new">+{{ o.new_replies }}</span>
+          <form method="post" style="display:inline">{% csrf_token %}<input type="hidden" name="id" value="{{ o.pk }}"><button class="copy" name="op" value="seen" title="Marquer comme lu">lu</button></form>{% endif %}
+          {% if o.last_checked %}<div class="muted">{{ o.last_checked|timesince }}</div>{% endif %}</td>
+        <td><form method="post" data-confirm="Supprimer cette publication du suivi ?" data-danger>{% csrf_token %}<input type="hidden" name="id" value="{{ o.pk }}"><button class="pbtn sm" name="op" value="del_post">×</button></form></td>
+      </tr>{% empty %}<tr><td colspan="8" class="muted">Aucune publication pour l'instant.</td></tr>{% endfor %}
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>Annuaire</h2>
+      <form method="post" style="display:flex;gap:6px;flex-wrap:wrap">{% csrf_token %}
+        {% if not comms %}<button class="pbtn pri sm" name="op" value="seed">Charger la liste de départ</button>{% endif %}
+        <button class="pbtn sm" name="op" value="refresh_reddit">Actualiser membres + règles (Reddit)</button></form></div>
+    <div style="overflow-x:auto"><table class="t">
+      <tr><th>Communauté</th><th>Zone</th><th class="r">Membres</th><th>Autopromo</th><th>Angle conseillé / règles</th></tr>
+      {% for c in comms %}<tr class="{% if not c.active %}off{% endif %}">
+        <td><a href="{{ c.url }}" target="_blank" rel="noopener"><b>{{ c.name }}</b> ↗</a><div class="muted">{{ c.get_platform_display }} · {{ c.lang|upper }}</div></td>
+        <td>{{ c.get_region_display }}</td>
+        <td class="r">{% if c.members %}{{ c.members|floatformat:"0g" }}{% else %}—{% endif %}{% if c.members_checked_at %}<div class="muted">{{ c.members_checked_at|date:"d/m" }}</div>{% elif c.members %}<div class="muted">estimé</div>{% endif %}</td>
+        <td><span class="pr {{ c.promo }}">{{ c.get_promo_display }}</span></td>
+        <td><div class="angle">{{ c.angle }}</div>{% if c.rules %}<div class="rules">{{ c.rules }}</div>{% endif %}
+          <details class="ed"><summary>modifier</summary>
+            <form method="post" class="grid2" style="margin-top:6px">{% csrf_token %}<input type="hidden" name="op" value="edit_comm"><input type="hidden" name="id" value="{{ c.pk }}">
+              <input type="text" name="name" value="{{ c.name }}"><input type="url" name="url" value="{{ c.url }}">
+              <select name="region">{% for k, l in regions %}<option value="{{ k }}" {% if c.region == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+              <select name="promo">{% for k, l in promos %}<option value="{{ k }}" {% if c.promo == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+              <textarea name="angle" rows="2" style="grid-column:1/-1">{{ c.angle }}</textarea>
+              <textarea name="notes" rows="2" style="grid-column:1/-1" placeholder="Notes (modérateurs, jour d'autopromo…)">{{ c.notes }}</textarea>
+              <label class="sw"><input type="checkbox" name="active" {% if c.active %}checked{% endif %}> Active</label>
+              <span style="display:flex;gap:6px;justify-content:flex-end"><button class="pbtn sm" name="op" value="del_comm" data-confirm="Supprimer {{ c.name }} ?" data-danger>Supprimer</button><button class="pbtn pri sm">Enregistrer</button></span>
+            </form></details></td>
+      </tr>{% endfor %}
+    </table></div>
+    <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">+ Ajouter une communauté</summary>
+      <form method="post" class="grid2" style="margin-top:8px">{% csrf_token %}<input type="hidden" name="op" value="add_comm">
+        <input type="text" name="name" placeholder="Nom (ex. r/crafts)" required><input type="url" name="url" placeholder="URL" required>
+        <select name="platform">{% for k, l in platforms %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select>
+        <select name="region">{% for k, l in regions %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select>
+        <input type="text" name="lang" placeholder="Langue (fr, en…)" value="en">
+        <select name="promo">{% for k, l in promos %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select>
+        <textarea name="angle" rows="2" style="grid-column:1/-1" placeholder="Angle conseillé"></textarea>
+        <div><button class="pbtn pri">Ajouter</button></div>
+      </form></details>
+  </div>
+</div>
+<script>
+document.querySelectorAll('.copy[data-copy]').forEach(function(b){b.addEventListener('click',function(){
+  navigator.clipboard.writeText(b.dataset.copy).then(function(){var t=b.textContent;b.textContent='copié ✓';setTimeout(function(){b.textContent=t},1200);});});});
+</script>
+{% endblock %}

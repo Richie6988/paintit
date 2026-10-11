@@ -136,6 +136,9 @@ LOGGING = {
 
 # --- Paiement Stripe ---
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+# Suivi des communautes (lecture seule) : app Reddit de type « script » (https://www.reddit.com/prefs/apps)
+REDDIT_CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID", "")
+REDDIT_CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET", "")
 STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 

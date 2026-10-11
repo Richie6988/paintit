@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 logger = logging.getLogger("studio.views")
 import threading
@@ -860,7 +861,7 @@ def robots(request):
     body = (
         "User-agent: *\n"
         "Disallow: /preview/\nDisallow: /media/\nDisallow: /files/\n"
-        "Disallow: /delivery/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /admin/\nDisallow: /admin-hub/\n"
+        "Disallow: /delivery/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /admin/\nDisallow: /admin-hub/\nDisallow: /go/\n"
         "Allow: /llm.txt\nAllow: /llm.json\nAllow: /play/\n"
         "\nSitemap: %s/sitemap.xml\n"
         "\n# Infos pour les IA / LLM :\n"
@@ -3400,3 +3401,126 @@ def erp_legal(request):
     return render(request, "admin/erp_legal.html", {
         "form": form, "checks": checks, "done": sum(1 for _, ok in checks if ok),
         "sections": [{"title": t, "help": h, "fields": [form[n] for n in names]} for t, h, names in sections]})
+
+
+# ---------------- Communautes (compte de marque assume) ----------------
+def go_link(request, code):
+    """Lien traque d'une publication communaute : compte le clic, attribue la vente, redirige."""
+    from django.db.models import F
+    from urllib.parse import urlencode, urlparse, parse_qsl, urlunparse
+    from .models import Outreach
+    o = Outreach.objects.filter(code=code).select_related("community").first()
+    if not o:
+        return redirect("studio:home")
+    who = _visitor_kind(request)
+    if who == "human":
+        upd = {"clicks": F("clicks") + 1, "last_click_at": timezone.now()}
+        k = "go_%s" % o.pk
+        if not request.session.get(k):
+            request.session[k] = 1
+            upd["unique_clicks"] = F("unique_clicks") + 1
+        Outreach.objects.filter(pk=o.pk).update(**upd)
+    if who != "bot":
+        request.session["ad_ref"] = ("c:" + o.code)[:24]       # attribution de la vente (dernier clic)
+    u = urlparse(o.target_url or settings.SITE_URL + "/create/")
+    q = dict(parse_qsl(u.query))
+    q.update({"utm_source": (o.community.platform if o.community else "community"),
+              "utm_medium": "community", "utm_campaign": (o.community.name if o.community else "outreach")[:60],
+              "utm_content": o.code})
+    resp = redirect(urlunparse(u._replace(query=urlencode(q))))
+    resp["Cache-Control"] = "no-store"
+    return resp
+
+
+@staff_member_required
+def erp_communities(request):
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from django.db.models import Count, Sum
+    from .models import Community, Outreach
+    from . import community as cm
+    if request.method == "POST":
+        op = request.POST.get("op")
+        try:
+            if op == "seed":
+                messages.success(request, "%d communauté(s) ajoutée(s) à l'annuaire." % cm.seed())
+            elif op == "add_comm":
+                Community.objects.create(platform=request.POST.get("platform", "reddit"),
+                                         name=request.POST.get("name", "").strip()[:120] or "Communauté",
+                                         url=request.POST.get("url", "").strip()[:300],
+                                         region=request.POST.get("region", "global"),
+                                         lang=request.POST.get("lang", "en")[:5],
+                                         promo=request.POST.get("promo", "unknown"),
+                                         angle=request.POST.get("angle", "").strip())
+                messages.success(request, "Communauté ajoutée.")
+            elif op == "edit_comm":
+                c = Community.objects.get(pk=request.POST.get("id"))
+                for f in ("name", "url", "region", "lang", "promo", "angle", "notes", "rules"):
+                    if f in request.POST:
+                        setattr(c, f, request.POST.get(f, "").strip())
+                c.active = bool(request.POST.get("active"))
+                c.save()
+                messages.success(request, "Communauté mise à jour.")
+            elif op == "del_comm":
+                Community.objects.filter(pk=request.POST.get("id")).delete()
+            elif op == "refresh_reddit":
+                n = 0
+                for c in Community.objects.filter(platform="reddit", active=True):
+                    try:
+                        n += cm.refresh_subreddit(c)
+                    except Exception as exc:
+                        messages.error(request, "%s : %s" % (c.name, exc))
+                    time.sleep(1)
+                messages.success(request, "%d subreddit(s) actualisé(s) (membres + règles)." % n)
+            elif op == "new_post":
+                c = Community.objects.filter(pk=request.POST.get("community")).first()
+                o = Outreach.objects.create(community=c, code=cm.new_code(),
+                                            title=request.POST.get("title", "").strip()[:300],
+                                            body=request.POST.get("body", "").strip(),
+                                            target_url=request.POST.get("target", "").strip()[:300]
+                                            or settings.SITE_URL + "/create/")
+                messages.success(request, "Publication préparée : lien traqué %s" % cm.tracked_url(o))
+            elif op == "mark_posted":
+                o = Outreach.objects.get(pk=request.POST.get("id"))
+                o.posted_url = request.POST.get("posted_url", "").strip()[:400]
+                o.posted_at = o.posted_at or timezone.now()
+                o.save(update_fields=["posted_url", "posted_at"])
+                if "reddit.com" in o.posted_url:
+                    cm.refresh_post(o)
+                messages.success(request, "Publication enregistrée : suivi activé.")
+            elif op == "seen":
+                o = Outreach.objects.get(pk=request.POST.get("id"))
+                o.comments_seen = o.comments or 0
+                o.save(update_fields=["comments_seen"])
+            elif op == "refresh_posts":
+                n = 0
+                for o in Outreach.objects.exclude(posted_url="").filter(posted_url__contains="reddit.com"):
+                    try:
+                        n += cm.refresh_post(o)
+                    except Exception as exc:
+                        messages.error(request, "%s : %s" % (o.code, exc))
+                messages.success(request, "%d publication(s) actualisée(s)." % n)
+            elif op == "del_post":
+                Outreach.objects.filter(pk=request.POST.get("id")).delete()
+        except Exception as exc:
+            logger.exception("Communautes")
+            messages.error(request, "Erreur : %s" % exc)
+        return redirect(request.get_full_path())
+    region = request.GET.get("region", "")
+    comms = Community.objects.all()
+    if region:
+        comms = comms.filter(region=region)
+    conv = {r["ad_ref"]: r for r in Order.objects.filter(status__in=Order.PAID_STATUSES, ad_ref__startswith="c:")
+            .values("ad_ref").annotate(n=Count("id"), ca=Sum("total"))}
+    posts = list(Outreach.objects.select_related("community")[:200])
+    for o in posts:
+        r = conv.get("c:" + o.code) or {}
+        o.orders, o.revenue = r.get("n", 0), round(r.get("ca") or 0, 2)
+        o.link = cm.tracked_url(o)
+        o.submit = cm.submit_url(o.community, o.title, o.body, o.link) if not o.posted_url else ""
+    tot = {"clicks": sum(o.unique_clicks for o in posts), "orders": sum(o.orders for o in posts),
+           "revenue": round(sum(o.revenue for o in posts), 2), "replies": sum(o.new_replies for o in posts)}
+    return render(request, "admin/erp_communities.html", {
+        **_admin.site.each_context(request), "comms": comms, "posts": posts, "tot": tot, "region": region,
+        "regions": Community.REGIONS, "platforms": Community.PLATFORMS, "promos": Community.PROMO,
+        "reddit_oauth": bool(settings.REDDIT_CLIENT_ID), "erp_section": "communities"})
