@@ -177,7 +177,7 @@ def send_order_confirmation(order, shipping):
     ) % {
         "logo": settings.SITE_URL + settings.STATIC_URL + "studio/img/logo.png",
         "hero": settings.SITE_URL + "/preview/img/" + uid + "/preview/",
-        "play": settings.SITE_URL + "/paint/" + uid + "/",
+        "play": settings.SITE_URL + "/play/" + uid + "/",
         "gallery": settings.SITE_URL + "/paint/",
         "play_l": {"fr": "\u25B6 Jouer en digital maintenant", "en": "\u25B6 Play the digital version",
                    "de": "\u25B6 Jetzt digital spielen", "es": "\u25B6 Jugar la versi\u00f3n digital",
@@ -304,7 +304,7 @@ def send_gallery(email, models, lang="fr"):
         uid = str(m.get("uid", "")).strip()
         if not uid or not os.path.isdir(os.path.join(st.MEDIA_ROOT, "orders", uid)):
             continue
-        play = site + "/paint/" + uid + "/"
+        play = site + "/play/" + uid + "/"
         thumb = site + "/preview/img/" + uid + "/preview/"
         meta = "%s couleurs" % m.get("colors", "")
         rows_html.append(

@@ -6,7 +6,7 @@ import uuid
 
 from django.conf import settings
 from django.utils import timezone
-from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, HttpResponsePermanentRedirect, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
@@ -417,9 +417,31 @@ def paint_portal(request):
     })
 
 
+def _count_zones(uid):
+    f = os.path.join(settings.MEDIA_ROOT, "orders", uid, f"{uid}_digipaint.svg")
+    try:
+        with open(f, encoding="utf-8") as fh:
+            return fh.read().count('class="z"')
+    except OSError:
+        return 0
+
+
+def legacy_play(request, uid=None, rest=None):
+    """Anciennes URLs /gallery/... et /paint/<uid>/ -> /play/... (301, conserve le prefixe de langue)."""
+    path = request.path.replace("/gallery/", "/play/", 1) if "/gallery/" in request.path \
+        else request.path.replace("/paint/", "/play/", 1)
+    q = request.META.get("QUERY_STRING")
+    return HttpResponsePermanentRedirect(path + ("?" + q if q else ""))
+
+
 def gallery(request):
     """Onglet Gallery : toutes les toiles PaintIt en vrac, filtrables par recherche."""
     models = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-").order_by("category", "title"))
+    for m in models:   # nb de zones calcule une fois depuis le SVG du jeu, puis memorise
+        if not m.zones:
+            m.zones = _count_zones(m.uid)
+            if m.zones:
+                m.save(update_fields=["zones"])
     from . import seo
     from django.utils.translation import gettext as _t
     return render(request, "studio/gallery.html", {
@@ -466,7 +488,7 @@ def paint_verify_code(request):
     EmailCode.objects.filter(email=email).delete()       # usage unique
     request.session["verified_email"] = email
     _bp = request.session.pop("buy_pending", None)
-    return JsonResponse({"ok": True, "redirect": ("/gallery/buy/%s/" % _bp) if _bp else "/paint/"})
+    return JsonResponse({"ok": True, "redirect": ("/play/buy/%s/" % _bp) if _bp else "/paint/"})
 
 
 def paint_logout(request):
@@ -796,7 +818,7 @@ def robots(request):
         "User-agent: *\n"
         "Disallow: /preview/\nDisallow: /media/\nDisallow: /files/\n"
         "Disallow: /delivery/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /admin/\nDisallow: /admin-hub/\n"
-        "Allow: /llm.txt\nAllow: /llm.json\nAllow: /gallery/\n"
+        "Allow: /llm.txt\nAllow: /llm.json\nAllow: /play/\n"
         "\nSitemap: %s/sitemap.xml\n"
         "\n# Infos pour les IA / LLM :\n"
         "# %s/llm.txt\n# %s/llm.json\n" % (site, site, site)
@@ -1422,7 +1444,7 @@ def llm_txt(request):
     ]
     lines += ["Q: %s\nR: %s" % (it["q"], it["a"]) for it in f["faq"]]
     lines += ["", "## Liens",
-              "- Créer une toile : %s/create/" % site, "- Tester le jeu : %s/gallery/" % site,
+              "- Créer une toile : %s/create/" % site, "- Tester le jeu : %s/play/" % site,
               "- FAQ : %s/faq/" % site, "- Contact : %s/contact/" % site,
               "- Données structurées : %s/llm.json" % site, "- Plan du site : %s/sitemap.xml" % site]
     return HttpResponse("\n".join(lines) + "\n", content_type="text/plain; charset=utf-8")
@@ -1448,7 +1470,7 @@ def llm_json(request):
                       "activité créative en famille", "activité pour seniors", "décoration murale"],
         "languages": ["fr", "en", "de", "es", "it"],
         "faq": f["faq"],
-        "links": {"home": site + "/", "create": site + "/create/", "play": site + "/gallery/",
+        "links": {"home": site + "/", "create": site + "/create/", "play": site + "/play/",
                   "faq": site + "/faq/", "contact": site + "/contact/", "sitemap": site + "/sitemap.xml"},
     }
     return JsonResponse(data, json_dumps_params={"ensure_ascii": False, "indent": 2})
@@ -1459,8 +1481,8 @@ def sitemap_xml(request):
     from django.urls import translate_url
     from .models import DigitalCanvas
     site = settings.SITE_URL
-    # pages publiques uniquement (les toiles /paint/<uid>/ ne sont pas indexees)
-    paths = ["/", "/create/", "/gallery/", "/faq/", "/contact/", "/cgv/", "/mentions-legales/", "/privacy/"]
+    # pages publiques uniquement (les toiles /play/<uid>/ ne sont pas indexees)
+    paths = ["/", "/create/", "/play/", "/faq/", "/contact/", "/cgv/", "/mentions-legales/", "/privacy/"]
     langs = [c for c, _ in settings.LANGUAGES]
     x = ['<?xml version="1.0" encoding="UTF-8"?>',
          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '

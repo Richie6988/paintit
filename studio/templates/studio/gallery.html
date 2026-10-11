@@ -23,6 +23,11 @@
               <span class="mc-play"><svg class="icplay" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span>
             {% endif %}
           </div></div>
+          <div class="g-meta">
+            <span>{{ m.colors }} {% trans "couleurs" %}</span>
+            {% if m.zones %}<span>{{ m.zones }} {% trans "zones" %}</span>{% endif %}
+            <span class="g-stars" title="{% trans 'Difficulté' %} {{ m.difficulty }}/3" aria-label="{% trans 'Difficulté' %} {{ m.difficulty }}/3">{% for i in "123" %}<i class="{% if forloop.counter <= m.difficulty %}on{% endif %}">★</i>{% endfor %}</span>
+          </div>
         </a>
       {% endfor %}
     </div>

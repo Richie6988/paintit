@@ -104,7 +104,7 @@ class PaymentTests(TestCase):
 @override_settings(MEDIA_ROOT=MEDIA, STRIPE_SECRET_KEY="", DEBUG=False)
 class NoDemoInProdTests(TestCase):
     def test_paint_confirm_refuses_without_stripe(self):
-        r = self.client.post("/paint/XYZ/confirm/")
+        r = self.client.post("/play/XYZ/confirm/")
         self.assertEqual(r.status_code, 503)
         self.assertFalse(DigitalCanvas.objects.exists())
 
@@ -395,7 +395,7 @@ class SeoTests(TestCase):
         self.assertIn("Product", self._ld("/"))
         self.assertIn("FAQPage", self._ld("/faq/"))
         self.assertIn("FAQPage", self._ld("/it/faq/"))
-        self.assertIn("BreadcrumbList", self._ld("/gallery/"))
+        self.assertIn("BreadcrumbList", self._ld("/play/"))
 
     def test_faq_in_footer_and_sitemap(self):
         self.assertContains(self.client.get("/"), 'href="/faq/"')

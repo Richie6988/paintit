@@ -292,7 +292,7 @@
     },5000);}
   }
   document.getElementById('pwPay').addEventListener('click',function(){
-    fetch("/paint/"+UID+"/confirm/",{method:'POST',headers:{'X-CSRFToken':CSRF}})
+    fetch("/play/"+UID+"/confirm/",{method:'POST',headers:{'X-CSRFToken':CSRF}})
       .then(function(r){return r.json();}).then(function(d){if(d&&d.redirect){location.href=d.redirect;return;}if(d&&d.ok){OWNED=true;document.getElementById('paywall').classList.remove('show');}});
   });
   var host=document.getElementById('host'), wrap=document.getElementById('svgwrap'), boardEl=document.getElementById('board');

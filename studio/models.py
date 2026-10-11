@@ -338,7 +338,14 @@ class DigitalCanvas(models.Model):
     origin_uid = models.CharField("Toile d'origine", max_length=40, blank=True, default="")   # modele publie depuis une toile client
     in_slider = models.BooleanField("Dans le slider de l'accueil", default=True)
     showcase_slug = models.CharField("Assets du slider", max_length=80, blank=True, default="")   # <slug>_pbn.png / _template.png
+    zones = models.IntegerField("Zones à peindre", default=0)   # calcule depuis le SVG du jeu (0 = inconnu)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def difficulty(self):
+        """Difficulte 1 a 3 etoiles : nombre de zones + poids du nombre de couleurs."""
+        score = (self.zones or 0) + 10 * (self.colors or 0)
+        return 1 if score < 500 else 2 if score < 1200 else 3
 
     class Meta:
         unique_together = ("email", "uid")
