@@ -20,16 +20,15 @@
  details.ed summary{cursor:pointer;color:#2f6bf2;font-weight:700;font-size:.78rem}
  @media(max-width:860px){.grid2{grid-template-columns:1fr}}
 </style>
-<div class="erp">
+<div class="erp gx">
   <div class="erp-head">
     <div><h1>Communautés</h1><div class="muted">Annuaire des communautés (UE · US · Australie), publications sous le compte de marque PaintIt, liens traqués et retours.</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <a class="pbtn pri" href="/admin-hub/communities/library/">📚 Bibliothèque de publications</a>
       <div class="seg"><a href="?" class="{% if not region %}on{% endif %}">Toutes</a>{% for k, l in regions %}<a href="?region={{ k }}" class="{% if region == k %}on{% endif %}">{{ k|upper }}</a>{% endfor %}</div>
     </div>
   </div>
 
-  {% include "admin/_growth_tabs.html" %}
+  {% include "admin/_growth_ui.html" %}{% include "admin/_growth_tabs.html" %}
   <div class="ethic">✅ <b>Règles du jeu</b> : un seul compte, celui de la marque (ex. u/PaintIt_Official), présenté comme tel (« je suis le fondateur de PaintIt »). Respecter les règles de chaque communauté, environ 1 message promotionnel pour 10 contributions utiles, jamais de faux avis ni de faux utilisateurs (interdit en UE, aux US et en Australie, et motif de bannissement du domaine).
     {% if not reddit_oauth %}<br>ℹ️ Suivi Reddit en mode public. Pour plus de fiabilité, créez une app « script » sur reddit.com/prefs/apps et ajoutez <code>REDDIT_CLIENT_ID</code> / <code>REDDIT_CLIENT_SECRET</code> au fichier .env.{% endif %}</div>
 

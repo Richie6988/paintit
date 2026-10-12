@@ -18,7 +18,7 @@
  .kind-h td{background:#f7f9fd !important;font-weight:800;color:#12224f;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
  @media(max-width:860px){.grp{grid-template-columns:1fr}}
 </style>
-<div class="erp">
+<div class="erp gx">
   <div class="erp-head">
     <div><h1>Marketing · galerie A/B</h1><div class="muted">Chaque génération du Marketing Corner = une variante. Vues : affichages de la pub via son lien public · Clics : passages par le lien traqué · Ventes : commandes payées attribuées au dernier clic.</div></div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -27,7 +27,7 @@
     </div>
   </div>
 
-  {% include "admin/_growth_tabs.html" %}
+  {% include "admin/_growth_ui.html" %}{% include "admin/_growth_tabs.html" %}
   <div class="kpis">
     <div class="kpi"><div class="l">Pubs</div><div class="v">{{ tot.ads }}</div></div>
     <div class="kpi"><div class="l">Vues</div><div class="v">{{ tot.views }}</div></div>

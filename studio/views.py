@@ -3734,28 +3734,30 @@ def erp_reviews(request):
 
 
 # ---------------- Croissance : campagnes (ciblage, contenus, diffusion, retombees) ----------------
-def _campaign_from_post(c, P):
-    c.name = (P.get("name") or c.name or "Campagne").strip()[:80]
-    c.goal = P.get("goal", c.goal or "").strip()
-    c.status = P.get("status", c.status or "draft")
-    for f in ("start", "end"):
-        v = (P.get(f) or "").strip()
-        setattr(c, f, v or None)
-    try:
-        c.budget = float((P.get("budget") or "0").replace(",", "."))
-    except ValueError:
-        c.budget = 0
+def _campaign_targeting(c, P):
     for f in ("regions", "langs", "platforms", "categories"):
         setattr(c, f, ",".join(P.getlist(f)))
     if (P.get("min_priority") or "").isdigit():
         c.min_priority = int(P["min_priority"])
     c.exclude_forbidden = bool(P.get("exclude_forbidden"))
+    return c
+
+
+def _campaign_settings(c, P):
+    from .models import Discount
+    c.name = (P.get("name") or c.name or "Campagne").strip()[:80]
+    c.goal = P.get("goal", "").strip()
+    c.status = P.get("status") or c.status
+    for f in ("start", "end"):
+        setattr(c, f, (P.get(f) or "").strip() or None)
+    try:
+        c.budget = float((P.get("budget") or "0").replace(",", "."))
+    except ValueError:
+        c.budget = 0
     c.append_code = bool(P.get("append_code"))
     c.target_path = (P.get("target_path") or "/create/").strip()[:120]
-    c.notes = P.get("notes", c.notes or "")
-    from .models import Discount
-    did = P.get("discount")
-    c.discount = Discount.objects.filter(pk=did).first() if did and did.isdigit() else None
+    did = P.get("discount") or ""
+    c.discount = Discount.objects.filter(pk=did).first() if did.isdigit() else None
     return c
 
 
@@ -3766,12 +3768,21 @@ def growth_hub(request):
     from .models import Campaign
     from . import growth
     if request.method == "POST" and request.POST.get("op") == "create":
-        c = Campaign(name=(request.POST.get("name") or "").strip()[:80] or "Nouvelle campagne")
-        if Campaign.objects.filter(name=c.name).exists():
-            messages.error(request, "Une campagne porte déjà ce nom.")
-            return redirect("studio:growth_hub")
+        preset = request.POST.get("preset", "")
+        pname = next((p["name"] for p in growth.PRESETS if p["key"] == preset), "")
+        name = (request.POST.get("name") or "").strip()[:80] or pname or "Nouvelle campagne"
+        base, n = name, 2
+        while Campaign.objects.filter(name=name).exists():
+            name = "%s (%d)" % (base, n); n += 1
+        c = growth.apply_preset(Campaign(name=name, goal=request.POST.get("goal", "").strip()), preset)
         c.save()
-        messages.success(request, "Campagne créée : définissez le ciblage puis générez les actions.")
+        if preset and request.POST.get("generate"):
+            made, _sk = growth.generate_actions(c)
+            if made:
+                c.status = "active"; c.save(update_fields=["status"])
+            messages.success(request, "Campagne « %s » créée : %d action(s) ciblée(s) prête(s) à publier." % (c.name, len(made)))
+        else:
+            messages.success(request, "Campagne « %s » créée. Ajustez le ciblage puis générez les actions." % c.name)
         return redirect("studio:growth_campaign", pk=c.pk)
     camps = list(Campaign.objects.all())
     totals = {"clicks": 0, "orders": 0, "revenue": 0.0, "budget": 0.0}
@@ -3780,8 +3791,27 @@ def growth_hub(request):
         totals["clicks"] += c.s["clicks"]; totals["orders"] += c.s["orders"]
         totals["revenue"] += c.s["revenue"]; totals["budget"] += c.budget
     totals["revenue"] = round(totals["revenue"], 2)
+    for c in camps:
+        c.pct = round(c.s["posted"] / c.s["actions"] * 100) if c.s["actions"] else 0
     return render(request, "admin/growth_hub.html", {**_admin.site.each_context(request), "camps": camps,
-                                                     "totals": totals, "erp_section": "growth", "gtab": "campaigns"})
+                                                     "totals": totals, "presets": growth.PRESETS,
+                                                     "erp_section": "growth", "gtab": "campaigns"})
+
+
+@staff_member_required
+def growth_match(request, pk):
+    """Apercu en direct du ciblage (sans enregistrer) : nombre et liste des communautes visees."""
+    from .models import Campaign
+    from . import growth
+    c = Campaign.objects.filter(pk=pk).first() or Campaign()
+    for f in ("regions", "langs", "platforms", "categories"):
+        setattr(c, f, ",".join(request.GET.getlist(f)))
+    if (request.GET.get("min_priority") or "").isdigit():
+        c.min_priority = int(request.GET["min_priority"])
+    c.exclude_forbidden = request.GET.get("exclude_forbidden") == "1"
+    m = growth.match_communities(c)
+    return JsonResponse({"count": len(m), "items": [{"name": x.name, "platform": x.get_platform_display(),
+                                                     "lang": x.lang} for x in m[:40]]})
 
 
 @staff_member_required
@@ -3796,16 +3826,23 @@ def growth_campaign(request, pk):
     if request.method == "POST":
         op = request.POST.get("op")
         try:
-            if op == "save":
-                _campaign_from_post(c, request.POST).save()
-                messages.success(request, "Campagne enregistrée.")
-            elif op == "generate":
+            if op in ("target", "target_generate"):
+                _campaign_targeting(c, request.POST).save()
+                if op == "target":
+                    messages.success(request, "Ciblage enregistré.")
+            if op == "settings":
+                _campaign_settings(c, request.POST).save()
+                messages.success(request, "Réglages enregistrés.")
+            if op in ("generate", "target_generate"):
                 made, skipped = growth.generate_actions(c)
                 if c.status == "draft":
                     c.status = "active"; c.save(update_fields=["status"])
-                messages.success(request, "⚡ %d action(s) ciblée(s) générée(s)%s." % (
-                    len(made), (" · ignorées : " + ", ".join(skipped[:8])) if skipped else ""))
-            elif op == "new_code":
+                if made:
+                    messages.success(request, "%d publication(s) personnalisée(s) prête(s) à diffuser." % len(made))
+                else:
+                    messages.warning(request, "Aucune nouvelle publication : %s" % (
+                        "; ".join(skipped[:6]) if skipped else "aucune communauté ne correspond au ciblage."))
+            if op == "new_code":
                 import secrets as _s
                 d = Discount.objects.create(code=("%s-%s" % (cm._slug_code(c.name), _s.token_hex(2))).upper()[:32],
                                             kind=Discount.PROMO, percent=int(request.POST.get("percent") or 10), max_uses=0)
@@ -3841,9 +3878,30 @@ def growth_campaign(request, pk):
         o.link = cm.tracked_url(o)
         o.submit = cm.submit_url(o.community, o.title, o.body, o.link) if not o.posted_url else ""
     matched = growth.match_communities(c)
+    t = st["tot"]
+    steps = [
+        {"k": 1, "id": "ciblage", "t": "Cibler", "s": "%d communauté%s" % (len(matched), "s" if len(matched) > 1 else ""),
+         "done": bool(matched)},
+        {"k": 2, "id": "actions", "t": "Générer", "s": "%d action%s prête%s" % (t["actions"], "s" * (t["actions"] > 1), "s" * (t["actions"] > 1)),
+         "done": t["actions"] > 0},
+        {"k": 3, "id": "actions", "t": "Publier", "s": "%d / %d publiée%s" % (t["posted"], t["actions"], "s" * (t["posted"] > 1)),
+         "done": t["actions"] > 0 and t["posted"] == t["actions"]},
+        {"k": 4, "id": "resultats", "t": "Mesurer", "s": "%d visiteur%s · %d vente%s" % (t["clicks"], "s" * (t["clicks"] > 1), t["orders"], "s" * (t["orders"] > 1)),
+         "done": t["orders"] > 0},
+    ]
+    cur = next((x["k"] for x in steps if not x["done"]), 4)
+    funnel_raw = [("Actions préparées", t["actions"]), ("Publiées", t["posted"]), ("Visiteurs", t["clicks"]), ("Ventes", t["orders"])]
+    top = max([v for _l, v in funnel_raw] + [1])
+    funnel = [{"l": l, "v": v, "w": round(v / top * 100, 1)} for l, v in funnel_raw]
+    chmax = max([ch["clicks"] for ch in st["channels"].values()] + [1])
+    channels = [{"l": k, "w": round(ch["clicks"] / chmax * 100, 1), **ch} for k, ch in st["channels"].items()]
+    todo = sum(1 for o in st["posts"] if not o.posted_url)
     return render(request, "admin/growth_campaign.html", {
+        "steps": steps, "cur": cur, "funnel": funnel, "channels": channels, "todo": todo,
         **_admin.site.each_context(request), "c": c, "st": st, "matched": matched,
         "regions": Community.REGIONS, "platforms": Community.PLATFORMS, "categories": PostTemplate.CATEGORIES,
         "langs": sorted(set(Community.objects.values_list("lang", flat=True)) | {"en", "fr", "de", "es", "it"}),
         "discounts": Discount.objects.filter(active=True, kind=Discount.PROMO).order_by("-created_at")[:50],
-        "statuses": Campaign.STATUS, "erp_section": "growth", "gtab": "campaigns"})
+        "statuses": Campaign.STATUS, "erp_section": "growth", "gtab": "campaigns",
+        "prio_opts": [(1, "Priorité haute uniquement"), (2, "Priorités haute et moyenne"), (3, "Toutes les priorités")],
+        "paths": [("/create/", "Création (aperçu gratuit)"), ("/play/", "Jouer (jeu gratuit)"), ("/", "Accueil")]})

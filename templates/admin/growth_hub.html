@@ -3,30 +3,88 @@
 {% block breadcrumbs %}{% endblock %}
 {% block content_title %}{% endblock %}
 {% block content %}
-{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
-<div class="erp">
-  <div class="erp-head"><div><h1>Croissance</h1>
-    <div class="muted">Campagne par campagne : cibler, créer, diffuser, suivre. Publications communautés, pubs A/B et codes promo sont rattachés à leur campagne ; les ventes sont attribuées au dernier clic.</div></div>
-    <form method="post" style="display:flex;gap:6px">{% csrf_token %}<input type="hidden" name="op" value="create">
-      <input type="text" name="name" placeholder="Nom de la nouvelle campagne" required style="min-width:240px"><button class="pbtn pri">+ Nouvelle campagne</button></form></div>
-  {% include "admin/_growth_tabs.html" %}
-  <div class="kpis">
-    <div class="kpi"><div class="l">Campagnes</div><div class="v">{{ camps|length }}</div></div>
-    <div class="kpi"><div class="l">Visiteurs</div><div class="v">{{ totals.clicks }}</div></div>
-    <div class="kpi"><div class="l">Ventes attribuées</div><div class="v">{{ totals.orders }}</div></div>
-    <div class="kpi"><div class="l">CA attribué</div><div class="v">{{ totals.revenue|floatformat:"2g" }} €</div><div class="muted">budget {{ totals.budget|floatformat:"0g" }} €</div></div>
+{% include "admin/_growth_ui.html" %}
+<style>
+ .camp{display:flex;flex-direction:column;gap:12px;transition:transform .15s,box-shadow .15s}
+ .camp:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(18,34,79,.06),0 14px 30px -16px rgba(18,34,79,.35)}
+ .camp .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+ .camp h3{font-size:1.05rem;font-weight:800}
+ .camp .goal{color:var(--ink2);font-size:.85rem;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ .camp .tg{display:flex;flex-wrap:wrap;gap:6px}
+ .camp .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+ .camp .nums b{display:block;font-size:1.15rem;font-variant-numeric:tabular-nums}
+ .camp .nums span{font-size:.72rem;color:var(--mute);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+ .camp .pg{display:flex;justify-content:space-between;font-size:.76rem;color:var(--mute);font-weight:700;margin-bottom:6px}
+</style>
+<div class="gx">
+  <div class="gx-top">
+    <div><h1>Croissance</h1>
+      <p>Une campagne réunit le ciblage, les contenus, la diffusion et les résultats. Choisissez un modèle de campagne : les publications personnalisées sont prêtes en un clic.</p></div>
+    <button class="gx-btn pri lg" type="button" onclick="document.getElementById('newCamp').showModal()">＋ Nouvelle campagne</button>
   </div>
-  <div class="card"><table class="t">
-    <tr><th>Campagne</th><th>Statut</th><th>Période</th><th>Ciblage</th><th class="r">Actions</th><th class="r">Visiteurs</th><th class="r">Ventes</th><th class="r">CA</th><th class="r">ROI</th></tr>
-    {% for c in camps %}<tr>
-      <td><a href="/admin-hub/growth/{{ c.pk }}/"><b>{{ c.name }}</b></a>{% if c.goal %}<div class="muted">{{ c.goal|truncatechars:80 }}</div>{% endif %}</td>
-      <td><span class="bdg2 {% if c.status == 'active' %}ok{% elif c.status == 'done' %}off{% else %}idle{% endif %}">{{ c.get_status_display }}</span></td>
-      <td class="muted">{{ c.start|date:"d/m"|default:"—" }} → {{ c.end|date:"d/m"|default:"—" }}</td>
-      <td class="muted" style="font-size:.78rem">{{ c.regions|default:"toutes zones"|upper }} · {{ c.langs|default:"toutes langues"|upper }} · {{ c.platforms|default:"tous canaux" }}</td>
-      <td class="r">{{ c.s.posted }}/{{ c.s.actions }}{% if c.s.ads %} <span class="muted">+{{ c.s.ads }} pubs</span>{% endif %}</td>
-      <td class="r"><b>{{ c.s.clicks }}</b></td><td class="r">{{ c.s.orders }}</td>
-      <td class="r">{{ c.s.revenue|floatformat:"2g" }} €</td><td class="r">{% if c.s.roi is not None %}{{ c.s.roi }} %{% else %}—{% endif %}</td>
-    </tr>{% empty %}<tr><td colspan="9" class="muted">Aucune campagne. Exemple : « Fête des mères FR/DE », « Lancement Reddit US », « Noël AU ».</td></tr>{% endfor %}
-  </table></div>
+  {% include "admin/_growth_tabs.html" %}
+
+  <div class="gx-kpis">
+    <div class="gx-kpi"><div class="l">Campagnes</div><div class="v">{{ camps|length }}</div></div>
+    <div class="gx-kpi"><div class="l">Visiteurs</div><div class="v">{{ totals.clicks }}</div><div class="s">via les liens traqués</div></div>
+    <div class="gx-kpi"><div class="l">Ventes attribuées</div><div class="v">{{ totals.orders }}</div></div>
+    <div class="gx-kpi"><div class="l">Chiffre d'affaires</div><div class="v">{{ totals.revenue|floatformat:"0g" }} €</div><div class="s">budget engagé {{ totals.budget|floatformat:"0g" }} €</div></div>
+  </div>
+
+  <div class="gx-sec">
+    <div class="gx-sec-h"><h2>Vos campagnes</h2></div>
+    {% if camps %}
+    <div class="gx-grid">
+      {% for c in camps %}
+      <a class="gx-card camp" href="/admin-hub/growth/{{ c.pk }}/">
+        <div class="hd"><div><h3>{{ c.name }}</h3>{% if c.goal %}<div class="goal">{{ c.goal }}</div>{% endif %}</div>
+          <span class="gx-chip {% if c.status == 'active' %}ok{% elif c.status == 'done' %}{% else %}warn{% endif %}"><span class="gx-dot"></span>{{ c.get_status_display }}</span></div>
+        <div class="tg">
+          {% with t=c.targeting_labels %}<span class="gx-chip" title="Zones">{{ t.zones|truncatechars:40 }}</span>
+          <span class="gx-chip" title="Canaux">{{ t.channels|truncatechars:40 }}</span>{% if t.langs %}<span class="gx-chip dark">{{ t.langs }}</span>{% endif %}{% endwith %}
+          {% if c.start or c.end %}<span class="gx-chip">{{ c.start|date:"d/m"|default:"…" }} → {{ c.end|date:"d/m"|default:"…" }}</span>{% endif %}
+          {% if c.discount %}<span class="gx-chip brand">{{ c.discount.code }}</span>{% endif %}
+        </div>
+        <div><div class="pg"><span>Diffusion</span><span>{{ c.s.posted }} / {{ c.s.actions }} publiée{{ c.s.posted|pluralize }}</span></div>
+          <div class="gx-prog"><i style="width:{{ c.pct|stringformat:'s' }}%"></i></div></div>
+        <div class="nums"><div><b>{{ c.s.clicks }}</b><span>Visiteurs</span></div><div><b>{{ c.s.orders }}</b><span>Ventes</span></div>
+          <div><b>{{ c.s.revenue|floatformat:"0g" }} €</b><span>CA</span></div></div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="gx-empty"><div class="ico">🎯</div><h3>Lancez votre première campagne</h3>
+      <p>Fête des mères, lancement Reddit, Noël… Choisissez un modèle : ciblage et publications sont préparés automatiquement.</p>
+      <button class="gx-btn pri" type="button" onclick="document.getElementById('newCamp').showModal()">＋ Nouvelle campagne</button></div>
+    {% endif %}
+  </div>
 </div>
+
+<dialog class="gx-dlg gx" id="newCamp">
+  <form method="post">{% csrf_token %}<input type="hidden" name="op" value="create">
+    <div class="hd"><div><h2 style="font-size:1.2rem;font-weight:800">Nouvelle campagne</h2>
+      <p class="gx-muted" style="margin:4px 0 0">Partez d'un modèle : zones, langues, canaux et thèmes sont pré-réglés (modifiables ensuite).</p></div>
+      <button type="button" class="gx-btn ghost sm" onclick="this.closest('dialog').close()" aria-label="Fermer">✕</button></div>
+    <div class="bd">
+      <div class="gx-presets">
+        {% for p in presets %}<div><input type="radio" name="preset" id="pr-{{ p.key }}" value="{{ p.key }}" {% if forloop.first %}checked{% endif %}>
+          <label for="pr-{{ p.key }}"><b>{{ p.name }}</b><small>{{ p.desc }}</small></label></div>{% endfor %}
+        <div><input type="radio" name="preset" id="pr-blank" value=""><label for="pr-blank"><b>Campagne vierge</b><small>Vous définissez tout le ciblage vous-même.</small></label></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <label class="gx-field"><span>Nom</span><input type="text" name="name" placeholder="ex. Fête des mères 2027"></label>
+        <label class="gx-field"><span>Objectif / message clé</span><input type="text" name="goal" placeholder="ex. Le cadeau qu'elle peint elle-même"></label>
+      </div>
+      <label class="gx-switch" style="margin-top:14px"><input type="checkbox" name="generate" value="1" checked> Générer tout de suite les publications ciblées</label>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+        <button type="button" class="gx-btn" onclick="this.closest('dialog').close()">Annuler</button>
+        <button class="gx-btn pri">Créer la campagne</button></div>
+    </div>
+  </form>
+</dialog>
+<script>
+(function(){var d=document.getElementById('newCamp');d.addEventListener('click',function(e){if(e.target===d)d.close();});
+  document.querySelectorAll('input[name=preset]').forEach(function(r){r.addEventListener('change',function(){
+    var g=d.querySelector('input[name=generate]');g.checked=!!r.value;g.disabled=!r.value;});});})();
+</script>
 {% endblock %}

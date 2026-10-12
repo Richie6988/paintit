@@ -26,7 +26,7 @@
  .filters a{font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:999px;background:#f1f1f1;color:#303030 !important;text-decoration:none}
  .filters a.on{background:#12224f;color:#fff !important}
 </style>
-<div class="erp">
+<div class="erp gx">
   <div class="erp-head">
     <div><a href="/admin-hub/communities/" class="muted" style="font-weight:700">← Communautés</a>
       <h1>Bibliothèque de publications</h1>
@@ -35,7 +35,7 @@
       <button class="pbtn{% if not tpls %} pri{% endif %}" name="op" value="seed">{% if tpls %}Ajouter les modèles manquants{% else %}Charger la bibliothèque (46 modèles){% endif %}</button></form>
   </div>
 
-  {% include "admin/_growth_tabs.html" %}
+  {% include "admin/_growth_ui.html" %}{% include "admin/_growth_tabs.html" %}
   <div class="filters"><b style="font-size:.8rem">Catégorie</b> <a href="?lang={{ lang }}&plat={{ plat }}" class="{% if not cat %}on{% endif %}">Toutes</a>
     {% for k, l in categories %}<a href="?cat={{ k }}&lang={{ lang }}&plat={{ plat }}" class="{% if cat == k %}on{% endif %}">{{ l }}</a>{% endfor %}</div>
   <div class="filters"><b style="font-size:.8rem">Langue</b> <a href="?cat={{ cat }}&plat={{ plat }}" class="{% if not lang %}on{% endif %}">Toutes</a>

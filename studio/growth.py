@@ -10,6 +10,31 @@ from collections import OrderedDict
 from django.conf import settings
 from django.db.models import Count, Sum
 
+# Preregles : une campagne prete a generer en un clic (ciblage + themes)
+PRESETS = [
+    {"key": "mothers", "name": "Fête des mères", "desc": "Cadeau qu'elle peint elle-même · FR, DE, ES, IT · Facebook & réseaux",
+     "regions": "fr,de,es,it", "langs": "fr,de,es,it", "platforms": "facebook,social", "categories": "season,gift,story"},
+    {"key": "xmas", "name": "Noël", "desc": "Cadeau photo personnalisé · toutes zones · Facebook, réseaux, Reddit",
+     "regions": "", "langs": "", "platforms": "facebook,social,reddit", "categories": "season,gift"},
+    {"key": "launch", "name": "Lancement produit", "desc": "Product Hunt, Hacker News, r/SideProject · angle technique",
+     "regions": "global", "langs": "en", "platforms": "launch,reddit", "categories": "launch,tech"},
+    {"key": "pbn", "name": "Communautés PBN (US · AU)", "desc": "Passionnés de peinture par numéros · histoires & avant/après",
+     "regions": "global,us,au", "langs": "en", "platforms": "reddit,facebook", "categories": "story,beforeafter,engage,tips"},
+    {"key": "seniors", "name": "Seniors & EHPAD", "desc": "Ateliers en résidence, 12 couleurs · partenariats",
+     "regions": "fr", "langs": "fr", "platforms": "facebook,forum", "categories": "b2b,family"},
+    {"key": "valentine", "name": "Saint-Valentin", "desc": "Peindre sa photo de couple à deux · réseaux sociaux",
+     "regions": "", "langs": "", "platforms": "social", "categories": "season,gift"},
+]
+
+
+def apply_preset(c, key):
+    p = next((x for x in PRESETS if x["key"] == key), None)
+    if p:
+        for f in ("regions", "langs", "platforms", "categories"):
+            setattr(c, f, p[f])
+    return c
+
+
 # canal de la communaute -> etiquettes de canal acceptees dans les modeles
 PLATFORM_TAGS = {"reddit": {"reddit"}, "facebook": {"facebook"}, "forum": {"forum"}, "discord": {"discord", "forum"},
                  "social": {"social"}, "launch": {"launch"}, "other": {"forum", "social"}}

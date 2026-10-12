@@ -85,6 +85,7 @@ urlpatterns = [
     path("admin-hub/marketing/", views.marketing_gallery, name="marketing_gallery"),
     path("admin-hub/growth/", views.growth_hub, name="growth_hub"),
     path("admin-hub/growth/<int:pk>/", views.growth_campaign, name="growth_campaign"),
+    path("admin-hub/growth/<int:pk>/match/", views.growth_match, name="growth_match"),
     path("admin-hub/communities/", views.erp_communities, name="erp_communities"),
     path("admin-hub/communities/library/", views.erp_community_library, name="erp_community_library"),
     path("go/<str:code>/", views.go_link, name="go_link"),

@@ -855,3 +855,11 @@ class Campaign(models.Model):
 
     def category_list(self):
         return self._l(self.categories)
+
+    def targeting_labels(self):
+        """Resume lisible du ciblage (cartes de campagne)."""
+        reg = dict(Community.REGIONS); pf = dict(Community.PLATFORMS)
+        zones = ", ".join(reg.get(x, x) for x in self.region_list()) or "Toutes zones"
+        chans = ", ".join(pf.get(x, x) for x in self.platform_list()) or "Tous canaux"
+        langs = " · ".join(x.upper() for x in self.lang_list())
+        return {"zones": zones, "channels": chans, "langs": langs}

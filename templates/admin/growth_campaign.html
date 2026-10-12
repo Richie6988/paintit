@@ -3,108 +3,218 @@
 {% block breadcrumbs %}{% endblock %}
 {% block content_title %}{% endblock %}
 {% block content %}
-{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+{% include "admin/_growth_ui.html" %}
 <style>
- .tgt{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
- .tgt fieldset{border:1px solid #e3e3e3;border-radius:12px;padding:10px 12px;margin:0;min-width:0}
- .tgt legend{font-weight:800;font-size:.8rem;color:#12224f;padding:0 4px}
- .tgt label{display:flex;gap:6px;align-items:center;font-size:.82rem;margin:3px 0}
- .tgt input[type=checkbox]{width:auto}
- .row3{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px}
- .row3 input,.row3 select,.row3 textarea{width:100%;box-sizing:border-box}
- .bolt{font-size:1.02rem;padding:12px 20px}
- .copy{cursor:pointer;border:1px solid #e2e8f2;background:#f7f9fd;border-radius:7px;padding:2px 7px;font-size:.74rem;font-weight:700;color:#2f4b8f}
- .new{background:#2f6bf2;color:#fff;border-radius:999px;padding:1px 7px;font-size:.72rem;font-weight:800}
- .pill{border-radius:999px;padding:1px 8px;font-size:.72rem;font-weight:800;background:#f1f1f1}
- @media(max-width:1000px){.tgt{grid-template-columns:1fr 1fr}.row3{grid-template-columns:1fr 1fr}}
+ .tgt{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px}
+ .tgt .groups{display:flex;flex-direction:column;gap:18px}
+ .live{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:16px;align-self:start;position:sticky;top:12px}
+ .live .big{font-size:2.2rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+ .live ul{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
+ .live li{display:flex;flex-direction:column;gap:1px;font-size:.82rem;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+ .live li span{color:var(--mute);font-weight:600;font-size:.74rem}
+ .seg2{display:inline-flex;gap:4px;padding:4px;background:var(--soft);border:1px solid var(--line);border-radius:10px}
+ .seg2 button{border:0;background:transparent;padding:6px 12px;border-radius:7px;font-weight:700;font-size:.82rem;color:var(--ink2);cursor:pointer}
+ .seg2 button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(18,34,79,.12)}
+ .act{display:flex;flex-direction:column;gap:10px}
+ .act .who{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+ .act .who b{font-size:.92rem}
+ .act h3{font-size:.98rem;font-weight:800;line-height:1.35}
+ .act .txt{font-size:.85rem;color:var(--ink2);line-height:1.5;white-space:pre-line;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+ .act .txt.open{display:block}
+ .act .more{border:0;background:none;color:var(--brand);font-weight:700;font-size:.8rem;cursor:pointer;padding:0;align-self:flex-start}
+ .act .brief{display:flex;gap:8px;font-size:.8rem;color:var(--ink2);background:var(--soft);border-radius:10px;padding:9px 11px}
+ .act .ft{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:10px;border-top:1px solid var(--line);margin-top:auto}
+ .act .posted{display:none;gap:6px;width:100%}
+ .act .posted.on{display:flex}
+ .act .posted input{flex:1;height:32px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font-size:.82rem;min-width:0}
+ .act .st{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+ .act .st div{background:var(--soft);border-radius:8px;padding:7px 4px}
+ .act .st b{display:block;font-size:1rem;font-variant-numeric:tabular-nums}.act .st span{font-size:.68rem;color:var(--mute);font-weight:700;text-transform:uppercase}
+ .act.is-posted{border-color:#cdebd8}
+ .res{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+ .set{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+ @media(max-width:980px){.tgt,.res{grid-template-columns:1fr}.live{position:static}.set{grid-template-columns:1fr}}
 </style>
-<div class="erp">
-  <div class="erp-head"><div><a href="/admin-hub/growth/" class="muted" style="font-weight:700">← Campagnes</a>
-    <h1>{{ c.name }} <span class="bdg2 {% if c.status == 'active' %}ok{% elif c.status == 'done' %}off{% else %}idle{% endif %}" style="vertical-align:middle">{{ c.get_status_display }}</span></h1>
-    {% if c.goal %}<div class="muted">{{ c.goal }}</div>{% endif %}</div>
-    <form method="post" style="display:flex;gap:6px;align-items:center">{% csrf_token %}
-      <span class="muted">{{ matched|length }} communauté{{ matched|length|pluralize }} ciblée{{ matched|length|pluralize }}</span>
-      <button class="pbtn pri bolt" name="op" value="generate" data-confirm="Générer les actions ciblées ?" data-confirm-text="Une publication personnalisée (meilleur modèle de la bibliothèque, lien traqué unique) sera préparée pour chacune des {{ matched|length }} communautés ciblées. Rien n'est publié automatiquement." data-ok="Générer">⚡ Générer les actions ciblées</button></form>
+<div class="gx">
+  <a class="gx-crumb" href="/admin-hub/growth/">← Toutes les campagnes</a>
+  <div class="gx-top">
+    <div><h1>{{ c.name }} <span class="gx-chip {% if c.status == 'active' %}ok{% elif c.status == 'done' %}{% else %}warn{% endif %}" style="vertical-align:middle"><span class="gx-dot"></span>{{ c.get_status_display }}</span></h1>
+      <p>{% if c.goal %}{{ c.goal }}{% else %}<span class="gx-muted">Ajoutez un objectif dans les réglages.</span>{% endif %}
+        {% if c.start or c.end %} · {{ c.start|date:"d M"|default:"…" }} → {{ c.end|date:"d M Y"|default:"…" }}{% endif %}{% if c.discount %} · code <b>{{ c.discount.code }}</b> (-{{ c.discount.percent }} %){% endif %}</p></div>
+    <div style="display:flex;gap:8px">
+      <a class="gx-btn" href="#reglages">Réglages</a>
+      {% if not st.posts %}
+        <form method="post">{% csrf_token %}<button class="gx-btn pri lg" name="op" value="generate" {% if not matched %}disabled{% endif %}>⚡ Générer {{ matched|length }} publication{{ matched|length|pluralize }}</button></form>
+      {% elif todo %}<a class="gx-btn pri lg" href="#actions">Publier · {{ todo }} restante{{ todo|pluralize }}</a>
+      {% else %}<a class="gx-btn pri lg" href="#resultats">Voir les résultats</a>{% endif %}
+    </div>
   </div>
   {% include "admin/_growth_tabs.html" %}
 
-  <div class="kpis">
-    <div class="kpi"><div class="l">Actions</div><div class="v">{{ st.tot.posted }}/{{ st.tot.actions }}</div><div class="muted">publiées / préparées{% if st.tot.ads %} · {{ st.tot.ads }} pub{{ st.tot.ads|pluralize }}{% endif %}</div></div>
-    <div class="kpi"><div class="l">Visiteurs</div><div class="v">{{ st.tot.clicks }}</div>{% if st.tot.ad_views %}<div class="muted">{{ st.tot.ad_views }} vues de pubs</div>{% endif %}</div>
-    <div class="kpi"><div class="l">Ventes</div><div class="v">{{ st.tot.orders }}</div><div class="muted">{% if st.tot.conv is not None %}{{ st.tot.conv }} % de conversion{% endif %}{% if st.tot.code_uses %} · code utilisé {{ st.tot.code_uses }}×{% endif %}</div></div>
-    <div class="kpi"><div class="l">CA attribué</div><div class="v">{{ st.tot.revenue|floatformat:"2g" }} €</div><div class="muted">budget {{ c.budget|floatformat:"0g" }} €{% if st.tot.roi is not None %} · ROI {{ st.tot.roi }} %{% endif %}</div></div>
-    <div class="kpi"><div class="l">Réponses à traiter</div><div class="v">{% if st.tot.replies %}<span class="new">{{ st.tot.replies }}</span>{% else %}0{% endif %}</div></div>
+  <div class="gx-steps">
+    {% for s in steps %}<a class="gx-step {% if s.done %}done{% elif s.k == cur %}cur{% endif %}" href="#{{ s.id }}">
+      <span class="k">{% if s.done %}✓{% else %}{{ s.k }}{% endif %}</span><span><b>{{ s.t }}</b><small>{{ s.s }}</small></span></a>{% endfor %}
   </div>
 
-  <details class="card" {% if not st.posts %}open{% endif %}><summary style="cursor:pointer;font-weight:800">🎯 Ciblage &amp; réglages</summary>
-    <form method="post" style="margin-top:12px">{% csrf_token %}<input type="hidden" name="op" value="save">
-      <div class="row3">
-        <input type="text" name="name" value="{{ c.name }}" placeholder="Nom">
-        <select name="status">{% for k, l in statuses %}<option value="{{ k }}" {% if c.status == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
-        <input type="date" name="start" value="{{ c.start|date:'Y-m-d' }}"><input type="date" name="end" value="{{ c.end|date:'Y-m-d' }}">
-        <input type="number" name="budget" step="1" min="0" value="{{ c.budget|floatformat:0 }}" placeholder="Budget €">
-      </div>
-      <textarea name="goal" rows="2" style="width:100%;box-sizing:border-box;margin-bottom:12px" placeholder="Objectif / message clé (ex. Fête des mères : le cadeau qu'elle peint elle-même)">{{ c.goal }}</textarea>
+  <!-- 1. CIBLAGE -->
+  <section class="gx-sec" id="ciblage">
+    <div class="gx-sec-h"><h2><span class="n">1</span>Ciblage</h2></div>
+    <form method="post" class="gx-card" id="tgtForm">{% csrf_token %}
       <div class="tgt">
-        <fieldset><legend>Zones</legend>{% for k, l in regions %}<label><input type="checkbox" name="regions" value="{{ k }}" {% if k in c.region_list %}checked{% endif %}> {{ l }}</label>{% endfor %}</fieldset>
-        <fieldset><legend>Langues</legend>{% for l in langs %}<label><input type="checkbox" name="langs" value="{{ l }}" {% if l in c.lang_list %}checked{% endif %}> {{ l|upper }}</label>{% endfor %}</fieldset>
-        <fieldset><legend>Canaux</legend>{% for k, l in platforms %}<label><input type="checkbox" name="platforms" value="{{ k }}" {% if k in c.platform_list %}checked{% endif %}> {{ l }}</label>{% endfor %}</fieldset>
-        <fieldset><legend>Thèmes de contenu</legend>{% for k, l in categories %}<label><input type="checkbox" name="categories" value="{{ k }}" {% if k in c.category_list %}checked{% endif %}> {{ l }}</label>{% endfor %}</fieldset>
+        <div class="groups">
+          <div><div class="gx-field" style="margin-bottom:8px"><span>Zones</span></div><div class="gx-toggles">
+            {% for k, l in regions %}<input type="checkbox" name="regions" value="{{ k }}" id="rg-{{ k }}" {% if k in c.region_list %}checked{% endif %}><label for="rg-{{ k }}">{{ l }}</label>{% endfor %}</div></div>
+          <div><div class="gx-field" style="margin-bottom:8px"><span>Langues</span></div><div class="gx-toggles">
+            {% for l in langs %}<input type="checkbox" name="langs" value="{{ l }}" id="lg-{{ l }}" {% if l in c.lang_list %}checked{% endif %}><label for="lg-{{ l }}">{{ l|upper }}</label>{% endfor %}</div></div>
+          <div><div class="gx-field" style="margin-bottom:8px"><span>Canaux</span></div><div class="gx-toggles">
+            {% for k, l in platforms %}<input type="checkbox" name="platforms" value="{{ k }}" id="pf-{{ k }}" {% if k in c.platform_list %}checked{% endif %}><label for="pf-{{ k }}">{{ l }}</label>{% endfor %}</div></div>
+          <div><div class="gx-field" style="margin-bottom:8px"><span>Thèmes des contenus</span></div><div class="gx-toggles">
+            {% for k, l in categories %}<input type="checkbox" name="categories" value="{{ k }}" id="ct-{{ k }}" {% if k in c.category_list %}checked{% endif %}><label for="ct-{{ k }}">{{ l }}</label>{% endfor %}</div></div>
+          <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+            <label class="gx-field" style="max-width:280px"><span>Communautés</span>
+              <select name="min_priority">{% for k, l in prio_opts %}<option value="{{ k }}" {% if c.min_priority == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+            <label class="gx-switch" style="margin-top:20px"><input type="checkbox" name="exclude_forbidden" value="1" {% if c.exclude_forbidden %}checked{% endif %}> Exclure les communautés où l'autopromotion est interdite</label>
+          </div>
+          <p class="gx-muted" style="margin:0">Aucune case cochée dans un groupe = pas de filtre sur ce critère.</p>
+        </div>
+        <aside class="live" aria-live="polite">
+          <div class="gx-muted" style="font-weight:800;text-transform:uppercase;letter-spacing:.05em;font-size:.72rem">Communautés ciblées</div>
+          <div class="big" id="liveCount">{{ matched|length }}</div>
+          <ul id="liveList">{% for m in matched|slice:":40" %}<li>{{ m.name }}<span>{{ m.get_platform_display }} · {{ m.lang|upper }}</span></li>{% empty %}<li class="gx-muted">Aucune : élargissez le ciblage.</li>{% endfor %}</ul>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+            <button class="gx-btn pri" name="op" value="target_generate">Enregistrer &amp; générer</button>
+            <button class="gx-btn" name="op" value="target">Enregistrer le ciblage</button>
+          </div>
+        </aside>
       </div>
-      <div class="row3" style="margin-top:12px;grid-template-columns:1fr 1fr 1fr 1fr">
-        <select name="min_priority">{% for k in "123" %}<option value="{{ k }}" {% if c.min_priority|stringformat:"s" == k %}selected{% endif %}>Communautés de priorité ≤ {{ k }}</option>{% endfor %}</select>
-        <input type="text" name="target_path" value="{{ c.target_path }}" placeholder="Page cible (/create/, /play/…)">
-        <select name="discount"><option value="">Pas de code promo</option>{% for d in discounts %}<option value="{{ d.pk }}" {% if c.discount_id == d.pk %}selected{% endif %}>{{ d.code }} (-{{ d.percent }} %)</option>{% endfor %}</select>
-        <span></span>
-      </div>
-      <label class="sw"><input type="checkbox" name="exclude_forbidden" {% if c.exclude_forbidden %}checked{% endif %}> Exclure les communautés où l'autopromotion est interdite</label>
-      <label class="sw" style="margin-top:6px"><input type="checkbox" name="append_code" {% if c.append_code %}checked{% endif %}> Ajouter le code promo à la fin des textes (sinon : seulement là où le modèle contient {code})</label>
-      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px">
-        <button class="pbtn sm" name="op" value="delete" data-confirm="Supprimer la campagne {{ c.name }} ?" data-danger style="color:#b42318">Supprimer</button>
-        <button class="pbtn pri">Enregistrer le ciblage</button></div>
     </form>
-    <form method="post" style="display:flex;gap:6px;align-items:center;margin-top:10px">{% csrf_token %}<input type="hidden" name="op" value="new_code">
-      <span class="muted" style="font-size:.8rem">Créer un code promo dédié à la campagne :</span>
-      <input type="number" name="percent" value="10" min="1" max="50" style="width:70px"> %<button class="pbtn sm">Créer &amp; rattacher</button></form>
-    <div class="muted" style="font-size:.78rem;margin-top:10px">Communautés ciblées actuellement : {% for m in matched %}{{ m.name }}{% if not forloop.last %}, {% endif %}{% empty %}aucune (élargissez le ciblage ou chargez l'annuaire).{% endfor %}</div>
-  </details>
+  </section>
 
-  {% if st.channels %}<div class="card"><div class="card-h"><h2>Retombées par canal</h2></div>
-    <table class="t"><tr><th>Canal</th><th class="r">Actions</th><th class="r">Publiées</th><th class="r">Visiteurs</th><th class="r">Ventes</th><th class="r">CA</th></tr>
-      {% for k, ch in st.channels.items %}<tr><td><b>{{ k }}</b></td><td class="r">{{ ch.actions }}</td><td class="r">{{ ch.posted }}</td><td class="r">{{ ch.clicks }}</td><td class="r">{{ ch.orders }}</td><td class="r">{{ ch.revenue|floatformat:"2g" }} €</td></tr>{% endfor %}
-    </table></div>{% endif %}
+  <!-- 2-3. ACTIONS -->
+  <section class="gx-sec" id="actions">
+    <div class="gx-sec-h"><h2><span class="n">2</span>Publications personnalisées</h2>
+      {% if st.posts %}<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="seg2" role="tablist"><button type="button" class="on" data-f="todo">À publier · {{ todo }}</button><button type="button" data-f="done">Publiées · {{ st.tot.posted }}</button><button type="button" data-f="all">Toutes · {{ st.tot.actions }}</button></div>
+        <form method="post">{% csrf_token %}<button class="gx-btn sm" name="op" value="generate" title="Ajoute les communautés ciblées qui n'ont pas encore de publication">＋ Compléter</button></form>
+        <form method="post">{% csrf_token %}<button class="gx-btn sm" name="op" value="refresh">↻ Stats Reddit</button></form></div>{% endif %}
+    </div>
+    {% if st.posts %}
+    <div class="gx-grid" id="acts">
+      {% for o in st.posts %}
+      <article class="gx-card act {% if o.posted_url %}is-posted{% endif %}" data-s="{% if o.posted_url %}done{% else %}todo{% endif %}">
+        <div class="who"><div style="min-width:0"><b>{{ o.community.name|default:"—" }}</b>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
+              {% if o.removed %}<span class="gx-chip bad">Retirée</span>{% elif o.posted_url %}<span class="gx-chip ok"><span class="gx-dot"></span>Publiée</span>{% else %}<span class="gx-chip warn"><span class="gx-dot"></span>À publier</span>{% endif %}
+              <span class="gx-chip">{{ o.community.get_platform_display }}</span><span class="gx-chip dark">{{ o.community.lang|upper }}</span></div></div>
+          <form method="post">{% csrf_token %}<input type="hidden" name="id" value="{{ o.pk }}"><button class="gx-btn ghost sm" name="op" value="del_post" title="Retirer de la campagne" aria-label="Retirer de la campagne" data-confirm="Retirer cette publication de la campagne ?" data-danger>✕</button></form></div>
+        <h3>{{ o.title }}</h3>
+        <div class="txt">{{ o.body }}</div>
+        <button type="button" class="more">Lire tout</button>
+        {% if o.template and o.template.media_brief %}<div class="brief"><span>🎬</span><span><b>{{ o.template.get_media_kind_display }}</b> · {{ o.template.media_brief }}{% if o.template.media %} · <a href="{{ o.template.media.url }}" download style="color:var(--brand);font-weight:700">télécharger le média</a>{% endif %}</span></div>{% endif %}
+        {% if o.posted_url %}
+          <div class="st"><div><b>{{ o.unique_clicks }}</b><span>Visiteurs</span></div><div><b>{{ o.orders }}</b><span>Ventes</span></div>
+            <div><b>{{ o.score|default_if_none:"–" }}</b><span>Score</span></div><div><b>{{ o.comments|default_if_none:"–" }}</b><span>Réponses</span></div></div>
+          <div class="ft"><a class="gx-btn sm" href="{{ o.posted_url }}" target="_blank" rel="noopener">Voir la publication ↗</a>
+            {% if o.new_replies %}<form method="post">{% csrf_token %}<input type="hidden" name="id" value="{{ o.pk }}"><button class="gx-btn sm pri" name="op" value="seen">{{ o.new_replies }} nouvelle{{ o.new_replies|pluralize }} réponse{{ o.new_replies|pluralize }} · marquer lu</button></form>{% endif %}
+            <button type="button" class="gx-btn sm ghost" data-copy="{{ o.link }}">Copier le lien traqué</button></div>
+        {% else %}
+          <div class="ft">
+            {% if o.submit %}<a class="gx-btn pri sm" href="{{ o.submit }}" target="_blank" rel="noopener">Publier (pré-rempli) ↗</a>
+            {% else %}<button type="button" class="gx-btn pri sm" data-copy="{{ o.title }}&#10;&#10;{{ o.body }}" data-open="{{ o.community.url }}">Copier &amp; ouvrir ↗</button>{% endif %}
+            <button type="button" class="gx-btn sm" data-copy="{{ o.title }}&#10;&#10;{{ o.body }}">Copier le texte</button>
+            <button type="button" class="gx-btn sm ghost js-posted">J'ai publié</button>
+            <form method="post" class="posted">{% csrf_token %}<input type="hidden" name="op" value="mark_posted"><input type="hidden" name="id" value="{{ o.pk }}">
+              <input type="url" name="posted_url" placeholder="Collez l'URL de votre publication" required><button class="gx-btn sm pri">Valider</button></form>
+          </div>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+    <div class="gx-empty" id="actsEmpty" hidden><div class="ico">🎉</div><h3>Tout est publié</h3><p>Suivez les retombées ci-dessous.</p></div>
+    {% else %}
+    <div class="gx-empty"><div class="ico">⚡</div><h3>Aucune publication pour l'instant</h3>
+      <p>{% if matched %}{{ matched|length }} communauté{{ matched|length|pluralize }} correspond{{ matched|length|pluralize:"ent" }} au ciblage. Chaque publication est choisie dans la bibliothèque, traduite et personnalisée, avec son lien traqué.{% else %}Aucune communauté ne correspond au ciblage : élargissez-le ou chargez l'annuaire dans « Communautés &amp; publications ».{% endif %}</p>
+      {% if matched %}<form method="post">{% csrf_token %}<button class="gx-btn pri lg" name="op" value="generate">⚡ Générer {{ matched|length }} publication{{ matched|length|pluralize }}</button></form>{% endif %}</div>
+    {% endif %}
+  </section>
 
-  <div class="card">
-    <div class="card-h"><h2>Actions de diffusion</h2>
-      <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="refresh">Actualiser les stats Reddit</button></form></div>
-    <div style="overflow-x:auto"><table class="t">
-      <tr><th>Communauté</th><th>Contenu personnalisé</th><th>Lien</th><th class="r">Visiteurs</th><th class="r">Ventes</th><th class="r">Score</th><th class="r">Com.</th><th></th></tr>
-      {% for o in st.posts %}<tr>
-        <td>{{ o.community.name|default:"—" }}<div class="muted">{{ o.community.get_platform_display }} · {{ o.community.lang|upper }}</div>{% if o.removed %}<span class="pill" style="background:#fedad9;color:#8e1f0b">retirée</span>{% endif %}</td>
-        <td style="max-width:380px"><b>{{ o.title|truncatechars:90 }}</b>{% if o.template %}<div class="muted" style="font-size:.72rem">modèle : {{ o.template.name }} · {{ o.template.get_media_kind_display }}{% if o.template.media_brief %} — 🎬 {{ o.template.media_brief|truncatechars:90 }}{% endif %}</div>{% endif %}
-          {% if o.posted_url %}<div><a href="{{ o.posted_url }}" target="_blank">voir la publication ↗</a> · {{ o.posted_at|date:"d/m" }}</div>
-          {% else %}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">{% if o.submit %}<a class="pbtn sm" href="{{ o.submit }}" target="_blank" rel="noopener">Ouvrir pré-rempli ↗</a>{% elif o.community %}<a class="pbtn sm" href="{{ o.community.url }}" target="_blank" rel="noopener">Ouvrir la communauté ↗</a>{% endif %}
-            <button type="button" class="copy" data-copy="{{ o.title }}&#10;&#10;{{ o.body }}">Copier le texte</button>
-            {% if o.template.media %}<a class="copy" href="{{ o.template.media.url }}" download>⬇ média</a>{% endif %}</div>
-            <form method="post" style="display:flex;gap:6px;margin-top:6px">{% csrf_token %}<input type="hidden" name="op" value="mark_posted"><input type="hidden" name="id" value="{{ o.pk }}">
-              <input type="url" name="posted_url" placeholder="URL une fois publié" required style="flex:1;min-width:140px"><button class="pbtn sm">Publié</button></form>{% endif %}</td>
-        <td><button type="button" class="copy" data-copy="{{ o.link }}">{{ o.code }} ⧉</button></td>
-        <td class="r"><b>{{ o.unique_clicks }}</b></td><td class="r">{{ o.orders }}{% if o.revenue %}<div class="muted">{{ o.revenue|floatformat:"2g" }} €</div>{% endif %}</td>
-        <td class="r">{{ o.score|default_if_none:"—" }}</td>
-        <td class="r">{{ o.comments|default_if_none:"—" }}{% if o.new_replies %} <span class="new">+{{ o.new_replies }}</span><form method="post" style="display:inline">{% csrf_token %}<input type="hidden" name="id" value="{{ o.pk }}"><button class="copy" name="op" value="seen">lu</button></form>{% endif %}</td>
-        <td><form method="post">{% csrf_token %}<input type="hidden" name="id" value="{{ o.pk }}"><button class="pbtn sm" name="op" value="del_post" data-confirm="Retirer cette action ?" data-danger>×</button></form></td>
-      </tr>{% empty %}<tr><td colspan="8" class="muted">Aucune action : réglez le ciblage puis cliquez sur « ⚡ Générer les actions ciblées ».</td></tr>{% endfor %}
-    </table></div>
-  </div>
+  <!-- 4. RESULTATS -->
+  <section class="gx-sec" id="resultats">
+    <div class="gx-sec-h"><h2><span class="n">3</span>Résultats</h2><span class="gx-muted">Ventes attribuées au dernier clic sur un lien de la campagne</span></div>
+    <div class="gx-kpis">
+      <div class="gx-kpi"><div class="l">Visiteurs</div><div class="v">{{ st.tot.clicks }}</div>{% if st.tot.ad_views %}<div class="s">{{ st.tot.ad_views }} vues de pubs</div>{% endif %}</div>
+      <div class="gx-kpi"><div class="l">Ventes</div><div class="v">{{ st.tot.orders }}</div><div class="s">{% if st.tot.conv is not None %}{{ st.tot.conv }} % des visiteurs{% else %}—{% endif %}</div></div>
+      <div class="gx-kpi"><div class="l">Chiffre d'affaires</div><div class="v">{{ st.tot.revenue|floatformat:"0g" }} €</div><div class="s">{% if c.budget %}budget {{ c.budget|floatformat:"0g" }} €{% if st.tot.roi is not None %} · ROI {{ st.tot.roi }} %{% endif %}{% else %}sans budget{% endif %}</div></div>
+      <div class="gx-kpi"><div class="l">Réponses à traiter</div><div class="v">{{ st.tot.replies }}</div>{% if st.tot.code_uses is not None %}<div class="s">code utilisé {{ st.tot.code_uses }} fois</div>{% endif %}</div>
+    </div>
+    <div class="res" style="margin-top:16px">
+      <div class="gx-card"><h3 style="font-size:.95rem;font-weight:800;margin-bottom:14px">Entonnoir</h3>
+        <div class="gx-bars">{% for f in funnel %}<div class="gx-bar" title="{{ f.l }} : {{ f.v }}"><span class="lab">{{ f.l }}</span><span class="trk"><span class="fil" style="display:block;width:{{ f.w|stringformat:'s' }}%"></span></span><span class="val">{{ f.v }}</span></div>{% endfor %}</div></div>
+      <div class="gx-card"><h3 style="font-size:.95rem;font-weight:800;margin-bottom:14px">Visiteurs par canal</h3>
+        {% if channels %}<div class="gx-bars">{% for ch in channels %}<div class="gx-bar" title="{{ ch.l }} : {{ ch.clicks }} visiteurs, {{ ch.orders }} ventes, {{ ch.revenue }} €"><span class="lab">{{ ch.l }}</span><span class="trk"><span class="fil" style="display:block;width:{{ ch.w|stringformat:'s' }}%"></span></span><span class="val">{{ ch.clicks }}<small>{{ ch.orders }} vente{{ ch.orders|pluralize }}</small></span></div>{% endfor %}</div>
+        {% else %}<p class="gx-muted" style="margin:0">Les canaux apparaissent dès la première publication.</p>{% endif %}</div>
+    </div>
+    <div class="gx-card" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="font-size:.95rem;font-weight:800">Pubs A/B</h3>
+        <a class="gx-btn sm" href="/marketing/?campaign={{ c.name|urlencode }}">＋ Créer une pub pour cette campagne</a></div>
+      {% if st.ads %}<div class="gx-bars" style="margin-top:14px">{% for a in st.ads %}<div class="gx-bar"><span class="lab">{{ a.variant }} · {{ a.kind }}</span><span class="gx-muted">{{ a.views }} vues</span><span class="val">{{ a.unique_clicks }}<small>{{ a.orders }} vente{{ a.orders|pluralize }}</small></span></div>{% endfor %}</div>
+      {% else %}<p class="gx-muted" style="margin:8px 0 0">Les pubs créées avec le nom de campagne « {{ c.name }} » apparaissent ici automatiquement.</p>{% endif %}
+    </div>
+  </section>
 
-  <div class="card"><div class="card-h"><h2>Pubs A/B de la campagne</h2><a class="pbtn sm" href="/marketing/?campaign={{ c.name|urlencode }}">+ Créer une pub pour cette campagne</a></div>
-    {% if st.ads %}<table class="t"><tr><th>Pub</th><th class="r">Vues</th><th class="r">Visiteurs</th><th class="r">Ventes</th><th class="r">CA</th></tr>
-      {% for a in st.ads %}<tr><td><b>{{ a.variant }}</b> · {{ a.kind }} <span class="muted">{{ a.image_uid }}</span></td><td class="r">{{ a.views }}</td><td class="r">{{ a.unique_clicks }}</td><td class="r">{{ a.orders }}</td><td class="r">{{ a.revenue|floatformat:"2g" }} €</td></tr>{% endfor %}</table>
-    {% else %}<div class="muted">Aucune pub rattachée. Les pubs créées avec le nom de campagne « {{ c.name }} » apparaissent ici automatiquement.</div>{% endif %}
-  </div>
+  <!-- REGLAGES -->
+  <section class="gx-sec" id="reglages">
+    <div class="gx-sec-h"><h2>Réglages</h2></div>
+    <form method="post" class="gx-card">{% csrf_token %}<input type="hidden" name="op" value="settings">
+      <div class="set">
+        <label class="gx-field"><span>Nom</span><input type="text" name="name" value="{{ c.name }}" required></label>
+        <label class="gx-field"><span>Statut</span><select name="status">{% for k, l in statuses %}<option value="{{ k }}" {% if c.status == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+        <label class="gx-field"><span>Budget (€)</span><input type="number" name="budget" min="0" step="1" value="{{ c.budget|floatformat:0 }}"></label>
+        <label class="gx-field" style="grid-column:1/-1"><span>Objectif / message clé</span><input type="text" name="goal" value="{{ c.goal }}" placeholder="ex. Le cadeau qu'elle peint elle-même"></label>
+        <label class="gx-field"><span>Début</span><input type="date" name="start" value="{{ c.start|date:'Y-m-d' }}"></label>
+        <label class="gx-field"><span>Fin</span><input type="date" name="end" value="{{ c.end|date:'Y-m-d' }}"></label>
+        <label class="gx-field"><span>Page d'arrivée</span><select name="target_path">{% for k, l in paths %}<option value="{{ k }}" {% if c.target_path == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+        <label class="gx-field"><span>Code promo</span><select name="discount"><option value="">Aucun</option>{% for d in discounts %}<option value="{{ d.pk }}" {% if c.discount_id == d.pk %}selected{% endif %}>{{ d.code }} · -{{ d.percent }} %</option>{% endfor %}</select></label>
+        <div class="gx-field" style="justify-content:flex-end"><label class="gx-switch"><input type="checkbox" name="append_code" {% if c.append_code %}checked{% endif %}> Ajouter le code à la fin des textes</label></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;gap:10px;margin-top:18px;flex-wrap:wrap">
+        <button class="gx-btn danger" name="op" value="delete" data-confirm="Supprimer la campagne « {{ c.name }} » ?" data-confirm-text="Les publications restent dans le suivi des communautés." data-danger>Supprimer la campagne</button>
+        <button class="gx-btn pri">Enregistrer</button></div>
+    </form>
+    <form method="post" class="gx-card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">{% csrf_token %}<input type="hidden" name="op" value="new_code">
+      <span style="font-weight:700">Créer un code promo dédié</span><span class="gx-muted">attribué à cette campagne, utilisable sans limite</span>
+      <label class="gx-field" style="flex-direction:row;align-items:center;gap:8px;margin-left:auto"><input type="number" name="percent" value="10" min="1" max="50" style="width:80px"> <span style="text-transform:none;letter-spacing:0">%</span></label>
+      <button class="gx-btn">Créer &amp; rattacher</button></form>
+  </section>
 </div>
 <script>
-document.querySelectorAll('.copy[data-copy]').forEach(function(b){b.addEventListener('click',function(){
-  navigator.clipboard.writeText(b.dataset.copy).then(function(){var t=b.textContent;b.textContent='copié ✓';setTimeout(function(){b.textContent=t},1200);});});});
+(function(){
+  // copier (+ ouvrir la communaute)
+  document.querySelectorAll('[data-copy]').forEach(function(b){b.addEventListener('click',function(){
+    var done=function(){var t=b.textContent;b.classList.add('gx-copy-ok');b.textContent='Copié ✓';setTimeout(function(){b.textContent=t;b.classList.remove('gx-copy-ok');},1400);
+      if(b.dataset.open)window.open(b.dataset.open,'_blank','noopener');};
+    (navigator.clipboard?navigator.clipboard.writeText(b.dataset.copy):Promise.reject()).then(done,done);});});
+  document.querySelectorAll('.act .more').forEach(function(m){var t=m.previousElementSibling;
+    if(t.scrollHeight<=t.clientHeight+2){m.hidden=true;}
+    m.addEventListener('click',function(){t.classList.toggle('open');m.textContent=t.classList.contains('open')?'Réduire':'Lire tout';});});
+  document.querySelectorAll('.js-posted').forEach(function(b){b.addEventListener('click',function(){
+    var f=b.parentNode.querySelector('.posted');f.classList.add('on');b.hidden=true;f.querySelector('input[type=url]').focus();});});
+  // filtre des publications
+  var cards=[].slice.call(document.querySelectorAll('#acts .act')),empty=document.getElementById('actsEmpty');
+  function filt(f){var n=0;cards.forEach(function(c){var ok=f==='all'||c.dataset.s===f;c.hidden=!ok;n+=ok;});if(empty)empty.hidden=n>0||f!=='todo';}
+  document.querySelectorAll('.seg2 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('.seg2 button').forEach(function(x){x.classList.toggle('on',x===b);});filt(b.dataset.f);});});
+  if(cards.length)filt('todo');
+  // ciblage : apercu en direct
+  var form=document.getElementById('tgtForm'),cnt=document.getElementById('liveCount'),list=document.getElementById('liveList'),tm;
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function live(){clearTimeout(tm);tm=setTimeout(function(){
+    var q=new URLSearchParams();form.querySelectorAll('input[type=checkbox]:checked').forEach(function(i){q.append(i.name,i.name==='exclude_forbidden'?'1':i.value);});
+    q.append('min_priority',form.querySelector('select[name=min_priority]').value);
+    fetch('/admin-hub/growth/{{ c.pk }}/match/?'+q.toString(),{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){
+      cnt.textContent=d.count;
+      list.innerHTML=d.items.length?d.items.map(function(x){return '<li>'+esc(x.name)+'<span>'+esc(x.platform)+' · '+esc(x.lang.toUpperCase())+'</span></li>';}).join(''):'<li class="gx-muted">Aucune : élargissez le ciblage.</li>';});},180);}
+  if(form)form.addEventListener('change',live);
+})();
 </script>
 {% endblock %}
