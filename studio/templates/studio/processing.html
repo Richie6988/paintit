@@ -7,7 +7,7 @@
     <div class="art-frame">{% include "studio/_loader.html" %}</div>
     <p class="loader-title">{% trans "Nous composons votre toile..." %}</p>
     <div class="bar"><i id="pbar" style="width:6%"></i></div>
-    <p class="loader-sub" id="loadersub">{% trans "Lecture de l'image" %}&hellip;</p>
+    <p class="loader-sub"><span id="loadersub">{% trans "Lecture de l'image" %}&hellip;</span><span class="bar-pct" id="ppct">6 %</span></p>
   </div>
 </section>
 <script>
@@ -20,7 +20,7 @@
         .then(function (r) { return r.json(); })
         .then(function (d) {
           if (d.error && d.error !== null && d.done && !d.pct) { window.location = "{% url 'studio:upload' %}"; return; }
-          if (typeof d.pct === 'number') { shown = Math.max(shown, d.pct); bar.style.width = shown + '%'; }
+          if (typeof d.pct === 'number') { shown = Math.max(shown, d.pct); bar.style.width = shown + '%'; var pp = document.getElementById('ppct'); if (pp) pp.textContent = Math.round(shown) + ' %'; }
           if (d.label) sub.textContent = d.label + '\u2026';
           if (d.done) {
             if (d.error) { window.location = "{% url 'studio:upload' %}"; return; }

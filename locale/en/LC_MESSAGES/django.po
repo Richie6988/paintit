@@ -1520,3 +1520,13 @@ msgid ""
 "fidèles."
 msgstr ""
 "Recommended for faces and portraits: more areas, more faithful features."
+
+msgid "idéal visages"
+msgstr "best for faces"
+
+msgid ""
+"Auto : réglage idéal selon le nombre de couleurs. Facile : grandes zones. "
+"Moyen et Expert : plus de zones, idéal pour les visages et portraits."
+msgstr ""
+"Auto: ideal setting for the number of colours. Easy: large areas. Medium and"
+" Expert: more areas, ideal for faces and portraits."

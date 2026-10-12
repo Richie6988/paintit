@@ -351,7 +351,7 @@ def preview(request):
     gw, gh = order.get("gen_w") or order.get("width_cm"), order.get("gen_h") or order.get("height_cm")
     gen_ratio = round(float(gw) / float(gh), 3) if gw and gh else None
     current_format = next((fm["id"] for fm in formats
-                           if fm["w"] == order.get("width_cm") and fm["h"] == order.get("height_cm")),
+                           if float(fm["w"]) == float(gw or 0) and float(fm["h"]) == float(gh or 0)),
                           (formats[0]["id"] if formats else None))
     # aligne le prix affiche sur le format courant
     if formats:
@@ -368,7 +368,7 @@ def preview(request):
     level = difficulty_level(order.get("zones"), colors)
     return render(request, "studio/preview.html",
                   {"order": order, "brushes_price": p.brushes_price, "formats": formats, "level": level,
-                   "gen_ratio": gen_ratio,
+                   "gen_ratio": gen_ratio, "gen_w": gw, "gen_h": gh,
                    "current_format": current_format,
                    "brushes_available": p.av_brushes})
 

@@ -1553,3 +1553,13 @@ msgid ""
 msgstr ""
 "Empfohlen für Gesichter und Porträts: mehr Felder, naturgetreuere "
 "Gesichtszüge."
+
+msgid "idéal visages"
+msgstr "ideal für Gesichter"
+
+msgid ""
+"Auto : réglage idéal selon le nombre de couleurs. Facile : grandes zones. "
+"Moyen et Expert : plus de zones, idéal pour les visages et portraits."
+msgstr ""
+"Auto: ideale Einstellung je nach Farbanzahl. Leicht: große Felder. Mittel "
+"und Experte: mehr Felder, ideal für Gesichter und Porträts."

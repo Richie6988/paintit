@@ -882,3 +882,17 @@ main{overflow-x:clip}
 .ci-level em.ci-age{color:#1e8848}
 @media (max-width:900px){.topbar .tb-msg{text-align:center}}
 .face-hint{color:#1f56cf;font-weight:600}
+
+/* Barre de chargement : trait de pinceau aux couleurs PaintIt (jaune -> bleu -> vert) + reflet anime */
+.loader-inline .bar{height:12px;background:#eef2f9;border-radius:999px;box-shadow:inset 0 1px 2px rgba(18,34,79,.08);position:relative}
+.loader-inline .bar i{position:relative;background:linear-gradient(90deg,var(--g1) 0%,#f6b93b 18%,var(--g2) 50%,#23a6f0 70%,var(--g3) 100%);
+  background-size:var(--bw,440px) 100%;transition:width .5s cubic-bezier(.2,.8,.2,1);overflow:hidden}
+.loader-inline .bar i::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);
+  transform:translateX(-100%);animation:barSheen 1.6s ease-in-out infinite}
+@keyframes barSheen{to{transform:translateX(100%)}}
+.loader-inline .bar-pct{font-weight:800;color:var(--accent-d);font-variant-numeric:tabular-nums;font-size:.86rem;margin-left:6px}
+.seg-hint.seg-face{color:#1f56cf}
+.segmented.seg4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.segmented.seg4 .seg{min-width:0}
+.segmented.seg4 .seg span{padding-left:4px;padding-right:4px}
+@media (max-width:480px){.segmented.seg4 .seg span{font-size:.86rem}.segmented.seg4 .seg-hint{font-size:.62rem}}

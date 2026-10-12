@@ -1529,3 +1529,13 @@ msgid ""
 "Recommandé pour les visages et portraits : plus de zones, des traits plus "
 "fidèles."
 msgstr "Recomendado para rostros y retratos: más zonas, rasgos más fieles."
+
+msgid "idéal visages"
+msgstr "ideal para rostros"
+
+msgid ""
+"Auto : réglage idéal selon le nombre de couleurs. Facile : grandes zones. "
+"Moyen et Expert : plus de zones, idéal pour les visages et portraits."
+msgstr ""
+"Auto: ajuste ideal según el número de colores. Fácil: zonas grandes. Medio y"
+" Experto: más zonas, ideal para rostros y retratos."
