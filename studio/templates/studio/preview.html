@@ -46,7 +46,7 @@
       <div class="fmt-opts">
         {% for fm in formats %}
         <label class="fmt-opt">
-          <input type="radio" name="kit_format" value="{{ fm.id }}" data-price="{{ fm.price|unlocalize }}" {% if fm.id == current_format %}checked{% endif %}>
+          <input type="radio" name="kit_format" value="{{ fm.id }}" data-price="{{ fm.price|unlocalize }}" data-ratio="{{ fm.ratio|unlocalize }}" {% if fm.id == current_format %}checked{% endif %}>
           <span class="fmt-card"><b>{{ fm.label }}</b><em>{{ fm.price|floatformat:2 }} &euro;</em></span>
         </label>
         {% endfor %}
@@ -138,5 +138,18 @@ document.addEventListener('DOMContentLoaded',function(){
     document.addEventListener('keydown',function(e){if(e.key==='Escape')lb.classList.remove('show');});
   }
 });
+</script>
+<form method="post" action="{% url 'studio:preview_reformat' %}" id="reformatForm" hidden>{% csrf_token %}<input type="hidden" name="kit_format" id="reformatFmt"></form>
+<script>
+(function(){
+  var gen={{ gen_ratio|default:"0"|unlocalize }};
+  document.querySelectorAll('input[name=kit_format]').forEach(function(r){r.addEventListener('change',function(){
+    var ra=parseFloat(r.dataset.ratio||'0');
+    if(gen&&ra&&Math.abs(ra-gen)>0.01){   // proportions differentes (ex. carre) : on recalcule la toile
+      document.getElementById('reformatFmt').value=r.value;
+      document.getElementById('reformatForm').submit();
+    }
+  });});
+})();
 </script>
 {% endblock %}

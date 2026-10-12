@@ -103,8 +103,8 @@ def _run_generation(uid, src, colors, w, h, fmt, orientation, lang, focus=(0.5, 
                           density=dens, detail=det)
         canvas_price = compute_price(fmt, colors)
         order = {
-            **result, "colors": colors, "width_cm": w, "height_cm": h,
-            "orientation": orientation, "format_label": FORMATS[fmt][2],
+            **result, "colors": colors, "width_cm": w, "height_cm": h, "gen_w": w, "gen_h": h, "focus": list(focus),
+            "orientation": orientation, "format_label": "%g x %g cm" % (w, h),
             "difficulty": level, "lang": lang,
             "canvas_price": canvas_price, "brushes": False, "brushes_amount": 0.0,
             "price": canvas_price,
@@ -338,9 +338,18 @@ def preview(request):
     p = Pricing.get()
     from .models import KitFormat
     colors = order.get("colors", 24)
-    formats = [{"id": kf.id, "label": kf.label, "w": kf.width_cm, "h": kf.height_cm,
-                "price": round(float(kf.price) + p.color_price(colors), 2)}
-               for kf in KitFormat.objects.filter(available=True)]
+    land = order.get("orientation") == "paysage"
+
+    def _oriented(kf):   # 40x50 -> 50x40 en paysage (le carre reste carre)
+        a, b = sorted((kf.width_cm, kf.height_cm))
+        return (b, a) if land else (a, b)
+    formats = []
+    for kf in KitFormat.objects.filter(available=True):
+        fw, fh = _oriented(kf)
+        formats.append({"id": kf.id, "label": "%d x %d cm" % (fw, fh), "w": fw, "h": fh,
+                        "ratio": round(fw / fh, 3), "price": round(float(kf.price) + p.color_price(colors), 2)})
+    gw, gh = order.get("gen_w") or order.get("width_cm"), order.get("gen_h") or order.get("height_cm")
+    gen_ratio = round(float(gw) / float(gh), 3) if gw and gh else None
     current_format = next((fm["id"] for fm in formats
                            if fm["w"] == order.get("width_cm") and fm["h"] == order.get("height_cm")),
                           (formats[0]["id"] if formats else None))
@@ -359,8 +368,42 @@ def preview(request):
     level = difficulty_level(order.get("zones"), colors)
     return render(request, "studio/preview.html",
                   {"order": order, "brushes_price": p.brushes_price, "formats": formats, "level": level,
+                   "gen_ratio": gen_ratio,
                    "current_format": current_format,
                    "brushes_available": p.av_brushes})
+
+
+def preview_reformat(request):
+    """Format aux proportions differentes (ex. 40x40) choisi dans l'apercu : on recalcule la toile a ces
+    dimensions (meme photo, meme cadrage, memes reglages ; lissage/couleurs en cache -> rapide)."""
+    order = request.session.get("order")
+    if request.method != "POST" or not order:
+        return redirect("studio:preview")
+    from .models import KitFormat
+    kf = KitFormat.objects.filter(id=request.POST.get("kit_format"), available=True).first()
+    src = request.session.get("last_photo")
+    if not src or not os.path.exists(src):
+        from .pipeline import source_file
+        src = source_file(os.path.join(settings.MEDIA_ROOT, "orders", order.get("uid", "")), order.get("uid", ""))
+    if not kf or not src or not os.path.exists(src):
+        return redirect("studio:preview")
+    a, b = sorted((kf.width_cm, kf.height_cm))
+    orientation = order.get("orientation", "portrait")
+    w, h = (b, a) if orientation == "paysage" else (a, b)
+    fx, fy = order.get("focus") or request.session.get("last_focus") or [0.5, 0.5]
+    uid = f"{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:4].upper()}"
+    jobs.start(uid)
+    fmt_key = "40x50" if "40x50" in FORMATS else next(iter(FORMATS))
+    try:
+        genqueue.submit(_run_generation, uid, src, int(order.get("colors", 24)), w, h, fmt_key, orientation,
+                        get_language() or "fr", (fx, fy),
+                        source_name=request.session.get("last_photo_name") or os.path.basename(src),
+                        level=order.get("difficulty") if order.get("difficulty") in ("easy", "medium", "expert") else "auto")
+    except genqueue.QueueFull:
+        jobs.pop(uid)
+        return redirect("studio:preview")
+    request.session.pop("digital_trial", None)   # on reste dans le parcours commande -> retour a l'apercu
+    return redirect("%s?uid=%s" % (reverse("studio:processing"), uid))
 
 
 def set_options(request):
@@ -375,9 +418,10 @@ def set_options(request):
         if fmt_id:
             kf = KitFormat.objects.filter(id=fmt_id, available=True).first()
             if kf:
-                order["width_cm"] = kf.width_cm
-                order["height_cm"] = kf.height_cm
-                order["format_label"] = kf.label
+                a, b = sorted((kf.width_cm, kf.height_cm))
+                fw, fh = (b, a) if order.get("orientation") == "paysage" else (a, b)
+                order["width_cm"], order["height_cm"] = fw, fh
+                order["format_label"] = "%d x %d cm" % (fw, fh)
                 order["canvas_price"] = round(float(kf.price) + p.color_price(order.get("colors", 24)), 2)
         brushes = bool(request.POST.get("brushes")) and p.av_brushes
         bp = p.brushes_price if brushes else 0.0
@@ -420,18 +464,28 @@ def order_file(request, uid, name):
     if name == "production.zip":
         # Tous les fichiers de production d'une commande en un seul lien (fournisseur / ERP) - sans prix
         import io, zipfile
-        from .models import Supplier
-        from .integrations import order_files
-        o = Order.objects.filter(uid=uid).first()
-        sup = (o.supplier if o and o.supplier_id else None) or Supplier.for_checkout("kit")
-        names = list(order_files(sup, uid)) if sup else []
+        # Ce dont le fournisseur a besoin, et seulement ca : poster, toile .tiff, JSON (couleurs -> references nuancier)
+        import json as _json
+        d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+        names = ["%s_poster.png" % uid, "%s_template.tiff" % uid, "%s_supplier.json" % uid]
+        found = [n for n in names if os.path.isfile(os.path.join(d, n))]
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-            for n in names:
-                fp = os.path.join(settings.MEDIA_ROOT, "orders", uid, n)
-                if os.path.isfile(fp):
-                    z.write(fp, n)
-        if not names:
+            for n in found:
+                z.write(os.path.join(d, n), n)
+            oj = os.path.join(d, "%s_order.json" % uid)
+            if names[2] not in found and os.path.isfile(oj):
+                # repli : JSON fournisseur derive de la fiche commande, SANS prix ni infos internes
+                full = _json.load(open(oj, encoding="utf-8"))
+                oi = full.get("order_information") or {}
+                sj = {"consignee_information": full.get("consignee_information") or {},
+                      "order_information": {k: oi.get(k) for k in ("uid", "created_at", "format", "orientation", "width_cm",
+                                                                   "height_cm", "colors_count", "brushes")},
+                      "color_specifications": full.get("color_specifications") or []}
+                sj["order_information"]["files"] = {"template_tiff": names[1], "poster_png": names[0]}
+                z.writestr(names[2], _json.dumps(sj, ensure_ascii=False, indent=2))
+                found.append(names[2])
+        if not found:
             raise Http404
         resp = HttpResponse(buf.getvalue(), content_type="application/zip")
         resp["Content-Disposition"] = 'attachment; filename="PaintIt-%s.zip"' % uid

@@ -242,6 +242,26 @@ def _phone(code, number):
     return "+" + n
 
 
+def variant_title(order):
+    """Titre de variante tel que Shopify l'affiche (options Format / Couleurs) : « 40x50 / 24 »."""
+    from .models import format_key
+    return "%s / %d" % (format_key(order.width_cm, order.height_cm), int(order.colors))
+
+
+def line_properties(order):
+    """Proprietes de ligne de commande (vues par l'ERP du fournisseur) : identiques dans Shopify et dans l'Excel
+    MangoERP. Fichiers = ce dont le fournisseur a besoin : poster, toile .tiff, JSON des couleurs (+ ZIP des 3)."""
+    from .security import file_url
+    u = order.uid
+    return [("Commande PaintIt", u),
+            ("Format", "%s (%s)" % (order.format_label, order.orientation)),
+            ("Couleurs", str(order.colors)),
+            ("Poster", file_url(u, "%s_poster.png" % u)),
+            ("Toile numérotée (TIFF)", file_url(u, "%s_template.tiff" % u)),
+            ("Fiche couleurs (JSON)", file_url(u, "%s_supplier.json" % u)),
+            ("Fichiers (ZIP)", file_url(u, "production.zip"))]
+
+
 def push_order(sup, order, files):
     """Cree la commande dans Shopify (payee, sans e-mail Shopify au client). -> nom Shopify (#1001)."""
     from . import address
@@ -259,15 +279,7 @@ def push_order(sup, order, files):
     k = (total / price) if price else 1.0
     canvas = round((price - float(order.brushes_amount or 0)) * k, 2)
     brush_amt = round(total - canvas, 2) if order.brushes else 0.0
-    props = [{"name": "Commande PaintIt", "value": order.uid},
-             {"name": "Format", "value": "%s (%s)" % (order.format_label, order.orientation)},
-             {"name": "Couleurs", "value": str(order.colors)}]
-    labels = {"template.pdf": "Toile numérotée (PDF)", "template.tiff": "Toile numérotée (TIFF)",
-              "template.svg": "Toile numérotée (SVG)", "preview.svg": "Aperçu colorié", "poster.png": "Poster",
-              "supplier.json": "Fiche commande (JSON)"}
-    for name, url in files.items():
-        lbl = next((v for k, v in labels.items() if name.endswith(k)), "Photo originale" if "_source_" in name else name)
-        props.append({"name": lbl, "value": url})
+    props = [{"name": n, "value": v} for n, v in line_properties(order)]
     li = {"quantity": 1, "properties": props,
           "priceSet": {"shopMoney": {"amount": "%.2f" % canvas, "currencyCode": cur}}}
     if variant:

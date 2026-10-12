@@ -297,8 +297,7 @@ def build(order, shipping):
             "format": oi["format"], "orientation": oi["orientation"],
             "width_cm": oi["width_cm"], "height_cm": oi["height_cm"],
             "colors_count": oi["colors_count"], "brushes": oi["brushes"],
-            "files": {"template_pdf": "%s_template.pdf" % uid, "template_tiff": "%s_template.tiff" % uid,
-                      "template_svg": "%s_template.svg" % uid, "poster_png": "%s_poster.png" % uid},
+            "files": {"template_tiff": "%s_template.tiff" % uid, "poster_png": "%s_poster.png" % uid},
         },
         "color_specifications": supplier_colors(colors),
     }

@@ -36,6 +36,7 @@ urlpatterns = [
     path("create/finalize/", views.gen_finalize, name="gen_finalize"),
     path("preview/", views.preview, name="preview"),
     path("preview/options/", views.set_options, name="set_options"),
+    path("preview/reformat/", views.preview_reformat, name="preview_reformat"),
     path("preview/img/<str:uid>/<str:kind>/", views.order_image, name="order_image"),
     path("files/<str:uid>/<str:name>", views.order_file, name="order_file"),
     path("play/", views.gallery, name="gallery"),

@@ -112,27 +112,29 @@ def order_values(sup, order, sku_pattern=None):
     if cost is not None:
         cost += (sup.offer_cost("colors", order.colors) or 0) + \
                 ((sup.offer_cost("extras", "brushes") or 0) if order.brushes else 0)
-    pdf = "%s_template.pdf" % order.uid
-    variant = "%s · %d couleurs%s" % (order.format_label or fmt, order.colors or 0, " · pinceaux" if order.brushes else "")
+    # Meme contenu que si la commande arrivait de la boutique Shopify : SKU, titre produit et variante,
+    # telephone international, proprietes de ligne (fichiers) -> le fournisseur traite les deux a l'identique.
+    from . import shopify as _shop
     from .models import CompanyInfo
+    variant = _shop.variant_title(order) + (" + Set de pinceaux" if order.brushes else "")
     cfg = (sup.offer or {}).get("xlsx") or {}
-    phone = ("%s %s" % (order.phone_code or "", order.phone or "")).strip()
-    sku_qty = "%s*1" % sku + (";%s*1" % (cfg.get("brush_sku") or "PBN-BRUSHES") if order.brushes else "")
+    phone = _shop._phone(order.phone_code, order.phone) or ""
+    sku_qty = "%s*1" % sku + (";%s*1" % (cfg.get("brush_sku") or _shop.BRUSH_SKU) if order.brushes else "")
+    props = _shop.line_properties(order)
     return {
         "sku_qty": sku_qty, "amount": round(float(order.total or order.price or 0), 2), "mobile": phone,
         "address_full": ", ".join(x for x in (order.address1, order.address2) if x),
         "ioss": cfg.get("ioss", ""), "logistics": cfg.get("logistics", ""),
         "sender_tax": getattr(CompanyInfo.get(), "vat_number", "") or "",
         "uid": order.uid, "date": order.created_at.strftime("%Y-%m-%d %H:%M") if order.created_at else "",
-        "sku": sku, "product": "PaintIt - peinture par numéros personnalisée", "variant": variant,
+        "sku": sku, "product": _shop.PRODUCT_TITLE, "variant": variant,
         "qty": 1, "unit_cost": round(cost, 2) if cost is not None else "", "currency": "EUR",
         "name": order.customer_name, "phone": phone,
         "email": order.customer_email, "address1": order.address1, "address2": order.address2,
         "postal_code": order.postal_code, "city": order.city, "state": order.city or "",   # province obligatoire chez certains ERP
         "country": order.country, "country_code": (address.COUNTRIES.get(order.country) or ("",))[0],
-        # 1 lien ZIP (tous les fichiers) + le PDF direct : Mango n'accepte pas de piece jointe a l'import
-        "note": ("PaintIt %s · %s | ZIP : %s | PDF : %s" % (order.uid, variant, file_url(order.uid, "production.zip"),
-                                                          file_url(order.uid, pdf)))[:1000],
+        # proprietes de ligne Shopify, une par ligne (« Nom: valeur ») : Mango n'accepte pas de piece jointe a l'import
+        "note": "\n".join("%s: %s" % (n, v) for n, v in props)[:2000],
         "files": file_url(order.uid, "production.zip"),
     }
 
