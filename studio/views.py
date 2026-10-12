@@ -63,7 +63,8 @@ def home(request):
                         pass
     from . import seo
     return render(request, "studio/home.html",
-                  {"ld_product": seo.dump(seo.product()), "colors_available": Pricing.get().available_colors(),
+                  {"ld_product": seo.dump(seo.product(with_reviews=True)), "reviews": seo.reviews_summary(),
+                   "colors_available": Pricing.get().available_colors(),
                    "library_preview": lib, "showcase_slides": _json.dumps(slides),
                    "first_slide": next((x for x in slides if "moto" in x["p"]), slides[0] if slides else None)})
 
@@ -920,7 +921,7 @@ def robots(request):
     body = (
         "User-agent: *\n"
         "Disallow: /preview/\nDisallow: /media/\nDisallow: /files/\n"
-        "Disallow: /delivery/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /admin/\nDisallow: /admin-hub/\nDisallow: /go/\n"
+        "Disallow: /delivery/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /admin/\nDisallow: /admin-hub/\nDisallow: /go/\nDisallow: /avis/\n"
         "Allow: /llm.txt\nAllow: /llm.json\nAllow: /play/\n"
         "\nSitemap: %s/sitemap.xml\n"
         "\n# Infos pour les IA / LLM :\n"
@@ -3671,3 +3672,60 @@ def erp_community_library(request):
         "plats": [("reddit", "Reddit"), ("facebook", "Facebook"), ("social", "Réseaux sociaux"), ("launch", "Lancement"),
                   ("forum", "Forums / Q&A"), ("discord", "Discord")],
         "erp_section": "communities"})
+
+
+def review_page(request, uid):
+    """Depot d'un avis client verifie (lien personnel envoye apres livraison)."""
+    import hmac as _hmac
+    from .models import Review
+    o = Order.objects.filter(uid=uid).first()
+    tok = request.GET.get("t") or request.POST.get("t") or ""
+    if not o or not _hmac.compare_digest(tok, security.review_token(uid)):
+        raise Http404
+    if o.status not in (Order.SHIPPED, Order.DELIVERED, Order.FULFILLED):
+        raise Http404
+    try:
+        r = o.review
+    except Review.DoesNotExist:
+        r = None
+    parts = (o.customer_name or "").split()
+    default_name = (parts[0] + (" %s." % parts[-1][0] if len(parts) > 1 else "")) if parts else _("Client vérifié")
+    sent = False
+    if request.method == "POST":
+        try:
+            rating = max(1, min(5, int(request.POST.get("rating", "0"))))
+        except ValueError:
+            rating = 0
+        if rating:
+            text = (request.POST.get("text") or "").strip()[:2000]
+            name = (request.POST.get("author") or default_name).strip()[:60] or default_name
+            if r:
+                r.rating, r.text, r.author = rating, text, name
+                r.save(update_fields=["rating", "text", "author"])
+            else:
+                r = Review.objects.create(order=o, rating=rating, text=text, author=name, lang=get_language() or "fr")
+            sent = True
+    return render(request, "studio/review.html", {"o": o, "r": r, "t": tok, "sent": sent, "default_name": default_name,
+                                                  "stars": [1, 2, 3, 4, 5]})
+
+
+@staff_member_required
+def erp_reviews(request):
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from django.db.models import Avg, Count
+    from .models import Review
+    if request.method == "POST":
+        r = Review.objects.filter(pk=request.POST.get("id")).first()
+        if r and request.POST.get("op") == "hide":
+            r.published, r.hidden_reason = False, (request.POST.get("reason") or "Contenu abusif / hors sujet")[:120]
+            r.save(update_fields=["published", "hidden_reason"])
+        elif r and request.POST.get("op") == "show":
+            r.published, r.hidden_reason = True, ""
+            r.save(update_fields=["published", "hidden_reason"])
+        messages.success(request, "Avis mis à jour.")
+        return redirect(request.get_full_path())
+    agg = Review.objects.filter(published=True).aggregate(avg=Avg("rating"), n=Count("id"))
+    return render(request, "admin/erp_reviews.html", {
+        **_admin.site.each_context(request), "reviews": Review.objects.select_related("order")[:300], "agg": agg,
+        "erp_section": "reviews"})

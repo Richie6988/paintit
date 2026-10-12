@@ -1,0 +1,32 @@
+{% extends "studio/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Votre avis" %} · PaintIt{% endblock %}
+{% block meta_robots %}<meta name="robots" content="noindex,nofollow">{% endblock %}
+{% block content %}
+<section class="panel">
+  {% if sent %}
+    <h1>{% trans "Merci pour votre avis !" %}</h1>
+    <p class="sub">{% trans "Il aide d'autres personnes à se lancer. Vous pouvez le modifier à tout moment avec le même lien." %}</p>
+    <a class="cta" href="{% url 'studio:home' %}">{% trans "Retour à l'accueil" %}</a>
+  {% else %}
+    <h1>{% trans "Votre avis sur votre toile" %}</h1>
+    <p class="sub">{% blocktrans with f=o.format_label c=o.colors %}Commande {{ f }}, {{ c }} couleurs. Votre avis est publié tel quel, avec la mention « achat vérifié ».{% endblocktrans %}</p>
+    <form method="post" class="rv-form">{% csrf_token %}<input type="hidden" name="t" value="{{ t }}">
+      <div class="rv-stars" role="radiogroup" aria-label="{% trans 'Note' %}">
+        {% for s in stars reversed %}<input type="radio" id="st{{ s }}" name="rating" value="{{ s }}" {% if r and r.rating == s %}checked{% endif %} required><label for="st{{ s }}" title="{{ s }}/5">★</label>{% endfor %}
+      </div>
+      <label class="field"><span>{% trans "Votre avis (facultatif)" %}</span>
+        <textarea name="text" rows="5" maxlength="2000" placeholder="{% trans 'Qualité de la toile, des couleurs, plaisir de peindre, livraison…' %}">{{ r.text|default:'' }}</textarea></label>
+      <label class="field"><span>{% trans "Nom affiché" %}</span><input type="text" name="author" maxlength="60" value="{{ r.author|default:default_name }}"></label>
+      <button class="cta" type="submit">{% trans "Publier mon avis" %}</button>
+    </form>
+  {% endif %}
+</section>
+<style>
+.rv-stars{display:inline-flex;flex-direction:row-reverse;gap:4px;margin:6px 0 16px}
+.rv-stars input{position:absolute;opacity:0;width:0;height:0}
+.rv-stars label{font-size:2.4rem;line-height:1;color:#d9d9d9;cursor:pointer;transition:color .15s}
+.rv-stars input:checked~label,.rv-stars label:hover,.rv-stars label:hover~label{color:#f6b93b}
+.rv-form .field{display:block;margin-bottom:14px}.rv-form textarea,.rv-form input[type=text]{width:100%;box-sizing:border-box}
+</style>
+{% endblock %}

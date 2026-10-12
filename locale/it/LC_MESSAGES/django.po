@@ -1568,3 +1568,54 @@ msgid ""
 msgstr ""
 "La tua tela viene adattata al formato scelto durante la preparazione "
 "dell'ordine."
+
+msgid "Votre avis"
+msgstr "La tua recensione"
+
+msgid "Merci pour votre avis !"
+msgstr "Grazie per la tua recensione!"
+
+msgid ""
+"Il aide d'autres personnes à se lancer. Vous pouvez le modifier à tout "
+"moment avec le même lien."
+msgstr ""
+"Aiuta altre persone a iniziare. Puoi modificarla in qualsiasi momento con lo"
+" stesso link."
+
+msgid "Votre avis sur votre toile"
+msgstr "La tua recensione sulla tela"
+
+#, python-format
+msgid ""
+"Commande %(f)s, %(c)s couleurs. Votre avis est publié tel quel, avec la "
+"mention « achat vérifié »."
+msgstr ""
+"Ordine %(f)s, %(c)s colori. La tua recensione è pubblicata così com'è, con "
+"la dicitura «acquisto verificato»."
+
+msgid "Note"
+msgstr "Voto"
+
+msgid "Votre avis (facultatif)"
+msgstr "La tua recensione (facoltativa)"
+
+msgid "Qualité de la toile, des couleurs, plaisir de peindre, livraison…"
+msgstr "Qualità di tela e colori, piacere di dipingere, consegna…"
+
+msgid "Nom affiché"
+msgstr "Nome visualizzato"
+
+msgid "Publier mon avis"
+msgstr "Pubblica la mia recensione"
+
+msgid "Ils ont peint leur souvenir"
+msgstr "Hanno dipinto il loro ricordo"
+
+msgid "achat vérifié"
+msgstr "acquisto verificato"
+
+#, python-format
+msgid "%(n)s avis vérifié"
+msgid_plural "%(n)s avis vérifiés"
+msgstr[0] "%(n)s recensione verificata"
+msgstr[1] "%(n)s recensioni verificate"

@@ -1580,3 +1580,54 @@ msgid ""
 msgstr ""
 "Ihre Leinwand wird bei der Vorbereitung Ihrer Bestellung an das gewählte "
 "Format angepasst."
+
+msgid "Votre avis"
+msgstr "Ihre Bewertung"
+
+msgid "Merci pour votre avis !"
+msgstr "Danke für Ihre Bewertung!"
+
+msgid ""
+"Il aide d'autres personnes à se lancer. Vous pouvez le modifier à tout "
+"moment avec le même lien."
+msgstr ""
+"Sie hilft anderen beim Einstieg. Sie können sie jederzeit über denselben "
+"Link ändern."
+
+msgid "Votre avis sur votre toile"
+msgstr "Ihre Bewertung Ihrer Leinwand"
+
+#, python-format
+msgid ""
+"Commande %(f)s, %(c)s couleurs. Votre avis est publié tel quel, avec la "
+"mention « achat vérifié »."
+msgstr ""
+"Bestellung %(f)s, %(c)s Farben. Ihre Bewertung wird unverändert mit dem "
+"Vermerk „verifizierter Kauf“ veröffentlicht."
+
+msgid "Note"
+msgstr "Bewertung"
+
+msgid "Votre avis (facultatif)"
+msgstr "Ihre Bewertung (optional)"
+
+msgid "Qualité de la toile, des couleurs, plaisir de peindre, livraison…"
+msgstr "Qualität von Leinwand und Farben, Malspaß, Lieferung…"
+
+msgid "Nom affiché"
+msgstr "Angezeigter Name"
+
+msgid "Publier mon avis"
+msgstr "Bewertung veröffentlichen"
+
+msgid "Ils ont peint leur souvenir"
+msgstr "Sie haben ihre Erinnerung gemalt"
+
+msgid "achat vérifié"
+msgstr "verifizierter Kauf"
+
+#, python-format
+msgid "%(n)s avis vérifié"
+msgid_plural "%(n)s avis vérifiés"
+msgstr[0] "%(n)s verifizierte Bewertung"
+msgstr[1] "%(n)s verifizierte Bewertungen"

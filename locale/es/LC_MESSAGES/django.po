@@ -1554,3 +1554,54 @@ msgid ""
 "Votre toile est ajustée au format choisi lors de la préparation de votre "
 "commande."
 msgstr "Tu lienzo se ajusta al formato elegido al preparar tu pedido."
+
+msgid "Votre avis"
+msgstr "Tu opinión"
+
+msgid "Merci pour votre avis !"
+msgstr "¡Gracias por tu opinión!"
+
+msgid ""
+"Il aide d'autres personnes à se lancer. Vous pouvez le modifier à tout "
+"moment avec le même lien."
+msgstr ""
+"Ayuda a otras personas a lanzarse. Puedes modificarla cuando quieras con el "
+"mismo enlace."
+
+msgid "Votre avis sur votre toile"
+msgstr "Tu opinión sobre tu lienzo"
+
+#, python-format
+msgid ""
+"Commande %(f)s, %(c)s couleurs. Votre avis est publié tel quel, avec la "
+"mention « achat vérifié »."
+msgstr ""
+"Pedido %(f)s, %(c)s colores. Tu opinión se publica tal cual, con la mención "
+"«compra verificada»."
+
+msgid "Note"
+msgstr "Puntuación"
+
+msgid "Votre avis (facultatif)"
+msgstr "Tu opinión (opcional)"
+
+msgid "Qualité de la toile, des couleurs, plaisir de peindre, livraison…"
+msgstr "Calidad del lienzo y colores, placer de pintar, entrega…"
+
+msgid "Nom affiché"
+msgstr "Nombre visible"
+
+msgid "Publier mon avis"
+msgstr "Publicar mi opinión"
+
+msgid "Ils ont peint leur souvenir"
+msgstr "Pintaron su recuerdo"
+
+msgid "achat vérifié"
+msgstr "compra verificada"
+
+#, python-format
+msgid "%(n)s avis vérifié"
+msgid_plural "%(n)s avis vérifiés"
+msgstr[0] "%(n)s opinión verificada"
+msgstr[1] "%(n)s opiniones verificadas"

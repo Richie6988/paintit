@@ -786,3 +786,24 @@ class PostTemplate(models.Model):
 
     def platform_list(self):
         return [p.strip() for p in (self.platforms or "").split(",") if p.strip()]
+
+
+class Review(models.Model):
+    """Avis client VERIFIE (lie a une commande livree). Publie apres moderation : on ne masque que les contenus
+    abusifs ou hors sujet, jamais un avis parce qu'il est negatif (regles Google + droit de la consommation)."""
+    order = models.OneToOneField("Order", on_delete=models.CASCADE, related_name="review")
+    rating = models.PositiveSmallIntegerField("Note (1-5)")
+    text = models.TextField("Avis", blank=True, default="")
+    author = models.CharField("Nom affiché", max_length=60)
+    lang = models.CharField(max_length=5, default="fr")
+    published = models.BooleanField("Publié", default=True)
+    hidden_reason = models.CharField("Motif de masquage", max_length=120, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Avis client"
+        verbose_name_plural = "Avis clients"
+
+    def __str__(self):
+        return "%s · %d/5" % (self.author, self.rating)

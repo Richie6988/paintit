@@ -43,6 +43,19 @@ class Command(BaseCommand):
             else:
                 ko += 1
         self.stdout.write(self.style.SUCCESS("%d transmise(s), %d echec(s), %d a traiter." % (ok, ko, len(todo))))
+        # Demande d'avis (verifie) : aussi pour les commandes expediees depuis assez longtemps sans statut « livree »
+        from studio import emails
+        from studio.models import Pricing
+        wait = int(Pricing.get().delivery_days_max or 9) + 2
+        for o in Order.objects.filter(status__in=(Order.SHIPPED, Order.DELIVERED), feedback_sent=False,
+                                      status_changed_at__lt=timezone.now() - datetime.timedelta(days=wait))[:50]:
+            if dry:
+                continue
+            try:
+                emails.send_feedback_request(o)
+                Order.objects.filter(pk=o.pk).update(feedback_sent=True)
+            except Exception as exc:
+                self.stdout.write(self.style.ERROR("Avis %s : %s" % (o.uid, exc)))
         # Boutiques Shopify relais : relit les expeditions (au cas ou un webhook serait perdu)
         from studio import shopify
         for sup in Supplier.objects.filter(active=True, integration="shopify"):

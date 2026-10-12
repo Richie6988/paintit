@@ -243,7 +243,8 @@ def send_feedback_request(order_row):
         return
     T = FEEDBACK_STR.get((o.lang or "en")[:2], FEEDBACK_STR["en"])
     logo = settings.SITE_URL + settings.STATIC_URL + "studio/img/logo.png"
-    review = getattr(settings, "REVIEW_URL", "")
+    from .security import review_url
+    review = getattr(settings, "REVIEW_URL", "") or review_url(o.uid)   # par defaut : avis verifie sur paintit.click
     cta = ('<p style="margin:18px 0"><a href="%s" style="background:#2f6bf2;color:#fff;'
            'text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;'
            'display:inline-block">%s</a></p>' % (review, T["cta"])) if review else ""

@@ -16,6 +16,15 @@ def file_token(uid, name):
     return _sig("file", uid, name)[:32]
 
 
+def review_token(uid):
+    return _sig("review", uid)[:24]
+
+
+def review_url(uid):
+    """Lien personnel (signe) pour deposer l'avis d'une commande : l'avis est donc toujours verifie."""
+    return "%s/avis/%s/?t=%s" % (settings.SITE_URL, uid, review_token(uid))
+
+
 def file_url(uid, name, absolute=True):
     """Lien de telechargement signe d'un fichier de media/orders/<uid>/ (dossier NON public)."""
     path = "/files/%s/%s?t=%s" % (uid, name, file_token(uid, name))

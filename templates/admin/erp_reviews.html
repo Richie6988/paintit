@@ -1,0 +1,27 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Avis clients · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<div class="erp">
+  <div class="erp-head"><div><h1>Avis clients</h1>
+    <div class="muted">Avis vérifiés : un lien personnel est envoyé après la livraison. Ils alimentent les étoiles Google (aggregateRating / review) et le bloc avis de l'accueil. Ne masquez que les contenus abusifs ou hors sujet, jamais un avis négatif (règles Google, droit de la consommation).</div></div></div>
+  <div class="kpis">
+    <div class="kpi"><div class="l">Note moyenne</div><div class="v">{% if agg.avg %}{{ agg.avg|floatformat:1 }} / 5{% else %}—{% endif %}</div></div>
+    <div class="kpi"><div class="l">Avis publiés</div><div class="v">{{ agg.n }}</div></div>
+  </div>
+  <div class="card"><table class="t">
+    <tr><th>Date</th><th>Client</th><th>Note</th><th>Avis</th><th>Commande</th><th></th></tr>
+    {% for r in reviews %}<tr class="{% if not r.published %}off{% endif %}">
+      <td>{{ r.created_at|date:"d/m/Y" }}</td><td>{{ r.author }}</td>
+      <td style="color:#f6b93b;white-space:nowrap">{% for i in "12345" %}{% if forloop.counter <= r.rating %}★{% else %}<span style="color:#ddd">★</span>{% endif %}{% endfor %}</td>
+      <td style="max-width:420px">{{ r.text|default:"—" }}{% if not r.published %}<div class="muted">Masqué : {{ r.hidden_reason }}</div>{% endif %}</td>
+      <td><a href="/admin-hub/orders/{{ r.order_id }}/">{{ r.order.uid }}</a></td>
+      <td><form method="post" style="display:flex;gap:4px">{% csrf_token %}<input type="hidden" name="id" value="{{ r.pk }}">
+        {% if r.published %}<input type="text" name="reason" placeholder="Motif (abus, hors sujet…)" style="width:140px"><button class="pbtn sm" name="op" value="hide">Masquer</button>
+        {% else %}<button class="pbtn sm" name="op" value="show">Republier</button>{% endif %}</form></td>
+    </tr>{% empty %}<tr><td colspan="6" class="muted">Aucun avis pour l'instant. Ils arrivent après les premières livraisons (e-mail automatique).</td></tr>{% endfor %}
+  </table></div>
+</div>
+{% endblock %}

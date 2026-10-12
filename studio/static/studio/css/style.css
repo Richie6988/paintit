@@ -904,3 +904,10 @@ main{overflow-x:clip}
 .reveal:not(.updating) .pv-upd{display:none}
 body.pv-busy .options .cta{opacity:.6;pointer-events:none}
 .fmt-note{display:block;margin-top:6px;color:var(--muted);font-size:.78rem}
+.reviews-real{max-width:1080px;margin:40px auto 0;padding:0 20px;text-align:center}
+.reviews-real .rr-agg{color:var(--muted);margin:0 0 16px}
+.rr-stars{color:#f6b93b;letter-spacing:1px}.rr-stars .off{color:#ddd}
+.rr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;text-align:left}
+.rr{margin:0;background:#fff;border:1px solid var(--ring);border-radius:16px;padding:16px}
+.rr blockquote{margin:8px 0;color:var(--ink);font-size:.92rem;line-height:1.5}
+.rr figcaption{color:var(--muted);font-size:.8rem;font-weight:600}

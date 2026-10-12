@@ -37,6 +37,14 @@
   <p class="reassure">{% trans "Gratuit, sans inscription. Aperçu en quelques secondes." %}</p>
 </section>
 
+{% if reviews %}
+<section class="reviews-real">
+  <h2>{% trans "Ils ont peint leur souvenir" %}</h2>
+  <p class="rr-agg"><span class="rr-stars">★★★★★</span> <b>{{ reviews.avg|floatformat:1 }}/5</b> · {% blocktrans count n=reviews.n %}{{ n }} avis vérifié{% plural %}{{ n }} avis vérifiés{% endblocktrans %}</p>
+  <div class="rr-grid">{% for r in reviews.items %}<figure class="rr"><div class="rr-stars">{% for i in "12345" %}{% if forloop.counter <= r.rating %}★{% else %}<span class="off">★</span>{% endif %}{% endfor %}</div>
+    <blockquote>{{ r.text|truncatechars:240 }}</blockquote><figcaption>{{ r.author }} · {% trans "achat vérifié" %}</figcaption></figure>{% endfor %}</div>
+</section>
+{% endif %}
 <section class="why">
   <h2>{% trans "Pourquoi PaintIt ?" %}</h2>
   <div class="why-grid">

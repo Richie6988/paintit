@@ -1546,3 +1546,53 @@ msgid ""
 "commande."
 msgstr ""
 "Your canvas is adjusted to the chosen size when your order is prepared."
+
+msgid "Votre avis"
+msgstr "Your review"
+
+msgid "Merci pour votre avis !"
+msgstr "Thank you for your review!"
+
+msgid ""
+"Il aide d'autres personnes à se lancer. Vous pouvez le modifier à tout "
+"moment avec le même lien."
+msgstr ""
+"It helps others get started. You can edit it anytime with the same link."
+
+msgid "Votre avis sur votre toile"
+msgstr "Your review of your canvas"
+
+#, python-format
+msgid ""
+"Commande %(f)s, %(c)s couleurs. Votre avis est publié tel quel, avec la "
+"mention « achat vérifié »."
+msgstr ""
+"Order %(f)s, %(c)s colours. Your review is published as written, marked "
+"“verified purchase”."
+
+msgid "Note"
+msgstr "Rating"
+
+msgid "Votre avis (facultatif)"
+msgstr "Your review (optional)"
+
+msgid "Qualité de la toile, des couleurs, plaisir de peindre, livraison…"
+msgstr "Canvas and paint quality, painting experience, delivery…"
+
+msgid "Nom affiché"
+msgstr "Display name"
+
+msgid "Publier mon avis"
+msgstr "Publish my review"
+
+msgid "Ils ont peint leur souvenir"
+msgstr "They painted their memories"
+
+msgid "achat vérifié"
+msgstr "verified purchase"
+
+#, python-format
+msgid "%(n)s avis vérifié"
+msgid_plural "%(n)s avis vérifiés"
+msgstr[0] "%(n)s verified review"
+msgstr[1] "%(n)s verified reviews"

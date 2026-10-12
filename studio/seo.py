@@ -10,14 +10,14 @@ def dump(obj):
     return mark_safe(json.dumps(obj, ensure_ascii=False).replace("</", "<\\/"))
 
 
-def product(request=None):
+def product(request=None, with_reviews=False):
     """Produit + offre agregee (fourchette de prix reelle de la boutique)."""
     from .models import KitFormat, Pricing
     p = Pricing.get()
     fmts = [float(f.price) for f in KitFormat.objects.filter(available=True)] or [p.format_price("40x50")]
     cols = [p.color_price(n) for n in p.available_colors()] or [0.0]
     site = settings.SITE_URL
-    return {
+    data = {
         "@context": "https://schema.org", "@type": "Product",
         "name": "Peinture par numéros personnalisée PaintIt",
         "description": ("Kit de peinture par numéros 100 % personnalisé, calculé à partir de votre photo par un "
@@ -47,6 +47,28 @@ def product(request=None):
                                                "returnPolicyCategory": "https://schema.org/MerchantReturnNotPermitted",
                                                "applicableCountry": "FR"}},
     }
+    # Etoiles Google : UNIQUEMENT avec de vrais avis clients verifies et publies (jamais de note inventee).
+    from .models import Review
+    from django.db.models import Avg, Count
+    pub = Review.objects.filter(published=True)
+    agg = pub.aggregate(avg=Avg("rating"), n=Count("id")) if with_reviews else {"n": 0}
+    if agg["n"]:
+        data["aggregateRating"] = {"@type": "AggregateRating", "ratingValue": "%.1f" % agg["avg"],
+                                   "reviewCount": agg["n"], "bestRating": "5", "worstRating": "1"}
+        data["review"] = [{"@type": "Review", "author": {"@type": "Person", "name": r.author},
+                           "datePublished": r.created_at.date().isoformat(),
+                           "reviewRating": {"@type": "Rating", "ratingValue": r.rating, "bestRating": 5},
+                           **({"reviewBody": r.text[:500]} if r.text else {})} for r in pub[:5]]
+    return data
+
+
+def reviews_summary():
+    """Avis publies pour l'affichage (Google exige que les avis balises soient visibles sur la page)."""
+    from .models import Review
+    from django.db.models import Avg, Count
+    pub = Review.objects.filter(published=True)
+    agg = pub.aggregate(avg=Avg("rating"), n=Count("id"))
+    return {"avg": agg["avg"], "n": agg["n"], "items": list(pub.exclude(text="")[:3])} if agg["n"] else None
 
 
 def origin():
