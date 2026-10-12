@@ -903,3 +903,4 @@ main{overflow-x:clip}
   color:var(--ink);font-weight:700;font-size:.86rem;padding:8px 14px;border-radius:999px;box-shadow:0 6px 18px rgba(18,34,79,.18);white-space:nowrap}
 .reveal:not(.updating) .pv-upd{display:none}
 body.pv-busy .options .cta{opacity:.6;pointer-events:none}
+.fmt-note{display:block;margin-top:6px;color:var(--muted);font-size:.78rem}

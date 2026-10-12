@@ -1549,3 +1549,8 @@ msgstr ""
 
 msgid "Ajustement au format"
 msgstr "Ajustando al formato"
+
+msgid ""
+"Votre toile est ajustée au format choisi lors de la préparation de votre "
+"commande."
+msgstr "Tu lienzo se ajusta al formato elegido al preparar tu pedido."

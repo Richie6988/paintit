@@ -351,7 +351,8 @@ def preview(request):
     gw, gh = order.get("gen_w") or order.get("width_cm"), order.get("gen_h") or order.get("height_cm")
     gen_ratio = round(float(gw) / float(gh), 3) if gw and gh else None
     current_format = next((fm["id"] for fm in formats
-                           if float(fm["w"]) == float(gw or 0) and float(fm["h"]) == float(gh or 0)),
+                           if float(fm["w"]) == float(order.get("width_cm") or 0)
+                           and float(fm["h"]) == float(order.get("height_cm") or 0)),
                           (formats[0]["id"] if formats else None))
     # aligne le prix affiche sur le format courant
     if formats:
@@ -1103,8 +1104,10 @@ def _reformat_for_supplier(o):
     src = source_file(d, uid)
     try:
         if src and os.path.exists(src):
+            from .forms import DENSITY_LEVELS
+            dens, det = DENSITY_LEVELS.get(o.get("difficulty"), DENSITY_LEVELS["auto"])   # densite choisie par le client
             generate(src, o.get("colors", 24), o.get("width_cm", 40), o.get("height_cm", 50),
-                     uid=uid, source_name=os.path.basename(src))
+                     uid=uid, source_name=os.path.basename(src), density=dens, detail=det)
     except Exception:
         logger.exception("Reformatage toile %s", uid)
 

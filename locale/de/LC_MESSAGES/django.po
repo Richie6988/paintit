@@ -1573,3 +1573,10 @@ msgstr ""
 
 msgid "Ajustement au format"
 msgstr "Anpassung an das Format"
+
+msgid ""
+"Votre toile est ajustée au format choisi lors de la préparation de votre "
+"commande."
+msgstr ""
+"Ihre Leinwand wird bei der Vorbereitung Ihrer Bestellung an das gewählte "
+"Format angepasst."
