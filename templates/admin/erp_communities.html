@@ -24,6 +24,7 @@
   <div class="erp-head">
     <div><h1>Communautés</h1><div class="muted">Annuaire des communautés (UE · US · Australie), publications sous le compte de marque PaintIt, liens traqués et retours.</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="pbtn pri" href="/admin-hub/communities/library/">📚 Bibliothèque de publications</a>
       <div class="seg"><a href="?" class="{% if not region %}on{% endif %}">Toutes</a>{% for k, l in regions %}<a href="?region={{ k }}" class="{% if region == k %}on{% endif %}">{{ k|upper }}</a>{% endfor %}</div>
     </div>
   </div>

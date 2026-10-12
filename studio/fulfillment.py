@@ -170,15 +170,38 @@ def _compose_poster(uid, d, colors, lang):
 
 
 def supplier_colors(colors):
-    """Couleurs pour le FOURNISSEUR : numero de la toile -> reference de SON nuancier.
-    (Repli hex/RGB uniquement si la couleur n'a pas de reference : toile generee avant l'import du nuancier.)"""
+    """Couleurs pour le FOURNISSEUR : numero de la toile -> code interne de SON nuancier + hex/RGB.
+    Toile generee avant l'import du nuancier : code de la teinte la plus proche (CIEDE2000), marque « approx »."""
+    pal = []
+    try:
+        from .pipeline import supplier_palette
+        pal = supplier_palette() or []
+    except Exception:
+        pal = []
     out = []
     for c in colors:
-        if c.get("code"):
-            out.append({"number": c.get("number"), "supplier_code": str(c["code"])})
-        else:
-            out.append({"number": c.get("number"), "hex": c.get("hex"), "rgb": c.get("rgb")})
+        row = {"number": c.get("number")}
+        code, approx = c.get("code") or c.get("supplier_code"), False
+        if not code and pal and c.get("hex"):
+            code, approx = _nearest_code(c["hex"], pal), True
+        if code:
+            row["supplier_code"] = str(code)
+            if approx:
+                row["supplier_code_approx"] = True
+        row["hex"] = c.get("hex")
+        row["rgb"] = c.get("rgb")
+        out.append(row)
     return out
+
+
+def _nearest_code(hex_, palette):
+    import numpy as np
+    import pbn
+    h = hex_.lstrip("#")
+    src = pbn._to_lab([[int(h[i:i + 2], 16) for i in (0, 2, 4)]])
+    cand = [p for p in palette if p.get("hex")]
+    lab = pbn._to_lab([[int(p["hex"].lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)] for p in cand])
+    return str(cand[int(np.argmin(pbn.delta_e2000(src, lab)[0]))].get("code", ""))
 
 
 def load_colors(uid):

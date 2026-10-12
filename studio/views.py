@@ -385,8 +385,9 @@ def preview_reformat(request):
     if not src or not os.path.exists(src):
         from .pipeline import source_file
         src = source_file(os.path.join(settings.MEDIA_ROOT, "orders", order.get("uid", "")), order.get("uid", ""))
+    silent = request.headers.get("X-Requested-With") == "fetch"   # recalcul en arriere-plan depuis l'apercu
     if not kf or not src or not os.path.exists(src):
-        return redirect("studio:preview")
+        return JsonResponse({"error": "source"}, status=400) if silent else redirect("studio:preview")
     a, b = sorted((kf.width_cm, kf.height_cm))
     orientation = order.get("orientation", "portrait")
     w, h = (b, a) if orientation == "paysage" else (a, b)
@@ -401,8 +402,10 @@ def preview_reformat(request):
                         level=order.get("difficulty") if order.get("difficulty") in ("easy", "medium", "expert") else "auto")
     except genqueue.QueueFull:
         jobs.pop(uid)
-        return redirect("studio:preview")
+        return JsonResponse({"error": "busy"}, status=503) if silent else redirect("studio:preview")
     request.session.pop("digital_trial", None)   # on reste dans le parcours commande -> retour a l'apercu
+    if silent:
+        return JsonResponse({"uid": uid})
     return redirect("%s?uid=%s" % (reverse("studio:processing"), uid))
 
 
@@ -481,7 +484,8 @@ def order_file(request, uid, name):
                 sj = {"consignee_information": full.get("consignee_information") or {},
                       "order_information": {k: oi.get(k) for k in ("uid", "created_at", "format", "orientation", "width_cm",
                                                                    "height_cm", "colors_count", "brushes")},
-                      "color_specifications": full.get("color_specifications") or []}
+                      "color_specifications": __import__("studio.fulfillment", fromlist=["x"]).supplier_colors(
+                          full.get("color_specifications") or [])}
                 sj["order_information"]["files"] = {"template_tiff": names[1], "poster_png": names[0]}
                 z.writestr(names[2], _json.dumps(sj, ensure_ascii=False, indent=2))
                 found.append(names[2])
@@ -3584,3 +3588,83 @@ def erp_communities(request):
         **_admin.site.each_context(request), "comms": comms, "posts": posts, "tot": tot, "region": region,
         "regions": Community.REGIONS, "platforms": Community.PLATFORMS, "promos": Community.PROMO,
         "reddit_oauth": bool(settings.REDDIT_CLIENT_ID), "erp_section": "communities"})
+
+
+@staff_member_required
+def erp_community_library(request):
+    """Bibliotheque de publications : visualiser / modifier les modeles, les envoyer vers une ou plusieurs communautes
+    (un lien traque unique par communaute)."""
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from django.db.models import Count, Sum
+    from .models import Community, Outreach, PostTemplate
+    from . import community as cm
+    from .community_library import seed_library
+    if request.method == "POST":
+        op = request.POST.get("op")
+        t = PostTemplate.objects.filter(pk=request.POST.get("id")).first()
+        try:
+            if op == "seed":
+                messages.success(request, "%d modèle(s) ajouté(s) à la bibliothèque." % seed_library())
+            elif op in ("save", "new"):
+                t = t if op == "save" and t else PostTemplate()
+                for f in ("name", "category", "lang", "platforms", "hook", "body", "media_kind", "media_brief", "target_path"):
+                    if f in request.POST:
+                        setattr(t, f, request.POST.get(f, "").strip())
+                t.name = t.name or t.hook[:60] or "Nouveau modèle"
+                t.active = bool(request.POST.get("active", "on" if op == "new" else ""))
+                if request.FILES.get("media"):
+                    t.media = request.FILES["media"]
+                if request.POST.get("media_clear"):
+                    t.media = None
+                t.save()
+                messages.success(request, "Modèle « %s » enregistré." % t.name)
+            elif op == "dup" and t:
+                t.pk = None; t.name = (t.name + " (copie)")[:120]; t.save()
+                messages.success(request, "Modèle dupliqué.")
+            elif op == "del" and t:
+                t.delete()
+            elif op == "use" and t:
+                ids = [int(x) for x in request.POST.getlist("communities") if x.isdigit()]
+                made = []
+                for c in Community.objects.filter(pk__in=ids):
+                    o = Outreach.objects.create(community=c, template=t, code=cm.new_code(), title=t.hook,
+                                                body=t.body, target_url=settings.SITE_URL + (t.target_path or "/create/"))
+                    link = cm.tracked_url(o)
+                    if "{link}" in o.body:
+                        o.body = o.body.replace("{link}", link); o.save(update_fields=["body"])
+                    made.append(c.name)
+                if made:
+                    messages.success(request, "« %s » préparé pour %d communauté(s) : %s. Retrouvez-les dans Publications "
+                                     "(un lien traqué par communauté)." % (t.name, len(made), ", ".join(made)))
+                else:
+                    messages.error(request, "Choisissez au moins une communauté.")
+        except Exception as exc:
+            logger.exception("Bibliotheque")
+            messages.error(request, "Erreur : %s" % exc)
+        return redirect(request.get_full_path())
+    cat, lang, plat = request.GET.get("cat", ""), request.GET.get("lang", ""), request.GET.get("plat", "")
+    qs = PostTemplate.objects.annotate(uses=Count("posts"), uclicks=Sum("posts__unique_clicks"))
+    if cat:
+        qs = qs.filter(category=cat)
+    if lang:
+        qs = qs.filter(lang=lang)
+    if plat:
+        qs = qs.filter(platforms__contains=plat)
+    conv = {}
+    for r in Order.objects.filter(status__in=Order.PAID_STATUSES, ad_ref__startswith="c:").values("ad_ref").annotate(n=Count("id")):
+        conv[r["ad_ref"][2:]] = r["n"]
+    tpls = list(qs)
+    codes = {}
+    for o in Outreach.objects.exclude(template=None).values("template_id", "code"):
+        codes.setdefault(o["template_id"], []).append(o["code"])
+    for t in tpls:
+        t.orders = sum(conv.get(c, 0) for c in codes.get(t.pk, []))
+    comms = list(Community.objects.filter(active=True))
+    return render(request, "admin/erp_community_library.html", {
+        **_admin.site.each_context(request), "tpls": tpls, "comms": comms, "cat": cat, "lang": lang, "plat": plat,
+        "categories": PostTemplate.CATEGORIES, "medias": PostTemplate.MEDIA,
+        "langs": sorted(set(PostTemplate.objects.values_list("lang", flat=True))),
+        "plats": [("reddit", "Reddit"), ("facebook", "Facebook"), ("social", "Réseaux sociaux"), ("launch", "Lancement"),
+                  ("forum", "Forums / Q&A"), ("discord", "Discord")],
+        "erp_section": "communities"})

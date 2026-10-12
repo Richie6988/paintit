@@ -1563,3 +1563,13 @@ msgid ""
 msgstr ""
 "Auto: ideale Einstellung je nach Farbanzahl. Leicht: große Felder. Mittel "
 "und Experte: mehr Felder, ideal für Gesichter und Porträts."
+
+msgid ""
+"Auto : réglage idéal selon le nombre de couleurs. Facile : grandes zones. "
+"Expert : plus de zones, idéal pour les visages et portraits."
+msgstr ""
+"Auto: ideale Einstellung je nach Farbanzahl. Leicht: große Felder. Experte: "
+"mehr Felder, ideal für Gesichter und Porträts."
+
+msgid "Ajustement au format"
+msgstr "Anpassung an das Format"

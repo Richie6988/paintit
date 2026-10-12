@@ -1551,3 +1551,13 @@ msgid ""
 msgstr ""
 "Auto: impostazione ideale in base al numero di colori. Facile: zone grandi. "
 "Medio ed Esperto: più zone, ideale per volti e ritratti."
+
+msgid ""
+"Auto : réglage idéal selon le nombre de couleurs. Facile : grandes zones. "
+"Expert : plus de zones, idéal pour les visages et portraits."
+msgstr ""
+"Auto: impostazione ideale in base al numero di colori. Facile: zone grandi. "
+"Esperto: più zone, ideale per volti e ritratti."
+
+msgid "Ajustement au format"
+msgstr "Adattamento al formato"

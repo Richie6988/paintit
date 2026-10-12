@@ -83,6 +83,7 @@ urlpatterns = [
     path("marketing/", views.marketing_page, name="marketing"),
     path("admin-hub/marketing/", views.marketing_gallery, name="marketing_gallery"),
     path("admin-hub/communities/", views.erp_communities, name="erp_communities"),
+    path("admin-hub/communities/library/", views.erp_community_library, name="erp_community_library"),
     path("go/<str:code>/", views.go_link, name="go_link"),
     path("go/<str:token>/", views.ad_click, name="ad_click"),
     path("api/suppliers/<str:secret>/events/", views.supplier_webhook, name="supplier_webhook"),

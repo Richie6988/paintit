@@ -998,7 +998,8 @@ def run(args):
     colors = [{"number": i + 1,
                "hex": "#%02X%02X%02X" % (int(bgr[2]), int(bgr[1]), int(bgr[0])),
                "rgb": [int(bgr[2]), int(bgr[1]), int(bgr[0])],
-               **({"code": codes[i], "delta_e": round(deltas[i], 1)} if codes[i] is not None else {})}
+               **({"code": codes[i], "supplier_code": codes[i], "delta_e": round(deltas[i], 1)}
+                  if codes[i] is not None else {})}
               for i, bgr in enumerate(palette)]
     with open(colors_path, "w", encoding="utf-8") as f:
         json.dump(colors, f, ensure_ascii=False, indent=2)

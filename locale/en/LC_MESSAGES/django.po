@@ -1530,3 +1530,13 @@ msgid ""
 msgstr ""
 "Auto: ideal setting for the number of colours. Easy: large areas. Medium and"
 " Expert: more areas, ideal for faces and portraits."
+
+msgid ""
+"Auto : réglage idéal selon le nombre de couleurs. Facile : grandes zones. "
+"Expert : plus de zones, idéal pour les visages et portraits."
+msgstr ""
+"Auto: ideal setting for the number of colours. Easy: large areas. Expert: "
+"more areas, ideal for faces and portraits."
+
+msgid "Ajustement au format"
+msgstr "Adjusting to"

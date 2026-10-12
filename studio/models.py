@@ -726,6 +726,7 @@ class Community(models.Model):
 class Outreach(models.Model):
     """Une publication (ou reponse) dans une communaute, avec son lien traque /go/<code>/ et ses statistiques."""
     community = models.ForeignKey(Community, null=True, blank=True, on_delete=models.SET_NULL, related_name="posts")
+    template = models.ForeignKey("PostTemplate", null=True, blank=True, on_delete=models.SET_NULL, related_name="posts")
     code = models.CharField(max_length=16, unique=True)
     title = models.CharField("Titre", max_length=300, blank=True, default="")
     body = models.TextField("Texte", blank=True, default="")
@@ -750,3 +751,38 @@ class Outreach(models.Model):
     @property
     def new_replies(self):
         return max(0, (self.comments or 0) - (self.comments_seen or 0))
+
+
+class PostTemplate(models.Model):
+    """Modele de publication reutilisable (bibliotheque) : accroche, texte ({link} = lien traque), brief media."""
+    CATEGORIES = [("story", "Histoire / émotion"), ("beforeafter", "Avant / après"), ("gift", "Idée cadeau"),
+                  ("tech", "Technique / algorithme"), ("engage", "Question / engagement"), ("challenge", "Défi / communauté"),
+                  ("tips", "Conseils de peinture"), ("launch", "Lancement / produit"), ("season", "Saisonnier"),
+                  ("family", "Enfants / seniors"), ("b2b", "Partenariats / B2B"), ("ugc", "Clients (avec accord)")]
+    MEDIA = [("photo", "Photo"), ("beforeafter", "Photo avant/après"), ("carousel", "Carrousel"),
+             ("video", "Vidéo courte"), ("gif", "GIF / timelapse"), ("text", "Texte seul")]
+    name = models.CharField("Nom interne", max_length=120)
+    category = models.CharField(max_length=12, choices=CATEGORIES, default="story")
+    lang = models.CharField("Langue", max_length=5, default="en")
+    platforms = models.CharField("Canaux adaptés", max_length=120, default="reddit,facebook",
+                                 help_text="reddit, facebook, social, launch, forum, discord (séparés par des virgules)")
+    hook = models.CharField("Accroche / titre", max_length=300)
+    body = models.TextField("Texte", blank=True, default="", help_text="{link} est remplacé par le lien traqué.")
+    media_kind = models.CharField("Média", max_length=12, choices=MEDIA, default="photo")
+    media_brief = models.TextField("Brief média (quoi montrer)", blank=True, default="")
+    media = models.FileField("Fichier média", upload_to="community/", blank=True, null=True)
+    target_path = models.CharField("Page cible", max_length=120, default="/create/")
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["category", "lang", "name"]
+        verbose_name = "Modèle de publication"
+        verbose_name_plural = "Bibliothèque de publications"
+
+    def __str__(self):
+        return self.name
+
+    def platform_list(self):
+        return [p.strip() for p in (self.platforms or "").split(",") if p.strip()]

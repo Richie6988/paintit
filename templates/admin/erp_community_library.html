@@ -1,0 +1,96 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Bibliothèque de publications · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .lib{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+ .tp{background:#fff;border:1px solid #e3e3e3;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+ .tp.off{opacity:.5}
+ .tp h3{margin:0;font-size:.98rem;color:#12224f;line-height:1.35}
+ .tp .meta{display:flex;flex-wrap:wrap;gap:5px}
+ .chipx{border-radius:999px;padding:1px 8px;font-size:.7rem;font-weight:800;background:#f1f1f1;color:#4a4a4a}
+ .chipx.cat{background:#e0f0ff;color:#00527c}.chipx.med{background:#fff1d6;color:#9a6300}.chipx.lng{background:#12224f;color:#fff}
+ .tp .body{font-size:.82rem;color:#33415c;white-space:pre-line;max-height:120px;overflow:auto;background:#fafbfd;border-radius:8px;padding:8px}
+ .tp .brief{font-size:.78rem;color:#6d7175}
+ .tp .stats{font-size:.76rem;color:#6d7175}
+ .tp details summary{cursor:pointer;font-weight:700;font-size:.8rem;color:#2f6bf2}
+ .tp form.ed{display:grid;gap:6px;margin-top:8px}
+ .tp form.ed input,.tp form.ed select,.tp form.ed textarea{width:100%;box-sizing:border-box;font-size:.82rem}
+ .cl{max-height:180px;overflow:auto;border:1px solid #eee;border-radius:8px;padding:6px;display:grid;gap:3px}
+ .cl label{display:flex;gap:6px;align-items:center;font-size:.8rem}
+ .cl label .muted{font-size:.7rem}
+ .tp img.mprev{max-width:100%;max-height:140px;border-radius:8px;object-fit:cover}
+ .filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+ .filters a{font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:999px;background:#f1f1f1;color:#303030 !important;text-decoration:none}
+ .filters a.on{background:#12224f;color:#fff !important}
+</style>
+<div class="erp">
+  <div class="erp-head">
+    <div><a href="/admin-hub/communities/" class="muted" style="font-weight:700">← Communautés</a>
+      <h1>Bibliothèque de publications</h1>
+      <div class="muted">Accroches et publications multimédia prêtes à l'emploi. Remplacez les [CROCHETS] par de vrais détails ; <code>{link}</code> devient un lien traqué unique pour chaque communauté.</div></div>
+    <form method="post" style="display:flex;gap:6px">{% csrf_token %}
+      <button class="pbtn{% if not tpls %} pri{% endif %}" name="op" value="seed">{% if tpls %}Ajouter les modèles manquants{% else %}Charger la bibliothèque (46 modèles){% endif %}</button></form>
+  </div>
+
+  <div class="filters"><b style="font-size:.8rem">Catégorie</b> <a href="?lang={{ lang }}&plat={{ plat }}" class="{% if not cat %}on{% endif %}">Toutes</a>
+    {% for k, l in categories %}<a href="?cat={{ k }}&lang={{ lang }}&plat={{ plat }}" class="{% if cat == k %}on{% endif %}">{{ l }}</a>{% endfor %}</div>
+  <div class="filters"><b style="font-size:.8rem">Langue</b> <a href="?cat={{ cat }}&plat={{ plat }}" class="{% if not lang %}on{% endif %}">Toutes</a>
+    {% for l in langs %}<a href="?cat={{ cat }}&lang={{ l }}&plat={{ plat }}" class="{% if lang == l %}on{% endif %}">{{ l|upper }}</a>{% endfor %}
+    &nbsp;<b style="font-size:.8rem">Canal</b> <a href="?cat={{ cat }}&lang={{ lang }}" class="{% if not plat %}on{% endif %}">Tous</a>
+    {% for k, l in plats %}<a href="?cat={{ cat }}&lang={{ lang }}&plat={{ k }}" class="{% if plat == k %}on{% endif %}">{{ l }}</a>{% endfor %}</div>
+
+  <details class="card" style="margin-bottom:14px"><summary style="cursor:pointer;font-weight:800">+ Nouveau modèle</summary>
+    <form method="post" enctype="multipart/form-data" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">{% csrf_token %}<input type="hidden" name="op" value="new">
+      <input type="text" name="name" placeholder="Nom interne"><input type="text" name="hook" placeholder="Accroche / titre" required>
+      <select name="category">{% for k, l in categories %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select>
+      <select name="media_kind">{% for k, l in medias %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select>
+      <input type="text" name="lang" value="en" placeholder="Langue (en, fr, de…)"><input type="text" name="platforms" value="reddit,facebook" placeholder="Canaux">
+      <textarea name="body" rows="4" style="grid-column:1/-1" placeholder="Texte ({link} = lien traqué)"></textarea>
+      <textarea name="media_brief" rows="2" style="grid-column:1/-1" placeholder="Brief média : quoi montrer"></textarea>
+      <input type="text" name="target_path" value="/create/"><input type="file" name="media" accept="image/*,video/*">
+      <div><button class="pbtn pri">Créer</button></div>
+    </form></details>
+
+  <div class="lib">
+  {% for t in tpls %}
+    <div class="tp {% if not t.active %}off{% endif %}">
+      <div class="meta"><span class="chipx lng">{{ t.lang|upper }}</span><span class="chipx cat">{{ t.get_category_display }}</span>
+        <span class="chipx med">{{ t.get_media_kind_display }}</span>{% for p in t.platform_list %}<span class="chipx">{{ p }}</span>{% endfor %}</div>
+      <h3>{{ t.hook }}</h3>
+      {% if t.media %}{% with u=t.media.url %}{% if ".mp4" in u or ".webm" in u or ".mov" in u %}<video src="{{ u }}" controls style="max-width:100%;max-height:160px;border-radius:8px"></video>{% else %}<img class="mprev" src="{{ u }}" alt="">{% endif %}{% endwith %}{% endif %}
+      {% if t.body %}<div class="body">{{ t.body }}</div>{% endif %}
+      {% if t.media_brief %}<div class="brief">🎬 {{ t.media_brief }}</div>{% endif %}
+      <div class="stats">{{ t.uses }} envoi{{ t.uses|pluralize }} · {{ t.uclicks|default:0 }} visiteur{{ t.uclicks|default:0|pluralize }} · {{ t.orders }} vente{{ t.orders|pluralize }} · cible {{ t.target_path }}</div>
+      <details><summary>📤 Envoyer vers des communautés</summary>
+        <form method="post" style="margin-top:6px;display:grid;gap:6px">{% csrf_token %}<input type="hidden" name="op" value="use"><input type="hidden" name="id" value="{{ t.pk }}">
+          <div class="cl">{% for c in comms %}<label><input type="checkbox" name="communities" value="{{ c.pk }}" style="width:auto"> {{ c.name }}{% if c.platform in t.platforms and c.lang == t.lang %} <b style="color:#1e8848;font-size:.7rem">✓ adapté</b>{% endif %} <span class="muted">· {{ c.get_platform_display }} · {{ c.lang|upper }}{% if c.promo == "forbidden" %} · ⛔ autopromo interdite{% endif %}</span></label>{% empty %}<span class="muted">Chargez d'abord l'audit des communautés.</span>{% endfor %}</div>
+          <button class="pbtn pri sm">Préparer pour les communautés cochées</button>
+          <span class="muted" style="font-size:.72rem">Chaque communauté reçoit son propre lien traqué. Publication : bouton « Ouvrir pré-rempli » dans Publications.</span>
+        </form></details>
+      <details><summary>✏️ Modifier</summary>
+        <form method="post" enctype="multipart/form-data" class="ed">{% csrf_token %}<input type="hidden" name="op" value="save"><input type="hidden" name="id" value="{{ t.pk }}">
+          <input type="text" name="name" value="{{ t.name }}" placeholder="Nom interne">
+          <input type="text" name="hook" value="{{ t.hook }}">
+          <textarea name="body" rows="6">{{ t.body }}</textarea>
+          <textarea name="media_brief" rows="2" placeholder="Brief média">{{ t.media_brief }}</textarea>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <select name="category">{% for k, l in categories %}<option value="{{ k }}" {% if t.category == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+            <select name="media_kind">{% for k, l in medias %}<option value="{{ k }}" {% if t.media_kind == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+            <input type="text" name="lang" value="{{ t.lang }}"><input type="text" name="platforms" value="{{ t.platforms }}">
+            <input type="text" name="target_path" value="{{ t.target_path }}"><input type="file" name="media" accept="image/*,video/*">
+          </div>
+          <label class="sw"><input type="checkbox" name="active" {% if t.active %}checked{% endif %}> Actif</label>
+          {% if t.media %}<label class="sw"><input type="checkbox" name="media_clear" value="1"> Retirer le média</label>{% endif %}
+          <div style="display:flex;gap:6px;justify-content:space-between">
+            <span style="display:flex;gap:6px"><button class="pbtn sm" name="op" value="dup">Dupliquer</button>
+              <button class="pbtn sm" name="op" value="del" data-confirm="Supprimer ce modèle ?" data-danger style="color:#b42318">Supprimer</button></span>
+            <button class="pbtn pri sm">Enregistrer</button></div>
+        </form></details>
+    </div>
+  {% empty %}<div class="muted">Bibliothèque vide : cliquez sur « Charger la bibliothèque ».</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -360,8 +360,8 @@ class SupplierPaletteTests(TestCase):
         from studio.fulfillment import supplier_colors
         out = supplier_colors([{"number": 1, "hex": "#FFFFFF", "rgb": [255, 255, 255], "code": "1"},
                                {"number": 2, "hex": "#000000", "rgb": [0, 0, 0]}])
-        self.assertEqual(out[0], {"number": 1, "supplier_code": "1"})
-        self.assertIn("hex", out[1])                                           # repli sans reference
+        self.assertEqual(out[0], {"number": 1, "supplier_code": "1", "hex": "#FFFFFF", "rgb": [255, 255, 255]})
+        self.assertIn("hex", out[1])                                           # code + hex : les deux
 
 
 class InboxTests(TestCase):

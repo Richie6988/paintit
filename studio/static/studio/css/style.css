@@ -896,3 +896,10 @@ main{overflow-x:clip}
 .segmented.seg4 .seg{min-width:0}
 .segmented.seg4 .seg span{padding-left:4px;padding-right:4px}
 @media (max-width:480px){.segmented.seg4 .seg span{font-size:.86rem}.segmented.seg4 .seg-hint{font-size:.62rem}}
+/* Apercu : recalcul de la toile en arriere-plan (changement de format) */
+.reveal.updating{transition:aspect-ratio .3s}
+.reveal.updating .reveal-img{filter:blur(3px) saturate(.6);opacity:.55;transition:filter .3s,opacity .3s}
+.reveal .pv-upd{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;background:rgba(255,255,255,.92);
+  color:var(--ink);font-weight:700;font-size:.86rem;padding:8px 14px;border-radius:999px;box-shadow:0 6px 18px rgba(18,34,79,.18);white-space:nowrap}
+.reveal:not(.updating) .pv-upd{display:none}
+body.pv-busy .options .cta{opacity:.6;pointer-events:none}
