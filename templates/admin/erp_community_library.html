@@ -35,6 +35,7 @@
       <button class="pbtn{% if not tpls %} pri{% endif %}" name="op" value="seed">{% if tpls %}Ajouter les modèles manquants{% else %}Charger la bibliothèque (46 modèles){% endif %}</button></form>
   </div>
 
+  {% include "admin/_growth_tabs.html" %}
   <div class="filters"><b style="font-size:.8rem">Catégorie</b> <a href="?lang={{ lang }}&plat={{ plat }}" class="{% if not cat %}on{% endif %}">Toutes</a>
     {% for k, l in categories %}<a href="?cat={{ k }}&lang={{ lang }}&plat={{ plat }}" class="{% if cat == k %}on{% endif %}">{{ l }}</a>{% endfor %}</div>
   <div class="filters"><b style="font-size:.8rem">Langue</b> <a href="?cat={{ cat }}&plat={{ plat }}" class="{% if not lang %}on{% endif %}">Toutes</a>

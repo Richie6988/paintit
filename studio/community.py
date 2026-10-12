@@ -29,6 +29,12 @@ def new_code():
             return c
 
 
+def _slug_code(name):
+    import re as _re, unicodedata
+    t = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().upper()
+    return _re.sub(r"[^A-Z0-9]+", "", t)[:12] or "PAINTIT"
+
+
 def tracked_url(o):
     return "%s/go/%s/" % (settings.SITE_URL, o.code)
 

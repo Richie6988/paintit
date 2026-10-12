@@ -1,0 +1,13 @@
+<style>
+ .gtabs{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 16px;border-bottom:1px solid #e3e3e3}
+ .gtabs a{padding:9px 14px;font-weight:800;font-size:.86rem;color:#6d7175 !important;text-decoration:none;border-bottom:3px solid transparent;margin-bottom:-1px}
+ .gtabs a.on{color:#12224f !important;border-bottom-color:#2f6bf2}
+ .gtabs a:hover{color:#12224f !important}
+</style>
+<nav class="gtabs">
+  <a href="/admin-hub/growth/" class="{% if gtab == 'campaigns' %}on{% endif %}">🎯 Campagnes</a>
+  <a href="/admin-hub/communities/" class="{% if gtab == 'communities' %}on{% endif %}">📣 Publications &amp; communautés</a>
+  <a href="/admin-hub/communities/library/" class="{% if gtab == 'library' %}on{% endif %}">📚 Bibliothèque</a>
+  <a href="/admin-hub/marketing/" class="{% if gtab == 'ads' %}on{% endif %}">🖼️ Pubs A/B</a>
+  <a href="/marketing/" class="">＋ Créer une pub</a>
+</nav>

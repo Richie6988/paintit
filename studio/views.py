@@ -1826,8 +1826,10 @@ def marketing_page(request):
     ctx = {"results": None, "error": None, "erp_section": "marketing",
            "link": request.POST.get("link", "https://paintit.click/create/"),
            "colors": request.POST.get("colors", "24"),
-           "campaign": request.POST.get("campaign", ""),
+           "campaign": request.POST.get("campaign", "") or request.GET.get("campaign", ""),
            "variant": request.POST.get("variant", "")}
+    from .models import Campaign
+    ctx["campaign_names"] = list(Campaign.objects.values_list("name", flat=True))
     texts, gif = ({}, {})
     base = None
     if request.method == "POST":
@@ -2035,7 +2037,7 @@ def marketing_gallery(request):
                 "unique": tot["u"] or 0, "tests": tot["t"] or 0,
                 "ctr": round(min(tot["u"] or 0, tot["v"]) / tot["v"] * 100, 1) if tot["v"] else None,
                 "orders": att["n"] or 0, "revenue": round(att["ca"] or 0, 2)},
-        "erp_section": "marketing"})
+        "erp_section": "growth", "gtab": "ads"})
 
 
 # ---------------- Hub ERP (tableau de bord admin) ----------------
@@ -3591,7 +3593,7 @@ def erp_communities(request):
     return render(request, "admin/erp_communities.html", {
         **_admin.site.each_context(request), "comms": comms, "posts": posts, "tot": tot, "region": region,
         "regions": Community.REGIONS, "platforms": Community.PLATFORMS, "promos": Community.PROMO,
-        "reddit_oauth": bool(settings.REDDIT_CLIENT_ID), "erp_section": "communities"})
+        "reddit_oauth": bool(settings.REDDIT_CLIENT_ID), "erp_section": "growth", "gtab": "communities"})
 
 
 @staff_member_required
@@ -3671,7 +3673,7 @@ def erp_community_library(request):
         "langs": sorted(set(PostTemplate.objects.values_list("lang", flat=True))),
         "plats": [("reddit", "Reddit"), ("facebook", "Facebook"), ("social", "Réseaux sociaux"), ("launch", "Lancement"),
                   ("forum", "Forums / Q&A"), ("discord", "Discord")],
-        "erp_section": "communities"})
+        "erp_section": "growth", "gtab": "library"})
 
 
 def review_page(request, uid):
@@ -3729,3 +3731,119 @@ def erp_reviews(request):
     return render(request, "admin/erp_reviews.html", {
         **_admin.site.each_context(request), "reviews": Review.objects.select_related("order")[:300], "agg": agg,
         "erp_section": "reviews"})
+
+
+# ---------------- Croissance : campagnes (ciblage, contenus, diffusion, retombees) ----------------
+def _campaign_from_post(c, P):
+    c.name = (P.get("name") or c.name or "Campagne").strip()[:80]
+    c.goal = P.get("goal", c.goal or "").strip()
+    c.status = P.get("status", c.status or "draft")
+    for f in ("start", "end"):
+        v = (P.get(f) or "").strip()
+        setattr(c, f, v or None)
+    try:
+        c.budget = float((P.get("budget") or "0").replace(",", "."))
+    except ValueError:
+        c.budget = 0
+    for f in ("regions", "langs", "platforms", "categories"):
+        setattr(c, f, ",".join(P.getlist(f)))
+    if (P.get("min_priority") or "").isdigit():
+        c.min_priority = int(P["min_priority"])
+    c.exclude_forbidden = bool(P.get("exclude_forbidden"))
+    c.append_code = bool(P.get("append_code"))
+    c.target_path = (P.get("target_path") or "/create/").strip()[:120]
+    c.notes = P.get("notes", c.notes or "")
+    from .models import Discount
+    did = P.get("discount")
+    c.discount = Discount.objects.filter(pk=did).first() if did and did.isdigit() else None
+    return c
+
+
+@staff_member_required
+def growth_hub(request):
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from .models import Campaign
+    from . import growth
+    if request.method == "POST" and request.POST.get("op") == "create":
+        c = Campaign(name=(request.POST.get("name") or "").strip()[:80] or "Nouvelle campagne")
+        if Campaign.objects.filter(name=c.name).exists():
+            messages.error(request, "Une campagne porte déjà ce nom.")
+            return redirect("studio:growth_hub")
+        c.save()
+        messages.success(request, "Campagne créée : définissez le ciblage puis générez les actions.")
+        return redirect("studio:growth_campaign", pk=c.pk)
+    camps = list(Campaign.objects.all())
+    totals = {"clicks": 0, "orders": 0, "revenue": 0.0, "budget": 0.0}
+    for c in camps:
+        c.s = growth.stats(c)["tot"]
+        totals["clicks"] += c.s["clicks"]; totals["orders"] += c.s["orders"]
+        totals["revenue"] += c.s["revenue"]; totals["budget"] += c.budget
+    totals["revenue"] = round(totals["revenue"], 2)
+    return render(request, "admin/growth_hub.html", {**_admin.site.each_context(request), "camps": camps,
+                                                     "totals": totals, "erp_section": "growth", "gtab": "campaigns"})
+
+
+@staff_member_required
+def growth_campaign(request, pk):
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from .models import Campaign, Community, Discount, Outreach, PostTemplate
+    from . import growth, community as cm
+    c = Campaign.objects.filter(pk=pk).first()
+    if not c:
+        raise Http404
+    if request.method == "POST":
+        op = request.POST.get("op")
+        try:
+            if op == "save":
+                _campaign_from_post(c, request.POST).save()
+                messages.success(request, "Campagne enregistrée.")
+            elif op == "generate":
+                made, skipped = growth.generate_actions(c)
+                if c.status == "draft":
+                    c.status = "active"; c.save(update_fields=["status"])
+                messages.success(request, "⚡ %d action(s) ciblée(s) générée(s)%s." % (
+                    len(made), (" · ignorées : " + ", ".join(skipped[:8])) if skipped else ""))
+            elif op == "new_code":
+                import secrets as _s
+                d = Discount.objects.create(code=("%s-%s" % (cm._slug_code(c.name), _s.token_hex(2))).upper()[:32],
+                                            kind=Discount.PROMO, percent=int(request.POST.get("percent") or 10), max_uses=0)
+                c.discount = d; c.save(update_fields=["discount"])
+                messages.success(request, "Code promo %s (-%d %%) créé et rattaché à la campagne." % (d.code, d.percent))
+            elif op == "mark_posted":
+                o = Outreach.objects.get(pk=request.POST.get("id"), campaign=c)
+                o.posted_url = request.POST.get("posted_url", "").strip()[:400]
+                o.posted_at = o.posted_at or timezone.now()
+                o.save(update_fields=["posted_url", "posted_at"])
+                if "reddit.com" in o.posted_url:
+                    cm.refresh_post(o)
+            elif op == "seen":
+                o = Outreach.objects.get(pk=request.POST.get("id"), campaign=c)
+                o.comments_seen = o.comments or 0; o.save(update_fields=["comments_seen"])
+            elif op == "del_post":
+                Outreach.objects.filter(pk=request.POST.get("id"), campaign=c).delete()
+            elif op == "refresh":
+                n = 0
+                for o in Outreach.objects.filter(campaign=c).exclude(posted_url="").filter(posted_url__contains="reddit.com"):
+                    n += cm.refresh_post(o)
+                messages.success(request, "%d publication(s) actualisée(s)." % n)
+            elif op == "delete":
+                c.delete()
+                messages.success(request, "Campagne supprimée (les publications restent dans le suivi).")
+                return redirect("studio:growth_hub")
+        except Exception as exc:
+            logger.exception("Campagne")
+            messages.error(request, "Erreur : %s" % exc)
+        return redirect(request.get_full_path())
+    st = growth.stats(c)
+    for o in st["posts"]:
+        o.link = cm.tracked_url(o)
+        o.submit = cm.submit_url(o.community, o.title, o.body, o.link) if not o.posted_url else ""
+    matched = growth.match_communities(c)
+    return render(request, "admin/growth_campaign.html", {
+        **_admin.site.each_context(request), "c": c, "st": st, "matched": matched,
+        "regions": Community.REGIONS, "platforms": Community.PLATFORMS, "categories": PostTemplate.CATEGORIES,
+        "langs": sorted(set(Community.objects.values_list("lang", flat=True)) | {"en", "fr", "de", "es", "it"}),
+        "discounts": Discount.objects.filter(active=True, kind=Discount.PROMO).order_by("-created_at")[:50],
+        "statuses": Campaign.STATUS, "erp_section": "growth", "gtab": "campaigns"})

@@ -727,6 +727,7 @@ class Outreach(models.Model):
     """Une publication (ou reponse) dans une communaute, avec son lien traque /go/<code>/ et ses statistiques."""
     community = models.ForeignKey(Community, null=True, blank=True, on_delete=models.SET_NULL, related_name="posts")
     template = models.ForeignKey("PostTemplate", null=True, blank=True, on_delete=models.SET_NULL, related_name="posts")
+    campaign = models.ForeignKey("Campaign", null=True, blank=True, on_delete=models.SET_NULL, related_name="posts")
     code = models.CharField(max_length=16, unique=True)
     title = models.CharField("Titre", max_length=300, blank=True, default="")
     body = models.TextField("Texte", blank=True, default="")
@@ -807,3 +808,50 @@ class Review(models.Model):
 
     def __str__(self):
         return "%s · %d/5" % (self.author, self.rating)
+
+
+class Campaign(models.Model):
+    """Campagne de croissance : ciblage + contenus + diffusion + retombees (publications, pubs A/B, ventes)."""
+    STATUS = [("draft", "Brouillon"), ("active", "En cours"), ("done", "Terminée")]
+    name = models.CharField("Nom", max_length=80, unique=True)
+    goal = models.TextField("Objectif / message clé", blank=True, default="")
+    status = models.CharField(max_length=8, choices=STATUS, default="draft")
+    start = models.DateField("Début", null=True, blank=True)
+    end = models.DateField("Fin", null=True, blank=True)
+    budget = models.FloatField("Budget (€)", default=0)
+    # Ciblage (listes separees par des virgules ; vide = tout)
+    regions = models.CharField(max_length=120, blank=True, default="")
+    langs = models.CharField(max_length=60, blank=True, default="")
+    platforms = models.CharField(max_length=120, blank=True, default="")
+    categories = models.CharField("Thèmes de contenu", max_length=200, blank=True, default="")
+    min_priority = models.PositiveSmallIntegerField("Priorité max. des communautés", default=3)
+    exclude_forbidden = models.BooleanField("Exclure les communautés où l'autopromo est interdite", default=True)
+    discount = models.ForeignKey("Discount", null=True, blank=True, on_delete=models.SET_NULL, related_name="campaigns")
+    append_code = models.BooleanField("Ajouter le code promo aux textes", default=False)
+    target_path = models.CharField("Page cible", max_length=120, default="/create/")
+    notes = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Campagne"
+        verbose_name_plural = "Campagnes"
+
+    def __str__(self):
+        return self.name
+
+    @staticmethod
+    def _l(v):
+        return [x.strip() for x in (v or "").split(",") if x.strip()]
+
+    def region_list(self):
+        return self._l(self.regions)
+
+    def lang_list(self):
+        return self._l(self.langs)
+
+    def platform_list(self):
+        return self._l(self.platforms)
+
+    def category_list(self):
+        return self._l(self.categories)

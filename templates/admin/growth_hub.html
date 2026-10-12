@@ -1,0 +1,32 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Croissance · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<div class="erp">
+  <div class="erp-head"><div><h1>Croissance</h1>
+    <div class="muted">Campagne par campagne : cibler, créer, diffuser, suivre. Publications communautés, pubs A/B et codes promo sont rattachés à leur campagne ; les ventes sont attribuées au dernier clic.</div></div>
+    <form method="post" style="display:flex;gap:6px">{% csrf_token %}<input type="hidden" name="op" value="create">
+      <input type="text" name="name" placeholder="Nom de la nouvelle campagne" required style="min-width:240px"><button class="pbtn pri">+ Nouvelle campagne</button></form></div>
+  {% include "admin/_growth_tabs.html" %}
+  <div class="kpis">
+    <div class="kpi"><div class="l">Campagnes</div><div class="v">{{ camps|length }}</div></div>
+    <div class="kpi"><div class="l">Visiteurs</div><div class="v">{{ totals.clicks }}</div></div>
+    <div class="kpi"><div class="l">Ventes attribuées</div><div class="v">{{ totals.orders }}</div></div>
+    <div class="kpi"><div class="l">CA attribué</div><div class="v">{{ totals.revenue|floatformat:"2g" }} €</div><div class="muted">budget {{ totals.budget|floatformat:"0g" }} €</div></div>
+  </div>
+  <div class="card"><table class="t">
+    <tr><th>Campagne</th><th>Statut</th><th>Période</th><th>Ciblage</th><th class="r">Actions</th><th class="r">Visiteurs</th><th class="r">Ventes</th><th class="r">CA</th><th class="r">ROI</th></tr>
+    {% for c in camps %}<tr>
+      <td><a href="/admin-hub/growth/{{ c.pk }}/"><b>{{ c.name }}</b></a>{% if c.goal %}<div class="muted">{{ c.goal|truncatechars:80 }}</div>{% endif %}</td>
+      <td><span class="bdg2 {% if c.status == 'active' %}ok{% elif c.status == 'done' %}off{% else %}idle{% endif %}">{{ c.get_status_display }}</span></td>
+      <td class="muted">{{ c.start|date:"d/m"|default:"—" }} → {{ c.end|date:"d/m"|default:"—" }}</td>
+      <td class="muted" style="font-size:.78rem">{{ c.regions|default:"toutes zones"|upper }} · {{ c.langs|default:"toutes langues"|upper }} · {{ c.platforms|default:"tous canaux" }}</td>
+      <td class="r">{{ c.s.posted }}/{{ c.s.actions }}{% if c.s.ads %} <span class="muted">+{{ c.s.ads }} pubs</span>{% endif %}</td>
+      <td class="r"><b>{{ c.s.clicks }}</b></td><td class="r">{{ c.s.orders }}</td>
+      <td class="r">{{ c.s.revenue|floatformat:"2g" }} €</td><td class="r">{% if c.s.roi is not None %}{{ c.s.roi }} %{% else %}—{% endif %}</td>
+    </tr>{% empty %}<tr><td colspan="9" class="muted">Aucune campagne. Exemple : « Fête des mères FR/DE », « Lancement Reddit US », « Noël AU ».</td></tr>{% endfor %}
+  </table></div>
+</div>
+{% endblock %}

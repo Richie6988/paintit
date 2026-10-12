@@ -83,6 +83,8 @@ urlpatterns = [
     path(".well-known/appspecific/com.chrome.devtools.json", views.devtools),
     path("marketing/", views.marketing_page, name="marketing"),
     path("admin-hub/marketing/", views.marketing_gallery, name="marketing_gallery"),
+    path("admin-hub/growth/", views.growth_hub, name="growth_hub"),
+    path("admin-hub/growth/<int:pk>/", views.growth_campaign, name="growth_campaign"),
     path("admin-hub/communities/", views.erp_communities, name="erp_communities"),
     path("admin-hub/communities/library/", views.erp_community_library, name="erp_community_library"),
     path("go/<str:code>/", views.go_link, name="go_link"),

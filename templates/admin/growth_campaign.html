@@ -1,0 +1,110 @@
+{% extends "admin/base_site.html" %}
+{% block title %}{{ c.name }} · Croissance · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .tgt{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+ .tgt fieldset{border:1px solid #e3e3e3;border-radius:12px;padding:10px 12px;margin:0;min-width:0}
+ .tgt legend{font-weight:800;font-size:.8rem;color:#12224f;padding:0 4px}
+ .tgt label{display:flex;gap:6px;align-items:center;font-size:.82rem;margin:3px 0}
+ .tgt input[type=checkbox]{width:auto}
+ .row3{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+ .row3 input,.row3 select,.row3 textarea{width:100%;box-sizing:border-box}
+ .bolt{font-size:1.02rem;padding:12px 20px}
+ .copy{cursor:pointer;border:1px solid #e2e8f2;background:#f7f9fd;border-radius:7px;padding:2px 7px;font-size:.74rem;font-weight:700;color:#2f4b8f}
+ .new{background:#2f6bf2;color:#fff;border-radius:999px;padding:1px 7px;font-size:.72rem;font-weight:800}
+ .pill{border-radius:999px;padding:1px 8px;font-size:.72rem;font-weight:800;background:#f1f1f1}
+ @media(max-width:1000px){.tgt{grid-template-columns:1fr 1fr}.row3{grid-template-columns:1fr 1fr}}
+</style>
+<div class="erp">
+  <div class="erp-head"><div><a href="/admin-hub/growth/" class="muted" style="font-weight:700">← Campagnes</a>
+    <h1>{{ c.name }} <span class="bdg2 {% if c.status == 'active' %}ok{% elif c.status == 'done' %}off{% else %}idle{% endif %}" style="vertical-align:middle">{{ c.get_status_display }}</span></h1>
+    {% if c.goal %}<div class="muted">{{ c.goal }}</div>{% endif %}</div>
+    <form method="post" style="display:flex;gap:6px;align-items:center">{% csrf_token %}
+      <span class="muted">{{ matched|length }} communauté{{ matched|length|pluralize }} ciblée{{ matched|length|pluralize }}</span>
+      <button class="pbtn pri bolt" name="op" value="generate" data-confirm="Générer les actions ciblées ?" data-confirm-text="Une publication personnalisée (meilleur modèle de la bibliothèque, lien traqué unique) sera préparée pour chacune des {{ matched|length }} communautés ciblées. Rien n'est publié automatiquement." data-ok="Générer">⚡ Générer les actions ciblées</button></form>
+  </div>
+  {% include "admin/_growth_tabs.html" %}
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Actions</div><div class="v">{{ st.tot.posted }}/{{ st.tot.actions }}</div><div class="muted">publiées / préparées{% if st.tot.ads %} · {{ st.tot.ads }} pub{{ st.tot.ads|pluralize }}{% endif %}</div></div>
+    <div class="kpi"><div class="l">Visiteurs</div><div class="v">{{ st.tot.clicks }}</div>{% if st.tot.ad_views %}<div class="muted">{{ st.tot.ad_views }} vues de pubs</div>{% endif %}</div>
+    <div class="kpi"><div class="l">Ventes</div><div class="v">{{ st.tot.orders }}</div><div class="muted">{% if st.tot.conv is not None %}{{ st.tot.conv }} % de conversion{% endif %}{% if st.tot.code_uses %} · code utilisé {{ st.tot.code_uses }}×{% endif %}</div></div>
+    <div class="kpi"><div class="l">CA attribué</div><div class="v">{{ st.tot.revenue|floatformat:"2g" }} €</div><div class="muted">budget {{ c.budget|floatformat:"0g" }} €{% if st.tot.roi is not None %} · ROI {{ st.tot.roi }} %{% endif %}</div></div>
+    <div class="kpi"><div class="l">Réponses à traiter</div><div class="v">{% if st.tot.replies %}<span class="new">{{ st.tot.replies }}</span>{% else %}0{% endif %}</div></div>
+  </div>
+
+  <details class="card" {% if not st.posts %}open{% endif %}><summary style="cursor:pointer;font-weight:800">🎯 Ciblage &amp; réglages</summary>
+    <form method="post" style="margin-top:12px">{% csrf_token %}<input type="hidden" name="op" value="save">
+      <div class="row3">
+        <input type="text" name="name" value="{{ c.name }}" placeholder="Nom">
+        <select name="status">{% for k, l in statuses %}<option value="{{ k }}" {% if c.status == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+        <input type="date" name="start" value="{{ c.start|date:'Y-m-d' }}"><input type="date" name="end" value="{{ c.end|date:'Y-m-d' }}">
+        <input type="number" name="budget" step="1" min="0" value="{{ c.budget|floatformat:0 }}" placeholder="Budget €">
+      </div>
+      <textarea name="goal" rows="2" style="width:100%;box-sizing:border-box;margin-bottom:12px" placeholder="Objectif / message clé (ex. Fête des mères : le cadeau qu'elle peint elle-même)">{{ c.goal }}</textarea>
+      <div class="tgt">
+        <fieldset><legend>Zones</legend>{% for k, l in regions %}<label><input type="checkbox" name="regions" value="{{ k }}" {% if k in c.region_list %}checked{% endif %}> {{ l }}</label>{% endfor %}</fieldset>
+        <fieldset><legend>Langues</legend>{% for l in langs %}<label><input type="checkbox" name="langs" value="{{ l }}" {% if l in c.lang_list %}checked{% endif %}> {{ l|upper }}</label>{% endfor %}</fieldset>
+        <fieldset><legend>Canaux</legend>{% for k, l in platforms %}<label><input type="checkbox" name="platforms" value="{{ k }}" {% if k in c.platform_list %}checked{% endif %}> {{ l }}</label>{% endfor %}</fieldset>
+        <fieldset><legend>Thèmes de contenu</legend>{% for k, l in categories %}<label><input type="checkbox" name="categories" value="{{ k }}" {% if k in c.category_list %}checked{% endif %}> {{ l }}</label>{% endfor %}</fieldset>
+      </div>
+      <div class="row3" style="margin-top:12px;grid-template-columns:1fr 1fr 1fr 1fr">
+        <select name="min_priority">{% for k in "123" %}<option value="{{ k }}" {% if c.min_priority|stringformat:"s" == k %}selected{% endif %}>Communautés de priorité ≤ {{ k }}</option>{% endfor %}</select>
+        <input type="text" name="target_path" value="{{ c.target_path }}" placeholder="Page cible (/create/, /play/…)">
+        <select name="discount"><option value="">Pas de code promo</option>{% for d in discounts %}<option value="{{ d.pk }}" {% if c.discount_id == d.pk %}selected{% endif %}>{{ d.code }} (-{{ d.percent }} %)</option>{% endfor %}</select>
+        <span></span>
+      </div>
+      <label class="sw"><input type="checkbox" name="exclude_forbidden" {% if c.exclude_forbidden %}checked{% endif %}> Exclure les communautés où l'autopromotion est interdite</label>
+      <label class="sw" style="margin-top:6px"><input type="checkbox" name="append_code" {% if c.append_code %}checked{% endif %}> Ajouter le code promo à la fin des textes (sinon : seulement là où le modèle contient {code})</label>
+      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px">
+        <button class="pbtn sm" name="op" value="delete" data-confirm="Supprimer la campagne {{ c.name }} ?" data-danger style="color:#b42318">Supprimer</button>
+        <button class="pbtn pri">Enregistrer le ciblage</button></div>
+    </form>
+    <form method="post" style="display:flex;gap:6px;align-items:center;margin-top:10px">{% csrf_token %}<input type="hidden" name="op" value="new_code">
+      <span class="muted" style="font-size:.8rem">Créer un code promo dédié à la campagne :</span>
+      <input type="number" name="percent" value="10" min="1" max="50" style="width:70px"> %<button class="pbtn sm">Créer &amp; rattacher</button></form>
+    <div class="muted" style="font-size:.78rem;margin-top:10px">Communautés ciblées actuellement : {% for m in matched %}{{ m.name }}{% if not forloop.last %}, {% endif %}{% empty %}aucune (élargissez le ciblage ou chargez l'annuaire).{% endfor %}</div>
+  </details>
+
+  {% if st.channels %}<div class="card"><div class="card-h"><h2>Retombées par canal</h2></div>
+    <table class="t"><tr><th>Canal</th><th class="r">Actions</th><th class="r">Publiées</th><th class="r">Visiteurs</th><th class="r">Ventes</th><th class="r">CA</th></tr>
+      {% for k, ch in st.channels.items %}<tr><td><b>{{ k }}</b></td><td class="r">{{ ch.actions }}</td><td class="r">{{ ch.posted }}</td><td class="r">{{ ch.clicks }}</td><td class="r">{{ ch.orders }}</td><td class="r">{{ ch.revenue|floatformat:"2g" }} €</td></tr>{% endfor %}
+    </table></div>{% endif %}
+
+  <div class="card">
+    <div class="card-h"><h2>Actions de diffusion</h2>
+      <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="refresh">Actualiser les stats Reddit</button></form></div>
+    <div style="overflow-x:auto"><table class="t">
+      <tr><th>Communauté</th><th>Contenu personnalisé</th><th>Lien</th><th class="r">Visiteurs</th><th class="r">Ventes</th><th class="r">Score</th><th class="r">Com.</th><th></th></tr>
+      {% for o in st.posts %}<tr>
+        <td>{{ o.community.name|default:"—" }}<div class="muted">{{ o.community.get_platform_display }} · {{ o.community.lang|upper }}</div>{% if o.removed %}<span class="pill" style="background:#fedad9;color:#8e1f0b">retirée</span>{% endif %}</td>
+        <td style="max-width:380px"><b>{{ o.title|truncatechars:90 }}</b>{% if o.template %}<div class="muted" style="font-size:.72rem">modèle : {{ o.template.name }} · {{ o.template.get_media_kind_display }}{% if o.template.media_brief %} — 🎬 {{ o.template.media_brief|truncatechars:90 }}{% endif %}</div>{% endif %}
+          {% if o.posted_url %}<div><a href="{{ o.posted_url }}" target="_blank">voir la publication ↗</a> · {{ o.posted_at|date:"d/m" }}</div>
+          {% else %}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">{% if o.submit %}<a class="pbtn sm" href="{{ o.submit }}" target="_blank" rel="noopener">Ouvrir pré-rempli ↗</a>{% elif o.community %}<a class="pbtn sm" href="{{ o.community.url }}" target="_blank" rel="noopener">Ouvrir la communauté ↗</a>{% endif %}
+            <button type="button" class="copy" data-copy="{{ o.title }}&#10;&#10;{{ o.body }}">Copier le texte</button>
+            {% if o.template.media %}<a class="copy" href="{{ o.template.media.url }}" download>⬇ média</a>{% endif %}</div>
+            <form method="post" style="display:flex;gap:6px;margin-top:6px">{% csrf_token %}<input type="hidden" name="op" value="mark_posted"><input type="hidden" name="id" value="{{ o.pk }}">
+              <input type="url" name="posted_url" placeholder="URL une fois publié" required style="flex:1;min-width:140px"><button class="pbtn sm">Publié</button></form>{% endif %}</td>
+        <td><button type="button" class="copy" data-copy="{{ o.link }}">{{ o.code }} ⧉</button></td>
+        <td class="r"><b>{{ o.unique_clicks }}</b></td><td class="r">{{ o.orders }}{% if o.revenue %}<div class="muted">{{ o.revenue|floatformat:"2g" }} €</div>{% endif %}</td>
+        <td class="r">{{ o.score|default_if_none:"—" }}</td>
+        <td class="r">{{ o.comments|default_if_none:"—" }}{% if o.new_replies %} <span class="new">+{{ o.new_replies }}</span><form method="post" style="display:inline">{% csrf_token %}<input type="hidden" name="id" value="{{ o.pk }}"><button class="copy" name="op" value="seen">lu</button></form>{% endif %}</td>
+        <td><form method="post">{% csrf_token %}<input type="hidden" name="id" value="{{ o.pk }}"><button class="pbtn sm" name="op" value="del_post" data-confirm="Retirer cette action ?" data-danger>×</button></form></td>
+      </tr>{% empty %}<tr><td colspan="8" class="muted">Aucune action : réglez le ciblage puis cliquez sur « ⚡ Générer les actions ciblées ».</td></tr>{% endfor %}
+    </table></div>
+  </div>
+
+  <div class="card"><div class="card-h"><h2>Pubs A/B de la campagne</h2><a class="pbtn sm" href="/marketing/?campaign={{ c.name|urlencode }}">+ Créer une pub pour cette campagne</a></div>
+    {% if st.ads %}<table class="t"><tr><th>Pub</th><th class="r">Vues</th><th class="r">Visiteurs</th><th class="r">Ventes</th><th class="r">CA</th></tr>
+      {% for a in st.ads %}<tr><td><b>{{ a.variant }}</b> · {{ a.kind }} <span class="muted">{{ a.image_uid }}</span></td><td class="r">{{ a.views }}</td><td class="r">{{ a.unique_clicks }}</td><td class="r">{{ a.orders }}</td><td class="r">{{ a.revenue|floatformat:"2g" }} €</td></tr>{% endfor %}</table>
+    {% else %}<div class="muted">Aucune pub rattachée. Les pubs créées avec le nom de campagne « {{ c.name }} » apparaissent ici automatiquement.</div>{% endif %}
+  </div>
+</div>
+<script>
+document.querySelectorAll('.copy[data-copy]').forEach(function(b){b.addEventListener('click',function(){
+  navigator.clipboard.writeText(b.dataset.copy).then(function(){var t=b.textContent;b.textContent='copié ✓';setTimeout(function(){b.textContent=t},1200);});});});
+</script>
+{% endblock %}

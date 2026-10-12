@@ -50,7 +50,7 @@ code{background:var(--bg3);padding:1px 5px;border-radius:5px}
       <div>
         <label>Lien cible (où mène le clic)</label><input type="text" name="link" value="{{ link }}">
         <p class="hint">Chaque pub reçoit son propre lien traqué <code>/go/…</code> qui compte les clics puis redirige ici (avec UTM).</p>
-        <div class="row2"><div><label>Campagne</label><input type="text" name="campaign" value="{{ campaign }}" placeholder="Fête des mères"></div>
+        <div class="row2"><div><label>Campagne</label><input type="text" name="campaign" value="{{ campaign }}" placeholder="Fête des mères" list="camplist"><datalist id="camplist">{% for n in campaign_names %}<option value="{{ n }}">{% endfor %}</datalist></div>
         <div><label>Nom de la variante</label><input type="text" name="variant" value="" placeholder="auto : A, B, C…"></div></div>
         <label>Couleurs de la toile</label><input type="number" name="colors" value="{{ colors }}" min="2" max="48">
       </div>
