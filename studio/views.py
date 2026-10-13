@@ -2173,6 +2173,14 @@ def _sup_color(name):
     return cols[int(hashlib.md5((name or "?").encode()).hexdigest(), 16) % len(cols)]
 
 
+SUPPLIER_CHANNELS = [
+    ("woo", "MangoERP direct", "L'ERP du fournisseur récupère les commandes (API WooCommerce)"),
+    ("shopify", "Shopify", "Commandes recréées dans votre boutique Shopify relais"),
+    ("api", "API", "POST JSON signé vers le serveur du fournisseur"),
+    ("email", "E-mail", "Commande + fichiers (et Excel ERP) par e-mail"),
+]
+
+
 def _sup_card(sup):
     from . import erp
     sup.stats = erp.supplier_stats(sup)
@@ -2298,6 +2306,15 @@ def erp_supplier(request, pk):
                         request, "%d commande(s) créée(s) dans Shopify%s." % (n, (", %d échec(s) (voir journal)" % ko) if ko else ""))
             except Exception as exc:
                 messages.error(request, "Shopify : %s" % exc)
+        elif op == "channel":
+            ch = request.POST.get("integration", "")
+            if ch in dict(Supplier.INTEGRATIONS) and ch != sup.integration:
+                sup.integration = ch
+                sup.save(update_fields=["integration"])
+                if ch == "woo" and not (sup.woo or {}).get("ck"):
+                    from . import woo_api
+                    woo_api.generate_keys(sup)
+                messages.success(request, "Canal d'intégration : %s." % sup.get_integration_display())
         elif op in ("woo_keys", "woo_revoke"):
             from . import woo_api
             if op == "woo_keys":
@@ -2373,6 +2390,7 @@ def erp_supplier(request, pk):
     return render(request, "admin/erp_supplier.html", {
         "automation": automation, "due": due, "due_total": round(sum(o.cost or 0 for o in due), 2), "paid": paid,
         "xl": (sup.offer or {}).get("xlsx") or {},
+        "channels": SUPPLIER_CHANNELS,
         "woo": sup.woo or {}, "woo_site": settings.SITE_URL,
         "woo_logs": sup.connector_logs.all()[:15] if sup.integration == "woo" or (sup.woo or {}).get("ck") else [],
         "shop": sup.shopify or {}, "shop_hook": __import__("studio.shopify", fromlist=["x"]).webhook_url(sup),
@@ -2437,7 +2455,8 @@ def erp_supplier_edit(request, pk=None):
         ("Banque", "Coordonnées de paiement du fournisseur.", ["bank_name", "iban", "bic"]),
         ("Notes internes", "", ["notes"]),
     ]
-    sec = [{"title": t, "help": h, "fields": [f[n] for n in names if n in f.fields]} for t, h, names in sections]
+    sec = [{"title": t, "help": h, "fields": [f[n] for n in names if n in f.fields], "custom": t == "Intégration"}
+           for t, h, names in sections]
     from .models import COLOR_COUNTS, Supplier as _S
     o = (sup.offer if sup else None) or {}
     g = lambda grp, k: ((o.get(grp) or {}).get(str(k)) or {})
@@ -2450,7 +2469,7 @@ def erp_supplier_edit(request, pk=None):
     xl = o.get("xlsx") or {}
     xcols = [{"i": i, "header": h, "field": (xl.get("map") or {}).get(str(i), "")} for i, h in enumerate(xl.get("headers") or [])]
     return render(request, "admin/erp_supplier_form.html", {
-        **_admin.site.each_context(request), "form": form, "sup": sup, "sections": sec, "offer": offer,
+        **_admin.site.each_context(request), "form": form, "sup": sup, "sections": sec, "channels": SUPPLIER_CHANNELS, "offer": offer,
         "xl": xl, "xcols": xcols, "xfields": xlsx_bridge.FIELDS, "xsku_default": xlsx_bridge.DEFAULT_SKU,
         "erp_section": "suppliers"})
 

@@ -43,7 +43,7 @@
   {% if form.errors %}<div class="banner err"><span><b>Le formulaire contient des erreurs</b> : corrigez les champs signalés en rouge.</span></div>{% endif %}
   {% if form.non_field_errors %}<div class="banner err"><span>{{ form.non_field_errors|join:" " }}</span></div>{% endif %}
   <form method="post" id="supform" enctype="multipart/form-data">{% csrf_token %}
-    {% for s in sections %}
+    {% for s in sections %}{% if s.custom %}{% include "admin/_supplier_integration_form.html" %}{% else %}
     <div class="pf-sec">
       <div><h2>{{ s.title }}</h2>{% if s.help %}<p>{{ s.help }}</p>{% endif %}</div>
       <div class="pf-box">
@@ -57,7 +57,7 @@
         {% endfor %}
       </div>
     </div>
-    {% endfor %}
+    {% endif %}{% endfor %}
     <div class="pf-sec">
       <div><h2>Offre &amp; tarifs</h2><p>Ce que ce fournisseur sait produire et son prix d'achat HT par option (€). Les formats sont ceux de l'onglet <a href="/admin-tarifs/">Tarifs</a> : ajoutez-y un format pour le voir ici. Non coché = non proposé.</p></div>
       <div class="pf-box one">
@@ -93,41 +93,6 @@
         <div class="pf-f" style="justify-content:flex-end"><label class="sw"><input type="checkbox" name="tax_vat_recoverable" {% if offer.taxes.vat_recoverable %}checked{% endif %}> TVA récupérable</label>
           <span class="hlp">Décochez si la TVA payée au fournisseur ne peut pas être déduite : elle est alors ajoutée au coût.</span></div>
         <span class="hlp wide" style="grid-column:1/-1">Les coûts produit saisis ci-dessus s'entendent <b>hors taxes</b>.</span>
-      </div>
-    </div>
-    <div class="pf-sec" id="shopify">
-      <div><h2>Shopify (relais ERP)</h2><p>Si le fournisseur travaille via Shopify (ex. Yingsa Art avec MangoERP) : PaintIt reste votre site et encaisse avec Stripe, et chaque commande payée est recréée automatiquement dans <b>votre</b> boutique Shopify, où son ERP la récupère. Son expédition revient ici automatiquement (suivi + e-mail client).<br><br>Choisissez « Shopify » dans <b>Intégration</b> ci-dessus.</p></div>
-      <div class="pf-box">
-        <div class="pf-f wide"><label>Boutique (domaine myshopify)</label><input type="text" name="shop_domain" value="{{ sup.shopify.domain|default:'' }}" placeholder="ma-boutique.myshopify.com"></div>
-        <div class="pf-f"><label>Client ID (app du Dev Dashboard)</label><input type="text" name="shop_client_id" value="{{ sup.shopify.client_id|default:'' }}" autocomplete="off"></div>
-        <div class="pf-f"><label>Client secret {% if sup.shopify.client_secret %}<span class="muted">· enregistré</span>{% endif %}</label><input type="password" name="shop_client_secret" value="" placeholder="{% if sup.shopify.client_secret %}•••••• (inchangé){% endif %}" autocomplete="new-password">
-          {% if sup.shopify.client_secret %}<label class="sw" style="font-size:.76rem"><input type="checkbox" name="shop_clear_client_secret" value="1"> effacer</label>{% endif %}</div>
-        <div class="pf-f"><label>OU jeton Admin API (ancienne app, shpat_…) {% if sup.shopify.static_token %}<span class="muted">· enregistré</span>{% endif %}</label><input type="password" name="shop_static_token" value="" placeholder="{% if sup.shopify.static_token %}•••••• (inchangé){% endif %}" autocomplete="new-password">
-          {% if sup.shopify.static_token %}<label class="sw" style="font-size:.76rem"><input type="checkbox" name="shop_clear_static_token" value="1"> effacer</label>{% endif %}</div>
-        <div class="pf-f"><label>Version d'API</label><input type="text" name="shop_api_version" value="{{ sup.shopify.api_version|default:'' }}" placeholder="2025-07"></div>
-        <span class="hlp" style="grid-column:1/-1">Shopify → Paramètres → Applications → Développer des apps (Dev Dashboard) → créer une app installée sur votre boutique avec les accès <code>write_orders, read_orders, write_products, read_products, read_fulfillments, read_merchant_managed_fulfillment_orders</code>, puis copier Client ID / Client secret. Le jeton (24 h) est renouvelé automatiquement.</span>
-      </div>
-    </div>
-    <div class="pf-sec" id="erp-excel">
-      <div><h2>ERP du fournisseur (Excel)</h2><p>Pour un fournisseur qui travaille avec un ERP (MangoERP / 芒果店长…) <b>sans passer par Shopify</b> : il crée chez lui un « magasin personnalisé » (自定义店铺) et importe nos commandes avec « Excel导入手工订单 ». Téléversez son modèle Excel : PaintIt le remplira à chaque commande.</p></div>
-      <div class="pf-box one">
-        {% if xl.template %}
-          <div><b>Modèle : {{ xl.name }}</b> <span class="muted">· {{ xl.headers|length }} colonnes (en-têtes ligne {{ xl.header_row }})</span></div>
-          <table class="of"><tr><th>Colonne du modèle</th><th>Rempli avec</th></tr>
-            {% for c in xcols %}<tr><td>{{ c.header|default:"(sans titre)" }}</td><td><select name="xmap_{{ c.i }}"><option value="">— laisser vide —</option>
-              {% for k, lbl, kw in xfields %}<option value="{{ k }}" {% if c.field == k %}selected{% endif %}>{{ lbl }}</option>{% endfor %}</select></td></tr>{% endfor %}
-          </table>
-          <div class="pf-f"><label>Modèle de SKU</label><input type="text" name="xlsx_sku" value="{{ xl.sku|default:xsku_default }}">
-            <span class="hlp">Doit correspondre au SKU créé par le fournisseur dans son ERP. Variables : {format} (ex. 40x50), {colors} (ex. 24), {brushes} (B si pinceaux).</span></div>
-          <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="pf-f"><label>N° IOSS (envois hors UE → UE ≤ 150 €)</label><input type="text" name="xlsx_ioss" value="{{ xl.ioss|default:'' }}" placeholder="IM2500000000"></div>
-            <div class="pf-f"><label>Transporteur à demander</label><input type="text" name="xlsx_logistics" value="{{ xl.logistics|default:'' }}" placeholder="ex. YunExpress, laisser vide = au choix"></div>
-          </div>
-          <label class="sw"><input type="checkbox" name="xlsx_attach" {% if xl.attach %}checked{% endif %}> Joindre ce fichier Excel à chaque commande envoyée par e-mail</label>
-          <label class="sw"><input type="checkbox" name="xlsx_remove" value="1"> Retirer le modèle</label>
-        {% else %}<div class="muted">Aucun modèle : l'export utilisera un format standard (une colonne par champ, libellés FR + clés).</div>{% endif %}
-        <div class="pf-f"><label>{% if xl.template %}Remplacer le modèle{% else %}Modèle Excel du fournisseur (.xlsx){% endif %}</label><input type="file" name="xlsx_template" accept=".xlsx,.xlsm">
-          <span class="hlp">Dans MangoERP : Commandes (订单) → Créer une commande manuelle (手工创建订单) → télécharger « Excel模板 ». Les colonnes sont associées automatiquement (chinois, anglais, français), vérifiez-les ensuite.</span></div>
       </div>
     </div>
     <div class="pf-sec" id="nuancier-edit">

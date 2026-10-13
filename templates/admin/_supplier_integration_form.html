@@ -1,0 +1,64 @@
+{# Section Integration de la fiche fournisseur : un seul bloc, panneaux selon le canal choisi #}
+<div class="pf-sec" id="integration">
+  <div><h2>Intégration</h2><p>Comment les commandes payées parviennent au fournisseur, et comment son suivi d'expédition revient. Un seul canal actif ; l'Excel reste disponible en secours.</p></div>
+  <div class="pf-box one">
+    <div class="chsel">{% for k, l, d in channels %}<label class="{% if form.integration.value == k %}on{% endif %}"><input type="radio" name="integration" value="{{ k }}" {% if form.integration.value == k %}checked{% endif %}><b>{{ l }}</b><small>{{ d }}</small></label>{% endfor %}</div>
+    <label class="sw">{{ form.auto_dispatch }} {{ form.auto_dispatch.label }}</label>
+    <div class="chp" data-ch="woo"><p class="hlp" style="margin:0">Aucun réglage ici : après enregistrement, la fiche affiche l'URL et les clés <b>consumerKey / consumerSecret</b> à saisir dans MangoERP (授权 → WooCommerce).</p></div>
+    <div class="chp" data-ch="email"><div class="pf-f"><label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>{{ form.email }}{% for e in form.email.errors %}<span class="err">{{ e }}</span>{% endfor %}</div></div>
+    <div class="chp" data-ch="api" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="pf-f"><label for="{{ form.api_url.id_for_label }}">{{ form.api_url.label }}</label>{{ form.api_url }}{% for e in form.api_url.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+      <div class="pf-f"><label for="{{ form.api_key.id_for_label }}">{{ form.api_key.label }}</label>{{ form.api_key }}</div></div>
+    <div class="chp" data-ch="shopify">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="pf-f wide"><label>Boutique (domaine myshopify)</label><input type="text" name="shop_domain" value="{{ sup.shopify.domain|default:'' }}" placeholder="ma-boutique.myshopify.com"></div>
+        <div class="pf-f"><label>Client ID (app du Dev Dashboard)</label><input type="text" name="shop_client_id" value="{{ sup.shopify.client_id|default:'' }}" autocomplete="off"></div>
+        <div class="pf-f"><label>Client secret {% if sup.shopify.client_secret %}<span class="muted">· enregistré</span>{% endif %}</label><input type="password" name="shop_client_secret" value="" placeholder="{% if sup.shopify.client_secret %}•••••• (inchangé){% endif %}" autocomplete="new-password">
+          {% if sup.shopify.client_secret %}<label class="sw" style="font-size:.76rem"><input type="checkbox" name="shop_clear_client_secret" value="1"> effacer</label>{% endif %}</div>
+        <div class="pf-f"><label>OU jeton Admin API (ancienne app, shpat_…) {% if sup.shopify.static_token %}<span class="muted">· enregistré</span>{% endif %}</label><input type="password" name="shop_static_token" value="" placeholder="{% if sup.shopify.static_token %}•••••• (inchangé){% endif %}" autocomplete="new-password">
+          {% if sup.shopify.static_token %}<label class="sw" style="font-size:.76rem"><input type="checkbox" name="shop_clear_static_token" value="1"> effacer</label>{% endif %}</div>
+        <div class="pf-f"><label>Version d'API</label><input type="text" name="shop_api_version" value="{{ sup.shopify.api_version|default:'' }}" placeholder="2025-07"></div>
+        <span class="hlp" style="grid-column:1/-1">Shopify → Paramètres → Applications → Développer des apps (Dev Dashboard) → créer une app installée sur votre boutique avec les accès <code>write_orders, read_orders, write_products, read_products, read_fulfillments, read_merchant_managed_fulfillment_orders</code>, puis copier Client ID / Client secret. Le jeton (24 h) est renouvelé automatiquement.</span>
+      </div>
+    </div>
+    <details class="chx" id="erp-excel"><summary>Excel ERP (import manuel / secours){% if xl.template %} · modèle {{ xl.headers|length }} colonnes{% endif %}</summary>
+      <p class="hlp">Le fournisseur importe ce fichier dans son ERP (MangoERP → 自定义店铺 → Excel导入手工订单). Téléversez son modèle : PaintIt le remplit à chaque commande.</p>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        {% if xl.template %}
+          <div><b>Modèle : {{ xl.name }}</b> <span class="muted">· {{ xl.headers|length }} colonnes (en-têtes ligne {{ xl.header_row }})</span></div>
+          <table class="of"><tr><th>Colonne du modèle</th><th>Rempli avec</th></tr>
+            {% for c in xcols %}<tr><td>{{ c.header|default:"(sans titre)" }}</td><td><select name="xmap_{{ c.i }}"><option value="">— laisser vide —</option>
+              {% for k, lbl, kw in xfields %}<option value="{{ k }}" {% if c.field == k %}selected{% endif %}>{{ lbl }}</option>{% endfor %}</select></td></tr>{% endfor %}
+          </table>
+          <div class="pf-f"><label>Modèle de SKU</label><input type="text" name="xlsx_sku" value="{{ xl.sku|default:xsku_default }}">
+            <span class="hlp">Doit correspondre au SKU créé par le fournisseur dans son ERP. Variables : {format} (ex. 40x50), {colors} (ex. 24), {brushes} (B si pinceaux).</span></div>
+          <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="pf-f"><label>N° IOSS (envois hors UE → UE ≤ 150 €)</label><input type="text" name="xlsx_ioss" value="{{ xl.ioss|default:'' }}" placeholder="IM2500000000"></div>
+            <div class="pf-f"><label>Transporteur à demander</label><input type="text" name="xlsx_logistics" value="{{ xl.logistics|default:'' }}" placeholder="ex. YunExpress, laisser vide = au choix"></div>
+          </div>
+          <label class="sw"><input type="checkbox" name="xlsx_attach" {% if xl.attach %}checked{% endif %}> Joindre ce fichier Excel à chaque commande envoyée par e-mail</label>
+          <label class="sw"><input type="checkbox" name="xlsx_remove" value="1"> Retirer le modèle</label>
+        {% else %}<div class="muted">Aucun modèle : l'export utilisera un format standard (une colonne par champ, libellés FR + clés).</div>{% endif %}
+        <div class="pf-f"><label>{% if xl.template %}Remplacer le modèle{% else %}Modèle Excel du fournisseur (.xlsx){% endif %}</label><input type="file" name="xlsx_template" accept=".xlsx,.xlsm">
+          <span class="hlp">Dans MangoERP : Commandes (订单) → Créer une commande manuelle (手工创建订单) → télécharger « Excel模板 ». Les colonnes sont associées automatiquement (chinois, anglais, français), vérifiez-les ensuite.</span></div>
+      </div>
+    </details>
+  </div>
+</div>
+<style>
+ .chsel{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+ .chsel label{cursor:pointer;border:1.5px solid #e3e3e3;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;background:#fff}
+ .chsel label.on{border-color:#2f6bf2;box-shadow:0 0 0 3px rgba(47,107,242,.12);background:#f5f8ff}
+ .chsel input{position:absolute;opacity:0;pointer-events:none}
+ .chsel b{font-size:.86rem;color:#12224f}.chsel small{font-size:.72rem;color:#6d7175;line-height:1.3}
+ .chp .hlp,.chx .hlp{font-size:.76rem;color:#6d7175;line-height:1.5}
+ .chx>summary{cursor:pointer;font-weight:800;font-size:.86rem}
+ @media(max-width:860px){.chsel{grid-template-columns:1fr 1fr}}
+</style>
+<script>
+(function(){var box=document.getElementById('integration');
+  function sync(){var v=(box.querySelector('input[name=integration]:checked')||{}).value;
+    box.querySelectorAll('.chsel label').forEach(function(l){l.classList.toggle('on',l.querySelector('input').checked);});
+    box.querySelectorAll('.chp').forEach(function(p){p.style.display=p.dataset.ch===v?'':'none';});}
+  box.querySelectorAll('input[name=integration]').forEach(function(r){r.addEventListener('change',sync);});sync();})();
+</script>

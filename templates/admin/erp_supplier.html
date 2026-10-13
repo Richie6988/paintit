@@ -57,29 +57,24 @@
         </div>
       </div>
 
-      {% if sup.integration == "shopify" %}
-      <div class="card">
-        <div class="card-h"><h2>Shopify → ERP du fournisseur</h2>{% if shop.domain and shop.last_check %}<span class="bdg2 ok">Connecté</span>{% elif shop.domain %}<span class="bdg2 warn">À tester</span>{% else %}<span class="bdg2 err">Non configuré</span>{% endif %}</div>
-        <ol class="muted" style="margin:0 0 12px;padding-left:18px;font-size:.84rem;line-height:1.7">
-          <li>{% if shop.domain %}✅{% else %}⬜{% endif %} Boutique : <b>{{ shop.shop_name|default:shop.domain|default:"—" }}</b> <a href="/admin-hub/suppliers/{{ sup.pk }}/edit/#shopify">configurer</a></li>
-          <li>{% if shop.catalogue_synced %}✅{% else %}⬜{% endif %} Catalogue publié (SKU <code>PBN-40x50-24C</code>…){% if shop.variants %} · {{ shop.variants|length }} variantes{% endif %} — à associer par le fournisseur dans son ERP</li>
-          <li>{% if shop.webhooks %}✅{% else %}⬜{% endif %} Retours d'expédition automatiques{% if shop.webhooks %} ({{ shop.webhooks|length }} webhooks){% endif %}</li>
-          <li>Le fournisseur autorise sa connexion MangoERP sur votre boutique (côté Shopify : installer l'app MangoERP et lui donner l'accès).</li>
-        </ol>
-        <form method="post" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">{% csrf_token %}
-          <button class="pbtn" name="op" value="shop_test">Tester la connexion</button>
-          <button class="pbtn" name="op" value="shop_catalog">Publier le catalogue</button>
-          <button class="pbtn" name="op" value="shop_webhooks">Activer les retours</button>
-          <button class="pbtn" name="op" value="shop_poll">Synchroniser les suivis</button>
-          {% if shop_pending %}<button class="pbtn pri" style="grid-column:1/-1" name="op" value="shop_push" data-confirm="Créer {{ shop_pending }} commande(s) dans Shopify ?" data-ok="Envoyer">Envoyer {{ shop_pending }} commande(s) en attente vers Shopify</button>{% endif %}
+<style>
+ .chsel{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 14px}
+ .chsel button{all:unset;cursor:pointer;border:1.5px solid #e3e3e3;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;background:#fff;transition:border-color .15s,box-shadow .15s}
+ .chsel button:hover{border-color:#9db4f5}
+ .chsel button.on{border-color:#2f6bf2;box-shadow:0 0 0 3px rgba(47,107,242,.12);background:#f5f8ff}
+ .chsel b{font-size:.86rem;color:#12224f}.chsel small{font-size:.72rem;color:#6d7175;line-height:1.3}
+ .chpanel{padding:2px 0 12px}
+ .chfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid #eee;padding-top:12px}
+ .chx{margin-top:12px;border-top:1px solid #eee;padding-top:10px}.chx>summary{cursor:pointer;font-weight:800;font-size:.84rem}
+ @media(max-width:860px){.chsel{grid-template-columns:1fr 1fr}}
+</style>
+      <div class="card" id="integration">
+        <div class="card-h"><h2>Intégration</h2><span style="display:flex;gap:6px">{% if sup.channel %}<span class="bdg2 info">{{ sup.channel }}</span>{% else %}<span class="bdg2 err">Canal à configurer</span>{% endif %}{% if sup.auto_dispatch %}<span class="bdg2 ok">Automatique</span>{% else %}<span class="bdg2 warn">Manuelle</span>{% endif %}</span></div>
+        <form method="post" class="chsel">{% csrf_token %}<input type="hidden" name="op" value="channel">
+          {% for k, l, d in channels %}<button name="integration" value="{{ k }}" class="{% if sup.integration == k %}on{% endif %}"><b>{{ l }}</b><small>{{ d }}</small></button>{% endfor %}
         </form>
-        <div class="muted" style="font-size:.74rem;margin-top:8px;word-break:break-all">Webhook : {{ shop_hook }}{% if shop.last_check %} · vérifié le {{ shop.last_check|slice:":10" }}{% endif %}</div>
-      </div>
-      {% endif %}
-
-      {% if sup.integration == "woo" or woo.ck %}
-      <div class="card" id="woo">
-        <div class="card-h"><h2>Connecteur MangoERP (API WooCommerce)</h2>{% if woo.ck and woo.last_seen %}<span class="bdg2 ok">ERP connecté</span>{% elif woo.ck %}<span class="bdg2 warn">En attente de l'ERP</span>{% else %}<span class="bdg2 err">Clés à générer</span>{% endif %}</div>
+        <div class="chpanel">
+        {% if sup.integration == "woo" %}
         <p class="muted" style="margin:0 0 10px">L'ERP du fournisseur voit paintit.click comme une boutique WooCommerce et vient chercher seul les commandes payées qui lui sont transmises (SKU, adresse, fichiers de production), puis renvoie les n° de suivi. Aucun prix d'achat n'est exposé.</p>
         {% if woo.ck %}
         <ol class="muted" style="margin:0 0 12px;padding-left:18px;font-size:.84rem;line-height:1.8">
@@ -103,11 +98,57 @@
             {% if l.body %}<tr><td></td><td colspan="3"><code style="font-size:.7rem;word-break:break-all">{{ l.body|truncatechars:300 }}</code></td></tr>{% endif %}{% endfor %}
           </table></details>
         {% endif %}
-      </div>
-      {% endif %}
+        {% elif sup.integration == "shopify" %}
+        <p class="muted" style="margin:0 0 10px">Chaque commande payée est recréée dans votre boutique Shopify, où l'ERP du fournisseur la récupère ; l'expédition revient ici.</p>
+        <ol class="muted" style="margin:0 0 12px;padding-left:18px;font-size:.84rem;line-height:1.7">
+          <li>{% if shop.domain %}✅{% else %}⬜{% endif %} Boutique : <b>{{ shop.shop_name|default:shop.domain|default:"—" }}</b> <a href="/admin-hub/suppliers/{{ sup.pk }}/edit/#integration">configurer</a></li>
+          <li>{% if shop.catalogue_synced %}✅{% else %}⬜{% endif %} Catalogue publié (SKU <code>PBN-40x50-24C</code>…){% if shop.variants %} · {{ shop.variants|length }} variantes{% endif %} — à associer par le fournisseur dans son ERP</li>
+          <li>{% if shop.webhooks %}✅{% else %}⬜{% endif %} Retours d'expédition automatiques{% if shop.webhooks %} ({{ shop.webhooks|length }} webhooks){% endif %}</li>
+          <li>Le fournisseur autorise sa connexion MangoERP sur votre boutique (côté Shopify : installer l'app MangoERP et lui donner l'accès).</li>
+        </ol>
+        <form method="post" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">{% csrf_token %}
+          <button class="pbtn" name="op" value="shop_test">Tester la connexion</button>
+          <button class="pbtn" name="op" value="shop_catalog">Publier le catalogue</button>
+          <button class="pbtn" name="op" value="shop_webhooks">Activer les retours</button>
+          <button class="pbtn" name="op" value="shop_poll">Synchroniser les suivis</button>
+          {% if shop_pending %}<button class="pbtn pri" style="grid-column:1/-1" name="op" value="shop_push" data-confirm="Créer {{ shop_pending }} commande(s) dans Shopify ?" data-ok="Envoyer">Envoyer {{ shop_pending }} commande(s) en attente vers Shopify</button>{% endif %}
+        </form>
+        <div class="muted" style="font-size:.74rem;margin-top:8px;word-break:break-all">Webhook : {{ shop_hook }}{% if shop.last_check %} · vérifié le {{ shop.last_check|slice:":10" }}{% endif %}</div>
+        {% elif sup.integration == "api" %}
+        <dl class="kv"><dt>Endpoint</dt><dd>{{ sup.api_url|default:"— à renseigner" }}</dd><dt>Clé API</dt><dd>{{ api_key|default:"—" }}</dd></dl>
+        {% else %}
+        <dl class="kv"><dt>E-mail commande</dt><dd>{{ sup.email|default:"— à renseigner" }}</dd></dl>
+        {% endif %}
+        {% if sup.integration == "email" and not sup.email or sup.integration == "api" and not sup.api_url or sup.integration == "shopify" and not shop.domain %}<a class="pbtn sm" style="margin-top:8px" href="/admin-hub/suppliers/{{ sup.pk }}/edit/#integration">Configurer</a>{% endif %}
+        </div>
 
-      <div class="card">
-        <div class="card-h"><h2>ERP du fournisseur (Excel)</h2>{% if xl.template %}<span class="bdg2 ok">Modèle {{ xl.headers|length }} col.</span>{% else %}<span class="bdg2 idle">Format standard</span>{% endif %}</div>
+        <div class="files" style="margin-bottom:10px"><span class="muted" style="font-size:.78rem;font-weight:700">Fichiers transmis :</span> {% for f in files %}<span class="chip">{{ f }}</span>{% empty %}<span class="muted">aucun</span>{% endfor %}</div>
+        <div class="chfoot">
+          <div class="muted" style="font-size:.8rem">Dernier envoi : {% if sup.last_sync_at %}{{ sup.last_sync_at|date:"d/m/Y H:i" }} {% if sup.last_sync_ok %}<span class="bdg2 ok">OK</span>{% else %}<span class="bdg2 err">Échec</span>{% endif %}{% else %}—{% endif %}</div>
+          <form method="post" style="display:flex;gap:6px;flex-wrap:wrap">{% csrf_token %}
+            <button class="pbtn sm" name="op" value="auto" title="{% if sup.auto_dispatch %}Chaque commande payée est transmise immédiatement, relancée en cas d'échec.{% else %}Les commandes payées attendent votre validation.{% endif %}">Passer en {% if sup.auto_dispatch %}manuel{% else %}automatique{% endif %}</button>
+            {% if sup.integration != "woo" %}<button class="pbtn sm pri" name="op" value="test">Tester la connexion</button>{% endif %}</form>
+        </div>
+        {% if automation.retries %}<div class="banner warn" style="margin:10px 0 0"><span>{{ automation.retries }} commande{{ automation.retries|pluralize }} en attente de relance automatique.</span></div>{% endif %}
+
+        {% if sup.integration == "api" or sup.integration == "email" %}
+        <details class="chx"><summary>Guide technique &amp; URL de retour</summary>
+          <div style="display:flex;gap:6px;margin:8px 0"><input type="text" readonly value="{{ automation.callback }}" id="cbUrl" style="flex:1;font-size:.74rem" onclick="this.select()">
+            <button type="button" class="pbtn sm" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('cbUrl').value);this.textContent='Copié ✓'">Copier</button>
+            <form method="post" data-confirm="Générer un nouveau secret ?" data-confirm-text="L'ancienne URL de retour cessera de fonctionner : transmettez la nouvelle au fournisseur." data-ok="Régénérer" data-danger>{% csrf_token %}<button class="pbtn sm" name="op" value="secret">Régénérer</button></form></div>
+        <details open><summary style="font-weight:800;cursor:pointer;margin-bottom:6px">1 · Envoi des commandes (PaintIt → fournisseur)</summary>
+          <p class="muted" style="margin:4px 0 8px">{% if sup.integration == "api" %}POST JSON sur <code>{{ sup.api_url|default:"(URL API à renseigner)" }}</code> · en-têtes <code>Authorization: Bearer &lt;clé API&gt;</code>, <code>X-PaintIt-Event</code>, <code>X-PaintIt-Signature</code> = HMAC-SHA256 (hex) du corps avec le secret webhook.{% else %}E-mail à <code>{{ sup.email|default:"(e-mail à renseigner)" }}</code> avec le même contenu en pièce jointe <code>order_&lt;ref&gt;.json</code>. Passez en intégration API pour un traitement 100 % automatique.{% endif %}</p>
+          <pre style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px;font-size:.74rem;max-height:320px;overflow:auto">{{ automation.out }}</pre></details>
+        <details><summary style="font-weight:800;cursor:pointer;margin:10px 0 6px">2 · Retours de statut (fournisseur → PaintIt)</summary>
+          <p class="muted" style="margin:4px 0 8px">POST JSON sur l'URL de retour. <code>status</code> ∈ <code>in_production</code>, <code>shipped</code>, <code>delivered</code>, <code>failed</code>. Plusieurs commandes : envoyer une liste. Signature facultative (<code>X-PaintIt-Signature</code>, même calcul) ; si présente elle est vérifiée.</p>
+          <pre style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px;font-size:.74rem;overflow:auto">curl -X POST {{ automation.callback }} \
+  -H "Content-Type: application/json" \
+  -d '{{ automation.in|escape }}'</pre></details>
+        <details><summary style="font-weight:800;cursor:pointer;margin:10px 0 6px">3 · Relances automatiques</summary>
+          <p class="muted" style="margin:4px 0">Tâche planifiée <code>python manage.py supplier_sync</code> (toutes les 15 min) : retransmet les envois en échec (5 essais max) et envoie les commandes payées jamais transmises.</p></details>
+        </details>
+        {% endif %}
+        <details class="chx"{% if sup.integration == "email" %} open{% endif %}><summary>Excel ERP (import manuel / secours){% if xl.template %} · modèle {{ xl.headers|length }} col.{% endif %}</summary>
         <p class="muted" style="margin:0 0 10px">Sans Shopify : le fournisseur importe ce fichier dans son ERP (MangoERP → 自定义店铺 → Excel导入手工订单), puis nous renvoie son export d'expédition avec les n° de suivi.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <a class="pbtn pri" href="/admin-hub/suppliers/{{ sup.pk }}/export/orders.xlsx">Télécharger les commandes à traiter (.xlsx)</a>
@@ -118,7 +159,9 @@
           <button class="pbtn" name="op" value="tracking_import">Importer les n° de suivi</button>
         </form>
         <div class="muted" style="font-size:.76rem;margin-top:6px">Colonnes reconnues : n° de commande (订单号 / order no), n° de suivi (跟踪号 / 运单号 / tracking), transporteur (物流方式 / carrier). Les commandes passent en « Expédiée » et le client est notifié comme avec l'API.</div>
+        </details>
       </div>
+
 
       <div class="card">
         <div class="card-h"><h2>Règlements fournisseur</h2><span class="bdg2 {% if due_total %}warn{% else %}ok{% endif %}">{{ due_total|floatformat:2 }} € à régler</span></div>
@@ -144,19 +187,6 @@
             <button class="pbtn sm" name="op" value="pay_undo" style="padding:1px 8px">annuler</button></form>{% endfor %}{% endif %}
       </div>
 
-      <div class="card">
-        <div class="card-h"><h2>Guide d'intégration</h2><span class="muted">à transmettre à l'équipe technique du fournisseur</span></div>
-        <details open><summary style="font-weight:800;cursor:pointer;margin-bottom:6px">1 · Envoi des commandes (PaintIt → fournisseur)</summary>
-          <p class="muted" style="margin:4px 0 8px">{% if sup.integration == "api" %}POST JSON sur <code>{{ sup.api_url|default:"(URL API à renseigner)" }}</code> · en-têtes <code>Authorization: Bearer &lt;clé API&gt;</code>, <code>X-PaintIt-Event</code>, <code>X-PaintIt-Signature</code> = HMAC-SHA256 (hex) du corps avec le secret webhook.{% else %}E-mail à <code>{{ sup.email|default:"(e-mail à renseigner)" }}</code> avec le même contenu en pièce jointe <code>order_&lt;ref&gt;.json</code>. Passez en intégration API pour un traitement 100 % automatique.{% endif %}</p>
-          <pre style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px;font-size:.74rem;max-height:320px;overflow:auto">{{ automation.out }}</pre></details>
-        <details><summary style="font-weight:800;cursor:pointer;margin:10px 0 6px">2 · Retours de statut (fournisseur → PaintIt)</summary>
-          <p class="muted" style="margin:4px 0 8px">POST JSON sur l'URL de retour. <code>status</code> ∈ <code>in_production</code>, <code>shipped</code>, <code>delivered</code>, <code>failed</code>. Plusieurs commandes : envoyer une liste. Signature facultative (<code>X-PaintIt-Signature</code>, même calcul) ; si présente elle est vérifiée.</p>
-          <pre style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px;font-size:.74rem;overflow:auto">curl -X POST {{ automation.callback }} \
-  -H "Content-Type: application/json" \
-  -d '{{ automation.in|escape }}'</pre></details>
-        <details><summary style="font-weight:800;cursor:pointer;margin:10px 0 6px">3 · Relances automatiques</summary>
-          <p class="muted" style="margin:4px 0">Tâche planifiée <code>python manage.py supplier_sync</code> (toutes les 15 min) : retransmet les envois en échec (5 essais max) et envoie les commandes payées jamais transmises.</p></details>
-      </div>
 
       <div class="card">
         <div class="card-h"><h2>Activité</h2><span class="muted">transmissions et échecs</span></div>
@@ -166,29 +196,6 @@
     </div>
 
     <div>
-      <div class="card">
-        <div class="card-h"><h2>Intégration</h2>{% if sup.channel %}<span class="bdg2 info">{{ sup.channel }}</span>{% else %}<span class="bdg2 err">Aucun canal</span>{% endif %}</div>
-        <dl class="kv">
-          {% if sup.integration == "api" %}<dt>Endpoint</dt><dd>{{ sup.api_url|default:"—" }}</dd><dt>Clé API</dt><dd>{{ api_key|default:"—" }}</dd>
-          {% else %}<dt>E-mail commande</dt><dd>{{ sup.email|default:"—" }}</dd>{% endif %}
-          <dt>Dernier envoi</dt><dd>{% if sup.last_sync_at %}{{ sup.last_sync_at|date:"d/m/Y H:i" }} · {% if sup.last_sync_ok %}<span class="bdg2 ok">OK</span>{% else %}<span class="bdg2 err">Échec</span>{% endif %}{% else %}—{% endif %}</dd>
-        </dl>
-        <div style="margin-top:10px" class="files">{% for f in files %}<span class="chip">{{ f }}</span>{% empty %}<span class="muted">Aucun fichier sélectionné</span>{% endfor %}</div>
-      </div>
-      <div class="card">
-        <div class="card-h"><h2>Automatisation</h2>{% if sup.auto_dispatch %}<span class="bdg2 ok">Automatique</span>{% else %}<span class="bdg2 warn">Manuelle</span>{% endif %}</div>
-        <p class="muted" style="margin:0 0 10px">{% if sup.auto_dispatch %}Chaque commande payée est transmise immédiatement (API ou e-mail), puis relancée automatiquement en cas d'échec.{% else %}Les commandes payées attendent votre validation (bouton « Transmettre » de la fiche commande).{% endif %}</p>
-        <div class="stack">
-          <form method="post">{% csrf_token %}<button class="pbtn" style="width:100%" name="op" value="auto">Passer en mode {% if sup.auto_dispatch %}manuel{% else %}automatique{% endif %}</button></form>
-          <form method="post">{% csrf_token %}<button class="pbtn pri" style="width:100%" name="op" value="test">Tester la connexion</button></form>
-        </div>
-        <label style="font-weight:700;font-size:.78rem;display:block;margin:12px 0 4px">URL de retour (statuts &amp; suivi)</label>
-        <div style="display:flex;gap:6px"><input type="text" readonly value="{{ automation.callback }}" id="cbUrl" style="flex:1;font-size:.74rem" onclick="this.select()">
-          <button type="button" class="pbtn sm" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('cbUrl').value);this.textContent='Copié ✓'">Copier</button></div>
-        <p class="muted" style="margin:6px 0 0">À donner au fournisseur : il y envoie « en production », « expédiée » (+ n° de suivi), « livrée ». La commande se met à jour seule.</p>
-        <form method="post" style="margin-top:8px" data-confirm="Générer un nouveau secret ?" data-confirm-text="L'ancienne URL de retour cessera de fonctionner : transmettez la nouvelle au fournisseur." data-ok="Régénérer" data-danger>{% csrf_token %}<button class="pbtn sm" name="op" value="secret">Régénérer le secret</button></form>
-        {% if automation.retries %}<div class="banner warn" style="margin:10px 0 0"><span>{{ automation.retries }} commande{{ automation.retries|pluralize }} en attente de relance automatique.</span></div>{% endif %}
-      </div>
       <div class="card">
         <div class="card-h"><h2>Contact</h2></div>
         <dl class="kv">
