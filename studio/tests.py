@@ -486,6 +486,10 @@ class WooConnectorTests(TestCase):
         self.assertEqual(o["shipping_address"]["country"], "FR")
         self.assertTrue(any(m["key"] == "Fichiers (ZIP)" for m in o["line_items"][0]["meta"]))
         self.assertNotIn("cost", str(o))
+        li = o["line_items"][0]
+        self.assertIn("_poster.png", li["image"]["src"])
+        p = self.client.get("/wc-api/v3/products/%d" % li["product_id"], self.auth).json()["product"]
+        self.assertEqual((p["sku"], p["images"][0]["src"]), (li["sku"], li["image"]["src"]))
         # Basic auth + API REST moderne
         import base64
         h = "Basic " + base64.b64encode(("%s:%s" % (self.keys["ck"], self.keys["cs"])).encode()).decode()

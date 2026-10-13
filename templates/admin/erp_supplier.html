@@ -90,14 +90,13 @@
           {% if woo.ck %}<button class="pbtn" name="op" value="woo_revoke" data-confirm="Couper l'accès de l'ERP ?" data-danger style="color:#b42318">Révoquer</button>{% endif %}
         </form>
         <div class="muted" style="font-size:.74rem;margin-top:8px">{% if woo.created %}Clés du {{ woo.created|slice:":10" }}{% endif %}{% if woo.last_seen %} · dernier appel authentifié de l'ERP : {{ woo.last_seen|slice:":10" }} {{ woo.last_seen|slice:"11:16" }} UTC{% else %} · <b>l'ERP n'a encore lu aucune commande</b> : dans MangoERP → 订单 (Commandes) → 同步订单 (synchroniser), choisir la boutique PaintIt{% endif %}</div>
-        {% if woo_logs %}
-        <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700;font-size:.82rem">Journal des appels de l'ERP ({{ woo_logs|length }} derniers, y compris refusés)</summary>
+        <details style="margin-top:10px" open><summary style="cursor:pointer;font-weight:700;font-size:.82rem">Journal des appels de l'ERP ({{ woo_logs|length }} derniers, y compris refusés)</summary>
+          {% if not woo_logs %}<div class="muted" style="font-size:.78rem;margin-top:6px">Aucun appel reçu pour l'instant.</div>{% endif %}
           <table style="width:100%;font-size:.74rem;margin-top:6px">
             {% for l in woo_logs %}<tr><td>{{ l.at|date:"d/m H:i" }}</td><td><b>{{ l.method }}</b> {{ l.path }}{% if l.query %}?{{ l.query|truncatechars:60 }}{% endif %}</td>
               <td>{% if l.status < 300 %}<span class="bdg2 ok">{{ l.status }}</span>{% else %}<span class="bdg2 err">{{ l.status }}</span>{% endif %}</td><td class="muted">{{ l.note }}</td></tr>
             {% if l.body %}<tr><td></td><td colspan="3"><code style="font-size:.7rem;word-break:break-all">{{ l.body|truncatechars:300 }}</code></td></tr>{% endif %}{% endfor %}
           </table></details>
-        {% endif %}
         {% elif sup.integration == "shopify" %}
         <p class="muted" style="margin:0 0 10px">Chaque commande payée est recréée dans votre boutique Shopify, où l'ERP du fournisseur la récupère ; l'expédition revient ici.</p>
         <ol class="muted" style="margin:0 0 12px;padding-left:18px;font-size:.84rem;line-height:1.7">

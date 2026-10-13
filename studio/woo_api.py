@@ -138,11 +138,13 @@ def _lines(o):
     price, total = float(o.price or 0), float(o.total or o.price or 0)
     k = (total / price) if price else 1.0
     canvas = round((price - float(o.brushes_amount or 0)) * k, 2)
-    out = [{"id": o.pk * 10 + 1, "sku": sku_for(format_key(o.width_cm, o.height_cm), o.colors),
+    from .security import file_url
+    img = file_url(o.uid, "%s_poster.png" % o.uid)
+    out = [{"id": o.pk * 10 + 1, "image": img, "sku": sku_for(format_key(o.width_cm, o.height_cm), o.colors),
             "name": "%s - %s" % (PRODUCT_TITLE, variant_title(o)), "quantity": 1, "price": canvas,
             "total": canvas, "meta": line_properties(o)}]
     if o.brushes:
-        out.append({"id": o.pk * 10 + 2, "sku": BRUSH_SKU, "name": "Set de pinceaux", "quantity": 1,
+        out.append({"id": o.pk * 10 + 2, "image": "", "sku": BRUSH_SKU, "name": "Set de pinceaux", "quantity": 1,
                     "price": round(total - canvas, 2), "total": round(total - canvas, 2), "meta": []})
     return out
 
@@ -170,8 +172,8 @@ def order_legacy(o):
         "customer_ip": "", "customer_user_agent": "", "customer_id": 0, "view_order_url": "",
         "line_items": [{"id": li["id"], "subtotal": "%.2f" % li["total"], "subtotal_tax": "0.00",
                         "total": "%.2f" % li["total"], "total_tax": "0.00", "price": "%.2f" % li["price"],
-                        "quantity": li["quantity"], "tax_class": "", "name": li["name"], "product_id": 0,
-                        "sku": li["sku"], "meta": [{"key": k, "label": k, "value": v} for k, v in li["meta"]]}
+                        "quantity": li["quantity"], "tax_class": "", "name": li["name"], "product_id": li["id"],
+                        "image": {"id": li["id"], "src": li["image"]}, "sku": li["sku"], "meta": [{"key": k, "label": k, "value": v} for k, v in li["meta"]]}
                        for li in lines],
         "shipping_lines": [{"id": o.pk, "method_id": "free_shipping", "method_title": "Livraison offerte", "total": "0.00"}],
         "tax_lines": [], "fee_lines": [], "coupon_lines": [],
@@ -199,7 +201,8 @@ def order_rest(o):
         "meta_data": [{"id": 1, "key": "paintit_uid", "value": o.uid}] + (
             [{"id": 2, "key": "_tracking_number", "value": o.tracking_number},
              {"id": 3, "key": "_tracking_provider", "value": o.carrier}] if o.tracking_number else []),
-        "line_items": [{"id": li["id"], "name": li["name"], "product_id": 0, "variation_id": 0,
+        "line_items": [{"id": li["id"], "name": li["name"], "product_id": li["id"], "variation_id": 0,
+                        "image": {"id": li["id"], "src": li["image"]},
                         "quantity": li["quantity"], "tax_class": "", "subtotal": "%.2f" % li["total"],
                         "subtotal_tax": "0.00", "total": "%.2f" % li["total"], "total_tax": "0.00", "taxes": [],
                         "sku": li["sku"], "price": li["price"],
@@ -385,6 +388,19 @@ def _route(request, sup, route, modern):
     m = request.method
     parts = [p for p in route.strip("/").split("/") if p]
     if not parts or parts[0] != "orders":
+        if len(parts) == 2 and parts[0] == "products" and parts[1].isdigit():
+            # produit = ligne de commande (id = commande*10 + n) : l'ERP y lit l'image (le poster du client)
+            pid = int(parts[1])
+            order = _scope(sup).filter(pk=pid // 10).first()
+            li = next((x for x in (_lines(order) if order else []) if x["id"] == pid), None)
+            if not li:
+                return None, 404, {}, "produit inconnu"
+            imgs = [{"id": pid, "src": li["image"], "position": 0, "name": li["sku"], "alt": li["name"]}] if li["image"] else []
+            prod = {"id": pid, "title": li["name"], "name": li["name"], "sku": li["sku"], "type": "simple",
+                    "status": "publish", "price": "%.2f" % li["price"], "regular_price": "%.2f" % li["price"],
+                    "in_stock": True, "stock_status": "instock", "virtual": False, "weight": "",
+                    "images": imgs, "featured_src": li["image"], "permalink": settings.SITE_URL}
+            return (prod if modern else {"product": prod}), 200, {}, "produit"
         if parts and parts[0] in ("products", "customers", "coupons", "webhooks", "reports"):
             return ([] if modern else {parts[0]: []}), 200, {}, "vide"
         if parts and parts[0] == "system_status":
