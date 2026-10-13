@@ -201,8 +201,28 @@ def actions():
                     "label": "Messages sans réponse" + (" (dont %d > 24 h)" % late_msgs if late_msgs else ""),
                     "level": "err" if late_msgs else "warn",
                     "url": "/admin-hub/messages/?box=open"})
+    from .models import SupplierPayment
+    from . import ledger
+    drafts = SupplierPayment.objects.filter(status="draft")
+    if drafts.exists():
+        out.append({"key": "payments", "count": drafts.count(), "level": "warn", "url": "/admin-hub/compta/",
+                    "label": "Virements fournisseurs à effectuer", "hint": "Virer puis confirmer dans l'ERP"})
+    due = Order.objects.filter(status__in=(Order.SHIPPED, Order.DELIVERED), supplier_paid_at__isnull=True,
+                               supplier_payment__isnull=True, status_changed_at__lt=now - datetime.timedelta(days=15))
+    if due.exists():
+        out.append({"key": "supplier_due", "count": due.count(), "level": "info", "url": "/admin-hub/suppliers/",
+                    "label": "Commandes expédiées non réglées au fournisseur (> 15 j)", "hint": "Préparer le virement"})
+    oss = ledger.oss_status()
+    if oss["near"]:
+        out.append({"key": "oss", "count": "%d %%" % oss["pct"], "level": "err" if oss["over"] else "warn",
+                    "url": "/admin-hub/compta/", "label": "Ventes vers l'UE : seuil OSS de 10 000 €",
+                    "hint": "TVA du pays du client au-delà du seuil"})
+    kit = Supplier.for_checkout("kit")
+    if kit and not kit.grid():
+        out.append({"key": "grid", "count": "!", "level": "warn", "url": "/admin-hub/suppliers/%d/#tarifs" % kit.pk,
+                    "label": "Grille tarifaire du fournisseur vide", "hint": "Coûts et marges non calculés"})
     if not Supplier.for_checkout("kit"):
-        out.append({"key": "supplier", "count": "!", "level": "err", "url": "/admin/studio/supplier/add/",
+        out.append({"key": "supplier", "count": "!", "level": "err", "url": "/admin-hub/suppliers/new/",
                     "label": "Aucun fournisseur actif pour le checkout Kit",
                     "hint": "Les commandes ne peuvent pas être transmises"})
     promos = Discount.objects.filter(kind=Discount.PROMO, active=True, max_uses__gt=0)

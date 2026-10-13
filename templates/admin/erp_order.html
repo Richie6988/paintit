@@ -173,9 +173,17 @@
           {% if o.discount_amount %}<span>Remise {{ o.discount_code }}</span><span>−{{ o.discount_amount|floatformat:2 }} €</span>{% endif %}
           <span>Livraison</span><span>offerte</span>
           <span class="tot">Total payé</span><span class="tot">{{ o.total|floatformat:2 }} €</span>
-          <span class="muted">Coût fournisseur (estim.)</span><span class="muted">{{ o.cost|floatformat:2 }} €</span>
-          <span><b>Marge</b></span><span><b>{{ o.benefit|floatformat:2 }} €</b></span>
+          {% if o.refunded_amount %}<span style="color:#b42318">Remboursé</span><span style="color:#b42318">−{{ o.refunded_amount|floatformat:2 }} €</span>{% endif %}
+          {% if fin.fee %}<span class="muted">Frais Stripe</span><span class="muted">−{{ fin.fee|floatformat:2 }} €</span>{% endif %}
+          <span class="muted">Coût fournisseur</span><span class="muted">{{ o.cost|floatformat:2 }} €</span>
+          <span><b>Marge</b></span><span><b>{{ fin.margin|floatformat:2 }} €</b></span>
         </div>
+        <dl class="kv" style="margin-top:12px">
+          <dt>Facture</dt><dd>{% if o.invoice_number %}<a href="/admin-hub/orders/{{ o.pk }}/receipt.pdf" target="_blank">{{ o.invoice_number }}</a>{% else %}—{% endif %}</dd>
+          <dt>Encaissement</dt><dd>{% if fin.sale %}<a href="/admin-hub/compta/?m={{ fin.sale.date|date:'Y-m' }}">{{ fin.sale.date|date:"d/m/Y" }}</a>{% if fin.sale.stripe_id %} · <span class="muted">{{ fin.sale.stripe_id|truncatechars:18 }}</span>{% endif %}{% else %}<span class="muted">non enregistré</span>{% endif %}</dd>
+          <dt>Fournisseur</dt><dd>{% if o.supplier_payment %}<a href="/admin-hub/payments/{{ o.supplier_payment_id }}/">{{ o.supplier_payment.reference }}</a> · {% if o.supplier_paid_at %}réglé le {{ o.supplier_paid_at|date:"d/m/Y" }}{% else %}virement à effectuer{% endif %}{% elif o.supplier_paid_at %}réglé le {{ o.supplier_paid_at|date:"d/m/Y" }}{% else %}<span class="muted">à régler</span>{% endif %}</dd>
+          {% if o.parcel.state or o.parcel.notified_at %}<dt>Colis</dt><dd>{% if o.parcel.notified_at %}arrivé · client prévenu ({{ o.parcel.last_mile.number }}){% else %}{{ o.parcel.state }}{% endif %}</dd>{% endif %}
+        </dl>
         {% if ad %}<div class="muted" style="margin-top:10px">Vente attribuée à la pub <a href="/admin-hub/marketing/">{{ ad.variant }} · {{ ad.label }}</a>{% if ad.campaign %} ({{ ad.campaign }}){% endif %}</div>{% endif %}
       </div>
 

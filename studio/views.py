@@ -3267,7 +3267,11 @@ def erp_order(request, pk):
     if o.ad_ref:
         from .models import MarketingAd
         ad = MarketingAd.objects.filter(token=o.ad_ref).first()
-    return render(request, "admin/erp_order.html", {"paid_statuses": Order.PAID_STATUSES,
+    sale = o.ledger.filter(kind="sale").first()
+    fee = sum(e.fee for e in o.ledger.all())
+    fin = {"sale": sale, "fee": fee,
+           "margin": round(float(o.total or 0) - float(o.refunded_amount or 0) - fee - float(o.cost or 0), 2)}
+    return render(request, "admin/erp_order.html", {"paid_statuses": Order.PAID_STATUSES, "fin": fin,
         **_admin.site.each_context(request), "o": o, "files": files, "visuals": visuals, "have": have, "sfiles": supplier_files_status(o.uid),
         "sfiles_ok": all(f["ok"] for f in supplier_files_status(o.uid)),
         "has_tiff": any(f["ext"] in ("TIFF", "TIF") for _k, _l, fs in files for f in fs),
