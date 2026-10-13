@@ -84,6 +84,11 @@ def _send(sup, payload):
             return True, "Shopify %s" % name, ""
         except Exception as exc:
             return False, "Shopify", str(exc)[:300]
+    if sup.integration == "woo":
+        # Connecteur WooCommerce : l'ERP du fournisseur vient chercher la commande (/wc-api/v3/orders)
+        if not (sup.woo or {}).get("ck"):
+            return False, "WooCommerce", "cles API non generees (fiche fournisseur)"
+        return True, "WooCommerce : mise a disposition de l'ERP", ""
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     if sup.integration == "api" and sup.api_url:
         import urllib.request

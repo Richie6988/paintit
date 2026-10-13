@@ -457,5 +457,80 @@ class ShopifyBridgeTests(TestCase):
         self.assertEqual((o.status, o.tracking_number), (Order.SHIPPED, "YT1"))
 
 
+class WooConnectorTests(TestCase):
+    """Connecteur compatible WooCommerce : l'ERP du fournisseur (MangoERP) lit les commandes et renvoie le suivi."""
+    def setUp(self):
+        from studio.models import Supplier
+        from studio import woo_api
+        self.sup = Supplier.objects.create(name="Yingsa", checkout="kit", integration="woo")
+        self.keys = woo_api.generate_keys(self.sup)
+        self.o = make_order(status=Order.FULFILLED)
+        Order.objects.filter(pk=self.o.pk).update(supplier=self.sup)
+        make_order(uid="OTHER000-0000", status=Order.PAID)          # autre fournisseur / non transmise
+        self.auth = {"consumer_key": self.keys["ck"], "consumer_secret": self.keys["cs"]}
+
+    def test_auth_required(self):
+        self.assertEqual(self.client.get("/wc-api/v3/").status_code, 200)       # index public (comme Woo)
+        self.assertEqual(self.client.get("/wc-api/v3/orders").status_code, 401)
+        bad = {**self.auth, "consumer_secret": "cs_nope"}
+        self.assertEqual(self.client.get("/wc-api/v3/orders", bad).status_code, 401)
+
+    def test_list_legacy_format_scoped(self):
+        r = self.client.get("/wc-api/v3/orders", {**self.auth, "status": "processing", "filter[limit]": "50"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["X-WC-Total"], "1")
+        o = r.json()["orders"][0]
+        self.assertEqual((o["order_number"], o["status"]), (self.o.uid, "processing"))
+        self.assertEqual(o["line_items"][0]["sku"], "PBN-40x50-24C")
+        self.assertEqual(o["shipping_address"]["country"], "FR")
+        self.assertTrue(any(m["key"] == "Fichiers (ZIP)" for m in o["line_items"][0]["meta"]))
+        self.assertNotIn("cost", str(o))
+        # Basic auth + API REST moderne
+        import base64
+        h = "Basic " + base64.b64encode(("%s:%s" % (self.keys["ck"], self.keys["cs"])).encode()).decode()
+        r = self.client.get("/wp-json/wc/v3/orders", {"status": "processing"}, HTTP_AUTHORIZATION=h)
+        self.assertEqual((r.status_code, r["X-WP-Total"], r.json()[0]["number"]), (200, "1", self.o.uid))
+
+    def test_oauth1_signature(self):
+        import base64, hashlib, hmac, time
+        from urllib.parse import quote
+        p = {"oauth_consumer_key": self.keys["ck"], "oauth_timestamp": str(int(time.time())),
+             "oauth_nonce": "abc", "oauth_signature_method": "HMAC-SHA256", "filter[limit]": "10"}
+        enc = lambda s: quote(s, safe="~")
+        norm = "&".join("%s=%s" % (enc(k), enc(v)) for k, v in sorted(p.items()))
+        base = "&".join(["GET", enc("http://testserver/wc-api/v3/orders"), enc(norm)])
+        p["oauth_signature"] = base64.b64encode(hmac.new((self.keys["cs"] + "&").encode(), base.encode(),
+                                                          hashlib.sha256).digest()).decode()
+        self.assertEqual(self.client.get("/wc-api/v3/orders", p).status_code, 200)
+
+    def test_tracking_update(self):
+        import json
+        from urllib.parse import urlencode
+        url = "/wc-api/v3/orders/%d?%s" % (self.o.pk, urlencode(self.auth))
+        r = self.client.put(url, json.dumps({"order": {"status": "completed", "order_meta": {
+            "_trackingmore_tracking_number": "YT2412345678", "_trackingmore_tracking_provider": "yunexpress"}}}),
+            content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        self.o.refresh_from_db()
+        self.assertEqual((self.o.status, self.o.tracking_number, self.o.carrier),
+                         (Order.SHIPPED, "YT2412345678", "yunexpress"))
+        self.assertEqual(r.json()["order"]["status"], "completed")
+        # note de suivi (format libre)
+        o2 = make_order(uid="NOTE0000-0001", status=Order.FULFILLED)
+        Order.objects.filter(pk=o2.pk).update(supplier=self.sup)
+        r = self.client.post("/wc-api/v3/orders/%d/notes?%s" % (o2.pk, urlencode(self.auth)),
+                             json.dumps({"order_note": {"note": "Tracking number: LX123456789CN carrier: 4PX"}}),
+                             content_type="application/json")
+        self.assertEqual(r.status_code, 201)
+        o2.refresh_from_db()
+        self.assertEqual((o2.status, o2.tracking_number), (Order.SHIPPED, "LX123456789CN"))
+        # commande hors perimetre
+        other = Order.objects.get(uid="OTHER000-0000")
+        self.assertEqual(self.client.get("/wc-api/v3/orders/%d" % other.pk, self.auth).status_code, 404)
+        from studio.models import ConnectorLog
+        self.assertTrue(ConnectorLog.objects.filter(supplier=self.sup, method="PUT").exists())
+        self.assertNotIn(self.keys["cs"], " ".join(ConnectorLog.objects.values_list("query", flat=True)))
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)

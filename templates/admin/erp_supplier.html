@@ -77,6 +77,35 @@
       </div>
       {% endif %}
 
+      {% if sup.integration == "woo" or woo.ck %}
+      <div class="card" id="woo">
+        <div class="card-h"><h2>Connecteur MangoERP (API WooCommerce)</h2>{% if woo.ck and woo.last_seen %}<span class="bdg2 ok">ERP connecté</span>{% elif woo.ck %}<span class="bdg2 warn">En attente de l'ERP</span>{% else %}<span class="bdg2 err">Clés à générer</span>{% endif %}</div>
+        <p class="muted" style="margin:0 0 10px">L'ERP du fournisseur voit paintit.click comme une boutique WooCommerce et vient chercher seul les commandes payées qui lui sont transmises (SKU, adresse, fichiers de production), puis renvoie les n° de suivi. Aucun prix d'achat n'est exposé.</p>
+        {% if woo.ck %}
+        <ol class="muted" style="margin:0 0 12px;padding-left:18px;font-size:.84rem;line-height:1.8">
+          <li>MangoERP → 授权 (Autorisation) → <b>WooCommerce</b> → 添加授权</li>
+          <li>店铺别名 : <code>PaintIt</code> · 网址 (URL) : <code>{{ woo_site }}</code></li>
+          <li>consumerKey : <code style="user-select:all">{{ woo.ck }}</code></li>
+          <li>consumerSecret : <code style="user-select:all">{{ woo.cs }}</code></li>
+          <li>Le fournisseur associe les SKU <code>PBN-40x50-24C</code>… (配对 SKU) à ses produits.</li>
+        </ol>
+        {% endif %}
+        <form method="post" style="display:flex;gap:8px;flex-wrap:wrap">{% csrf_token %}
+          <button class="pbtn{% if not woo.ck %} pri{% endif %}" name="op" value="woo_keys"{% if woo.ck %} data-confirm="Régénérer les clés ? L'ERP devra être reconfiguré." data-ok="Régénérer"{% endif %}>{% if woo.ck %}Régénérer les clés{% else %}Générer les clés API{% endif %}</button>
+          {% if woo.ck %}<button class="pbtn" name="op" value="woo_revoke" data-confirm="Couper l'accès de l'ERP ?" data-danger style="color:#b42318">Révoquer</button>{% endif %}
+        </form>
+        <div class="muted" style="font-size:.74rem;margin-top:8px">{% if woo.created %}Clés du {{ woo.created|slice:":10" }}{% endif %}{% if woo.last_seen %} · dernier appel de l'ERP : {{ woo.last_seen|slice:":10" }} {{ woo.last_seen|slice:"11:16" }}{% endif %}</div>
+        {% if woo_logs %}
+        <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700;font-size:.82rem">Journal des appels ({{ woo_logs|length }} derniers)</summary>
+          <table style="width:100%;font-size:.74rem;margin-top:6px">
+            {% for l in woo_logs %}<tr><td>{{ l.at|date:"d/m H:i" }}</td><td><b>{{ l.method }}</b> {{ l.path }}{% if l.query %}?{{ l.query|truncatechars:60 }}{% endif %}</td>
+              <td>{% if l.status < 300 %}<span class="bdg2 ok">{{ l.status }}</span>{% else %}<span class="bdg2 err">{{ l.status }}</span>{% endif %}</td><td class="muted">{{ l.note }}</td></tr>
+            {% if l.body %}<tr><td></td><td colspan="3"><code style="font-size:.7rem;word-break:break-all">{{ l.body|truncatechars:300 }}</code></td></tr>{% endif %}{% endfor %}
+          </table></details>
+        {% endif %}
+      </div>
+      {% endif %}
+
       <div class="card">
         <div class="card-h"><h2>ERP du fournisseur (Excel)</h2>{% if xl.template %}<span class="bdg2 ok">Modèle {{ xl.headers|length }} col.</span>{% else %}<span class="bdg2 idle">Format standard</span>{% endif %}</div>
         <p class="muted" style="margin:0 0 10px">Sans Shopify : le fournisseur importe ce fichier dans son ERP (MangoERP → 自定义店铺 → Excel导入手工订单), puis nous renvoie son export d'expédition avec les n° de suivi.</p>

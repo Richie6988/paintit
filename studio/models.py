@@ -478,7 +478,8 @@ class Supplier(models.Model):
     """Fournisseur plug-and-play : connecte a un checkout, avec grille tarifaire,
     conditions de partenariat et integration (e-mail ou API)."""
     CHECKOUTS = [("kit", "Kit a peindre"), ("print", "Tableau fini"), ("all", "Tous les checkouts")]
-    INTEGRATIONS = [("email", "E-mail"), ("api", "API (webhook)"), ("shopify", "Shopify (MangoERP / ERP fournisseur)")]
+    INTEGRATIONS = [("email", "E-mail"), ("api", "API (webhook)"), ("shopify", "Shopify (MangoERP / ERP fournisseur)"),
+                    ("woo", "Connecteur WooCommerce (MangoERP direct, sans Shopify)")]
     name = models.CharField("Nom", max_length=120)
     active = models.BooleanField("Actif", default=True)
     checkout = models.CharField("Checkout connecte", max_length=10, choices=CHECKOUTS, default="kit")
@@ -532,6 +533,9 @@ class Supplier(models.Model):
     # {"domain", "client_id", "client_secret", "static_token", "token", "token_exp", "api_version",
     #  "product_id", "variants": {sku: gid}, "webhooks": [...], "last_check": ...}
     shopify = models.JSONField("Shopify", default=dict, blank=True)
+    # Connecteur compatible WooCommerce (l'ERP du fournisseur lie paintit.click comme une boutique Woo) :
+    # {"ck": "ck_...", "cs": "cs_...", "created": iso, "last_seen": iso}
+    woo = models.JSONField("Connecteur WooCommerce", default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     @staticmethod
@@ -683,6 +687,23 @@ class SupplierFile(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ConnectorLog(models.Model):
+    """Journal des appels de l'ERP du fournisseur sur le connecteur WooCommerce (diagnostic du format)."""
+    supplier = models.ForeignKey(Supplier, null=True, blank=True, on_delete=models.CASCADE, related_name="connector_logs")
+    method = models.CharField(max_length=8)
+    path = models.CharField(max_length=300)
+    query = models.CharField(max_length=500, blank=True, default="")
+    status = models.PositiveSmallIntegerField(default=200)
+    ip = models.CharField(max_length=45, blank=True, default="")
+    agent = models.CharField(max_length=200, blank=True, default="")
+    body = models.TextField(blank=True, default="")
+    note = models.CharField(max_length=200, blank=True, default="")
+    at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-at"]
 
 
 class Community(models.Model):

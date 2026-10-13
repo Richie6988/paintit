@@ -921,7 +921,7 @@ def robots(request):
     body = (
         "User-agent: *\n"
         "Disallow: /preview/\nDisallow: /media/\nDisallow: /files/\n"
-        "Disallow: /delivery/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /admin/\nDisallow: /admin-hub/\nDisallow: /go/\nDisallow: /avis/\n"
+        "Disallow: /delivery/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /admin/\nDisallow: /admin-hub/\nDisallow: /go/\nDisallow: /avis/\nDisallow: /wc-api/\nDisallow: /wp-json/\n"
         "Allow: /llm.txt\nAllow: /llm.json\nAllow: /play/\n"
         "\nSitemap: %s/sitemap.xml\n"
         "\n# Infos pour les IA / LLM :\n"
@@ -2179,6 +2179,7 @@ def _sup_card(sup):
     sup.color = _sup_color(sup.name)
     sup.initials = "".join(w[0] for w in (sup.name or "?").split()[:2]).upper()
     sup.channel = ("Shopify" if sup.integration == "shopify" and (sup.shopify or {}).get("domain") else
+                   "MangoERP (Woo)" if sup.integration == "woo" and (sup.woo or {}).get("ck") else
                    "API" if sup.integration == "api" and sup.api_url else
                    "E-mail" if sup.email else None)
     sup.health = ("off" if not sup.active else "err" if not sup.channel or not sup.last_sync_ok
@@ -2297,6 +2298,15 @@ def erp_supplier(request, pk):
                         request, "%d commande(s) créée(s) dans Shopify%s." % (n, (", %d échec(s) (voir journal)" % ko) if ko else ""))
             except Exception as exc:
                 messages.error(request, "Shopify : %s" % exc)
+        elif op in ("woo_keys", "woo_revoke"):
+            from . import woo_api
+            if op == "woo_keys":
+                woo_api.generate_keys(sup)
+                messages.success(request, "Clés du connecteur générées : saisissez-les dans l'ERP du fournisseur "
+                                 "(les anciennes clés ne fonctionnent plus).")
+            else:
+                woo_api.revoke_keys(sup)
+                messages.success(request, "Clés révoquées : l'ERP ne peut plus lire les commandes.")
         elif op == "tracking_import":
             from . import xlsx_bridge
             f = request.FILES.get("tracking")
@@ -2363,6 +2373,8 @@ def erp_supplier(request, pk):
     return render(request, "admin/erp_supplier.html", {
         "automation": automation, "due": due, "due_total": round(sum(o.cost or 0 for o in due), 2), "paid": paid,
         "xl": (sup.offer or {}).get("xlsx") or {},
+        "woo": sup.woo or {}, "woo_site": settings.SITE_URL,
+        "woo_logs": sup.connector_logs.all()[:15] if sup.integration == "woo" or (sup.woo or {}).get("ck") else [],
         "shop": sup.shopify or {}, "shop_hook": __import__("studio.shopify", fromlist=["x"]).webhook_url(sup),
         "shop_pending": Order.objects.filter(supplier=sup, shopify_order_id="", status__in=(Order.PAID, Order.FULFILLED)).count(),
         **_admin.site.each_context(request), "sup": sup, "tab": tab, "rows": rows,
@@ -2384,7 +2396,7 @@ def _supplier_form_class():
         class Meta:
             model = Supplier
             exclude = ("created_at", "last_sync_at", "last_sync_ok", "last_sync_error", "webhook_secret",
-                       "palette", "palette_updated_at", "offer")
+                       "palette", "palette_updated_at", "offer", "shopify", "woo")
             widgets = {k: forms.Textarea(attrs={"rows": 3}) for k in
                        ("address", "pricing", "terms", "production_notes", "notes")}
     return SupplierForm
