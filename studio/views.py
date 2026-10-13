@@ -2175,10 +2175,10 @@ def _sup_color(name):
 
 
 SUPPLIER_CHANNELS = [
-    ("woo", "MangoERP direct", "L'ERP du fournisseur récupère les commandes (API WooCommerce)"),
-    ("shopify", "Shopify", "Commandes recréées dans votre boutique Shopify relais"),
-    ("api", "API", "POST JSON signé vers le serveur du fournisseur"),
-    ("email", "E-mail", "Commande + fichiers (et Excel ERP) par e-mail"),
+    ("woo", "MangoERP", "Son ERP récupère nos commandes"),
+    ("shopify", "Shopify", "Via votre boutique Shopify"),
+    ("api", "API", "Envoi vers son serveur"),
+    ("email", "E-mail", "Commande et fichiers par e-mail"),
 ]
 
 def _grid_view(sup):
@@ -2276,7 +2276,7 @@ def _sup_card(sup):
     sup.color = _sup_color(sup.name)
     sup.initials = "".join(w[0] for w in (sup.name or "?").split()[:2]).upper()
     sup.channel = ("Shopify" if sup.integration == "shopify" and (sup.shopify or {}).get("domain") else
-                   "MangoERP (Woo)" if sup.integration == "woo" and (sup.woo or {}).get("ck") else
+                   "MangoERP" if sup.integration == "woo" and (sup.woo or {}).get("ck") else
                    "API" if sup.integration == "api" and sup.api_url else
                    "E-mail" if sup.email else None)
     sup.health = ("off" if not sup.active else "err" if not sup.channel or not sup.last_sync_ok
@@ -2319,6 +2319,27 @@ def erp_supplier(request, pk):
     if request.method == "POST":
         op = request.POST.get("op")
         user = request.user.get_username()
+        tab = (request.POST.get("_tab") or "").strip()[:20]
+        if op == "save":
+            sec = request.POST.get("section", "")
+            if sec in SUPPLIER_SECTIONS:
+                form = _supplier_section_form(sec)(request.POST, instance=sup)
+                if form.is_valid():
+                    sup = form.save()
+                    notes = _save_supplier_extras(request, sup, SUPPLIER_SECTION_EXTRAS.get(sec, ()))
+                    messages.success(request, "Modifications enregistrées." + ("" if not notes else " " + " ".join(notes)))
+                else:
+                    messages.error(request, "Non enregistré : " + " ; ".join(
+                        "%s : %s" % (form.fields[k].label if k in form.fields else k, " ".join(v))
+                        for k, v in form.errors.items()))
+            return redirect(request.path + ("#" + tab if tab else ""))
+        if op == "delete":
+            name, spk = sup.name, sup.pk
+            sup.delete()
+            import shutil   # pieces jointes + modele Excel du fournisseur
+            shutil.rmtree(os.path.join(settings.MEDIA_ROOT, "private", "suppliers", str(spk)), ignore_errors=True)
+            messages.success(request, "Fournisseur %s supprimé." % name)
+            return redirect("studio:erp_suppliers")
         if op == "toggle":
             sup.active = not sup.active; sup.save(update_fields=["active"])
         elif op == "resend":
@@ -2413,16 +2434,14 @@ def erp_supplier(request, pk):
                              if op == "retry_now" else "%d commande(s) retirée(s) des relances (non transmises)." % n)
         elif op == "grid_save":
             n = _grid_save(sup, request.POST)
-            messages.success(request, "Grille tarifaire enregistrée (%d ligne%s). Les coûts et marges de l'onglet "
-                             "Tarifs en découlent." % (n, "s" if n > 1 else ""))
-            return redirect(reverse("studio:erp_supplier", args=[sup.pk]) + "#grille")
+            messages.success(request, "Grille enregistrée (%d ligne%s)." % (n, "s" if n > 1 else ""))
+            return redirect(reverse("studio:erp_supplier", args=[sup.pk]) + "#tarifs")
         elif op == "grid_seed":
             if not sup.grid():
                 sup.offer = {**(sup.offer or {}), "grid": Supplier.GRID_TEMPLATE}
                 sup.save(update_fields=["offer"])
-                messages.success(request, "Grille pré-remplie avec le devis Yingsa (USD). Vérifiez le taux de change "
-                                 "et ajoutez la livraison France / UE.")
-            return redirect(reverse("studio:erp_supplier", args=[sup.pk]) + "#grille")
+                messages.success(request, "Devis Yingsa repris. Vérifiez le taux USD → € et complétez la livraison France / UE.")
+            return redirect(reverse("studio:erp_supplier", args=[sup.pk]) + "#tarifs")
         elif op == "channel":
             ch = request.POST.get("integration", "")
             if ch in dict(Supplier.INTEGRATIONS) and ch != sup.integration:
@@ -2431,16 +2450,15 @@ def erp_supplier(request, pk):
                 if ch == "woo" and not (sup.woo or {}).get("ck"):
                     from . import woo_api
                     woo_api.generate_keys(sup)
-                messages.success(request, "Canal d'intégration : %s." % sup.get_integration_display())
+                messages.success(request, "Canal : %s." % sup.get_integration_display())
         elif op in ("woo_keys", "woo_revoke"):
             from . import woo_api
             if op == "woo_keys":
                 woo_api.generate_keys(sup)
-                messages.success(request, "Clés du connecteur générées : saisissez-les dans l'ERP du fournisseur "
-                                 "(les anciennes clés ne fonctionnent plus).")
+                messages.success(request, "Nouveaux accès générés. Les précédents ne fonctionnent plus.")
             else:
                 woo_api.revoke_keys(sup)
-                messages.success(request, "Clés révoquées : l'ERP ne peut plus lire les commandes.")
+                messages.success(request, "Accès révoqués.")
         elif op == "tracking_import":
             from . import xlsx_bridge
             f = request.FILES.get("tracking")
@@ -2465,10 +2483,10 @@ def erp_supplier(request, pk):
             n = 0
             for o in erp.unassigned_orders():
                 Order.objects.filter(pk=o.pk).update(supplier=sup); n += 1
-            messages.success(request, "%d commande(s) rattachee(s) a %s." % (n, sup.name))
-        return redirect(request.get_full_path())
+            messages.success(request, "%d commande(s) rattachée(s) à %s." % (n, sup.name))
+        return redirect(request.get_full_path() + ("#" + tab if tab else ""))
     _sup_card(sup)
-    tab = request.GET.get("tab", "open")
+    tab = request.GET.get("o", "open")
     qs = Order.objects.filter(supplier=sup).order_by("-created_at")
     tabs = [("open", "À traiter", qs.filter(status__in=(Order.PAID, Order.FULFILLED))),
             ("shipped", "Expédiées", qs.filter(status=Order.SHIPPED)),
@@ -2511,6 +2529,12 @@ def erp_supplier(request, pk):
         "automation": automation, "due": due, "due_total": round(sum(o.cost or 0 for o in due), 2), "paid": paid,
         "xl": (sup.offer or {}).get("xlsx") or {},
         "channels": SUPPLIER_CHANNELS, "grid": _grid_view(sup), "offer_x": sup.offer or {},
+        "forms": {k: _supplier_section_form(k)(instance=sup) for k in SUPPLIER_SECTIONS},
+        "xcols": [{"i": i, "header": h, "field": (((sup.offer or {}).get("xlsx") or {}).get("map") or {}).get(str(i), "")}
+                  for i, h in enumerate(((sup.offer or {}).get("xlsx") or {}).get("headers") or [])],
+        "xfields": __import__("studio.xlsx_bridge", fromlist=["x"]).FIELDS,
+        "xsku_default": __import__("studio.xlsx_bridge", fromlist=["x"]).DEFAULT_SKU,
+        "attention": _supplier_attention(sup),
         "woo": sup.woo or {}, "woo_site": settings.SITE_URL,
         "woo_logs": (ConnectorLog.objects.filter(models.Q(supplier=sup) | models.Q(
                          supplier__isnull=True, at__gte=timezone.now() - timedelta(days=7)))[:20]
@@ -2528,76 +2552,83 @@ def erp_supplier(request, pk):
         "unassigned": erp.unassigned_orders().count(), "erp_section": "suppliers"})
 
 
-def _supplier_form_class():
+SUPPLIER_SECTIONS = {
+    "profile": ["name", "checkout", "priority", "lead_time_days", "incoterms", "production_notes", "terms"],
+    "contact": ["contact_name", "contact_email", "phone", "address", "bank_name", "iban", "bic", "notes"],
+    "channel": ["email", "api_url", "api_key"],
+    "dispatch": ["auto_dispatch", "want_template_tiff", "want_poster", "want_order_json", "want_template_pdf",
+                 "want_template_svg", "want_preview_svg", "want_source"],
+    "excel": [], "palette": [], "docs": [],
+}
+SUPPLIER_SECTION_EXTRAS = {"channel": ("shopify",), "excel": ("xlsx",), "palette": ("palette",), "docs": ("files",)}
+SUPPLIER_LABELS = {
+    "name": "Nom", "checkout": "Produit fourni", "priority": "Priorité", "lead_time_days": "Délai de production (jours)",
+    "incoterms": "Incoterm", "production_notes": "Consignes de production", "terms": "Conditions commerciales",
+    "contact_name": "Interlocuteur", "contact_email": "E-mail", "phone": "Téléphone", "address": "Adresse",
+    "bank_name": "Banque", "iban": "IBAN", "bic": "BIC / SWIFT", "notes": "Notes internes",
+    "email": "E-mail de réception des commandes", "api_url": "URL de l'API", "api_key": "Clé API",
+    "auto_dispatch": "Transmettre automatiquement chaque commande payée",
+    "want_template_tiff": "Toile numérotée (TIFF)", "want_poster": "Poster couleur (PNG)",
+    "want_order_json": "Fiche couleurs (JSON)", "want_template_pdf": "Toile numérotée (PDF)",
+    "want_template_svg": "Toile numérotée (SVG)", "want_preview_svg": "Aperçu colorié (SVG)", "want_source": "Photo d'origine",
+}
+
+
+def _supplier_section_form(section):
     from django import forms
     from .models import Supplier
+    names = SUPPLIER_SECTIONS[section]
+    widgets = {k: forms.Textarea(attrs={"rows": 3}) for k in ("address", "terms", "production_notes", "notes") if k in names}
+    Form = forms.modelform_factory(Supplier, fields=names, widgets=widgets, labels=SUPPLIER_LABELS) if names else \
+        forms.modelform_factory(Supplier, fields=[])
+    for k in ("priority",):
+        if k in names:
+            Form.base_fields[k].help_text = "0 = fournisseur principal"
+    return Form
 
-    class SupplierForm(forms.ModelForm):
-        class Meta:
-            model = Supplier
-            exclude = ("created_at", "last_sync_at", "last_sync_ok", "last_sync_error", "webhook_secret",
-                       "palette", "palette_updated_at", "offer", "shopify", "woo")
-            widgets = {k: forms.Textarea(attrs={"rows": 3}) for k in
-                       ("address", "pricing", "terms", "production_notes", "notes")}
-    return SupplierForm
+
+def _supplier_attention(sup):
+    """Points a traiter sur la fiche, du plus urgent au moins urgent : [(niveau, texte, onglet)]."""
+    from . import integrations
+    out = []
+    if not sup.active:
+        out.append(("warn", "Fournisseur en pause : aucune commande ne lui est transmise.", ""))
+    if sup.last_sync_at and not sup.last_sync_ok:
+        out.append(("bad", "Dernière transmission en échec : %s" % (sup.last_sync_error or "erreur inconnue"), "integration"))
+    n = len([x for x in integrations.pending_retries() if x.supplier_id == sup.pk])
+    if n:
+        out.append(("bad", "%d commande%s en échec de transmission à traiter." % (n, "s" if n > 1 else ""), "integration"))
+    if sup.integration == "email" and not sup.email or sup.integration == "api" and not sup.api_url \
+            or sup.integration == "woo" and not (sup.woo or {}).get("ck") \
+            or sup.integration == "shopify" and not (sup.shopify or {}).get("domain"):
+        out.append(("bad", "Canal d'intégration incomplet.", "integration"))
+    if not sup.grid():
+        out.append(("warn", "Grille tarifaire vide : coûts et marges non calculés.", "tarifs"))
+    else:
+        g = _grid_view(sup)
+        if g["missing_zones"]:
+            out.append(("warn", "Livraison non chiffrée : %s." % ", ".join(g["missing_zones"]), "tarifs"))
+    return out
 
 
 @staff_member_required
 def erp_supplier_edit(request, pk=None):
+    """Creation d'un fournisseur (nom + produit) ; l'ancienne page « Modifier » renvoie vers la fiche unique."""
     from django.contrib import admin as _admin
-    from django.contrib import messages
     from .models import Supplier
-    sup = Supplier.objects.filter(pk=pk).first() if pk else None
-    if pk and not sup:
-        raise Http404
-    Form = _supplier_form_class()
-    if request.method == "POST" and request.POST.get("op") == "delete" and sup:
-        name, spk = sup.name, sup.pk
-        sup.delete()
-        import shutil   # pieces jointes + modele Excel du fournisseur
-        shutil.rmtree(os.path.join(settings.MEDIA_ROOT, "private", "suppliers", str(spk)), ignore_errors=True)
-        messages.success(request, "Fournisseur %s supprime." % name)
-        return redirect("studio:erp_suppliers")
-    form = Form(request.POST or None, instance=sup)
+    if pk:
+        return redirect("studio:erp_supplier", pk=pk)
+    Form = _supplier_section_form("profile")
+    form = Form(request.POST or None, initial={"checkout": "kit", "lead_time_days": 5, "priority": 0})
     if request.method == "POST" and form.is_valid():
         sup = form.save()
-        notes = _save_supplier_extras(request, sup)
-        messages.success(request, "Fournisseur enregistré." + ("" if not notes else " " + " ".join(notes)))
-        return redirect("studio:erp_supplier", pk=sup.pk)
-    f = form
-    sections = [
-        ("Identité", "Nom, statut et checkout servi par ce fournisseur.", ["name", "active", "checkout", "priority"]),
-        ("Intégration", "Comment les commandes lui sont transmises : e-mail (liens des fichiers) ou API (POST JSON, Bearer).",
-         ["integration", "auto_dispatch", "email", "api_url", "api_key"]),
-        ("Fichiers transmis", "Fichiers joints à chaque commande.",
-         ["want_template_pdf", "want_template_tiff", "want_template_svg", "want_poster", "want_order_json",
-          "want_source", "want_preview_svg"]),
-        ("Contact", "", ["contact_name", "contact_email", "phone", "address"]),
-        ("Production & conditions", "", ["lead_time_days", "incoterms", "production_notes", "pricing", "terms"]),
-        ("Banque", "Coordonnées de paiement du fournisseur.", ["bank_name", "iban", "bic"]),
-        ("Notes internes", "", ["notes"]),
-    ]
-    sec = [{"title": t, "help": h, "fields": [f[n] for n in names if n in f.fields], "custom": t == "Intégration"}
-           for t, h, names in sections]
-    from .models import COLOR_COUNTS, Supplier as _S
-    o = (sup.offer if sup else None) or {}
-    g = lambda grp, k: ((o.get(grp) or {}).get(str(k)) or {})
-    offer = {"formats": [{"key": k, "label": lbl, **g("formats", k)} for k, lbl in _S.offer_formats()],
-             "colors": [{"key": str(n), "label": "%d couleurs" % n, **g("colors", n)} for n in COLOR_COUNTS],
-             "brushes": g("extras", "brushes"),
-             "options": list(o.get("options") or []) + [{} for _ in range(3)],
-             "shipping": o.get("shipping") or {}, "taxes": o.get("taxes") or {"vat_recoverable": True}}
-    from . import xlsx_bridge
-    xl = o.get("xlsx") or {}
-    xcols = [{"i": i, "header": h, "field": (xl.get("map") or {}).get(str(i), "")} for i, h in enumerate(xl.get("headers") or [])]
-    return render(request, "admin/erp_supplier_form.html", {
-        **_admin.site.each_context(request), "form": form, "sup": sup, "sections": sec, "channels": SUPPLIER_CHANNELS, "offer": offer,
-        "xl": xl, "xcols": xcols, "xfields": xlsx_bridge.FIELDS, "xsku_default": xlsx_bridge.DEFAULT_SKU,
-        "erp_section": "suppliers"})
+        return redirect(reverse("studio:erp_supplier", args=[sup.pk]) + "#integration")
+    return render(request, "admin/erp_supplier_new.html", {**_admin.site.each_context(request), "form": form,
+                                                          "erp_section": "suppliers"})
 
 
-def _save_supplier_extras(request, sup):
-    """Offre (formats / couleurs / options + couts), nuancier CSV et pieces jointes du formulaire fournisseur."""
+def _save_supplier_extras(request, sup, parts=()):
+    """Parties hors modele d'une section de la fiche : modele Excel (xlsx), Shopify, nuancier CSV, pieces jointes."""
     from .models import COLOR_COUNTS, SupplierFile
     P = request.POST
     notes = []
@@ -2612,7 +2643,9 @@ def _save_supplier_extras(request, sup):
     sup.offer = dict(sup.offer or {})     # grille tarifaire : editee sur la fiche (_grid_save), pas ici
     # Pont Excel (ERP du fournisseur : MangoERP...) : modele, correspondance des colonnes, SKU
     tf = request.FILES.get("xlsx_template")
-    if P.get("xlsx_remove"):
+    if "xlsx" not in parts:
+        pass
+    elif P.get("xlsx_remove"):
         xl = {}
         notes.append("Modèle Excel retiré.")
     elif tf:
@@ -2647,7 +2680,7 @@ def _save_supplier_extras(request, sup):
     else:
         sup.offer.pop("xlsx", None)
     fields = ["offer"]
-    if "shop_domain" in P:
+    if "shopify" in parts and "shop_domain" in P:
         sh = dict(sup.shopify or {})
         new = {"domain": P.get("shop_domain", "").strip()[:120], "client_id": P.get("shop_client_id", "").strip()[:120],
                "api_version": P.get("shop_api_version", "").strip()[:12]}
@@ -2663,11 +2696,11 @@ def _save_supplier_extras(request, sup):
         sh.update(new)
         sup.shopify = sh
         fields.append("shopify")
-    if P.get("palette_clear"):
+    if "palette" in parts and P.get("palette_clear"):
         sup.palette, sup.palette_updated_at = [], None
         fields += ["palette", "palette_updated_at"]
         notes.append("Nuancier retiré.")
-    f = request.FILES.get("palette_csv")
+    f = request.FILES.get("palette_csv") if "palette" in parts else None
     if f:
         from . import palette as _pal
         cols, rep = _pal.parse_csv(f.read())
@@ -2679,6 +2712,8 @@ def _save_supplier_extras(request, sup):
         else:
             notes.append("Nuancier non importé : 1re colonne = référence, 2e = code #RRGGBB.")
     sup.save(update_fields=list(dict.fromkeys(fields)))
+    if "files" not in parts:
+        return notes
     for fid in P.getlist("file_delete"):
         sf = SupplierFile.objects.filter(pk=fid, supplier=sup).first()
         if sf:

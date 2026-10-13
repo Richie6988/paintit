@@ -27,20 +27,20 @@
  .qg-foot{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:12px}
  .qg-foot label{display:flex;flex-direction:column;gap:3px;font-size:.74rem;font-weight:700;color:#6d7175}
 </style>
-<div class="card" id="grille">
-  <div class="card-h"><h2>Grille tarifaire</h2>
-    <span class="muted">{% if grid.g %}prix d'achat {{ grid.g.currency }}{% if grid.g.currency != "EUR" %} · 1 {{ grid.g.currency }} = {{ grid.g.fx|stringformat:"s" }} €{% endif %} · source des coûts et marges (onglet <a href="/admin-tarifs/">Tarifs</a>){% endif %}</span></div>
+<div class="sf-card" id="grille">
+  <div class="sf-card-h" style="margin-bottom:14px"><h2>Grille tarifaire</h2>
+    {% if grid.g %}<span class="gx-muted">Prix d'achat en {{ grid.g.currency }}{% if grid.g.currency != "EUR" %} · 1 {{ grid.g.currency }} = {{ grid.g.fx|stringformat:"s" }} €{% endif %} · <a href="/admin-tarifs/" style="color:var(--brand)">voir les marges</a></span>{% endif %}</div>
   {% if not grid.g %}
-    <p class="muted" style="margin:0 0 10px">Saisissez le devis du fournisseur tel qu'il vous l'envoie : prix unitaire par taille et nombre de couleurs, livraison par pays, supplément de livraison selon les couleurs, délais.</p>
-    <form method="post" style="display:flex;gap:8px">{% csrf_token %}
-      <button class="pbtn pri" name="op" value="grid_seed">Pré-remplir avec le devis Yingsa (USD)</button>
-      <button class="pbtn" name="op" value="grid_save">Commencer une grille vide</button>
+    <p class="sub">Saisissez le devis du fournisseur tel qu'il l'envoie. Coûts et marges en découlent.</p>
+    <form method="post" style="display:flex;gap:8px">{% csrf_token %}<input type="hidden" name="_tab" value="tarifs">
+      <button class="gx-btn pri" name="op" value="grid_seed">Reprendre le devis Yingsa</button>
+      <button class="gx-btn" name="op" value="grid_save">Grille vide</button>
       <input type="hidden" name="g_currency" value="EUR"><input type="hidden" name="g_cols" value="24"><input type="hidden" name="g_cols" value="36"><input type="hidden" name="g_cols" value="48">
       <input type="hidden" name="p_label_0" value="Kit sans cadre"><input type="hidden" name="g_np" value="0"><input type="hidden" name="z_label_0" value="France"><input type="hidden" name="z_countries_0" value="FR"><input type="hidden" name="g_nz" value="0">
       <input type="hidden" name="tax_vat_recoverable" value="on">
     </form>
   {% else %}
-  {% if grid.missing_zones %}<div class="banner warn" style="margin:0 0 12px"><span>Livraison non chiffrée pour <b>{{ grid.missing_zones|join:", " }}</b> : sans ce tarif, la marge des commandes livrées dans {% if grid.missing_zones|length > 1 %}ces zones{% else %}cette zone{% endif %} ne peut pas être calculée. Demandez-le au fournisseur.</span></div>{% endif %}
+  {% if grid.missing_zones %}<div class="sf-alert warn"><span>Livraison non chiffrée : {{ grid.missing_zones|join:", " }}. Marge incalculable pour ces destinations.</span></div>{% endif %}
   <form method="post">{% csrf_token %}<input type="hidden" name="op" value="grid_save">
     <input type="hidden" name="g_nz" value="{{ grid.zones|length }}"><input type="hidden" name="g_np" value="{{ grid.products|length }}"><input type="hidden" name="g_nr" value="{{ grid.n_rows }}">
     <div class="qg-top">
@@ -86,7 +86,7 @@
           {% for z in grid.zones %}<td><input type="text" inputmode="decimal" name="r_ship_{{ grid.n_rows|add:forloop.parentloop.counter0 }}_{{ z.key }}" placeholder="—"></td>{% endfor %}
           <td></td>{% if not p.rows %}<td></td>{% endif %}</tr>
       {% endfor %}
-      <tr><td class="prod"><input type="text" name="p_label_{{ grid.products|length }}" placeholder="＋ Produit"></td><td colspan="{{ grid.cols|length|add:grid.zones|length|add:3 }}" class="note">Nouveau produit (ex. tableau encadré) : nommez-le, enregistrez, puis ajoutez ses tailles.</td></tr>
+      <tr><td class="prod"><input type="text" name="p_label_{{ grid.products|length }}" placeholder="＋ Produit"></td><td colspan="{{ grid.cols|length|add:grid.zones|length|add:3 }}" class="note">Nommez le produit, enregistrez, puis ajoutez ses tailles.</td></tr>
       </tbody>
       <tfoot><tr><td colspan="{{ grid.cols|length|add:2 }}" style="text-align:right;font-weight:700">Délai de livraison</td>
         {% for z in grid.zones %}<td><input type="text" name="z_days_{{ forloop.counter0 }}" value="{{ z.days }}" placeholder="7-12 j"></td>{% endfor %}<td></td><td></td></tr></tfoot>
@@ -99,8 +99,8 @@
       <label>TVA à l'import (%)<span style="display:flex;gap:6px;align-items:center"><input type="text" name="tax_vat_rate" value="{{ offer_x.taxes.vat_rate|default_if_none:''|stringformat:'s' }}" placeholder="20"><span style="white-space:nowrap"><input type="checkbox" name="tax_vat_recoverable" {% if offer_x.taxes.vat_recoverable|default_if_none:True %}checked{% endif %} style="width:auto"> récupérable</span></span></label>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
-      <span class="muted" style="font-size:.76rem">Pays des zones : codes ISO (FR, GB, US…), <b>EU</b> = Union européenne, <b>*</b> = reste du monde. Le produit « vendu » est celui du kit PaintIt.</span>
-      <button class="pbtn pri">Enregistrer la grille</button></div>
+      <span class="gx-muted">Zones : codes pays (FR, GB…), EU = Union européenne, * = reste du monde.</span>
+      <button class="gx-btn pri">Enregistrer</button></div>
   </form>
   {% endif %}
 </div>

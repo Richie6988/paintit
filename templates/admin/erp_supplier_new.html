@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Nouveau fournisseur · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block messages %}{% endblock %}
+{% block content %}
+{% include "admin/_growth_ui.html" %}{% include "admin/_sf_style.html" %}
+<div class="gx sf" style="max-width:640px">
+  <a class="gx-crumb" href="/admin-hub/suppliers/">← Fournisseurs</a>
+  <div class="gx-top"><div><h1>Nouveau fournisseur</h1><p>L'essentiel pour commencer. Tarifs, intégration et coordonnées se complètent ensuite sur sa fiche.</p></div></div>
+  <form method="post" class="gx-card">{% csrf_token %}
+    {% if form.errors %}<div class="sf-alert bad">Vérifiez les champs signalés.</div>{% endif %}
+    <div class="sf-grid">
+      {% include "admin/_sf_field.html" with f=form.name %}{% include "admin/_sf_field.html" with f=form.checkout %}
+      {% include "admin/_sf_field.html" with f=form.lead_time_days %}{% include "admin/_sf_field.html" with f=form.priority %}
+    </div>
+    {% for f in form %}{% if f.name not in "name checkout lead_time_days priority" %}{{ f.as_hidden }}{% endif %}{% endfor %}
+    <div class="sf-actions"><a class="gx-btn" href="/admin-hub/suppliers/">Annuler</a><button class="gx-btn pri">Créer la fiche</button></div>
+  </form>
+</div>
+{% endblock %}

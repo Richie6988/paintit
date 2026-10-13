@@ -1,0 +1,2 @@
+{% if f.field.widget.input_type == "checkbox" %}<label class="gx-switch sf-sw">{{ f }} {{ f.label }}</label>
+{% else %}<label class="gx-field{% if f.field.widget.attrs.rows %} wide{% endif %}"><span>{{ f.label }}</span>{{ f }}{% if f.help_text %}<small class="gx-muted">{{ f.help_text }}</small>{% endif %}</label>{% endif %}

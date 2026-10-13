@@ -480,9 +480,8 @@ class KitFormat(models.Model):
 class Supplier(models.Model):
     """Fournisseur plug-and-play : connecte a un checkout, avec grille tarifaire,
     conditions de partenariat et integration (e-mail ou API)."""
-    CHECKOUTS = [("kit", "Kit a peindre"), ("print", "Tableau fini"), ("all", "Tous les checkouts")]
-    INTEGRATIONS = [("email", "E-mail"), ("api", "API (webhook)"), ("shopify", "Shopify (MangoERP / ERP fournisseur)"),
-                    ("woo", "Connecteur WooCommerce (MangoERP direct, sans Shopify)")]
+    CHECKOUTS = [("kit", "Kit à peindre"), ("print", "Tableau fini"), ("all", "Tous les produits")]
+    INTEGRATIONS = [("email", "E-mail"), ("api", "API"), ("shopify", "Shopify"), ("woo", "MangoERP")]
     name = models.CharField("Nom", max_length=120)
     active = models.BooleanField("Actif", default=True)
     checkout = models.CharField("Checkout connecte", max_length=10, choices=CHECKOUTS, default="kit")

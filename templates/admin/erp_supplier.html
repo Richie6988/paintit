@@ -2,243 +2,249 @@
 {% block title %}{{ sup.name }} · Fournisseurs · PaintIt ERP{% endblock %}
 {% block breadcrumbs %}{% endblock %}
 {% block content_title %}{% endblock %}
+{% block messages %}{% endblock %}
 {% block content %}
-{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
-<div class="erp">
-  <a href="/admin-hub/suppliers/" class="muted" style="font-weight:700">← Fournisseurs</a>
-  <div class="erp-head" style="margin-top:8px">
-    <div style="display:flex;gap:14px;align-items:center">
-      <div class="av lg" style="background:{{ sup.color }}">{{ sup.initials }}</div>
-      <div><h1 style="display:flex;gap:10px;align-items:center">{{ sup.name }}
-        {% if not sup.active %}<span class="bdg2 off"><span class="dot2"></span>Inactif</span>
-        {% elif sup.health == "err" %}<span class="bdg2 err"><span class="dot2"></span>Erreur d'intégration</span>
-        {% elif sup.health == "ok" %}<span class="bdg2 ok"><span class="dot2"></span>Connecté</span>
-        {% else %}<span class="bdg2 idle"><span class="dot2"></span>En attente de 1re commande</span>{% endif %}</h1>
-        <div class="muted">{{ sup.get_checkout_display }} · priorité {{ sup.priority }} · délai promis {{ sup.lead_time_days }} j{% if sup.incoterms %} · {{ sup.incoterms }}{% endif %}</div></div>
+{% include "admin/_erp_style.html" %}{% include "admin/_growth_ui.html" %}{% include "admin/_sf_style.html" %}
+<div class="gx sf">
+  <a class="gx-crumb" href="/admin-hub/suppliers/">← Fournisseurs</a>
+  <div class="sf-head">
+    <div class="sf-id">
+      <div class="sf-av" style="background:{{ sup.color }}">{{ sup.initials }}</div>
+      <div><h1>{{ sup.name }}
+        {% if not sup.active %}<span class="gx-chip"><span class="gx-dot"></span>En pause</span>
+        {% elif sup.health == "err" %}<span class="gx-chip bad"><span class="gx-dot"></span>À corriger</span>
+        {% elif sup.health == "ok" %}<span class="gx-chip ok"><span class="gx-dot"></span>Opérationnel</span>
+        {% else %}<span class="gx-chip"><span class="gx-dot"></span>Prêt</span>{% endif %}</h1>
+        <p>{{ sup.get_checkout_display }} · {{ sup.channel|default:"canal à configurer" }} · production {{ sup.lead_time_days }} j</p></div>
     </div>
-    <div style="display:flex;gap:8px">
-      <form method="post">{% csrf_token %}<button class="pbtn" name="op" value="toggle">{% if sup.active %}Mettre en pause{% else %}Activer{% endif %}</button></form>
-      <a class="pbtn pri" href="/admin-hub/suppliers/{{ sup.pk }}/edit/">Modifier</a>
-    </div>
+    <form method="post" style="display:flex;gap:8px">{% csrf_token %}
+      <button class="gx-btn" name="op" value="toggle">{% if sup.active %}Mettre en pause{% else %}Réactiver{% endif %}</button>
+    </form>
   </div>
 
-  {% if messages %}{% for m in messages %}<div class="banner {% if m.tags == 'error' %}err{% else %}warn{% endif %}"><span>{{ m }}</span></div>{% endfor %}{% endif %}
-  {% if sup.health == "err" %}<div class="banner err"><span><b>Dernière transmission en échec</b>{% if sup.last_sync_at %} ({{ sup.last_sync_at|timesince }}){% endif %} : {{ sup.last_sync_error|default:"aucun canal configuré (e-mail ou URL API)" }}</span><a class="pbtn sm" href="/admin-hub/suppliers/{{ sup.pk }}/edit/">Corriger</a></div>{% endif %}
-  {% if unassigned %}<div class="banner warn"><span><b>{{ unassigned }} commande{{ unassigned|pluralize }} payée{{ unassigned|pluralize }}</b> sans fournisseur rattaché.</span>
-    <form method="post">{% csrf_token %}<button class="pbtn sm" name="op" value="assign" data-confirm="Rattacher ces commandes à {{ sup.name }} ?" data-ok="Rattacher">Rattacher à {{ sup.name }}</button></form></div>{% endif %}
+  {% for m in messages %}<div class="sf-alert {% if m.tags == 'error' %}bad{% else %}ok{% endif %}"><span>{{ m }}</span></div>{% endfor %}
 
-  <div class="kpis">
-    <div class="kpi"><div class="l">Commandes (30 j)</div><div class="v">{{ sup.stats.orders_30 }}</div><div class="muted">{{ sup.stats.orders_total }} au total</div></div>
-    <div class="kpi"><div class="l">Achats (30 j)</div><div class="v">{{ sup.stats.spend_30|floatformat:"2g" }} €</div><div class="muted">pour {{ sup.stats.revenue_30|floatformat:"2g" }} € de ventes</div></div>
-    <div class="kpi"><div class="l">En production</div><div class="v">{{ sup.stats.in_production }}</div><div class="muted">{{ sup.stats.shipped }} en transit</div></div>
-    <div class="kpi"><div class="l">En retard</div><div class="v" {% if sup.stats.late %}style="color:#b42318"{% endif %}>{{ sup.stats.late }}</div><div class="muted">{{ sup.stats.late_prod }} prod. · {{ sup.stats.late_ship }} livraison</div></div>
-    <div class="kpi"><div class="l">Délai réel moyen</div><div class="v">{% if sup.stats.avg_days is not None %}{{ sup.stats.avg_days }} j{% else %}—{% endif %}</div><div class="muted">promis : {{ sup.stats.lead }} j</div></div>
-    <div class="kpi"><div class="l">Dans les délais</div><div class="v">{% if sup.stats.on_time is not None %}{{ sup.stats.on_time }} %{% else %}—{% endif %}</div><div class="muted">production ≤ délai promis</div></div>
-  </div>
+  <div class="sf-tabs"><nav class="gx-tabs" id="sfTabs">
+    <a href="#apercu" data-t="apercu">Aperçu{% if attention %}<em class="bad">{{ attention|length }}</em>{% endif %}</a>
+    <a href="#commandes" data-t="commandes">Commandes{% if sup.stats.in_production %}<em>{{ sup.stats.in_production }}</em>{% endif %}</a>
+    <a href="#tarifs" data-t="tarifs">Tarifs</a>
+    <a href="#integration" data-t="integration">Intégration</a>
+    <a href="#production" data-t="production">Production</a>
+    <a href="#coordonnees" data-t="coordonnees">Coordonnées</a>
+    <a href="#documents" data-t="documents">Documents{% with n=sup.files.count %}{% if n %}<em>{{ n }}</em>{% endif %}{% endwith %}</a>
+  </nav></div>
 
-  {% include "admin/_supplier_grid.html" %}
+  {# ================= APERÇU ================= #}
+  <section class="sf-panel" id="p-apercu">
+    {% for lvl, txt, t in attention %}<div class="sf-alert {{ lvl }}"><span>{{ txt }}</span>{% if t %}<a href="#{{ t }}" data-go="{{ t }}">Voir</a>{% endif %}</div>{% endfor %}
+    {% if unassigned %}<form method="post" class="sf-alert warn">{% csrf_token %}<input type="hidden" name="_tab" value="apercu">
+      <span>{{ unassigned }} commande{{ unassigned|pluralize }} payée{{ unassigned|pluralize }} sans fournisseur.</span>
+      <button class="gx-btn sm" name="op" value="assign" data-confirm="Rattacher ces commandes à {{ sup.name }} ?" data-ok="Rattacher">Rattacher à {{ sup.name }}</button></form>{% endif %}
+    <div class="gx-kpis" style="margin-bottom:16px">
+      <div class="gx-kpi"><div class="l">Commandes · 30 j</div><div class="v">{{ sup.stats.orders_30 }}</div><div class="s">{{ sup.stats.orders_total }} au total</div></div>
+      <div class="gx-kpi"><div class="l">Achats · 30 j</div><div class="v">{{ sup.stats.spend_30|floatformat:"0g" }} €</div><div class="s">pour {{ sup.stats.revenue_30|floatformat:"0g" }} € de ventes</div></div>
+      <div class="gx-kpi"><div class="l">En cours</div><div class="v">{{ sup.stats.in_production }}</div><div class="s">{{ sup.stats.shipped }} en livraison</div></div>
+      <div class="gx-kpi"><div class="l">En retard</div><div class="v"{% if sup.stats.late %} style="color:var(--bad)"{% endif %}>{{ sup.stats.late }}</div><div class="s">délai promis {{ sup.stats.lead }} j</div></div>
+      <div class="gx-kpi"><div class="l">Délai réel</div><div class="v">{% if sup.stats.avg_days is not None %}{{ sup.stats.avg_days }} j{% else %}—{% endif %}</div><div class="s">{% if sup.stats.on_time is not None %}{{ sup.stats.on_time }} % dans les temps{% else %}pas encore de recul{% endif %}</div></div>
+      <div class="gx-kpi"><div class="l">À régler</div><div class="v">{{ due_total|floatformat:"0g" }} €</div><div class="s">{{ due|length }} commande{{ due|length|pluralize }}</div></div>
+    </div>
+    <div class="sf-card"><h2>Activité récente</h2>
+      <ul class="sf-list" style="margin-top:8px">{% for e in events %}<li><span><a href="/admin/studio/order/{{ e.order_id }}/change/" style="font-weight:700">{{ e.order.uid }}</a> · {{ e.text }}</span><span class="gx-muted" style="white-space:nowrap">{{ e.at|date:"d/m H:i" }}</span></li>
+      {% empty %}<li class="gx-muted">Aucune transmission pour l'instant.</li>{% endfor %}</ul></div>
+  </section>
 
-  <div class="sp-layout">
-    <div>
-      <div class="card">
-        <div class="tabs2">{% for k, l, n in tabs %}<a href="?tab={{ k }}" class="{% if k == tab %}on{% endif %}">{{ l }}<em>{{ n }}</em></a>{% endfor %}</div>
-        <div style="overflow-x:auto">
-        <table class="t">
-          <tr><th>Commande</th><th>Produit</th><th>Client</th><th>Statut</th><th class="r">Depuis</th><th>Suivi</th><th class="r">Coût</th><th></th></tr>
-          {% for r in rows %}<tr>
-            <td><a href="/admin/studio/order/{{ r.o.pk }}/change/">{{ r.o.uid|truncatechars:16 }}</a><div class="muted">{{ r.o.created_at|date:"d/m/Y" }}</div></td>
-            <td>{{ r.o.format_label }} · {{ r.o.colors }}c{% if r.o.brushes %} · pinceaux{% endif %}</td>
-            <td>{{ r.o.customer_name|truncatechars:20 }}<div class="muted">{{ r.o.city }}{% if r.o.country %}, {{ r.o.country }}{% endif %}</div></td>
-            <td><span class="pill st-{{ r.o.status }}">{{ r.o.get_status_display }}</span></td>
-            <td class="r {% if r.late %}late{% endif %}">{{ r.age }} j{% if r.late %} ⚠{% endif %}</td>
-            <td>{% if r.o.tracking_number %}{% if r.o.tracking_url %}<a href="{{ r.o.tracking_url }}" target="_blank" rel="noopener">{{ r.o.carrier }} {{ r.o.tracking_number }}</a>{% else %}{{ r.o.carrier }} {{ r.o.tracking_number }}{% endif %}{% with p=r.o.parcel %}{% if p.notified_at %}<div class="muted" style="font-size:.72rem">✅ arrivé · client prévenu · {{ p.last_mile.number }}</div>{% elif p.state %}<div class="muted" style="font-size:.72rem">{{ p.state }}</div>{% endif %}{% endwith %}{% else %}<span class="muted">—</span>{% endif %}</td>
-            <td class="r">{{ r.o.cost|floatformat:2 }} €</td>
-            <td><form method="post">{% csrf_token %}<input type="hidden" name="order" value="{{ r.o.pk }}"><button class="pbtn sm" name="op" value="resend" title="Renvoyer la commande et les fichiers à ce fournisseur">Renvoyer</button></form></td>
-          </tr>{% empty %}<tr><td colspan="8" class="muted">Aucune commande dans cet onglet.</td></tr>{% endfor %}
-        </table>
-        </div>
-      </div>
+  {# ================= COMMANDES ================= #}
+  <section class="sf-panel" id="p-commandes">
+    <div class="sf-card">
+      <nav class="gx-tabs" style="margin-bottom:12px">{% for k, l, n in tabs %}<a href="?o={{ k }}#commandes" class="{% if k == tab %}on{% endif %}">{{ l }} <span class="gx-muted">{{ n }}</span></a>{% endfor %}</nav>
+      <div style="overflow-x:auto"><table class="t">
+        <tr><th>Commande</th><th>Produit</th><th>Client</th><th>Statut</th><th style="text-align:right">Depuis</th><th>Suivi</th><th style="text-align:right">Coût</th><th></th></tr>
+        {% for r in rows %}<tr>
+          <td><a href="/admin/studio/order/{{ r.o.pk }}/change/" style="font-weight:700">{{ r.o.uid|truncatechars:16 }}</a><div class="gx-muted">{{ r.o.created_at|date:"d/m/Y" }}</div></td>
+          <td>{{ r.o.format_label }} · {{ r.o.colors }} coul.{% if r.o.brushes %} · pinceaux{% endif %}</td>
+          <td>{{ r.o.customer_name|truncatechars:22 }}<div class="gx-muted">{{ r.o.city }}{% if r.o.country %}, {{ r.o.country }}{% endif %}</div></td>
+          <td><span class="pill st-{{ r.o.status }}">{{ r.o.get_status_display }}</span></td>
+          <td style="text-align:right{% if r.late %};color:var(--bad);font-weight:800{% endif %}">{{ r.age }} j</td>
+          <td>{% if r.o.tracking_number %}{% if r.o.tracking_url %}<a href="{{ r.o.tracking_url }}" target="_blank" rel="noopener">{{ r.o.tracking_number }}</a>{% else %}{{ r.o.tracking_number }}{% endif %}
+            {% with p=r.o.parcel %}{% if p.notified_at %}<div class="gx-muted">Arrivé · client prévenu</div>{% elif p.state %}<div class="gx-muted">{{ p.state }}</div>{% endif %}{% endwith %}{% else %}<span class="gx-muted">—</span>{% endif %}</td>
+          <td style="text-align:right">{{ r.o.cost|floatformat:2 }} €</td>
+          <td><form method="post">{% csrf_token %}<input type="hidden" name="_tab" value="commandes"><input type="hidden" name="order" value="{{ r.o.pk }}"><button class="gx-btn sm ghost" name="op" value="resend" title="Retransmettre la commande et ses fichiers">Renvoyer</button></form></td>
+        </tr>{% empty %}<tr><td colspan="8" class="gx-muted">Aucune commande.</td></tr>{% endfor %}
+      </table></div>
+    </div>
+    <div class="sf-card">
+      <div class="sf-card-h"><div><h2>Règlements</h2><p class="sub">Commandes transmises non réglées, au coût de la grille tarifaire.</p></div><span class="gx-chip {% if due_total %}warn{% else %}ok{% endif %}">{{ due_total|floatformat:2 }} € à régler</span></div>
+      {% if due %}<form method="post">{% csrf_token %}<input type="hidden" name="_tab" value="commandes">
+        <ul class="sf-list" style="max-height:280px;overflow:auto">{% for o in due %}<li><label style="display:flex;gap:10px;align-items:center;cursor:pointer"><input type="checkbox" name="oid" value="{{ o.pk }}" checked style="width:auto"> <b>{{ o.uid }}</b> <span class="gx-muted">{{ o.created_at|date:"d/m" }} · {{ o.get_status_display }}</span></label><b>{{ o.cost|floatformat:2 }} €</b></li>{% endfor %}</ul>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><input type="text" name="ref" placeholder="Référence du virement" style="flex:1;min-width:180px;height:40px">
+          <button class="gx-btn pri" name="op" value="pay_mark" data-confirm="Marquer les commandes cochées comme réglées ?" data-ok="Confirmer">Marquer réglées</button>
+          <a class="gx-btn" href="/admin-hub/suppliers/{{ sup.pk }}/export/statement.xlsx">Relevé .xlsx</a></div></form>
+      {% else %}<p class="gx-muted" style="margin:0">Tout est réglé.</p>{% endif %}
+      {% if paid %}<details class="sf-more"><summary>Derniers règlements</summary><ul class="sf-list">{% for o in paid %}<li><span>{{ o.uid }} · {{ o.cost|floatformat:2 }} € · {{ o.supplier_paid_at|date:"d/m/Y" }}{% if o.supplier_payment_ref %} · {{ o.supplier_payment_ref }}{% endif %}</span>
+        <form method="post">{% csrf_token %}<input type="hidden" name="_tab" value="commandes"><input type="hidden" name="oid" value="{{ o.pk }}"><button class="gx-btn sm ghost" name="op" value="pay_undo">Annuler</button></form></li>{% endfor %}</ul></details>{% endif %}
+    </div>
+  </section>
 
-<style>
- .chsel{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 14px}
- .chsel button{all:unset;cursor:pointer;border:1.5px solid #e3e3e3;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;background:#fff;transition:border-color .15s,box-shadow .15s}
- .chsel button:hover{border-color:#9db4f5}
- .chsel button.on{border-color:#2f6bf2;box-shadow:0 0 0 3px rgba(47,107,242,.12);background:#f5f8ff}
- .chsel b{font-size:.86rem;color:#12224f}.chsel small{font-size:.72rem;color:#6d7175;line-height:1.3}
- .chpanel{padding:2px 0 12px}
- .chfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid #eee;padding-top:12px}
- .chx{margin-top:12px;border-top:1px solid #eee;padding-top:10px}.chx>summary{cursor:pointer;font-weight:800;font-size:.84rem}
- @media(max-width:860px){.chsel{grid-template-columns:1fr 1fr}}
-</style>
-      <div class="card" id="integration">
-        <div class="card-h"><h2>Intégration</h2><span style="display:flex;gap:6px">{% if sup.channel %}<span class="bdg2 info">{{ sup.channel }}</span>{% else %}<span class="bdg2 err">Canal à configurer</span>{% endif %}{% if sup.auto_dispatch %}<span class="bdg2 ok">Automatique</span>{% else %}<span class="bdg2 warn">Manuelle</span>{% endif %}</span></div>
-        <form method="post" class="chsel">{% csrf_token %}<input type="hidden" name="op" value="channel">
-          {% for k, l, d in channels %}<button name="integration" value="{{ k }}" class="{% if sup.integration == k %}on{% endif %}"><b>{{ l }}</b><small>{{ d }}</small></button>{% endfor %}
-        </form>
-        <div class="chpanel">
-        {% if sup.integration == "woo" %}
-        <p class="muted" style="margin:0 0 10px">L'ERP du fournisseur voit paintit.click comme une boutique WooCommerce et vient chercher seul les commandes payées qui lui sont transmises (SKU, adresse, fichiers de production), puis renvoie les n° de suivi. Aucun prix d'achat n'est exposé.</p>
+  {# ================= TARIFS ================= #}
+  <section class="sf-panel" id="p-tarifs">{% include "admin/_supplier_grid.html" %}</section>
+
+  {# ================= INTÉGRATION ================= #}
+  <section class="sf-panel" id="p-integration">
+    <div class="sf-card">
+      <h2>Canal de transmission</h2><p class="sub">Comment les commandes payées parviennent au fournisseur, et comment le suivi revient.</p>
+      <form method="post" class="sf-ch">{% csrf_token %}<input type="hidden" name="op" value="channel"><input type="hidden" name="_tab" value="integration">
+        {% for k, l, d in channels %}<button name="integration" value="{{ k }}" class="{% if sup.integration == k %}on{% endif %}"><b>{{ l }}</b><small>{{ d }}</small></button>{% endfor %}
+      </form>
+
+      {% if sup.integration == "woo" %}
         {% if woo.ck %}
-        <ol class="muted" style="margin:0 0 12px;padding-left:18px;font-size:.84rem;line-height:1.8">
-          <li>MangoERP → 授权 (Autorisation) → <b>WooCommerce</b> → 添加授权</li>
-          <li>店铺别名 : <code>PaintIt</code> · 网址 (URL) : <code>{{ woo_site }}</code></li>
-          <li>consumerKey : <code style="user-select:all">{{ woo.ck }}</code></li>
-          <li>consumerSecret : <code style="user-select:all">{{ woo.cs }}</code></li>
-          <li>Le fournisseur associe les SKU <code>PBN-40x50-24C</code>… (配对 SKU) à ses produits.</li>
+        <ol class="sf-steps">
+          <li>MangoERP → 授权 → 独立站 → <b>Woocommerce</b> → 增加授权店铺</li>
+          <li>Renseigner les accès ci-dessous, puis associer nos SKU (<code>PBN-40x50-24C</code>…) à ses produits (配对).</li>
         </ol>
-        {% endif %}
-        <form method="post" style="display:flex;gap:8px;flex-wrap:wrap">{% csrf_token %}
-          <button class="pbtn{% if not woo.ck %} pri{% endif %}" name="op" value="woo_keys"{% if woo.ck %} data-confirm="Régénérer les clés ? L'ERP devra être reconfiguré." data-ok="Régénérer"{% endif %}>{% if woo.ck %}Régénérer les clés{% else %}Générer les clés API{% endif %}</button>
-          {% if woo.ck %}<button class="pbtn" name="op" value="woo_revoke" data-confirm="Couper l'accès de l'ERP ?" data-danger style="color:#b42318">Révoquer</button>{% endif %}
-        </form>
-        <div class="muted" style="font-size:.74rem;margin-top:8px">{% if woo.created %}Clés du {{ woo.created|slice:":10" }}{% endif %}{% if woo.last_seen %} · dernier appel authentifié de l'ERP : {{ woo.last_seen|slice:":10" }} {{ woo.last_seen|slice:"11:16" }} UTC{% else %} · <b>l'ERP n'a encore lu aucune commande</b> : dans MangoERP → 订单 (Commandes) → 同步订单 (synchroniser), choisir la boutique PaintIt{% endif %}</div>
-        <details style="margin-top:10px" open><summary style="cursor:pointer;font-weight:700;font-size:.82rem">Journal des appels de l'ERP ({{ woo_logs|length }} derniers, y compris refusés)</summary>
-          {% if not woo_logs %}<div class="muted" style="font-size:.78rem;margin-top:6px">Aucun appel reçu pour l'instant.</div>{% endif %}
-          <table style="width:100%;font-size:.74rem;margin-top:6px">
-            {% for l in woo_logs %}<tr><td>{{ l.at|date:"d/m H:i" }}</td><td><b>{{ l.method }}</b> {{ l.path }}{% if l.query %}?{{ l.query|truncatechars:60 }}{% endif %}</td>
-              <td>{% if l.status < 300 %}<span class="bdg2 ok">{{ l.status }}</span>{% else %}<span class="bdg2 err">{{ l.status }}</span>{% endif %}</td><td class="muted">{{ l.note }}</td></tr>
-            {% if l.body %}<tr><td></td><td colspan="3"><code style="font-size:.7rem;word-break:break-all">{{ l.body|truncatechars:300 }}</code></td></tr>{% endif %}{% endfor %}
-          </table></details>
-        {% elif sup.integration == "shopify" %}
-        <p class="muted" style="margin:0 0 10px">Chaque commande payée est recréée dans votre boutique Shopify, où l'ERP du fournisseur la récupère ; l'expédition revient ici.</p>
-        <ol class="muted" style="margin:0 0 12px;padding-left:18px;font-size:.84rem;line-height:1.7">
-          <li>{% if shop.domain %}✅{% else %}⬜{% endif %} Boutique : <b>{{ shop.shop_name|default:shop.domain|default:"—" }}</b> <a href="/admin-hub/suppliers/{{ sup.pk }}/edit/#integration">configurer</a></li>
-          <li>{% if shop.catalogue_synced %}✅{% else %}⬜{% endif %} Catalogue publié (SKU <code>PBN-40x50-24C</code>…){% if shop.variants %} · {{ shop.variants|length }} variantes{% endif %} — à associer par le fournisseur dans son ERP</li>
-          <li>{% if shop.webhooks %}✅{% else %}⬜{% endif %} Retours d'expédition automatiques{% if shop.webhooks %} ({{ shop.webhooks|length }} webhooks){% endif %}</li>
-          <li>Le fournisseur autorise sa connexion MangoERP sur votre boutique (côté Shopify : installer l'app MangoERP et lui donner l'accès).</li>
-        </ol>
-        <form method="post" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">{% csrf_token %}
-          <button class="pbtn" name="op" value="shop_test">Tester la connexion</button>
-          <button class="pbtn" name="op" value="shop_catalog">Publier le catalogue</button>
-          <button class="pbtn" name="op" value="shop_webhooks">Activer les retours</button>
-          <button class="pbtn" name="op" value="shop_poll">Synchroniser les suivis</button>
-          {% if shop_pending %}<button class="pbtn pri" style="grid-column:1/-1" name="op" value="shop_push" data-confirm="Créer {{ shop_pending }} commande(s) dans Shopify ?" data-ok="Envoyer">Envoyer {{ shop_pending }} commande(s) en attente vers Shopify</button>{% endif %}
-        </form>
-        <div class="muted" style="font-size:.74rem;margin-top:8px;word-break:break-all">Webhook : {{ shop_hook }}{% if shop.last_check %} · vérifié le {{ shop.last_check|slice:":10" }}{% endif %}</div>
-        {% elif sup.integration == "api" %}
-        <dl class="kv"><dt>Endpoint</dt><dd>{{ sup.api_url|default:"— à renseigner" }}</dd><dt>Clé API</dt><dd>{{ api_key|default:"—" }}</dd></dl>
-        {% else %}
-        <dl class="kv"><dt>E-mail commande</dt><dd>{{ sup.email|default:"— à renseigner" }}</dd></dl>
-        {% endif %}
-        {% if sup.integration == "email" and not sup.email or sup.integration == "api" and not sup.api_url or sup.integration == "shopify" and not shop.domain %}<a class="pbtn sm" style="margin-top:8px" href="/admin-hub/suppliers/{{ sup.pk }}/edit/#integration">Configurer</a>{% endif %}
+        <div class="sf-grid" style="margin-top:12px">
+          <div class="gx-field"><span>URL du site</span><div class="sf-code"><span>{{ woo_site }}</span><button type="button" data-copy="{{ woo_site }}">Copier</button></div></div>
+          <div class="gx-field"><span>Nom de la boutique</span><div class="sf-code"><span>PaintIt</span><button type="button" data-copy="PaintIt">Copier</button></div></div>
+          <div class="gx-field"><span>consumerKey</span><div class="sf-code"><span>{{ woo.ck }}</span><button type="button" data-copy="{{ woo.ck }}">Copier</button></div></div>
+          <div class="gx-field"><span>consumerSecret</span><div class="sf-code"><span>{{ woo.cs }}</span><button type="button" data-copy="{{ woo.cs }}">Copier</button></div></div>
         </div>
-
-        <div class="files" style="margin-bottom:10px"><span class="muted" style="font-size:.78rem;font-weight:700">Fichiers transmis :</span> {% for f in files %}<span class="chip">{{ f }}</span>{% empty %}<span class="muted">aucun</span>{% endfor %}</div>
-        <div class="chfoot">
-          <div class="muted" style="font-size:.8rem">Dernier envoi : {% if sup.last_sync_at %}{{ sup.last_sync_at|date:"d/m/Y H:i" }} {% if sup.last_sync_ok %}<span class="bdg2 ok">OK</span>{% else %}<span class="bdg2 err">Échec</span>{% endif %}{% else %}—{% endif %}</div>
-          <form method="post" style="display:flex;gap:6px;flex-wrap:wrap">{% csrf_token %}
-            <button class="pbtn sm" name="op" value="auto" title="{% if sup.auto_dispatch %}Chaque commande payée est transmise immédiatement, relancée en cas d'échec.{% else %}Les commandes payées attendent votre validation.{% endif %}">Passer en {% if sup.auto_dispatch %}manuel{% else %}automatique{% endif %}</button>
-            {% if sup.integration != "woo" %}<button class="pbtn sm pri" name="op" value="test">Tester la connexion</button>{% endif %}</form>
-        </div>
-        {% if automation.retries %}<form method="post" class="banner warn" style="margin:10px 0 0;display:block">{% csrf_token %}
-          <b>{{ automation.retries }} commande{{ automation.retries|pluralize }} dont la transmission a échoué</b> (relance automatique toutes les 15 min). Décidez lesquelles doivent partir en production{% if sup.integration == "woo" %} : une commande transmise devient visible pour l'ERP et sera fabriquée{% endif %}.
-          <div style="display:flex;flex-direction:column;gap:3px;margin:8px 0;font-size:.82rem">{% for o in automation.retry_rows %}<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="oid" value="{{ o.pk }}" checked style="width:auto">
-            <a href="/admin/studio/order/{{ o.pk }}/change/">{{ o.uid }}</a> · {{ o.created_at|date:"d/m/Y" }} · {{ o.customer_name|truncatechars:24 }} · {{ o.format_label }} · {{ o.total|floatformat:2 }} €</label>{% endfor %}</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="pbtn sm pri" name="op" value="retry_now" data-confirm="Transmettre les commandes cochées à {{ sup.name }} ?" data-ok="Transmettre">Transmettre les cochées</button>
-            <button class="pbtn sm" name="op" value="retry_skip" data-confirm="Ne jamais transmettre les commandes cochées (tests, doublons) ?" data-ok="Retirer">Ne pas transmettre (tests)</button></div>
-        </form>{% endif %}
-
-        {% if sup.integration == "api" or sup.integration == "email" %}
-        <details class="chx"><summary>Guide technique &amp; URL de retour</summary>
-          <div style="display:flex;gap:6px;margin:8px 0"><input type="text" readonly value="{{ automation.callback }}" id="cbUrl" style="flex:1;font-size:.74rem" onclick="this.select()">
-            <button type="button" class="pbtn sm" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('cbUrl').value);this.textContent='Copié ✓'">Copier</button>
-            <form method="post" data-confirm="Générer un nouveau secret ?" data-confirm-text="L'ancienne URL de retour cessera de fonctionner : transmettez la nouvelle au fournisseur." data-ok="Régénérer" data-danger>{% csrf_token %}<button class="pbtn sm" name="op" value="secret">Régénérer</button></form></div>
-        <details open><summary style="font-weight:800;cursor:pointer;margin-bottom:6px">1 · Envoi des commandes (PaintIt → fournisseur)</summary>
-          <p class="muted" style="margin:4px 0 8px">{% if sup.integration == "api" %}POST JSON sur <code>{{ sup.api_url|default:"(URL API à renseigner)" }}</code> · en-têtes <code>Authorization: Bearer &lt;clé API&gt;</code>, <code>X-PaintIt-Event</code>, <code>X-PaintIt-Signature</code> = HMAC-SHA256 (hex) du corps avec le secret webhook.{% else %}E-mail à <code>{{ sup.email|default:"(e-mail à renseigner)" }}</code> avec le même contenu en pièce jointe <code>order_&lt;ref&gt;.json</code>. Passez en intégration API pour un traitement 100 % automatique.{% endif %}</p>
-          <pre style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px;font-size:.74rem;max-height:320px;overflow:auto">{{ automation.out }}</pre></details>
-        <details><summary style="font-weight:800;cursor:pointer;margin:10px 0 6px">2 · Retours de statut (fournisseur → PaintIt)</summary>
-          <p class="muted" style="margin:4px 0 8px">POST JSON sur l'URL de retour. <code>status</code> ∈ <code>in_production</code>, <code>shipped</code>, <code>delivered</code>, <code>failed</code>. Plusieurs commandes : envoyer une liste. Signature facultative (<code>X-PaintIt-Signature</code>, même calcul) ; si présente elle est vérifiée.</p>
-          <pre style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px;font-size:.74rem;overflow:auto">curl -X POST {{ automation.callback }} \
-  -H "Content-Type: application/json" \
-  -d '{{ automation.in|escape }}'</pre></details>
-        <details><summary style="font-weight:800;cursor:pointer;margin:10px 0 6px">3 · Relances automatiques</summary>
-          <p class="muted" style="margin:4px 0">Tâche planifiée <code>python manage.py supplier_sync</code> (toutes les 15 min) : retransmet les envois en échec (5 essais max) et envoie les commandes payées jamais transmises.</p></details>
-        </details>
+        <p class="gx-muted" style="margin:12px 0 0">{% if woo.last_seen %}Dernière synchronisation de l'ERP : {{ woo.last_seen|slice:":10" }} à {{ woo.last_seen|slice:"11:16" }} (UTC).{% else %}L'ERP n'a encore lu aucune commande. Dans MangoERP : 订单 → 同步订单.{% endif %}</p>
         {% endif %}
-        <details class="chx"{% if sup.integration == "email" %} open{% endif %}><summary>Excel ERP (import manuel / secours){% if xl.template %} · modèle {{ xl.headers|length }} col.{% endif %}</summary>
-        <p class="muted" style="margin:0 0 10px">Sans Shopify : le fournisseur importe ce fichier dans son ERP (MangoERP → 自定义店铺 → Excel导入手工订单), puis nous renvoie son export d'expédition avec les n° de suivi.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <a class="pbtn pri" href="/admin-hub/suppliers/{{ sup.pk }}/export/orders.xlsx">Télécharger les commandes à traiter (.xlsx)</a>
-          <a class="pbtn" href="/admin-hub/suppliers/{{ sup.pk }}/edit/#erp-excel">{% if xl.template %}Modifier le modèle{% else %}Ajouter son modèle Excel{% endif %}</a>
-        </div>
-        <form method="post" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px">{% csrf_token %}
-          <b style="font-size:.84rem">Retour de suivi :</b><input type="file" name="tracking" accept=".xlsx,.xlsm,.csv,text/csv" required>
-          <button class="pbtn" name="op" value="tracking_import">Importer les n° de suivi</button>
-        </form>
-        <div class="muted" style="font-size:.76rem;margin-top:6px">Colonnes reconnues : n° de commande (订单号 / order no), n° de suivi (跟踪号 / 运单号 / tracking), transporteur (物流方式 / carrier). Les commandes passent en « Expédiée » et le client est notifié comme avec l'API.</div>
-        </details>
-      </div>
+        <form method="post" style="display:flex;gap:8px;margin-top:14px">{% csrf_token %}<input type="hidden" name="_tab" value="integration">
+          <button class="gx-btn{% if not woo.ck %} pri{% endif %}" name="op" value="woo_keys"{% if woo.ck %} data-confirm="Régénérer les accès ? L'ERP devra être reconfiguré." data-ok="Régénérer"{% endif %}>{% if woo.ck %}Régénérer les accès{% else %}Générer les accès{% endif %}</button>
+          {% if woo.ck %}<button class="gx-btn danger" name="op" value="woo_revoke" data-confirm="Couper l'accès de l'ERP ?" data-danger>Révoquer</button>{% endif %}</form>
+        <details class="sf-more"><summary>Journal des appels de l'ERP</summary>
+          {% if woo_logs %}<table class="log" style="margin-top:8px">{% for l in woo_logs %}<tr><td class="gx-muted" style="white-space:nowrap">{{ l.at|date:"d/m H:i" }}</td><td><b>{{ l.method }}</b> {{ l.path }}{% if l.body %}<div class="gx-muted" style="word-break:break-all">{{ l.body|truncatechars:200 }}</div>{% endif %}</td>
+            <td><span class="gx-chip {% if l.status < 300 %}ok{% else %}bad{% endif %}">{{ l.status }}</span></td><td class="gx-muted">{{ l.note }}</td></tr>{% endfor %}</table>
+          {% else %}<p class="gx-muted">Aucun appel reçu.</p>{% endif %}</details>
 
-
-      <div class="card">
-        <div class="card-h"><h2>Règlements fournisseur</h2><span class="bdg2 {% if due_total %}warn{% else %}ok{% endif %}">{{ due_total|floatformat:2 }} € à régler</span></div>
-        <p class="muted" style="margin:0 0 10px">Commandes transmises non encore réglées (coût de revient calculé avec son offre). Payez par virement (IBAN de la fiche, ou Wise / Payoneer pour un fournisseur hors zone euro), puis cochez-les comme réglées.</p>
-        {% if due %}
-        <form method="post">{% csrf_token %}
-          <div style="max-height:260px;overflow:auto">
-          <table style="width:100%;font-size:.84rem;border-collapse:collapse">
-            {% for o in due %}<tr style="border-bottom:1px solid #f3f3f3"><td style="padding:4px 0;width:24px"><input type="checkbox" name="oid" value="{{ o.pk }}" checked style="width:auto"></td>
-              <td><a href="/admin-hub/orders/{{ o.pk }}/">{{ o.uid }}</a> <span class="muted">{{ o.created_at|date:"d/m" }} · {{ o.get_status_display }}</span></td>
-              <td style="text-align:right;font-weight:700">{{ o.cost|floatformat:2 }} €</td></tr>{% endfor %}
-          </table></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
-            <input type="text" name="ref" placeholder="Réf. du virement (facultatif)" style="flex:1;min-width:160px">
-            <button class="pbtn pri" name="op" value="pay_mark" data-confirm="Marquer les commandes cochées comme réglées ?" data-ok="Marquer réglées">Marquer réglées</button>
-            <a class="pbtn" href="/admin-hub/suppliers/{{ sup.pk }}/export/statement.xlsx">Relevé (.xlsx)</a>
+      {% elif sup.integration == "shopify" %}
+        <ul class="sf-list">
+          <li><span>Boutique Shopify</span><b>{{ shop.shop_name|default:shop.domain|default:"—" }}</b></li>
+          <li><span>Catalogue publié</span><b>{% if shop.catalogue_synced %}{{ shop.variants|length }} variantes{% else %}non{% endif %}</b></li>
+          <li><span>Retours d'expédition</span><b>{% if shop.webhooks %}actifs{% else %}inactifs{% endif %}</b></li>
+        </ul>
+        <form method="post" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">{% csrf_token %}<input type="hidden" name="_tab" value="integration">
+          <button class="gx-btn sm" name="op" value="shop_test">Tester</button><button class="gx-btn sm" name="op" value="shop_catalog">Publier le catalogue</button>
+          <button class="gx-btn sm" name="op" value="shop_webhooks">Activer les retours</button><button class="gx-btn sm" name="op" value="shop_poll">Synchroniser les suivis</button>
+          {% if shop_pending %}<button class="gx-btn sm pri" name="op" value="shop_push" data-confirm="Créer {{ shop_pending }} commande(s) dans Shopify ?" data-ok="Envoyer">Envoyer {{ shop_pending }} commande{{ shop_pending|pluralize }}</button>{% endif %}</form>
+        <form method="post" class="sf-more" style="border-top:1px solid var(--line);margin-top:16px;padding-top:16px">{% csrf_token %}<input type="hidden" name="op" value="save"><input type="hidden" name="section" value="channel"><input type="hidden" name="_tab" value="integration">
+          {% for f in forms.channel %}{{ f.as_hidden }}{% endfor %}
+          <div class="sf-grid">
+            <label class="gx-field"><span>Domaine myshopify</span><input type="text" name="shop_domain" value="{{ shop.domain|default:'' }}" placeholder="boutique.myshopify.com"></label>
+            <label class="gx-field"><span>Version d'API</span><input type="text" name="shop_api_version" value="{{ shop.api_version|default:'' }}" placeholder="2025-07"></label>
+            <label class="gx-field"><span>Client ID</span><input type="text" name="shop_client_id" value="{{ shop.client_id|default:'' }}" autocomplete="off"></label>
+            <label class="gx-field"><span>Client secret</span><input type="password" name="shop_client_secret" placeholder="{% if shop.client_secret %}enregistré — laisser vide pour conserver{% endif %}" autocomplete="new-password"></label>
           </div>
-        </form>
-        {% else %}<div class="muted">Rien à régler.</div>{% endif %}
-        {% if paid %}<div class="muted" style="margin-top:12px;font-weight:700;font-size:.8rem">Derniers règlements</div>
-          {% for o in paid %}<form method="post" style="display:flex;justify-content:space-between;gap:8px;font-size:.8rem;padding:2px 0">{% csrf_token %}<input type="hidden" name="oid" value="{{ o.pk }}">
-            <span>{{ o.uid }} · {{ o.cost|floatformat:2 }} € · {{ o.supplier_paid_at|date:"d/m/Y" }}{% if o.supplier_payment_ref %} · {{ o.supplier_payment_ref }}{% endif %}</span>
-            <button class="pbtn sm" name="op" value="pay_undo" style="padding:1px 8px">annuler</button></form>{% endfor %}{% endif %}
-      </div>
+          <div class="sf-actions"><button class="gx-btn pri">Enregistrer</button></div></form>
 
-
-      <div class="card">
-        <div class="card-h"><h2>Activité</h2><span class="muted">transmissions et échecs</span></div>
-        <ul class="tl">{% for e in events %}<li><time>{{ e.at|date:"d/m H:i" }}</time><span><a href="/admin/studio/order/{{ e.order_id }}/change/">{{ e.order.uid }}</a> · {{ e.text }}{% if e.user %} <span class="muted">({{ e.user }})</span>{% endif %}</span></li>
-        {% empty %}<li class="muted">Aucune transmission enregistrée pour l'instant.</li>{% endfor %}</ul>
-      </div>
+      {% else %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="op" value="save"><input type="hidden" name="section" value="channel"><input type="hidden" name="_tab" value="integration">
+          <div class="sf-grid">
+            {% if sup.integration == "api" %}{% include "admin/_sf_field.html" with f=forms.channel.api_url %}{% include "admin/_sf_field.html" with f=forms.channel.api_key %}{{ forms.channel.email.as_hidden }}
+            {% else %}{% include "admin/_sf_field.html" with f=forms.channel.email %}{{ forms.channel.api_url.as_hidden }}{{ forms.channel.api_key.as_hidden }}{% endif %}
+          </div>
+          <div class="sf-actions"><button class="gx-btn" name="op" value="test" formnovalidate>Envoyer un test</button><button class="gx-btn pri">Enregistrer</button></div></form>
+        <details class="sf-more"><summary>Documentation technique</summary>
+          <p class="gx-muted">Statuts et suivi : POST JSON sur l'URL de retour ci-dessous (<code>status</code> : in_production, shipped, delivered, failed).</p>
+          <div class="sf-code"><span>{{ automation.callback }}</span><button type="button" data-copy="{{ automation.callback }}">Copier</button></div>
+          <p class="gx-muted" style="margin-top:12px">Exemple de commande envoyée :</p><pre>{{ automation.out }}</pre>
+          <p class="gx-muted">Exemple de retour :</p><pre>curl -X POST {{ automation.callback }} -H "Content-Type: application/json" -d '{{ automation.in|escape }}'</pre>
+          <form method="post" data-confirm="Générer une nouvelle URL de retour ?" data-confirm-text="L'ancienne cessera de fonctionner." data-ok="Régénérer" data-danger>{% csrf_token %}<input type="hidden" name="_tab" value="integration"><button class="gx-btn sm" name="op" value="secret">Régénérer l'URL de retour</button></form>
+        </details>
+      {% endif %}
     </div>
 
-    <div>
-      <div class="card">
-        <div class="card-h"><h2>Contact</h2></div>
-        <dl class="kv">
-          <dt>Contact</dt><dd>{{ sup.contact_name|default:"—" }}</dd>
-          <dt>E-mail</dt><dd>{% if sup.contact_email %}<a href="mailto:{{ sup.contact_email }}">{{ sup.contact_email }}</a>{% else %}—{% endif %}</dd>
-          <dt>Téléphone</dt><dd>{% if sup.phone %}<a href="tel:{{ sup.phone }}">{{ sup.phone }}</a>{% else %}—{% endif %}</dd>
-          <dt>Adresse</dt><dd>{{ sup.address|default:"—"|linebreaksbr }}</dd>
-        </dl>
-      </div>
-      <div class="card">
-        <div class="card-h"><h2>Nuancier</h2><a class="muted" href="/admin-hub/suppliers/{{ sup.pk }}/edit/#nuancier-edit">Modifier</a></div>
-        <div class="muted" style="font-size:.84rem">{% if sup.palette %}<b>{{ sup.palette|length }} teintes</b> (importé le {{ sup.palette_updated_at|date:"d/m/Y" }}){% else %}Aucun : couleurs calculées librement.{% endif %}</div>
-      </div>
-      <div class="card">
-        <div class="card-h"><h2>Pièces jointes</h2><a class="muted" href="/admin-hub/suppliers/{{ sup.pk }}/edit/">Ajouter</a></div>
-        {% with fs=sup.files.all %}{% if fs %}{% for x in fs %}<div style="display:flex;justify-content:space-between;gap:8px;font-size:.84rem;padding:4px 0">
-          <a href="/admin-hub/suppliers/{{ sup.pk }}/files/{{ x.pk }}/" target="_blank" style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ x.name }}</a><span class="muted">{{ x.size|filesizeformat }}</span></div>{% endfor %}
-        {% else %}<div class="muted">Aucune pièce jointe.</div>{% endif %}{% endwith %}
-      </div>
-      <div class="card">
-        <div class="card-h"><h2>Conditions &amp; paiement</h2></div>
-        <dl class="kv">
-          <dt>Délai promis</dt><dd>{{ sup.lead_time_days }} jours</dd>
-          <dt>Incoterms</dt><dd>{{ sup.incoterms|default:"—" }}</dd>
-          <dt>Banque</dt><dd>{{ sup.bank_name|default:"—" }}</dd>
-          <dt>IBAN</dt><dd>{{ iban|default:"—" }}</dd>
-          <dt>BIC</dt><dd>{{ sup.bic|default:"—" }}</dd>
-        </dl>
-        {% if sup.pricing %}<div class="muted" style="margin-top:10px;font-weight:700">Grille tarifaire</div><div style="font-size:.82rem;white-space:pre-line">{{ sup.pricing|truncatechars:600 }}</div>{% endif %}
-        {% if sup.terms %}<div class="muted" style="margin-top:10px;font-weight:700">Conditions</div><div style="font-size:.82rem;white-space:pre-line">{{ sup.terms|truncatechars:600 }}</div>{% endif %}
-      </div>
-      {% if sup.production_notes or sup.notes %}<div class="card"><div class="card-h"><h2>Notes</h2></div>
-        <div style="font-size:.84rem;white-space:pre-line">{{ sup.production_notes }}{% if sup.production_notes and sup.notes %}
+    {% if automation.retries %}<form method="post" class="sf-card" style="border-color:#f5c9c6">{% csrf_token %}<input type="hidden" name="_tab" value="integration">
+      <h2>Transmissions en échec</h2><p class="sub">Relancées toutes les 15 min. Choisissez celles à produire : une commande transmise sera fabriquée.</p>
+      <ul class="sf-list">{% for o in automation.retry_rows %}<li><label style="display:flex;gap:10px;align-items:center;cursor:pointer"><input type="checkbox" name="oid" value="{{ o.pk }}" checked style="width:auto"> <b>{{ o.uid }}</b> <span class="gx-muted">{{ o.created_at|date:"d/m/Y" }} · {{ o.customer_name|truncatechars:24 }} · {{ o.format_label }}</span></label><b>{{ o.total|floatformat:2 }} €</b></li>{% endfor %}</ul>
+      <div class="sf-actions"><button class="gx-btn" name="op" value="retry_skip" data-confirm="Ne jamais transmettre les commandes cochées ?" data-ok="Confirmer">Ne pas transmettre</button>
+        <button class="gx-btn pri" name="op" value="retry_now" data-confirm="Transmettre les commandes cochées ?" data-ok="Transmettre">Transmettre</button></div></form>{% endif %}
 
-{% endif %}{{ sup.notes }}</div></div>{% endif %}
+    <form method="post" class="sf-card">{% csrf_token %}<input type="hidden" name="op" value="save"><input type="hidden" name="section" value="dispatch"><input type="hidden" name="_tab" value="integration">
+      <h2>Envoi des commandes</h2><p class="sub">Dernier envoi : {% if sup.last_sync_at %}{{ sup.last_sync_at|date:"d/m/Y à H:i" }} — {% if sup.last_sync_ok %}réussi{% else %}en échec{% endif %}{% else %}aucun{% endif %}.</p>
+      {% include "admin/_sf_field.html" with f=forms.dispatch.auto_dispatch %}
+      <p class="gx-muted" style="margin:14px 0 8px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;font-size:.74rem">Fichiers joints</p>
+      <div class="sf-checks">{% for f in forms.dispatch %}{% if f.name != "auto_dispatch" %}{% include "admin/_sf_field.html" %}{% endif %}{% endfor %}</div>
+      <div class="sf-actions"><button class="gx-btn pri">Enregistrer</button></div>
+    </form>
+
+    <div class="sf-card">
+      <div class="sf-card-h"><div><h2>Import Excel</h2><p class="sub">Solution de secours : le fournisseur importe nos commandes dans son ERP et nous renvoie ses numéros de suivi.</p></div>
+        <a class="gx-btn" href="/admin-hub/suppliers/{{ sup.pk }}/export/orders.xlsx">Exporter les commandes</a></div>
+      <form method="post" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">{% csrf_token %}<input type="hidden" name="_tab" value="integration">
+        <input type="file" name="tracking" accept=".xlsx,.xlsm,.csv,text/csv" required><button class="gx-btn" name="op" value="tracking_import">Importer les suivis</button></form>
+      <details class="sf-more"><summary>Modèle d'import du fournisseur{% if xl.template %} · {{ xl.name }}{% endif %}</summary>
+        <form method="post" enctype="multipart/form-data" style="margin-top:12px">{% csrf_token %}<input type="hidden" name="op" value="save"><input type="hidden" name="section" value="excel"><input type="hidden" name="_tab" value="integration">
+          {% if xl.template %}
+            <table class="t"><tr><th>Colonne du modèle</th><th>Contenu</th></tr>
+              {% for c in xcols %}<tr><td>{{ c.header|default:"(sans titre)" }}</td><td><select name="xmap_{{ c.i }}"><option value="">—</option>{% for k, lbl, kw in xfields %}<option value="{{ k }}" {% if c.field == k %}selected{% endif %}>{{ lbl }}</option>{% endfor %}</select></td></tr>{% endfor %}</table>
+            <div class="sf-grid three" style="margin-top:14px">
+              <label class="gx-field"><span>Modèle de SKU</span><input type="text" name="xlsx_sku" value="{{ xl.sku|default:xsku_default }}"><small class="gx-muted">{format}, {colors}, {brushes}</small></label>
+              <label class="gx-field"><span>N° IOSS</span><input type="text" name="xlsx_ioss" value="{{ xl.ioss|default:'' }}"></label>
+              <label class="gx-field"><span>Transporteur</span><input type="text" name="xlsx_logistics" value="{{ xl.logistics|default:'' }}" placeholder="au choix du fournisseur"></label>
+            </div>
+            <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:14px"><label class="gx-switch"><input type="checkbox" name="xlsx_attach" {% if xl.attach %}checked{% endif %}> Joindre aux e-mails de commande</label>
+              <label class="gx-switch"><input type="checkbox" name="xlsx_remove" value="1"> Retirer le modèle</label></div>
+          {% endif %}
+          <label class="gx-field" style="margin-top:14px"><span>{% if xl.template %}Remplacer le modèle{% else %}Modèle Excel du fournisseur{% endif %}</span><input type="file" name="xlsx_template" accept=".xlsx,.xlsm"><small class="gx-muted">MangoERP : 订单 → 手工创建订单 → Excel模板. Les colonnes sont associées automatiquement.</small></label>
+          <div class="sf-actions"><button class="gx-btn pri">Enregistrer</button></div>
+        </form></details>
     </div>
-  </div>
+  </section>
+
+  {# ================= PRODUCTION ================= #}
+  <section class="sf-panel" id="p-production">
+    <form method="post" class="sf-card">{% csrf_token %}<input type="hidden" name="op" value="save"><input type="hidden" name="section" value="profile"><input type="hidden" name="_tab" value="production">
+      <h2>Profil</h2><p class="sub">Ce que fournit ce partenaire et dans quels délais.</p>
+      <div class="sf-grid">{% for f in forms.profile %}{% include "admin/_sf_field.html" %}{% endfor %}</div>
+      <div class="sf-actions"><button class="gx-btn pri">Enregistrer</button></div>
+    </form>
+    <form method="post" enctype="multipart/form-data" class="sf-card">{% csrf_token %}<input type="hidden" name="op" value="save"><input type="hidden" name="section" value="palette"><input type="hidden" name="_tab" value="production">
+      <h2>Nuancier</h2><p class="sub">Teintes disponibles chez le fournisseur. Chaque couleur calculée est remplacée par la plus proche.</p>
+      {% if sup.palette %}<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:12px">{% for c in sup.palette %}<span title="{{ c.code }} · {{ c.hex }}" style="width:18px;height:18px;border-radius:4px;background:{{ c.hex }};border:1px solid rgba(0,0,0,.08)"></span>{% endfor %}</div>
+        <p class="gx-muted">{{ sup.palette|length }} teintes · importé le {{ sup.palette_updated_at|date:"d/m/Y" }}</p>{% endif %}
+      <label class="gx-field"><span>{% if sup.palette %}Remplacer (CSV){% else %}Importer (CSV){% endif %}</span><input type="file" name="palette_csv" accept=".csv,text/csv,text/plain"><small class="gx-muted">Colonne 1 : référence fournisseur · colonne 2 : #RRGGBB</small></label>
+      <div class="sf-actions">{% if sup.palette %}<label class="gx-switch" style="margin-right:auto"><input type="checkbox" name="palette_clear" value="1"> Retirer le nuancier</label>{% endif %}<button class="gx-btn pri">Enregistrer</button></div>
+    </form>
+  </section>
+
+  {# ================= COORDONNÉES ================= #}
+  <section class="sf-panel" id="p-coordonnees">
+    <form method="post" class="sf-card">{% csrf_token %}<input type="hidden" name="op" value="save"><input type="hidden" name="section" value="contact"><input type="hidden" name="_tab" value="coordonnees">
+      <h2>Coordonnées</h2><p class="sub">Contact, paiement et notes internes.</p>
+      <div class="sf-grid">{% for f in forms.contact %}{% include "admin/_sf_field.html" %}{% endfor %}</div>
+      <div class="sf-actions"><button class="gx-btn pri">Enregistrer</button></div>
+    </form>
+    <form method="post" class="sf-card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap" data-confirm="Supprimer définitivement {{ sup.name }} ?" data-confirm-text="Ses commandes sont conservées, sans fournisseur rattaché." data-ok="Supprimer" data-danger>{% csrf_token %}
+      <div><h2>Supprimer le fournisseur</h2><p class="sub" style="margin:4px 0 0">Action définitive. Les commandes sont conservées.</p></div>
+      <button class="gx-btn danger" name="op" value="delete">Supprimer</button></form>
+  </section>
+
+  {# ================= DOCUMENTS ================= #}
+  <section class="sf-panel" id="p-documents">
+    <form method="post" enctype="multipart/form-data" class="sf-card">{% csrf_token %}<input type="hidden" name="op" value="save"><input type="hidden" name="section" value="docs"><input type="hidden" name="_tab" value="documents">
+      <h2>Documents</h2><p class="sub">Contrat, catalogue, devis, fiches techniques. Accès réservé à l'équipe.</p>
+      {% with fs=sup.files.all %}{% if fs %}<ul class="sf-list">{% for x in fs %}<li><a href="/admin-hub/suppliers/{{ sup.pk }}/files/{{ x.pk }}/" target="_blank" style="font-weight:700">{{ x.name }}</a>
+        <span class="gx-muted" style="display:flex;gap:12px;align-items:center">{{ x.size|filesizeformat }} · {{ x.uploaded_at|date:"d/m/Y" }}<label style="display:flex;gap:4px;align-items:center"><input type="checkbox" name="file_delete" value="{{ x.pk }}" style="width:auto"> supprimer</label></span></li>{% endfor %}</ul>
+      {% else %}<p class="gx-muted">Aucun document.</p>{% endif %}{% endwith %}
+      <label class="gx-field" style="margin-top:12px"><span>Ajouter</span><input type="file" name="attachments" multiple><small class="gx-muted">20 Mo max. par fichier.</small></label>
+      <div class="sf-actions"><button class="gx-btn pri">Enregistrer</button></div>
+    </form>
+  </section>
 </div>
+<script>
+(function(){
+  var tabs=[].slice.call(document.querySelectorAll('#sfTabs a'));
+  function show(t){
+    if(!document.getElementById('p-'+t))t='apercu';
+    tabs.forEach(function(a){a.classList.toggle('on',a.dataset.t===t);});
+    document.querySelectorAll('.sf-panel').forEach(function(p){p.classList.toggle('on',p.id==='p-'+t);});
+  }
+  function fromHash(){show((location.hash||'#apercu').slice(1));}
+  window.addEventListener('hashchange',fromHash);fromHash();
+  document.querySelectorAll('[data-copy]').forEach(function(b){b.addEventListener('click',function(){
+    navigator.clipboard&&navigator.clipboard.writeText(b.dataset.copy);var t=b.textContent;b.textContent='Copié';setTimeout(function(){b.textContent=t;},1200);});});
+})();
+</script>
 {% endblock %}
