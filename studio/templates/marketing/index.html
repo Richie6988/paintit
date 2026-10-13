@@ -1,144 +1,142 @@
+{% extends "admin/base_site.html" %}
 {% load static %}
-<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Marketing Corner · PaintIt</title>
+{% block title %}Studio créatif · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block messages %}{% endblock %}
+{% block content %}
+{% include "admin/_growth_ui.html" %}
 <style>
-:root{--bg:#0e1014;--bg2:#151922;--bg3:#1d2330;--line:#2a3242;--txt:#e8ecf4;--mut:#8b96ab;--acc:#6c8cff;--acc2:#9b6cff}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:"Segoe UI",system-ui,sans-serif}
-.top{padding:16px 22px;background:linear-gradient(90deg,#171c26,#12151d);border-bottom:1px solid var(--line);font-weight:800;font-size:18px}
-.top span{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
-.top small{display:block;color:var(--mut);font-weight:400;font-size:12.5px;margin-top:2px}
-.wrap{max-width:1120px;margin:22px auto;padding:0 16px}
-.panel{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:20px}
-label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--mut);margin:12px 0 5px}
-input[type=text],input[type=number],textarea{width:100%;background:var(--bg3);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px;font-size:14px;font-family:inherit}
-.mline{font-size:16px;font-weight:700}
-textarea{resize:vertical;min-height:52px}
-.drop{margin-top:6px;border:2px dashed var(--line);border-radius:12px;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--mut);cursor:pointer;transition:.2s;overflow:hidden;position:relative}
-.drop:hover,.drop.over{border-color:var(--acc);color:var(--txt);background:#161b27}.drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.btn{margin-top:16px;width:100%;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;background:linear-gradient(90deg,var(--acc),var(--acc2));color:#0b0e14;box-shadow:0 6px 18px rgba(108,140,255,.35)}
-.btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
-.content{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start;border-top:1px solid var(--line);padding:18px 0}
-.content:first-child{border-top:none;padding-top:4px}
-.view{background:var(--bg3);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.view iframe{width:100%;height:440px;border:0;background:#0b1226;display:block}.view img{width:100%;display:block}
-.content h4{margin:0 0 4px}.content .fmt{color:var(--mut);font-size:12px;margin-bottom:8px}
-.content .acts{display:flex;gap:12px;margin-top:10px}.content a{color:var(--acc);text-decoration:none;font-size:13px;font-weight:600}
-.err{color:#ffb4b4;background:#2a1416;border:1px solid #ff6c6c;padding:12px 14px;border-radius:10px;margin-bottom:16px}
-.empty{color:var(--mut);text-align:center;padding:50px 20px}.empty .ic{font-size:44px;margin-bottom:10px}
-.gifgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px}.gifgrid figure{margin:0}.gifgrid img{width:100%;border-radius:10px;border:1px solid var(--line)}.gifgrid figcaption{color:var(--mut);font-size:12px;margin-top:6px;text-align:center}
-#overlay{position:fixed;inset:0;background:rgba(8,10,16,.82);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:50}#overlay.show{display:flex}
-.spin{width:52px;height:52px;border:4px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}#overlay p{margin-top:16px;font-weight:600}
-.hint{color:var(--mut);font-size:12px;margin-top:4px}
-.drop{min-height:220px}.drop .swap{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(11,14,20,.8);color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;z-index:2}
-.top .nav a{color:var(--txt);text-decoration:none;font-size:13px;font-weight:600;margin-left:14px;background:var(--bg3);border:1px solid var(--line);padding:7px 12px;border-radius:9px}
-.panel.ok{border-color:#3fd07a;background:#132019}.panel.ok a{color:var(--acc)}
-code{background:var(--bg3);padding:1px 5px;border-radius:5px}
-@font-face{font-family:'mk-baloo';src:url({% static 'studio/fonts/Baloo2-Bold.ttf' %})}@font-face{font-family:'mk-poppins';src:url({% static 'studio/fonts/Poppins-Bold.ttf' %})}@font-face{font-family:'mk-anton';src:url({% static 'studio/fonts/Anton-Regular.ttf' %})}@font-face{font-family:'mk-dmserif';src:url({% static 'studio/fonts/DMSerifDisplay-Regular.ttf' %})}@font-face{font-family:'mk-pacifico';src:url({% static 'studio/fonts/Pacifico-Regular.ttf' %})}
-.fonts{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:6px}
-.fo{margin:0;text-transform:none;letter-spacing:0;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:10px 6px;text-align:center;background:var(--bg3);display:flex;flex-direction:column;gap:4px}
-.fo input{display:none}.fo span{font-size:24px;color:var(--txt)}.fo small{font-size:10.5px;color:var(--mut)}
-.fo:has(input:checked){border-color:var(--acc);box-shadow:0 0 0 2px rgba(108,140,255,.35)}
-.colors{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-content:start;margin-top:30px}
-.co{margin:0;text-transform:none;letter-spacing:0;display:flex;flex-direction:column;gap:6px;font-size:12px}
-.co input{width:100%;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--bg3);padding:3px;cursor:pointer}
-</style></head><body>
-<div class="top"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div>Marketing <span>Corner</span><small>Tous les textes éditables · chaque génération = une variante A/B enregistrée dans la galerie</small></div>
-<div class="nav"><a href="/admin-hub/marketing/">📊 Galerie A/B &amp; clics</a><a href="/admin-hub/">← ERP</a></div></div></div>
-<div class="wrap">
-<form method="post" enctype="multipart/form-data" id="mform">{% csrf_token %}
+@font-face{font-family:'mk-baloo';src:url({% static 'studio/fonts/Baloo2-Bold.ttf' %})}
+@font-face{font-family:'mk-poppins';src:url({% static 'studio/fonts/Poppins-Bold.ttf' %})}
+@font-face{font-family:'mk-anton';src:url({% static 'studio/fonts/Anton-Regular.ttf' %})}
+@font-face{font-family:'mk-dmserif';src:url({% static 'studio/fonts/DMSerifDisplay-Regular.ttf' %})}
+@font-face{font-family:'mk-pacifico';src:url({% static 'studio/fonts/Pacifico-Regular.ttf' %})}
+.mk .gx-card{margin-bottom:16px}
+.mk .gx-card+.gx-card{margin-top:0}
+.mk h2{font-size:1.02rem;font-weight:800}
+.mk .sub{color:var(--mute);font-size:.84rem;margin:4px 0 16px}
+.mk .g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.mk .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.mk .gx-field input[type=text],.mk .gx-field input[type=number],.mk .gx-field textarea{width:100%}
+.mk .gx-field textarea{min-height:46px}
+.mk .gx-field textarea.big{font-weight:800;font-size:1rem}
+.mk .drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px;border:2px dashed #cfd7e6;border-radius:var(--r);background:var(--soft);color:var(--mute);font-weight:700;cursor:pointer;overflow:hidden;text-align:center;transition:border-color .15s}
+.mk .drop:hover,.mk .drop.over{border-color:var(--brand);color:var(--brand)}
+.mk .drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}
+.mk .drop .swap{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(18,34,79,.88);color:#fff;font-size:.78rem;padding:6px 12px;border-radius:999px;z-index:2}
+.mk .fonts{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.mk .fo{cursor:pointer;border:1.5px solid var(--line);border-radius:12px;padding:10px 4px;text-align:center;background:#fff;display:flex;flex-direction:column;gap:2px;margin:0}
+.mk .fo input{display:none}.mk .fo b{font-size:1.6rem;font-weight:400;color:var(--ink);line-height:1.2}.mk .fo small{font-size:.68rem;color:var(--mute);font-weight:700}
+.mk .fo:has(input:checked){border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50)}
+.mk .colors{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mk .colors input[type=color]{width:100%;height:42px;border:1px solid var(--line);border-radius:10px;padding:3px;background:#fff;cursor:pointer}
+.mk .promo{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;padding:18px 0;border-top:1px solid var(--line)}
+.mk .promo:first-of-type{border-top:0;padding-top:0}
+.mk .view{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0b1226;min-height:200px}
+.mk .view iframe{width:100%;height:420px;border:0;display:block}
+.mk .empty{color:#8b96ab;text-align:center;padding:120px 20px;font-weight:700;font-size:.86rem}
+.mk .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.mk .gifs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.mk .gifs figure{margin:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.mk .gifs img{width:100%;display:block}
+.mk .gifs figcaption{padding:10px 12px;font-size:.8rem;font-weight:700;display:flex;flex-direction:column;gap:8px}
+.mk .gifs .acts{margin:0}
+.mk .alert{border-radius:12px;padding:12px 14px;font-weight:600;font-size:.88rem;margin-bottom:14px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.mk .alert.ok{background:var(--ok-50);color:var(--ok);border:1px solid #cdebd8}.mk .alert.bad{background:var(--bad-50);color:var(--bad);border:1px solid #f5c9c6}
+.mk .alert.info{background:var(--brand-50);color:var(--brand-d);border:1px solid var(--brand-100)}
+.mk .alert a{text-decoration:underline !important;font-weight:800}
+.mk .bar{position:sticky;bottom:0;z-index:5;background:linear-gradient(rgba(248,249,252,0),#f8f9fc 30%);padding:18px 0 8px;display:flex;justify-content:flex-end}
+#overlay{position:fixed;inset:0;background:rgba(18,34,79,.55);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:50;color:#fff;font-weight:700}
+#overlay.show{display:flex}
+#overlay .spin{width:48px;height:48px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;margin-bottom:14px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(max-width:900px){.mk .g2,.mk .promo{grid-template-columns:1fr}.mk .gifs,.mk .g3{grid-template-columns:1fr}.mk .fonts{grid-template-columns:repeat(3,1fr)}}
+</style>
+<div class="gx mk">
+  <div class="gx-top"><div><h1>Studio créatif</h1><p>Une photo devient pages animées et GIF prêts à publier. Chaque génération est une variante suivie dans les pubs A/B.</p></div></div>
+  {% include "admin/_growth_tabs.html" %}
+
+  <form method="post" enctype="multipart/form-data" id="mform">{% csrf_token %}
   {% if tpl %}<input type="hidden" name="tpl" value="{{ tpl.pk }}">
-  <div class="panel ok" style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><span>Visuel du modèle <b>« {{ tpl.name }} »</b> de la bibliothèque : la variante générée le remplacera.</span>
-    <a href="/admin-hub/communities/library/" style="font-weight:700">← Bibliothèque</a></div>{% endif %}
-  <div class="panel">
-    <div class="row2">
-      <div>
-        <label>Image du produit</label>
-        <label class="drop" id="drop"><input type="file" name="image" id="file" accept="image/*" hidden {% if not results %}required{% endif %}>
-          <img id="thumb" {% if current_img %}src="{{ current_img }}"{% else %}hidden{% endif %} alt=""><span id="dl" {% if current_img %}hidden{% endif %}>Glissez une image<br><em>ou cliquez</em></span>
+    <div class="alert info"><span>Visuel du modèle « {{ tpl.name }} ». La variante générée le remplacera dans la bibliothèque.</span><a href="/admin-hub/communities/library/">Retour à la bibliothèque</a></div>{% endif %}
+  {% if error %}<div class="alert bad">{{ error }}</div>{% endif %}
+  {% if results and variant %}<div class="alert ok"><span>Variante « {{ variant }} » enregistrée : {{ results|length }} contenu{{ results|length|pluralize }}.</span><a href="/admin-hub/marketing/">Voir les pubs A/B</a></div>{% endif %}
+
+  <div class="gx-card">
+    <div class="g2">
+      <div><h2>Photo</h2><p class="sub">{% if uid %}La photo actuelle est conservée. Déposez-en une autre pour tout régénérer.{% else %}La toile, la toile numérotée et tous les contenus en découlent.{% endif %}</p>
+        <label class="drop" id="drop"><input type="file" name="image" id="file" accept="image/*" hidden {% if not uid %}required{% endif %}>
+          <img id="thumb" {% if current_img %}src="{{ current_img }}"{% else %}hidden{% endif %} alt="">
+          <span id="dl" {% if current_img %}hidden{% endif %}>Glissez une photo<br>ou cliquez</span>
           {% if current_img %}<span class="swap">Changer la photo</span>{% endif %}</label>
-        {% if uid %}<input type="hidden" name="reuse_uid" value="{{ uid }}"><p class="hint">Photo actuelle conservée. Déposez une nouvelle photo pour tout régénérer (toile, toile numérotée, pages et GIF).</p>{% endif %}
+        {% if uid %}<input type="hidden" name="reuse_uid" value="{{ uid }}">{% endif %}
       </div>
-      <div>
-        <label>Lien cible (où mène le clic)</label><input type="text" name="link" value="{{ link }}">
-        <p class="hint">Chaque pub reçoit son propre lien traqué <code>/go/…</code> qui compte les clics puis redirige ici (avec UTM).</p>
-        <div class="row2"><div><label>Campagne</label><input type="text" name="campaign" value="{{ campaign }}" placeholder="Fête des mères" list="camplist"><datalist id="camplist">{% for n in campaign_names %}<option value="{{ n }}">{% endfor %}</datalist></div>
-        <div><label>Nom de la variante</label><input type="text" name="variant" value="" placeholder="auto : A, B, C…"></div></div>
-        <label>Couleurs de la toile</label><input type="number" name="colors" value="{{ colors }}" min="2" max="48">
-      </div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <h3 style="margin-top:0">Style <span style="color:var(--mut);font-weight:400;font-size:13px">— appliqué aux pages et aux GIF</span></h3>
-    <div class="row2">
-      <div><label>Police des titres</label>
-        <div class="fonts">{% for k, l, f in fonts %}<label class="fo"><input type="radio" name="s_font" value="{{ k }}" {% if style.font == k %}checked{% endif %}><span style="font-family:'mk-{{ k }}'">Aa</span><small>{{ l }}</small></label>{% endfor %}</div></div>
-      <div class="colors">
-        <label class="co"><span>Titres</span><input type="color" name="s_ink" value="{{ style.ink }}"></label>
-        <label class="co"><span>Accent</span><input type="color" name="s_accent" value="{{ style.accent }}"></label>
-        <label class="co"><span>Bouton</span><input type="color" name="s_cta" value="{{ style.cta }}"></label>
-        <label class="co"><span>Fond</span><input type="color" name="s_bg" value="{{ style.bg }}"></label>
-      </div>
-    </div>
-  </div>
-
-  {% if error %}<div class="err">{{ error }}</div>{% endif %}
-
-  {% if results and variant %}
-  <div class="panel ok">
-    <b>Variante « {{ variant }} » enregistrée</b> — {{ results|length }} pubs ajoutées à la <a href="/admin-hub/marketing/">galerie A/B</a>.
-    Modifiez les textes ci-dessous puis régénérez pour créer la variante suivante (même image).
-  </div>
-  {% endif %}
-
-  <div class="panel">
-    <h3 style="margin-top:0">Textes par promo <span style="color:var(--mut);font-weight:400;font-size:13px">— tous les textes de chaque vue</span></h3>
-    {% for pr in promos %}
-      <div class="content">
-        <div class="view">
-          {% with ad=None %}{% for r in results %}{% if r.kind == pr.key %}<iframe src="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/" loading="lazy"></iframe>{% endif %}{% empty %}<div class="empty" style="padding:120px 20px">Aperçu après génération</div>{% endfor %}{% endwith %}
+      <div><h2>Diffusion</h2><p class="sub">Chaque contenu reçoit son lien traqué.</p>
+        <div style="display:grid;gap:14px">
+          <label class="gx-field"><span>Lien cible</span><input type="text" name="link" value="{{ link }}"></label>
+          <div class="g2" style="gap:14px">
+            <label class="gx-field"><span>Campagne</span><input type="text" name="campaign" value="{{ campaign }}" placeholder="Fête des mères" list="camplist"><datalist id="camplist">{% for n in campaign_names %}<option value="{{ n }}">{% endfor %}</datalist></label>
+            <label class="gx-field"><span>Variante</span><input type="text" name="variant" value="" placeholder="A, B, C… (auto)"></label>
+          </div>
+          <label class="gx-field"><span>Couleurs de la toile</span><input type="number" name="colors" value="{{ colors }}" min="2" max="48"></label>
         </div>
-        <div>
-          <h4>{{ pr.label }}</h4>
-          <div class="fmt">Page web animée · CTA cliquable (lien traqué)</div>
-          {% for f in pr.slots %}
-            <label>{{ f.label }}</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="gx-card">
+    <h2>Style</h2><p class="sub">Appliqué aux pages et aux GIF.</p>
+    <div class="g2">
+      <div class="gx-field"><span>Police des titres</span>
+        <div class="fonts">{% for k, l, f in fonts %}<label class="fo"><input type="radio" name="s_font" value="{{ k }}" {% if style.font == k %}checked{% endif %}><b style="font-family:'mk-{{ k }}'">Aa</b><small>{{ l }}</small></label>{% endfor %}</div></div>
+      <div class="gx-field"><span>Couleurs</span>
+        <div class="colors">
+          <label class="gx-field"><small class="gx-muted">Titres</small><input type="color" name="s_ink" value="{{ style.ink }}"></label>
+          <label class="gx-field"><small class="gx-muted">Accent</small><input type="color" name="s_accent" value="{{ style.accent }}"></label>
+          <label class="gx-field"><small class="gx-muted">Bouton</small><input type="color" name="s_cta" value="{{ style.cta }}"></label>
+          <label class="gx-field"><small class="gx-muted">Fond</small><input type="color" name="s_bg" value="{{ style.bg }}"></label>
+        </div></div>
+    </div>
+  </div>
+
+  <div class="gx-card">
+    <h2>GIF</h2><p class="sub">Photo → toile → toile numérotée, en carré, portrait et story.</p>
+    <div class="g3" style="margin-bottom:16px">{% for f in gif_slots %}<label class="gx-field"><span>{{ f.label }}</span>{% if f.kind == "big" %}<textarea name="{{ f.slot }}" class="big">{{ f.value }}</textarea>{% else %}<input type="text" name="{{ f.slot }}" value="{{ f.value }}">{% endif %}</label>{% endfor %}</div>
+    <div class="gifs">
+      {% for r in results %}{% if r.fmt == "gif" %}<figure><img src="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/" alt=""><figcaption>{{ r.label }}
+        <span class="acts"><a class="gx-btn sm" href="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/?dl=1">GIF</a><a class="gx-btn sm" href="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/?png=1&amp;dl=1">Image PNG</a></span></figcaption></figure>{% endif %}
+      {% empty %}<div class="gx-muted">Aperçus après génération.</div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="gx-card">
+    <h2>Pages animées</h2><p class="sub">Pages web autonomes, bouton cliquable vers le lien traqué.</p>
+    {% for pr in promos %}
+      <div class="promo">
+        <div class="view">{% for r in results %}{% if r.kind == pr.key %}<iframe src="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/" loading="lazy"></iframe>{% endif %}{% empty %}<div class="empty">Aperçu après génération</div>{% endfor %}</div>
+        <div><h2 style="margin-bottom:12px">{{ pr.label }}</h2>
+          <div style="display:grid;gap:12px">{% for f in pr.slots %}<label class="gx-field"><span>{{ f.label }}</span>
             {% if f.kind == "multi" %}<textarea name="t_{{ pr.key }}_{{ f.slot }}" style="min-height:74px">{{ f.value }}</textarea>
-            {% elif f.kind == "big" %}<textarea name="t_{{ pr.key }}_{{ f.slot }}" class="mline">{{ f.value }}</textarea>
-            {% else %}<input type="text" name="t_{{ pr.key }}_{{ f.slot }}" value="{{ f.value }}">{% endif %}
-            {% if f.slot == "headline" %}<p class="hint">Les 2 derniers mots ressortent en couleur + animation.</p>{% endif %}
-          {% endfor %}
-          {% for r in results %}{% if r.kind == pr.key %}<div class="acts"><a href="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/" target="_blank">↗ Ouvrir</a><a href="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/?dl=1">⬇ Télécharger</a></div>{% endif %}{% endfor %}
+            {% elif f.kind == "big" %}<textarea name="t_{{ pr.key }}_{{ f.slot }}" class="big">{{ f.value }}</textarea>
+            {% else %}<input type="text" name="t_{{ pr.key }}_{{ f.slot }}" value="{{ f.value }}">{% endif %}</label>{% endfor %}</div>
+          {% for r in results %}{% if r.kind == pr.key %}<div class="acts"><a class="gx-btn sm" href="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/" target="_blank">Ouvrir</a><a class="gx-btn sm" href="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/?dl=1">Télécharger</a></div>{% endif %}{% endfor %}
         </div>
       </div>
     {% endfor %}
   </div>
 
-  <div class="panel">
-    <h3 style="margin-top:0">GIF prêts à poster <span style="color:var(--mut);font-weight:400;font-size:13px">— Facebook / Instagram (3 formats)</span></h3>
-    <div class="row2">
-      <div>{% for f in gif_slots %}<label>{{ f.label }}</label>{% if f.kind == "big" %}<textarea name="{{ f.slot }}" class="mline">{{ f.value }}</textarea>{% else %}<input type="text" name="{{ f.slot }}" value="{{ f.value }}">{% endif %}{% endfor %}
-        <p class="hint">Dans la publication, utilisez le lien traqué du GIF (galerie A/B) pour compter les clics.</p></div>
-      <div class="gifgrid">
-        {% for r in results %}{% if r.fmt == "gif" %}<figure><img src="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/" alt=""><figcaption>{{ r.label }} <a href="/marketing/file/{{ r.image_uid }}/{{ r.file_name }}/?dl=1">⬇</a></figcaption></figure>{% endif %}{% empty %}<div class="empty">Aperçu après génération</div>{% endfor %}
-      </div>
-    </div>
-  </div>
-
-  <button class="btn" type="submit" id="go">▶ {% if uid %}Générer une nouvelle variante (même image){% else %}Générer les contenus{% endif %}</button>
-</form>
+  <div class="bar"><button class="gx-btn pri lg" type="submit" id="go">{% if uid %}Générer une nouvelle variante{% else %}Générer les contenus{% endif %}</button></div>
+  </form>
 </div>
-<div id="overlay"><div class="spin"></div><p>Génération en cours… (~15–30 s)</p></div>
+<div id="overlay"><div class="spin"></div>Génération en cours… (15 à 30 s)</div>
 <script>
-var file=document.getElementById('file'),drop=document.getElementById('drop'),thumb=document.getElementById('thumb'),dl=document.getElementById('dl');
+(function(){var file=document.getElementById('file'),drop=document.getElementById('drop'),thumb=document.getElementById('thumb'),dl=document.getElementById('dl');
 function show(f){if(!f||!/^image\//.test(f.type))return;thumb.src=URL.createObjectURL(f);thumb.hidden=false;dl.hidden=true;}
-if(file){file.addEventListener('change',function(e){show(e.target.files[0]);});
+file.addEventListener('change',function(e){show(e.target.files[0]);});
 ['dragover','dragenter'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.add('over');});});
 ['dragleave','dragend'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.remove('over');});});
-drop.addEventListener('drop',function(e){e.preventDefault();drop.classList.remove('over');var f=e.dataTransfer.files[0];if(!f)return;try{var dt=new DataTransfer();dt.items.add(f);file.files=dt.files;}catch(x){}show(f);});}
-document.getElementById('mform').addEventListener('submit',function(){document.getElementById('go').disabled=true;document.getElementById('overlay').classList.add('show');});
+drop.addEventListener('drop',function(e){e.preventDefault();drop.classList.remove('over');var f=e.dataTransfer.files[0];if(!f)return;try{var dt=new DataTransfer();dt.items.add(f);file.files=dt.files;}catch(x){}show(f);});
+document.getElementById('mform').addEventListener('submit',function(){document.getElementById('go').disabled=true;document.getElementById('overlay').classList.add('show');});})();
 </script>
-<script src="{% static 'studio/js/dialog.js' %}"></script>
-</body></html>
+{% endblock %}

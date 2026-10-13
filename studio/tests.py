@@ -674,6 +674,14 @@ class LibraryVisualTests(TestCase):
             self.assertEqual(b.call_args.kwargs["style"]["font"], "anton")
         self.t.refresh_from_db()
         self.assertEqual(self.t.ad_variant, "B2")
+        # « Mettre à jour le visuel » : meme photo, meme style
+        from studio.models import MarketingAd
+        MarketingAd.objects.filter(variant="B2").update(texts={"_style": {"font": "anton"}})
+        with mock.patch("studio.marketing.build_all", side_effect=self.fake_build) as b, \
+                mock.patch("studio.library_visuals._has_files", return_value=True):
+            library_visuals.build(self.t)
+        self.assertEqual(b.call_args.args[0], "mkt-abc123")
+        self.assertEqual(b.call_args.kwargs["style"]["font"], "anton")
 
 
 def tearDownModule():

@@ -1780,9 +1780,21 @@ def marketing_file(request, uid, name):
     path = os.path.join(settings.MEDIA_ROOT, "marketing", uid, name)
     if not os.path.exists(path):
         raise Http404
-    ctype = "image/gif" if name.endswith(".gif") else "text/html; charset=utf-8"
-    with open(path, "rb") as fh:
-        resp = HttpResponse(fh.read(), content_type=ctype)
+    if name.endswith(".gif") and request.GET.get("png"):
+        # Image fixe : la toile coloriee avec son titre (milieu du 2e plan du GIF)
+        from PIL import Image
+        import io
+        im = Image.open(path)
+        n = getattr(im, "n_frames", 1)
+        im.seek(min(n - 1, 26))
+        buf = io.BytesIO()
+        im.convert("RGB").save(buf, "PNG", optimize=True)
+        resp = HttpResponse(buf.getvalue(), content_type="image/png")
+        name = name[:-4] + ".png"
+    else:
+        ctype = "image/gif" if name.endswith(".gif") else "text/html; charset=utf-8"
+        with open(path, "rb") as fh:
+            resp = HttpResponse(fh.read(), content_type=ctype)
     if request.GET.get("dl"):
         resp["Content-Disposition"] = 'attachment; filename="%s"' % name
     return resp
@@ -1824,7 +1836,8 @@ def marketing_page(request):
     from . import marketing
     from .models import MarketingAd
     import re as _re, uuid as _uuid, secrets
-    ctx = {"results": None, "error": None, "erp_section": "marketing",
+    from django.contrib import admin as _admin
+    ctx = {**_admin.site.each_context(request), "results": None, "error": None, "erp_section": "growth", "gtab": "studio",
            "link": request.POST.get("link", "https://paintit.click/create/"),
            "colors": request.POST.get("colors", "24"),
            "campaign": request.POST.get("campaign", "") or request.GET.get("campaign", ""),
@@ -1865,7 +1878,7 @@ def marketing_page(request):
         link = (request.POST.get("link") or "").strip() or settings.SITE_URL + "/create/"
         colors = int(request.POST.get("colors") or 24)
         reuse = (request.POST.get("reuse_uid") or "").strip()
-        reuse_ok = bool(reuse) and bool(_re.match(r"^mkt-[A-Za-z0-9]+$", reuse)) and \
+        reuse_ok = bool(reuse) and bool(_re.match(r"^[A-Za-z0-9][A-Za-z0-9_-]{2,39}$", reuse)) and \
             os.path.exists(os.path.join(settings.MEDIA_ROOT, "orders", reuse, "%s_preview.svg" % reuse))
         if not f and not reuse_ok:
             ctx["error"] = "Ajoutez une image."

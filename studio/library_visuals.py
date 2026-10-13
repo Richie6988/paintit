@@ -64,6 +64,9 @@ def build(tpl, uid=None):
     """Genere le visuel du modele (format adapte) et le rattache. -> MarketingAd ou None."""
     from . import marketing
     from .models import MarketingAd, PostTemplate
+    cur = tpl.visual()
+    if not uid and cur and _has_files(cur.image_uid):
+        uid = cur.image_uid         # meme photo que le visuel en cours
     uid = uid or pick_canvas(tpl, base_canvases())
     if not uid:
         return None
@@ -75,14 +78,15 @@ def build(tpl, uid=None):
     gif = {"gif_title": _trim(tpl.hook), "gif_cta": CTA.get(lang, CTA["en"]),
            "gif_footer": settings.SITE_URL.replace("https://", "").replace("http://", "")}
     suffix = "_" + variant.lower()
-    produced = marketing.build_all(uid, gif_texts=gif, suffix=suffix, only={kind})
+    style = marketing.norm_style(((cur.texts or {}).get("_style")) if cur else None)
+    produced = marketing.build_all(uid, gif_texts=gif, suffix=suffix, only={kind}, style=style)
     ad = None
     for key, label, path, k in produced:
         ad = MarketingAd.objects.create(token=secrets.token_urlsafe(9), image_uid=uid, campaign="Bibliothèque",
                                         variant=variant, kind=key, label=label, fmt="gif" if k == "gif" else "web",
                                         file_name=os.path.basename(path),
                                         target_url=settings.SITE_URL + (tpl.target_path or "/create/"),
-                                        texts=dict(gif, _style=marketing.norm_style(None)))
+                                        texts=dict(gif, _style=style))
     if ad:
         PostTemplate.objects.filter(pk=tpl.pk).update(ad_uid=uid, ad_variant=variant)
     return ad

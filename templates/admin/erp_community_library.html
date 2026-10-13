@@ -95,7 +95,7 @@
           {% if t.media %}<label class="sw"><input type="checkbox" name="media_clear" value="1"> Retirer le média</label>{% endif %}
           <div style="display:flex;gap:6px;justify-content:space-between">
             <span style="display:flex;gap:6px"><button class="pbtn sm" name="op" value="dup">Dupliquer</button>
-              {% if t.media_kind != "text" %}<button class="pbtn sm" name="op" value="visual" title="Regénère le visuel à partir de l'accroche">Nouveau visuel</button>{% endif %}
+              {% if t.media_kind != "text" %}<button class="pbtn sm" name="op" value="visual" title="Même photo et même style, titre mis à jour avec l'accroche">Mettre à jour le visuel</button>{% endif %}
               <button class="pbtn sm" name="op" value="del" data-confirm="Supprimer ce modèle ?" data-danger style="color:#b42318">Supprimer</button></span>
             <button class="pbtn pri sm">Enregistrer</button></div>
         </form></details>
