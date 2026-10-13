@@ -270,6 +270,75 @@ def send_feedback_request(order_row):
     _safe_send(msg)
 
 
+SOON_STR = {
+    "fr": {"subject": "Ça arrive !!! Votre toile PaintIt est en France", "hi": "Bonjour",
+           "body": "Bonne nouvelle : votre kit PaintIt est arrivé et vient d'être confié à {carrier} pour la dernière ligne droite.",
+           "num": "Votre numéro de suivi", "cta": "Suivre mon colis", "soon": "Préparez vos pinceaux, ça arrive très bientôt !",
+           "team": "L'équipe PaintIt", "country": "France"},
+    "en": {"subject": "It's coming soon!!! Your PaintIt canvas has arrived", "hi": "Hello",
+           "body": "Good news: your PaintIt kit has arrived in your country and has been handed over to {carrier} for the last mile.",
+           "num": "Your tracking number", "cta": "Track my parcel", "soon": "Get your brushes ready, it's coming very soon!",
+           "team": "The PaintIt team"},
+    "de": {"subject": "Es kommt bald!!! Ihre PaintIt-Leinwand ist angekommen", "hi": "Hallo",
+           "body": "Gute Nachricht: Ihr PaintIt-Set ist in Ihrem Land angekommen und wurde {carrier} für die letzte Etappe übergeben.",
+           "num": "Ihre Sendungsnummer", "cta": "Paket verfolgen", "soon": "Pinsel bereithalten, es kommt sehr bald!",
+           "team": "Ihr PaintIt-Team"},
+    "es": {"subject": "¡¡¡Ya llega!!! Tu lienzo PaintIt ha llegado", "hi": "Hola",
+           "body": "Buenas noticias: tu kit PaintIt ha llegado a tu país y se ha entregado a {carrier} para la última etapa.",
+           "num": "Tu número de seguimiento", "cta": "Seguir mi paquete", "soon": "¡Prepara los pinceles, llega muy pronto!",
+           "team": "El equipo PaintIt"},
+    "it": {"subject": "Sta arrivando!!! La tua tela PaintIt è arrivata", "hi": "Ciao",
+           "body": "Buone notizie: il tuo kit PaintIt è arrivato nel tuo paese ed è stato affidato a {carrier} per l'ultimo tratto.",
+           "num": "Il tuo numero di tracciamento", "cta": "Traccia il pacco", "soon": "Prepara i pennelli, arriva prestissimo!",
+           "team": "Il team PaintIt"},
+}
+CARRIER_NAMES = {"la-poste-colissimo": "Colissimo", "colissimo": "Colissimo", "laposte": "La Poste", "la-poste": "La Poste",
+                 "chronopost-france": "Chronopost", "dhl": "DHL", "dhl-germany": "DHL", "deutsch-post": "Deutsche Post",
+                 "dpd": "DPD", "dpd-fr": "DPD", "gls": "GLS", "ups": "UPS", "fedex": "FedEx", "postnl": "PostNL",
+                 "bpost": "bpost", "correos-spain": "Correos", "poste-italiane": "Poste Italiane", "colis-prive": "Colis Privé",
+                 "mondialrelay": "Mondial Relay", "royal-mail": "Royal Mail", "usps": "USPS", "canada-post": "Canada Post",
+                 "swiss-post": "La Poste Suisse", "austrian-post": "Österreichische Post", "an-post": "An Post"}
+
+
+def send_coming_soon(order_row, last_mile):
+    """Colis arrive dans le pays du client : n° du transporteur national + message « ça arrive ». -> bool"""
+    o = order_row
+    if not o.customer_email or not last_mile.get("number"):
+        return False
+    T = SOON_STR.get((o.lang or "en")[:2], SOON_STR["en"])
+    slug = (last_mile.get("carrier") or "").lower()
+    carrier = CARRIER_NAMES.get(slug) or (slug.replace("-", " ").title() if slug else "")
+    carrier = carrier or {"fr": "notre transporteur", "de": "unserem Zusteller", "es": "nuestro transportista",
+                          "it": "il nostro corriere"}.get((o.lang or "en")[:2], "our carrier")
+    subject = T["subject"] if (o.lang or "")[:2] != "fr" or o.country in ("France", "FR") else \
+        "Ça arrive !!! Votre toile PaintIt est arrivée"     # client francophone livre hors de France
+    url = last_mile.get("url") or ""
+    body = T["body"].format(carrier=carrier)
+    logo = settings.SITE_URL + settings.STATIC_URL + "studio/img/logo.png"
+    text = "%s %s,\n\n%s\n\n%s : %s %s\n%s\n\n%s\n%s" % (
+        T["hi"], o.customer_name, body, T["num"], carrier, last_mile["number"], url, T["soon"], T["team"])
+    cta = ('<p style="margin:18px 0"><a href="%s" style="background:#2f6bf2;color:#fff;text-decoration:none;'
+           'font-weight:700;padding:12px 20px;border-radius:10px;display:inline-block">%s</a></p>' % (url, T["cta"])) if url else ""
+    html = (
+        '<div style="background:#eef2f9;padding:24px 0;font-family:Arial,Helvetica,sans-serif">'
+        '<table align="center" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;'
+        'background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 24px rgba(18,34,79,.08)">'
+        '<tr><td style="background:#12224f;padding:18px 24px"><img src="%s" alt="PaintIt" '
+        'height="26" style="height:26px;background:#fff;border-radius:8px;padding:5px 8px"></td></tr>'
+        '<tr><td style="padding:26px 28px;color:#12224f;font-size:15px;line-height:1.6">'
+        '<p style="margin:0 0 4px;font-size:22px;font-weight:800">🎨 %s</p>'
+        '<p style="margin:12px 0 6px"><b>%s %s,</b></p><p style="margin:0 0 14px;color:#5b647a">%s</p>'
+        '<div style="background:#f4f6fb;border-radius:12px;padding:14px 16px"><div style="font-size:12px;color:#5b647a;'
+        'text-transform:uppercase;letter-spacing:.05em;font-weight:700">%s</div>'
+        '<div style="font-size:18px;font-weight:800;margin-top:4px">%s · %s</div></div>%s'
+        '<p style="margin:16px 0 0;font-weight:700">%s</p><p style="margin:4px 0 0"><b style="color:#2f6bf2">%s</b></p>'
+        '</td></tr></table></div>') % (
+        logo, subject, T["hi"], o.customer_name, body, T["num"], carrier, last_mile["number"], cta, T["soon"], T["team"])
+    msg = EmailMultiAlternatives(subject, text, settings.DEFAULT_FROM_EMAIL, [o.customer_email])
+    msg.attach_alternative(_brand(html), "text/html")
+    return _safe_send(msg)
+
+
 GALLERY_STR = {
     "fr": {"subject": "Vos creations PaintIt", "hi": "Bonjour",
            "intro": "Voici vos toiles enregistrees. Rejouez en DigiPaint ou commandez la version reelle.",

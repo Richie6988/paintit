@@ -57,6 +57,16 @@ class Command(BaseCommand):
                 Order.objects.filter(pk=o.pk).update(feedback_sent=True)
             except Exception as exc:
                 self.stdout.write(self.style.ERROR("Avis %s : %s" % (o.uid, exc)))
+        # Suivi colis : arrivee dans le pays -> e-mail « ça arrive » avec le n° du transporteur national
+        from studio import parcel
+        if parcel.enabled() and not dry:
+            for o in parcel.due_orders()[:100]:
+                try:
+                    r = parcel.check(o)
+                except Exception as exc:
+                    r = "erreur %s" % exc
+                if r != "deja verifie":
+                    self.stdout.write("Colis %s : %s" % (o.uid, r))
         # Boutiques Shopify relais : relit les expeditions (au cas ou un webhook serait perdu)
         from studio import shopify
         for sup in Supplier.objects.filter(active=True, integration="shopify"):

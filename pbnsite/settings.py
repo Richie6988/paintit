@@ -136,6 +136,8 @@ LOGGING = {
 
 # --- Paiement Stripe ---
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+# Suivi colis international (AfterShip) : arrivee dans le pays + n° du transporteur national -> e-mail client
+AFTERSHIP_API_KEY = os.environ.get("AFTERSHIP_API_KEY", "")
 # Suivi des communautes (lecture seule) : app Reddit de type « script » (https://www.reddit.com/prefs/apps)
 REDDIT_CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID", "")
 REDDIT_CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET", "")

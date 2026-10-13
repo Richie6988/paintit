@@ -49,7 +49,7 @@
             <td>{{ r.o.customer_name|truncatechars:20 }}<div class="muted">{{ r.o.city }}{% if r.o.country %}, {{ r.o.country }}{% endif %}</div></td>
             <td><span class="pill st-{{ r.o.status }}">{{ r.o.get_status_display }}</span></td>
             <td class="r {% if r.late %}late{% endif %}">{{ r.age }} j{% if r.late %} ⚠{% endif %}</td>
-            <td>{% if r.o.tracking_number %}{% if r.o.tracking_url %}<a href="{{ r.o.tracking_url }}" target="_blank" rel="noopener">{{ r.o.carrier }} {{ r.o.tracking_number }}</a>{% else %}{{ r.o.carrier }} {{ r.o.tracking_number }}{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td>{% if r.o.tracking_number %}{% if r.o.tracking_url %}<a href="{{ r.o.tracking_url }}" target="_blank" rel="noopener">{{ r.o.carrier }} {{ r.o.tracking_number }}</a>{% else %}{{ r.o.carrier }} {{ r.o.tracking_number }}{% endif %}{% with p=r.o.parcel %}{% if p.notified_at %}<div class="muted" style="font-size:.72rem">✅ arrivé · client prévenu · {{ p.last_mile.number }}</div>{% elif p.state %}<div class="muted" style="font-size:.72rem">{{ p.state }}</div>{% endif %}{% endwith %}{% else %}<span class="muted">—</span>{% endif %}</td>
             <td class="r">{{ r.o.cost|floatformat:2 }} €</td>
             <td><form method="post">{% csrf_token %}<input type="hidden" name="order" value="{{ r.o.pk }}"><button class="pbtn sm" name="op" value="resend" title="Renvoyer la commande et les fichiers à ce fournisseur">Renvoyer</button></form></td>
           </tr>{% empty %}<tr><td colspan="8" class="muted">Aucune commande dans cet onglet.</td></tr>{% endfor %}

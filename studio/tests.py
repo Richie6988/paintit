@@ -540,5 +540,42 @@ class WooConnectorTests(TestCase):
         self.assertNotIn(self.keys["cs"], " ".join(ConnectorLog.objects.values_list("query", flat=True)))
 
 
+@override_settings(AFTERSHIP_API_KEY="k", EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class ParcelTests(TestCase):
+    """Arrivee dans le pays -> e-mail « ça arrive » (une fois) avec le n° du transporteur national ; livre -> Livree."""
+    def setUp(self):
+        from studio.models import Supplier
+        self.sup = Supplier.objects.create(name="Yingsa", integration="woo")
+        self.o = make_order(status=Order.SHIPPED)
+        Order.objects.filter(pk=self.o.pk).update(supplier=self.sup, tracking_number="YT123", carrier="yunexpress",
+                                                  country="France")
+        self.o.refresh_from_db()
+        self.t = {"id": "as1", "tag": "InTransit", "slug": "yunexpress",
+                  "checkpoints": [{"country_region": "CHN", "message": "Departed"}], "last_mile": {}}
+
+    def fake(self, method, path, data=None):
+        return dict(self.t)
+
+    def test_waits_then_notifies_once_then_delivered(self):
+        from django.core import mail
+        from studio import parcel
+        with mock.patch("studio.parcel._http", side_effect=self.fake):
+            parcel.check(self.o, force=True)
+            self.assertEqual(len(mail.outbox), 0)                     # encore en Chine
+            self.t.update(checkpoints=self.t["checkpoints"] + [{"country_region": "FRA", "slug": "la-poste-colissimo",
+                                                                  "message": "Arrivé en France"}],
+                          last_mile={"tracking_number": "6A123456789", "slug": "la-poste-colissimo"})
+            self.o.refresh_from_db(); parcel.check(self.o, force=True)
+            self.assertEqual(len(mail.outbox), 1)
+            self.assertIn("6A123456789", mail.outbox[0].body)
+            self.assertIn("Colissimo", mail.outbox[0].body)
+            self.o.refresh_from_db(); parcel.check(self.o, force=True)
+            self.assertEqual(len(mail.outbox), 1)                     # pas de doublon
+            self.t["tag"] = "Delivered"
+            self.o.refresh_from_db(); parcel.check(self.o, force=True)
+        self.o.refresh_from_db()
+        self.assertEqual(self.o.status, Order.DELIVERED)
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)

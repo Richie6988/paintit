@@ -152,6 +152,9 @@ class Order(models.Model):
     carrier = models.CharField("Transporteur", max_length=60, blank=True, default="")
     tracking_number = models.CharField("N° de suivi", max_length=80, blank=True, default="")
     tracking_url = models.CharField("Lien de suivi", max_length=300, blank=True, default="")
+    # Suivi colis (studio/parcel.py) : {"id", "state", "dest_arrived_at", "last_mile": {"carrier","number","url"},
+    #  "notified_at", "last_check", "checkpoint", "error"}
+    parcel = models.JSONField("Suivi colis", default=dict, blank=True)
     feedback_sent = models.BooleanField(default=False)
     invoice_number = models.CharField("N° de facture", max_length=24, blank=True, default="", db_index=True)
 
