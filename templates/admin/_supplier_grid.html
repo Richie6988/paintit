@@ -1,0 +1,106 @@
+{# Grille tarifaire du fournisseur : presentee comme son devis, remplie ici ; source de tous les couts et marges #}
+<style>
+ .qg-wrap{overflow-x:auto;border:1px solid #e3e3e3;border-radius:12px}
+ .qg{border-collapse:collapse;width:100%;min-width:900px;font-size:.84rem}
+ .qg th,.qg td{border:1px solid #e6e8ee;padding:0;text-align:center;vertical-align:middle}
+ .qg thead th{padding:8px 6px;font-weight:800;line-height:1.25;background:#fafbfd}
+ .qg th.c24{background:#d9ead3}.qg th.cx{background:#fff7c2}
+ .qg th.zn{color:#2f6bf2}.qg th.zn:nth-child(3n){color:#e8862a}.qg th.zn:nth-child(3n+1){color:#7a3db8}
+ .qg td.prod{font-weight:700;padding:8px;min-width:120px;background:#fff}
+ .qg td.sz{padding:4px 6px;min-width:84px}
+ .qg input[type=text]{width:100%;box-sizing:border-box;border:0;background:transparent;text-align:center;padding:9px 4px;font:inherit;font-variant-numeric:tabular-nums;min-width:58px}
+ .qg input[type=text]:focus{outline:2px solid #2f6bf2;background:#f5f8ff}
+ .qg td.pr input{color:#c0392b;font-weight:700}.qg td.pr.c input{color:#12224f;font-weight:600}
+ .qg td.note{padding:8px;text-align:left;min-width:150px;font-size:.78rem;color:#6d7175}
+ .qg td.note input{border:1px solid #e3e3e3;border-radius:6px;padding:4px;width:52px;color:#c0392b;font-weight:700;min-width:0}
+ .qg tr.off td:not(.prod){opacity:.4}
+ .qg tfoot td{padding:6px;background:#fafbfd;font-size:.78rem}
+ .qg tfoot input{border:1px solid #e3e3e3 !important;border-radius:6px;background:#fff !important}
+ .qg .tools{display:flex;gap:4px;justify-content:center;align-items:center;font-size:.7rem;color:#6d7175;padding:2px}
+ .qg .tag{font-size:.66rem;font-weight:800;border-radius:999px;padding:0 6px;background:#fdecea;color:#b42318}
+ .qg-zone input[name^=z_label]{font-weight:800 !important;color:inherit;border-style:solid !important}
+ .qg-zone input{font-size:.74rem !important;padding:3px !important;border:1px dashed #d0d5e0 !important;border-radius:6px;margin-top:3px}
+ .qg-top{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:12px}
+ .qg-top label{display:flex;flex-direction:column;gap:3px;font-size:.74rem;font-weight:700;color:#6d7175}
+ .qg-top select,.qg-top input{font-size:.84rem}
+ .qg-cols label{flex-direction:row;align-items:center;gap:4px;color:#12224f}
+ .qg-foot{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:12px}
+ .qg-foot label{display:flex;flex-direction:column;gap:3px;font-size:.74rem;font-weight:700;color:#6d7175}
+</style>
+<div class="card" id="grille">
+  <div class="card-h"><h2>Grille tarifaire</h2>
+    <span class="muted">{% if grid.g %}prix d'achat {{ grid.g.currency }}{% if grid.g.currency != "EUR" %} · 1 {{ grid.g.currency }} = {{ grid.g.fx|stringformat:"s" }} €{% endif %} · source des coûts et marges (onglet <a href="/admin-tarifs/">Tarifs</a>){% endif %}</span></div>
+  {% if not grid.g %}
+    <p class="muted" style="margin:0 0 10px">Saisissez le devis du fournisseur tel qu'il vous l'envoie : prix unitaire par taille et nombre de couleurs, livraison par pays, supplément de livraison selon les couleurs, délais.</p>
+    <form method="post" style="display:flex;gap:8px">{% csrf_token %}
+      <button class="pbtn pri" name="op" value="grid_seed">Pré-remplir avec le devis Yingsa (USD)</button>
+      <button class="pbtn" name="op" value="grid_save">Commencer une grille vide</button>
+      <input type="hidden" name="g_currency" value="EUR"><input type="hidden" name="g_cols" value="24"><input type="hidden" name="g_cols" value="36"><input type="hidden" name="g_cols" value="48">
+      <input type="hidden" name="p_label_0" value="Kit sans cadre"><input type="hidden" name="g_np" value="0"><input type="hidden" name="z_label_0" value="France"><input type="hidden" name="z_countries_0" value="FR"><input type="hidden" name="g_nz" value="0">
+      <input type="hidden" name="tax_vat_recoverable" value="on">
+    </form>
+  {% else %}
+  {% if grid.missing_zones %}<div class="banner warn" style="margin:0 0 12px"><span>Livraison non chiffrée pour <b>{{ grid.missing_zones|join:", " }}</b> : sans ce tarif, la marge des commandes livrées dans {% if grid.missing_zones|length > 1 %}ces zones{% else %}cette zone{% endif %} ne peut pas être calculée. Demandez-le au fournisseur.</span></div>{% endif %}
+  <form method="post">{% csrf_token %}<input type="hidden" name="op" value="grid_save">
+    <input type="hidden" name="g_nz" value="{{ grid.zones|length }}"><input type="hidden" name="g_np" value="{{ grid.products|length }}"><input type="hidden" name="g_nr" value="{{ grid.n_rows }}">
+    <div class="qg-top">
+      <label>Devise du devis<select name="g_currency">{% for k, l in grid.currencies %}<option value="{{ k }}" {% if grid.g.currency == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+      <label>Taux : 1 unité = … €<input type="text" name="g_fx" value="{{ grid.g.fx|stringformat:'s' }}" style="width:90px"></label>
+      <div class="qg-top qg-cols" style="margin:0"><span style="font-size:.74rem;font-weight:700;color:#6d7175">Colonnes couleurs</span>
+        {% for c in grid.all_cols %}<label><input type="checkbox" name="g_cols" value="{{ c }}" {% if c in grid.cols %}checked{% endif %} style="width:auto"> {{ c }}</label>{% endfor %}</div>
+    </div>
+    <div class="qg-wrap"><table class="qg">
+      <thead><tr><th>Produit</th><th>Taille (cm)</th>
+        {% for c in grid.cols %}<th class="{% if forloop.first %}c24{% else %}cx{% endif %}">Prix unitaire ({{ grid.sym }})<br>{{ c }} couleurs</th>{% endfor %}
+        {% for z in grid.zones %}<th class="zn qg-zone">Livraison ({{ grid.sym }})
+          <input type="hidden" name="z_key_{{ forloop.counter0 }}" value="{{ z.key }}">
+          <input type="text" name="z_label_{{ forloop.counter0 }}" value="{{ z.label }}" title="Nom de la zone">
+          <input type="text" name="z_countries_{{ forloop.counter0 }}" value="{{ z.countries }}" title="Pays : codes ISO séparés par des virgules, EU = Union européenne, * = reste du monde" placeholder="FR, EU, *">
+          <div class="tools"><label><input type="checkbox" name="z_del_{{ forloop.counter0 }}" value="1" style="width:auto"> retirer</label></div></th>{% endfor %}
+        <th class="qg-zone" style="color:#6d7175">＋ Zone<input type="text" name="z_label_{{ grid.zones|length }}" placeholder="ex. Allemagne"><input type="text" name="z_countries_{{ grid.zones|length }}" placeholder="DE"></th>
+        <th>Note</th></tr></thead>
+      <tbody>
+      {% for p in grid.products %}
+        {% for r in p.rows %}
+        <tr class="{% if not r.on %}off{% endif %}">
+          {% if forloop.first %}<td class="prod" rowspan="{{ p.rows|length|add:1 }}">
+            <input type="hidden" name="p_key_{{ p.j }}" value="{{ p.key }}">
+            <input type="text" name="p_label_{{ p.j }}" value="{{ p.label }}" style="font-weight:700">
+            <div class="tools"><label title="Produit vendu sur PaintIt (kit)"><input type="radio" name="g_kit" value="{{ p.key }}" {% if p.kit %}checked{% endif %} style="width:auto"> vendu</label>
+              <label><input type="checkbox" name="p_del_{{ p.j }}" value="1" style="width:auto"> retirer</label></div></td>{% endif %}
+          <td class="sz"><input type="hidden" name="r_prod_{{ r.i }}" value="{{ r.product }}"><input type="text" name="r_size_{{ r.i }}" value="{{ r.size }}">
+            <div class="tools"><label title="Proposé"><input type="checkbox" name="r_on_{{ r.i }}" {% if r.on %}checked{% endif %} style="width:auto"> actif</label>
+              <label title="Supprimer la ligne"><input type="checkbox" name="r_del_{{ r.i }}" value="1" style="width:auto"> ✕</label>
+              {% if p.kit and r.on and not r.sold %}<span class="tag" title="Format absent de l'onglet Tarifs : non vendu sur le site">non vendu</span>{% endif %}</div></td>
+          {% for c, v in r.prices %}<td class="pr {% if not forloop.first %}c{% endif %}"><input type="text" inputmode="decimal" name="r_price_{{ r.i }}_{{ c }}" value="{% if v is not None %}{{ v|floatformat:'2u' }}{% endif %}" placeholder="—"></td>{% endfor %}
+          {% for zk, v in r.ships %}<td><input type="text" inputmode="decimal" name="r_ship_{{ r.i }}_{{ zk }}" value="{% if v is not None %}{{ v|floatformat:'2u' }}{% endif %}" placeholder="—"></td>{% endfor %}
+          <td></td>
+          {% if forloop.first %}<td class="note" rowspan="{{ p.rows|length|add:1 }}">Livraison pour {{ grid.cols.0 }} couleurs ;
+            {% for c, v in p.extras %}{% if not forloop.first %}<br>{{ c }} couleurs : + <input type="text" inputmode="decimal" name="p_extra_{{ p.j }}_{{ c }}" value="{{ v|default_if_none:''|stringformat:'s' }}" placeholder="0"> {{ grid.sym }}{% endif %}{% endfor %}</td>{% endif %}
+        </tr>
+        {% endfor %}
+        <tr><td class="sz" {% if not p.rows %}colspan="2"{% endif %}>{% if not p.rows %}<input type="hidden" name="p_key_{{ p.j }}" value="{{ p.key }}"><input type="text" name="p_label_{{ p.j }}" value="{{ p.label }}" style="font-weight:700">{% endif %}
+          <input type="hidden" name="r_prod_{{ grid.n_rows|add:forloop.counter0 }}" value="{{ p.key }}"><input type="hidden" name="r_on_{{ grid.n_rows|add:forloop.counter0 }}" value="on">
+          <input type="text" name="r_size_{{ grid.n_rows|add:forloop.counter0 }}" placeholder="＋ 60x80" title="Ajouter une taille"></td>
+          {% for c in grid.cols %}<td class="pr {% if not forloop.first %}c{% endif %}"><input type="text" inputmode="decimal" name="r_price_{{ grid.n_rows|add:forloop.parentloop.counter0 }}_{{ c }}" placeholder="—"></td>{% endfor %}
+          {% for z in grid.zones %}<td><input type="text" inputmode="decimal" name="r_ship_{{ grid.n_rows|add:forloop.parentloop.counter0 }}_{{ z.key }}" placeholder="—"></td>{% endfor %}
+          <td></td>{% if not p.rows %}<td></td>{% endif %}</tr>
+      {% endfor %}
+      <tr><td class="prod"><input type="text" name="p_label_{{ grid.products|length }}" placeholder="＋ Produit"></td><td colspan="{{ grid.cols|length|add:grid.zones|length|add:3 }}" class="note">Nouveau produit (ex. tableau encadré) : nommez-le, enregistrez, puis ajoutez ses tailles.</td></tr>
+      </tbody>
+      <tfoot><tr><td colspan="{{ grid.cols|length|add:2 }}" style="text-align:right;font-weight:700">Délai de livraison</td>
+        {% for z in grid.zones %}<td><input type="text" name="z_days_{{ forloop.counter0 }}" value="{{ z.days }}" placeholder="7-12 j"></td>{% endfor %}<td></td><td></td></tr></tfoot>
+    </table></div>
+    <div class="qg-foot">
+      <label>Set de pinceaux (€, si facturé à part)<span style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="brushes_on" {% if offer_x.extras.brushes.on %}checked{% endif %} style="width:auto"><input type="text" name="brushes_cost" value="{{ offer_x.extras.brushes.cost|default_if_none:''|stringformat:'s' }}" placeholder="inclus"></span></label>
+      <label>Frais fixes par commande (€)<input type="text" name="ship_handling" value="{{ offer_x.shipping.handling|default_if_none:''|stringformat:'s' }}" placeholder="0"></label>
+      <label>Droits de douane (%)<input type="text" name="tax_duties_rate" value="{{ offer_x.taxes.duties_rate|default_if_none:''|stringformat:'s' }}" placeholder="0"></label>
+      <label>Dédouanement (€ / commande)<input type="text" name="tax_customs_fee" value="{{ offer_x.taxes.customs_fee|default_if_none:''|stringformat:'s' }}" placeholder="0"></label>
+      <label>TVA à l'import (%)<span style="display:flex;gap:6px;align-items:center"><input type="text" name="tax_vat_rate" value="{{ offer_x.taxes.vat_rate|default_if_none:''|stringformat:'s' }}" placeholder="20"><span style="white-space:nowrap"><input type="checkbox" name="tax_vat_recoverable" {% if offer_x.taxes.vat_recoverable|default_if_none:True %}checked{% endif %} style="width:auto"> récupérable</span></span></label>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+      <span class="muted" style="font-size:.76rem">Pays des zones : codes ISO (FR, GB, US…), <b>EU</b> = Union européenne, <b>*</b> = reste du monde. Le produit « vendu » est celui du kit PaintIt.</span>
+      <button class="pbtn pri">Enregistrer la grille</button></div>
+  </form>
+  {% endif %}
+</div>

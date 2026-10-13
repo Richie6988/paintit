@@ -577,5 +577,62 @@ class ParcelTests(TestCase):
         self.assertEqual(self.o.status, Order.DELIVERED)
 
 
+class SupplierGridTests(TestCase):
+    """Grille tarifaire au format du devis : cout = prix (couleurs) + livraison zone + supplement couleurs, en EUR."""
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from studio.models import Supplier
+        self.sup = Supplier.objects.create(name="Yingsa")
+        self.sup.offer = {"grid": Supplier.GRID_TEMPLATE, "taxes": {"vat_recoverable": True}}
+        self.sup.save()
+        self.u = User.objects.create_superuser("g", "g@x.fr", "pw")
+
+    def test_cost_from_grid(self):
+        s = self.sup
+        # 40x50, 36 couleurs, UK : (9.5 + 8.5 + 1) USD * 0.92
+        self.assertEqual(s.order_cost("40x50", 36, country="GB"), round(19.0 * 0.92, 2))
+        self.assertEqual(s.order_cost("40x50", 48, country="NZ"), round((10.5 + 10.5 + 2) * 0.92, 2))
+        self.assertIsNone(s.order_cost("40x50", 24, country="FR"))       # livraison France non chiffree
+        self.assertIsNone(s.order_cost("60x80", 24, country="GB"))       # taille absente
+        self.assertEqual(s.goods_cost("40x50", 24), round(7.5 * 0.92, 2))
+        self.assertTrue(s.offer_get("formats", "40x50")["on"])
+        self.assertFalse(s.offer_get("colors", 12)["on"])
+
+    def test_save_roundtrip_from_fiche(self):
+        from studio import views
+        self.client.force_login(self.u)
+        with mock.patch("studio.middleware.StaffTwoFactorMiddleware.__call__", lambda m, r: m.get_response(r)):
+            r = self.client.get("/admin-hub/suppliers/%d/" % self.sup.pk)
+        self.assertContains(r, "Grille tarifaire")
+        from django.http import QueryDict
+        v = views._grid_view(self.sup)
+        P = QueryDict(mutable=True)
+        P.update({"g_currency": "USD", "g_fx": "0,9", "g_nz": str(len(v["zones"])), "g_np": str(len(v["products"])),
+                  "g_nr": str(v["n_rows"]), "g_kit": "unframed", "tax_vat_recoverable": "on"})
+        for c in v["cols"]:
+            P.appendlist("g_cols", c)
+        for i, z in enumerate(v["zones"]):
+            P.update({"z_key_%d" % i: z["key"], "z_label_%d" % i: z["label"], "z_countries_%d" % i: z["countries"]})
+        for p in v["products"]:
+            P.update({"p_key_%d" % p["j"]: p["key"], "p_label_%d" % p["j"]: p["label"]})
+            for c, val in p["extras"]:
+                if val is not None:
+                    P["p_extra_%d_%s" % (p["j"], c)] = str(val)
+            for r in p["rows"]:
+                P.update({"r_prod_%d" % r["i"]: r["product"], "r_size_%d" % r["i"]: r["size"], "r_on_%d" % r["i"]: "on"})
+                for c, val in r["prices"]:
+                    P["r_price_%d_%s" % (r["i"], c)] = str(val)
+                for zk, val in r["ships"]:
+                    if val is not None:
+                        P["r_ship_%d_%s" % (r["i"], zk)] = str(val)
+        P.update({"r_size_%d" % v["n_rows"]: "40x40", "r_prod_%d" % v["n_rows"]: "unframed",
+                  "r_ship_%d_fr" % 0: "4.5"})                          # livraison France ajoutee sur 30x40
+        views._grid_save(self.sup, P)
+        self.sup.refresh_from_db()
+        self.assertEqual(self.sup.grid()["fx"], 0.9)
+        self.assertEqual(len(self.sup.grid()["rows"]), v["n_rows"])     # ligne d'ajout vide / doublon ignores
+        self.assertEqual(self.sup.order_cost("30x40", 24, country="FR"), round((5.5 + 4.5) * 0.9, 2))
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)

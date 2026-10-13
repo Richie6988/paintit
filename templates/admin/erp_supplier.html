@@ -36,6 +36,8 @@
     <div class="kpi"><div class="l">Dans les délais</div><div class="v">{% if sup.stats.on_time is not None %}{{ sup.stats.on_time }} %{% else %}—{% endif %}</div><div class="muted">production ≤ délai promis</div></div>
   </div>
 
+  {% include "admin/_supplier_grid.html" %}
+
   <div class="sp-layout">
     <div>
       <div class="card">
@@ -211,12 +213,8 @@
         </dl>
       </div>
       <div class="card">
-        <div class="card-h"><h2>Offre &amp; tarifs</h2><a class="muted" href="/admin-hub/suppliers/{{ sup.pk }}/edit/">Modifier</a></div>
-        {% with rows=sup.offer_rows %}{% if sup.offer %}
-        <table style="width:100%;font-size:.82rem;border-collapse:collapse">
-          {% for cat, lbl, on, cost in rows %}{% if on %}<tr><td class="muted" style="padding:3px 0">{{ cat }}</td><td>{{ lbl }}</td><td style="text-align:right;font-weight:700">{% if cost is not None %}{{ cost|floatformat:2 }} €{% else %}—{% endif %}</td></tr>{% endif %}{% endfor %}
-        </table>{% else %}<div class="muted">Aucune offre saisie.</div>{% endif %}{% endwith %}
-        <div class="muted" style="margin-top:8px;font-size:.8rem">Nuancier : {% if sup.palette %}<b>{{ sup.palette|length }} teintes</b> (importé le {{ sup.palette_updated_at|date:"d/m/Y" }}){% else %}aucun, couleurs libres{% endif %}</div>
+        <div class="card-h"><h2>Nuancier</h2><a class="muted" href="/admin-hub/suppliers/{{ sup.pk }}/edit/#nuancier-edit">Modifier</a></div>
+        <div class="muted" style="font-size:.84rem">{% if sup.palette %}<b>{{ sup.palette|length }} teintes</b> (importé le {{ sup.palette_updated_at|date:"d/m/Y" }}){% else %}Aucun : couleurs calculées librement.{% endif %}</div>
       </div>
       <div class="card">
         <div class="card-h"><h2>Pièces jointes</h2><a class="muted" href="/admin-hub/suppliers/{{ sup.pk }}/edit/">Ajouter</a></div>

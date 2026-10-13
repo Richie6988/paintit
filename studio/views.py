@@ -1702,6 +1702,7 @@ def shop_pricing(request):
         "kit": kit, "sup": sup, "vat": vat, "margins": margins, "mcols": mcols,
         "sup_brushes": b, "sup_taxes": sup.taxes() if sup else None,
         "sup_ship": ((sup.offer or {}).get("shipping") or {}) if sup else {},
+        "sup_zone": ((sup.grid_zone("FR") or {}).get("label") if sup and sup.grid() else ""),
         "kit_formats": kfs,
         "kit_colors": kit_colors,
         "tab_dims": [{"key":k,"price":getattr(tab,"d_"+k),"av":getattr(tab,"av_"+k)}
@@ -2180,6 +2181,94 @@ SUPPLIER_CHANNELS = [
     ("email", "E-mail", "Commande + fichiers (et Excel ERP) par e-mail"),
 ]
 
+def _grid_view(sup):
+    """Grille tarifaire du fournisseur, prete a afficher/editer (groupee par produit, comme le devis)."""
+    from .models import KitFormat, format_key
+    g = sup.grid()
+    cols = [str(c) for c in g.get("cols") or []]
+    zones = g.get("zones") or []
+    sold = {k.key for k in KitFormat.objects.all()}
+    rows = list(g.get("rows") or [])
+    prods = []
+    for j, p in enumerate(g.get("products") or []):
+        pr = [dict(r, i=i, fmt=format_key(*r["size"].split("x")) if "x" in r.get("size", "") else r.get("size", ""),
+                   prices=[(c, (r.get("price") or {}).get(c)) for c in cols],
+                   ships=[(z["key"], (r.get("ship") or {}).get(z["key"])) for z in zones])
+              for i, r in enumerate(rows) if r.get("product") == p.get("key")]
+        for r in pr:
+            r["sold"] = r["fmt"] in sold
+        prods.append(dict(p, j=j, rows=pr, extras=[(c, (p.get("extra") or {}).get(c)) for c in cols]))
+    missing = [z["label"] for z in zones if not any((r.get("ship") or {}).get(z["key"]) not in (None, "")
+                                                    for r in rows if r.get("on"))]
+    return {"g": g, "cols": cols, "zones": zones, "products": prods, "n_rows": len(rows), "missing_zones": missing,
+            "all_cols": [str(n) for n in (12, 24, 36, 48)],
+            "currencies": [("USD", "Dollar US ($)"), ("EUR", "Euro (€)"), ("CNY", "Yuan (¥)"), ("GBP", "Livre (£)")],
+            "sym": {"USD": "$", "EUR": "€", "CNY": "¥", "GBP": "£"}.get(g.get("currency") or "EUR", "")}
+
+
+def _grid_save(sup, P):
+    """Enregistre la grille postee depuis la fiche (structure : voir Supplier.GRID_TEMPLATE)."""
+    import re as _re
+    from .models import format_key
+
+    def num(v):
+        v = (v or "").replace(",", ".").replace("$", "").replace("€", "").strip()
+        try:
+            return round(float(v), 4) if v else None
+        except ValueError:
+            return None
+    old = sup.grid()
+    cols = sorted({int(c) for c in P.getlist("g_cols") if c.isdigit()}) or [24]
+    zones = []
+    for i in range(int(P.get("g_nz") or 0) + 1):
+        lbl = (P.get("z_label_%d" % i) or "").strip()[:40]
+        if not lbl or P.get("z_del_%d" % i):
+            continue
+        key = (P.get("z_key_%d" % i) or "").strip() or ("z%d" % i)
+        while any(z["key"] == key for z in zones):
+            key += "_"
+        zones.append({"key": key, "label": lbl, "countries": (P.get("z_countries_%d" % i) or "").upper().strip()[:200],
+                      "days": (P.get("z_days_%d" % i) or "").strip()[:30]})
+    prods = []
+    for j in range(int(P.get("g_np") or 0) + 1):
+        lbl = (P.get("p_label_%d" % j) or "").strip()[:60]
+        if not lbl or P.get("p_del_%d" % j):
+            continue
+        key = (P.get("p_key_%d" % j) or "").strip() or _re.sub(r"[^a-z0-9]+", "_", lbl.lower()).strip("_") or "p%d" % j
+        prods.append({"key": key, "label": lbl, "kit": P.get("g_kit") == key,
+                      "extra": {str(c): num(P.get("p_extra_%d_%d" % (j, c))) for c in cols}})
+    if prods and not any(p["kit"] for p in prods):
+        prods[0]["kit"] = True
+    keys = {p["key"] for p in prods}
+    rows = []
+    for i in range(int(P.get("g_nr") or 0) + 3):
+        size = (P.get("r_size_%d" % i) or "").lower().replace(" ", "").replace("*", "x").replace("×", "x")
+        prod = P.get("r_prod_%d" % i)
+        if not _re.fullmatch(r"\d{2,3}x\d{2,3}", size) or prod not in keys or P.get("r_del_%d" % i):
+            continue
+        row = {"product": prod, "size": format_key(*size.split("x")), "on": bool(P.get("r_on_%d" % i)),
+               "price": {str(c): num(P.get("r_price_%d_%d" % (i, c))) for c in cols},
+               "ship": {z["key"]: num(P.get("r_ship_%d_%s" % (i, z["key"]))) for z in zones}}
+        if any(r["product"] == prod and r["size"] == row["size"] for r in rows):
+            continue        # taille deja presente pour ce produit
+        if i >= int(P.get("g_nr") or 0) and not any(v is not None for v in row["price"].values()):
+            continue        # ligne d'ajout laissee vide
+        rows.append(row)
+    order = {p["key"]: n for n, p in enumerate(prods)}
+    rows.sort(key=lambda r: (order.get(r["product"], 99), [int(x) for x in r["size"].split("x")]))
+    cur = P.get("g_currency") if P.get("g_currency") in ("USD", "EUR", "CNY", "GBP") else "EUR"
+    offer = dict(sup.offer or {})
+    offer["grid"] = {"currency": cur, "fx": 1.0 if cur == "EUR" else (num(P.get("g_fx")) or old.get("fx") or 1.0),
+                     "cols": cols, "zones": zones, "products": prods, "rows": rows,
+                     "note": (P.get("g_note") or "").strip()[:500]}
+    offer["extras"] = {"brushes": {"on": bool(P.get("brushes_on")), "cost": num(P.get("brushes_cost"))}}
+    offer["shipping"] = {**(offer.get("shipping") or {}), "handling": num(P.get("ship_handling"))}
+    offer["taxes"] = {"vat_rate": num(P.get("tax_vat_rate")) or 0.0, "vat_recoverable": bool(P.get("tax_vat_recoverable")),
+                      "duties_rate": num(P.get("tax_duties_rate")) or 0.0, "customs_fee": num(P.get("tax_customs_fee")) or 0.0}
+    sup.offer = offer
+    sup.save(update_fields=["offer"])
+    return len(rows)
+
 
 def _sup_card(sup):
     from . import erp
@@ -2322,6 +2411,18 @@ def erp_supplier(request, pk):
                     n += 1
             messages.success(request, ("%d/%d commande(s) transmise(s) via %s." % (n, len(todo), sup.get_integration_display()))
                              if op == "retry_now" else "%d commande(s) retirée(s) des relances (non transmises)." % n)
+        elif op == "grid_save":
+            n = _grid_save(sup, request.POST)
+            messages.success(request, "Grille tarifaire enregistrée (%d ligne%s). Les coûts et marges de l'onglet "
+                             "Tarifs en découlent." % (n, "s" if n > 1 else ""))
+            return redirect(reverse("studio:erp_supplier", args=[sup.pk]) + "#grille")
+        elif op == "grid_seed":
+            if not sup.grid():
+                sup.offer = {**(sup.offer or {}), "grid": Supplier.GRID_TEMPLATE}
+                sup.save(update_fields=["offer"])
+                messages.success(request, "Grille pré-remplie avec le devis Yingsa (USD). Vérifiez le taux de change "
+                                 "et ajoutez la livraison France / UE.")
+            return redirect(reverse("studio:erp_supplier", args=[sup.pk]) + "#grille")
         elif op == "channel":
             ch = request.POST.get("integration", "")
             if ch in dict(Supplier.INTEGRATIONS) and ch != sup.integration:
@@ -2409,7 +2510,7 @@ def erp_supplier(request, pk):
     return render(request, "admin/erp_supplier.html", {
         "automation": automation, "due": due, "due_total": round(sum(o.cost or 0 for o in due), 2), "paid": paid,
         "xl": (sup.offer or {}).get("xlsx") or {},
-        "channels": SUPPLIER_CHANNELS,
+        "channels": SUPPLIER_CHANNELS, "grid": _grid_view(sup), "offer_x": sup.offer or {},
         "woo": sup.woo or {}, "woo_site": settings.SITE_URL,
         "woo_logs": (ConnectorLog.objects.filter(models.Q(supplier=sup) | models.Q(
                          supplier__isnull=True, at__gte=timezone.now() - timedelta(days=7)))[:20]
@@ -2507,21 +2608,8 @@ def _save_supplier_extras(request, sup):
             return round(float(v), 2) if v else None
         except ValueError:
             return None
-    opts = []
-    for i in range(50):
-        n = (P.get("opt_name_%d" % i) or "").strip()[:80]
-        if n:
-            opts.append({"name": n, "cost": cost("opt_cost_%d" % i)})
-    from .models import Supplier as _S
     xl = dict((sup.offer or {}).get("xlsx") or {})
-    sup.offer = {
-        "formats": {k: {"on": bool(P.get("fmt_on_" + k)), "cost": cost("fmt_cost_" + k)} for k, _l in _S.offer_formats()},
-        "colors": {str(n): {"on": bool(P.get("col_on_%d" % n)), "cost": cost("col_cost_%d" % n)} for n in COLOR_COUNTS},
-        "extras": {"brushes": {"on": bool(P.get("brushes_on")), "cost": cost("brushes_cost")}},
-        "options": opts,
-        "shipping": {k: cost("ship_" + k) for k in ("fr", "eu", "world", "handling")},
-        "taxes": {"vat_rate": cost("tax_vat_rate") or 0.0, "vat_recoverable": bool(P.get("tax_vat_recoverable")),
-                  "duties_rate": cost("tax_duties_rate") or 0.0, "customs_fee": cost("tax_customs_fee") or 0.0}}
+    sup.offer = dict(sup.offer or {})     # grille tarifaire : editee sur la fiche (_grid_save), pas ici
     # Pont Excel (ERP du fournisseur : MangoERP...) : modele, correspondance des colonnes, SKU
     tf = request.FILES.get("xlsx_template")
     if P.get("xlsx_remove"):
@@ -2556,6 +2644,8 @@ def _save_supplier_extras(request, sup):
         xl["logistics"] = (P.get("xlsx_logistics") or "").strip()[:60]
     if xl:
         sup.offer["xlsx"] = xl
+    else:
+        sup.offer.pop("xlsx", None)
     fields = ["offer"]
     if "shop_domain" in P:
         sh = dict(sup.shopify or {})

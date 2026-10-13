@@ -108,10 +108,7 @@ def order_values(sup, order, sku_pattern=None):
         sku = pattern.format(format=fmt, colors=order.colors, brushes="B" if order.brushes else "")
     except (KeyError, IndexError, ValueError):
         sku = DEFAULT_SKU.format(format=fmt, colors=order.colors)
-    cost = sup.offer_cost("formats", fmt)
-    if cost is not None:
-        cost += (sup.offer_cost("colors", order.colors) or 0) + \
-                ((sup.offer_cost("extras", "brushes") or 0) if order.brushes else 0)
+    cost = sup.goods_cost(fmt, order.colors, order.brushes)
     # Meme contenu que si la commande arrivait de la boutique Shopify : SKU, titre produit et variante,
     # telephone international, proprietes de ligne (fichiers) -> le fournisseur traite les deux a l'identique.
     from . import shopify as _shop

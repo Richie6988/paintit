@@ -550,52 +550,138 @@ class Supplier(models.Model):
             fm = [(k, v[2]) for k, v in FORMATS.items()]
         return fm
 
+    # ---- Grille tarifaire (devis fournisseur) : offer["grid"]
+    # {"currency": "USD", "fx": 0.92 (EUR pour 1 unite), "cols": [24, 36, 48],
+    #  "zones": [{"key": "z1", "label": "UK", "countries": "GB", "days": "7-12"}],   countries : ISO2, "EU" ou "*"
+    #  "products": [{"key": "unframed", "label": "Unframe kit", "kit": true, "extra": {"36": 1, "48": 2}}],
+    #  "rows": [{"product": "unframed", "size": "30x40", "on": true, "price": {"24": 5.5}, "ship": {"z1": 6.5}}]}
+    GRID_TEMPLATE = {
+        "currency": "USD", "fx": 0.92, "cols": [24, 36, 48],
+        "zones": [{"key": "fr", "label": "France", "countries": "FR", "days": ""},
+                  {"key": "eu", "label": "Union européenne", "countries": "EU", "days": ""},
+                  {"key": "uk", "label": "UK", "countries": "GB", "days": "7-12"},
+                  {"key": "us", "label": "USA", "countries": "US", "days": "7-12"},
+                  {"key": "nz", "label": "NZ", "countries": "NZ", "days": "7-12"}],
+        "products": [{"key": "unframed", "label": "Unframe kit", "kit": True, "extra": {"36": 1, "48": 2}},
+                     {"key": "frame", "label": "DIY frame kit", "kit": False, "extra": {"36": 1, "48": 2}}],
+        "rows": [{"product": "unframed", "size": sz, "on": True, "price": {"24": a, "36": b, "48": c},
+                  "ship": {"uk": u, "us": us, "nz": nz}} for sz, a, b, c, u, us, nz in (
+            ("30x40", 5.5, 7.5, 8.5, 6.5, 7.8, 7.8), ("40x40", 6.5, 8.5, 9.5, 8.0, 9.5, 9.5),
+            ("40x50", 7.5, 9.5, 10.5, 8.5, 10.5, 10.5), ("40x60", 8.0, 10.0, 11.0, 10.0, 11.0, 11.0),
+            ("50x50", 8.5, 10.5, 11.5, 11.0, 13.5, 12.5), ("50x60", 9.0, 11.0, 12.0, 12.0, 15.5, 14.0),
+            ("50x70", 9.5, 11.5, 12.5, 13.0, 17.0, 16.0), ("50x75", 10.5, 12.5, 13.5, 15.0, 19.0, 18.0))] +
+                [{"product": "frame", "size": sz, "on": True, "price": {"24": a, "36": b, "48": c},
+                  "ship": {"uk": u, "us": us, "nz": nz}} for sz, a, b, c, u, us, nz in (
+            ("30x40", 7.2, 9.2, 10.2, 10.8, 10.2, 7.8), ("40x40", 8.2, 10.2, 11.2, 12.0, 11.5, 9.5),
+            ("40x50", 8.8, 10.8, 11.8, 18.0, 15.5, 10.5))],
+    }
+
+    def grid(self):
+        return (self.offer or {}).get("grid") or {}
+
+    def grid_fx(self):
+        g = self.grid()
+        return 1.0 if (g.get("currency") or "EUR") == "EUR" else float(g.get("fx") or 0) or 1.0
+
+    def grid_kit_product(self):
+        prods = self.grid().get("products") or []
+        return next((p for p in prods if p.get("kit")), prods[0] if prods else None)
+
+    def grid_row(self, fmt_key, product=None):
+        p = product or (self.grid_kit_product() or {}).get("key")
+        return next((r for r in self.grid().get("rows") or []
+                     if r.get("product") == p and r.get("on") and format_key(*r["size"].split("x")) == fmt_key), None)
+
+    def grid_zone(self, iso2):
+        """Zone de livraison du devis pour un pays (ISO2) : pays explicite, sinon « EU », sinon « * »."""
+        zones = self.grid().get("zones") or []
+        iso2 = (iso2 or "FR").upper()
+        lists = [(z, [c.strip().upper() for c in (z.get("countries") or "").replace(";", ",").split(",") if c.strip()])
+                 for z in zones]
+        from .supplier import EU
+        for test in (lambda cs: iso2 in cs, lambda cs: "EU" in cs and (iso2 in EU or iso2 == "FR"), lambda cs: "*" in cs):
+            for z, cs in lists:
+                if test(cs):
+                    return z
+        return None
+
+    def _num(self, d, k):
+        v = (d or {}).get(str(k))
+        return None if v in (None, "") else float(v)
+
+    def grid_goods(self, fmt_key, colors, product=None):
+        """Prix unitaire du kit (devise du devis) ou None."""
+        r = self.grid_row(fmt_key, product)
+        return self._num(r.get("price"), int(colors)) if r else None
+
+    def grid_shipping(self, fmt_key, colors, iso2="FR", product=None):
+        """Livraison (devise du devis) : colonne de la zone + supplement couleurs du produit. None si non chiffree."""
+        r = self.grid_row(fmt_key, product)
+        z = self.grid_zone(iso2)
+        if not r or not z:
+            return None
+        base = self._num(r.get("ship"), z["key"])
+        if base is None:
+            return None
+        prod = next((p for p in self.grid().get("products") or [] if p.get("key") == r.get("product")), {})
+        return base + (self._num(prod.get("extra"), int(colors)) or 0.0)
+
     def offer_get(self, group, key):
+        if self.grid() and group in ("formats", "colors"):
+            fx = self.grid_fx()
+            cols = [int(c) for c in self.grid().get("cols") or []]
+            if group == "formats":
+                p = self.grid_goods(str(key), cols[0]) if cols else None
+                return {"on": p is not None, "cost": round(p * fx, 2) if p is not None else None}
+            if int(key) not in cols:
+                return {"on": False, "cost": None}
+            diffs = [(self._num(r.get("price"), key) or 0) - (self._num(r.get("price"), cols[0]) or 0)
+                     for r in self.grid().get("rows") or [] if r.get("on")
+                     and r.get("product") == (self.grid_kit_product() or {}).get("key")]
+            return {"on": True, "cost": round(sum(diffs) / len(diffs) * fx, 2) if diffs else 0.0}
         return ((self.offer or {}).get(group) or {}).get(str(key)) or {}
 
     def offer_cost(self, group, key):
         d = self.offer_get(group, key)
         return d.get("cost") if d.get("on") else None
 
-    def offer_rows(self):
-        """Offre lisible : [(categorie, libelle, disponible, cout)] pour la fiche."""
-        o = self.offer or {}
-        rows = []
-        for k, lbl in self.offer_formats():
-            d = self.offer_get("formats", k)
-            rows.append(("Format", lbl, bool(d.get("on")), d.get("cost")))
-        for n in COLOR_COUNTS:
-            d = self.offer_get("colors", n)
-            rows.append(("Couleurs", "%d couleurs" % n, bool(d.get("on")), d.get("cost")))
-        d = self.offer_get("extras", "brushes")
-        rows.append(("Option", "Set de pinceaux", bool(d.get("on")), d.get("cost")))
-        for d in o.get("options") or []:
-            rows.append(("Option", d.get("name", ""), True, d.get("cost")))
-        sh = o.get("shipping") or {}
-        for k, lbl in (("fr", "France"), ("eu", "Union européenne"), ("world", "Monde")):
-            if sh.get(k) is not None:
-                rows.append(("Livraison", lbl, True, sh.get(k)))
-        if sh.get("handling") is not None:
-            rows.append(("Frais", "Frais fixes par commande", True, sh.get("handling")))
-        return rows
+    def goods_cost(self, fmt_key, colors, brushes=False):
+        """Prix d'achat produit (EUR, hors livraison/taxes) ou None."""
+        if self.grid():
+            p = self.grid_goods(fmt_key, colors)
+            if p is None:
+                return None
+            g = p * self.grid_fx()
+        else:
+            f = self.offer_cost("formats", fmt_key)
+            if f is None:
+                return None
+            g = f + (self.offer_cost("colors", colors) or 0.0)
+        return round(g + ((self.offer_cost("extras", "brushes") or 0.0) if brushes else 0.0), 2)
 
     def taxes(self):
         t = (self.offer or {}).get("taxes") or {}
         return {"vat_rate": float(t.get("vat_rate") or 0), "vat_recoverable": bool(t.get("vat_recoverable", True)),
                 "duties_rate": float(t.get("duties_rate") or 0), "customs_fee": float(t.get("customs_fee") or 0)}
 
-    def order_cost(self, fmt_key, colors, brushes=False, zone="fr"):
+    def order_cost(self, fmt_key, colors, brushes=False, country="FR"):
         """Cout de revient d'une commande chez ce fournisseur (EUR) : produit + droits + livraison + frais
-        (+ TVA fournisseur si non recuperable). None si le format n'est pas tarife."""
-        f = self.offer_cost("formats", fmt_key)
-        if f is None:
+        (+ TVA fournisseur si non recuperable). None si le format, les couleurs ou la livraison ne sont pas tarifes."""
+        goods = self.goods_cost(fmt_key, colors, brushes)
+        if goods is None:
             return None
-        c = self.offer_cost("colors", colors) or 0.0
-        b = (self.offer_cost("extras", "brushes") or 0.0) if brushes else 0.0
-        goods = f + c + b
-        t = self.taxes()
         sh = (self.offer or {}).get("shipping") or {}
-        cost = goods * (1 + t["duties_rate"] / 100.0) + t["customs_fee"] + float(sh.get(zone) or 0) + float(sh.get("handling") or 0)
+        if self.grid():
+            ship = self.grid_shipping(fmt_key, colors, country)
+            if ship is None:
+                return None
+            ship *= self.grid_fx()
+        else:
+            from .supplier import EU
+            c = (country or "FR").upper()
+            ship = float(sh.get("fr" if c in ("FR", "fr") else "eu" if c in EU or c == "eu" else "world") or 0)
+        t = self.taxes()
+        cost = goods * (1 + t["duties_rate"] / 100.0) + t["customs_fee"] + ship + float(sh.get("handling") or 0)
         if not t["vat_recoverable"]:
             cost *= 1 + t["vat_rate"] / 100.0
         return round(cost, 2)
