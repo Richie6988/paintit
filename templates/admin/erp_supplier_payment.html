@@ -1,0 +1,59 @@
+{% extends "admin/base_site.html" %}
+{% block title %}{{ pay.reference }} · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block messages %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_growth_ui.html" %}{% include "admin/_sf_style.html" %}
+<div class="gx sf" style="max-width:980px">
+  <a class="gx-crumb" href="/admin-hub/suppliers/{{ sup.pk }}/#commandes">← {{ sup.name }}</a>
+  <div class="sf-head"><div><h1 style="font-size:1.6rem;font-weight:800;display:flex;gap:10px;align-items:center">Virement {{ pay.reference }}
+    {% if pay.status == "draft" %}<span class="gx-chip warn">À virer</span>{% else %}<span class="gx-chip ok">Viré le {{ pay.paid_at|date:"d/m/Y" }}</span>{% endif %}</h1>
+    <p class="gx-muted" style="margin:4px 0 0">{{ orders|length }} commande{{ orders|length|pluralize }} · préparé le {{ pay.created_at|date:"d/m/Y" }}{% if pay.created_by %} par {{ pay.created_by }}{% endif %}</p></div></div>
+  {% for msg in messages %}<div class="sf-alert ok"><span>{{ msg }}</span></div>{% endfor %}
+
+  <div class="sf-cols">
+    <div class="sf-card">
+      <h2>Ordre de virement</h2><p class="sub">À saisir dans votre banque{% if pay.currency != "EUR" %} ou chez Wise / Payoneer pour un paiement en {{ pay.currency }}{% endif %}.</p>
+      <div class="sf-grid">
+        <div class="gx-field"><span>Bénéficiaire</span><div class="sf-code"><span>{{ sup.name }}</span><button type="button" data-copy="{{ sup.name }}">Copier</button></div></div>
+        <div class="gx-field"><span>Banque</span><div class="sf-code"><span>{{ sup.bank_name|default:"—" }}</span></div></div>
+        <div class="gx-field"><span>IBAN / n° de compte</span><div class="sf-code"><span>{{ sup.iban|default:"à renseigner" }}</span>{% if sup.iban %}<button type="button" data-copy="{{ sup.iban }}">Copier</button>{% endif %}</div></div>
+        <div class="gx-field"><span>BIC / SWIFT</span><div class="sf-code"><span>{{ sup.bic|default:"à renseigner" }}</span>{% if sup.bic %}<button type="button" data-copy="{{ sup.bic }}">Copier</button>{% endif %}</div></div>
+        <div class="gx-field"><span>Montant</span><div class="sf-code"><span><b>{% if pay.currency != "EUR" %}{{ pay.amount_native|floatformat:2 }} {{ pay.currency }}</b> ≈ {{ pay.amount_eur|floatformat:2 }} €{% else %}{{ pay.amount_eur|floatformat:2 }} €</b>{% endif %}</span><button type="button" data-copy="{% if pay.currency != 'EUR' %}{{ pay.amount_native|stringformat:'.2f' }}{% else %}{{ pay.amount_eur|stringformat:'.2f' }}{% endif %}">Copier</button></div></div>
+        <div class="gx-field"><span>Référence / motif</span><div class="sf-code"><span>{{ pay.reference }}</span><button type="button" data-copy="{{ pay.reference }}">Copier</button></div></div>
+      </div>
+      {% if not sup.iban %}<div class="sf-alert warn" style="margin-top:14px"><span>Coordonnées bancaires du fournisseur manquantes.</span><a href="/admin-hub/suppliers/{{ sup.pk }}/#coordonnees">Compléter</a></div>{% endif %}
+      <div class="sf-actions" style="justify-content:flex-start">
+        {% if sepa and company.bank_iban %}<a class="gx-btn" href="?sepa=1">Fichier SEPA (XML) pour la banque</a>
+        {% elif sepa %}<a class="gx-btn" href="/admin-hub/legal/">Renseigner l'IBAN de l'entreprise pour le fichier SEPA</a>{% endif %}
+        <a class="gx-btn" href="/admin-hub/suppliers/{{ sup.pk }}/export/statement.xlsx?pay={{ pay.pk }}">Relevé pour le fournisseur (.xlsx)</a>
+      </div>
+    </div>
+    <div>
+      {% if pay.status == "draft" %}
+      <form method="post" class="sf-card">{% csrf_token %}
+        <h2>Confirmer le virement</h2><p class="sub">Une fois le virement passé : les commandes sont marquées réglées et l'écriture est passée en comptabilité.</p>
+        <div style="display:grid;gap:12px">
+          <label class="gx-field"><span>Date du virement</span><input type="date" name="paid_at" value="{% now 'Y-m-d' %}" style="height:40px;border:1px solid var(--line);border-radius:10px;padding:0 10px"></label>
+          <label class="gx-field"><span>Référence bancaire</span><input type="text" name="bank_ref" placeholder="facultatif"></label>
+        </div>
+        <div class="sf-actions"><button class="gx-btn" name="op" value="cancel" data-confirm="Annuler ce règlement ?" data-ok="Annuler le règlement">Annuler</button>
+          <button class="gx-btn pri" name="op" value="confirm">Virement effectué</button></div>
+      </form>
+      {% else %}
+      <div class="sf-card"><h2>Virement effectué</h2><ul class="sf-list" style="margin-top:6px"><li><span>Date</span><b>{{ pay.paid_at|date:"d/m/Y" }}</b></li><li><span>Réf. bancaire</span><b>{{ pay.bank_ref|default:"—" }}</b></li><li><span>Comptabilité</span><b><a href="/admin-hub/compta/?m={{ pay.paid_at|date:'Y-m' }}">voir l'écriture</a></b></li></ul></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="sf-card">
+    <h2>Commandes réglées par ce virement</h2>
+    <table class="t" style="margin-top:8px"><tr><th>Commande</th><th>Date</th><th>Produit</th><th style="text-align:right">Coût</th></tr>
+      {% for o in orders %}<tr><td><a href="/admin-hub/orders/{{ o.pk }}/" style="font-weight:700">{{ o.uid }}</a></td><td>{{ o.created_at|date:"d/m/Y" }}</td><td>{{ o.format_label }} · {{ o.colors }} coul.{% if o.brushes %} · pinceaux{% endif %}</td><td style="text-align:right">{{ o.cost|floatformat:2 }} €</td></tr>{% endfor %}
+      <tr><td colspan="3" style="text-align:right;font-weight:800">Total</td><td style="text-align:right;font-weight:800">{{ pay.amount_eur|floatformat:2 }} €</td></tr>
+    </table>
+  </div>
+</div>
+<script>document.querySelectorAll('[data-copy]').forEach(function(b){b.addEventListener('click',function(){navigator.clipboard&&navigator.clipboard.writeText(b.dataset.copy);var t=b.textContent;b.textContent='Copié';setTimeout(function(){b.textContent=t;},1200);});});</script>
+{% endblock %}

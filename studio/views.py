@@ -1,3 +1,4 @@
+import datetime
 import os
 import time
 import logging
@@ -1370,6 +1371,8 @@ def stripe_webhook(request):
             return HttpResponse(status=200)
         uid = meta.get("uid") or obj.get("client_reference_id")
         kind = meta.get("kind", "kit")
+        from . import ledger
+        ledger.record_from_session(obj)
         if uid and kind == "digital":
             _record_digital(uid, meta.get("email", ""), {})
         elif uid and kind == "gallery":
@@ -1397,6 +1400,17 @@ def stripe_webhook(request):
             except Exception:
                 logger.exception("Stripe %s", etype)
         r = Order.objects.filter(uid=uid).first() if uid else None
+        if etype == "charge.refunded":
+            from . import ledger
+            kind = meta.get("kind") or ("kit" if r else "digital")
+            refunds = ((obj.get("refunds") or {}).get("data")) or []
+            for rf in refunds:
+                ledger.record_refund(rf.get("id"), (rf.get("amount") or 0) / 100.0, uid=uid or "", kind=kind,
+                                     payment_intent=obj.get("payment_intent") or "")
+            if not refunds:
+                ledger.record_refund("%s-%s" % (obj.get("id"), obj.get("amount_refunded")),
+                                     (obj.get("amount_refunded") or 0) / 100.0, uid=uid or "", kind=kind,
+                                     payment_intent=obj.get("payment_intent") or "")
         if r:
             label = "Remboursement Stripe" if etype == "charge.refunded" else "LITIGE Stripe ouvert"
             _order_note(r, "%s : %.2f EUR" % (label, (obj.get("amount_refunded") or obj.get("amount") or 0) / 100.0))
@@ -2495,15 +2509,12 @@ def erp_supplier(request, pk):
                     request, "%d commande(s) passée(s) en « Expédiée » avec leur n° de suivi.%s" % (
                         n, (" Ignorées : " + " ; ".join(errs[:6])) if errs else ""))
         elif op == "pay_mark":
+            from . import ledger
             ids = [int(x) for x in request.POST.getlist("oid") if x.isdigit()]
-            ref = (request.POST.get("ref") or "").strip()[:80]
-            qs = Order.objects.filter(supplier=sup, pk__in=ids, supplier_paid_at__isnull=True)
-            n = qs.count()
-            qs.update(supplier_paid_at=timezone.now(), supplier_payment_ref=ref)
-            messages.success(request, "%d commande(s) marquée(s) réglée(s)%s." % (n, (" (réf. %s)" % ref) if ref else ""))
-        elif op == "pay_undo":
-            Order.objects.filter(supplier=sup, pk=request.POST.get("oid")).update(supplier_paid_at=None, supplier_payment_ref="")
-            messages.success(request, "Règlement annulé.")
+            pay = ledger.prepare_payment(sup, list(Order.objects.filter(supplier=sup, pk__in=ids)), user=user)
+            if pay:
+                return redirect("studio:erp_supplier_payment", pk=pay.pk)
+            messages.error(request, "Aucune commande à régler dans la sélection.")
         elif op == "assign":
             n = 0
             for o in erp.unassigned_orders():
@@ -2548,8 +2559,8 @@ def erp_supplier(request, pk):
                   "out": _json.dumps(sample_out, ensure_ascii=False, indent=2),
                   "in": _json.dumps(sample_in, ensure_ascii=False, indent=2)}
     due = list(Order.objects.filter(supplier=sup, status__in=(Order.FULFILLED, Order.SHIPPED, Order.DELIVERED),
-                                    supplier_paid_at__isnull=True).order_by("created_at"))
-    paid = list(Order.objects.filter(supplier=sup, supplier_paid_at__isnull=False).order_by("-supplier_paid_at")[:8])
+                                    supplier_paid_at__isnull=True, supplier_payment__isnull=True).order_by("created_at"))
+    paid = list(sup.payments.all()[:10])
     return render(request, "admin/erp_supplier.html", {
         "automation": automation, "due": due, "due_total": round(sum(o.cost or 0 for o in due), 2), "paid": paid,
         "xl": (sup.offer or {}).get("xlsx") or {},
@@ -2771,9 +2782,13 @@ def erp_supplier_export(request, pk, kind):
     elif kind == "statement":
         import openpyxl
         wb = openpyxl.Workbook(); ws = wb.active; ws.title = "releve"
+        pay = sup.payments.filter(pk=request.GET.get("pay")).first() if (request.GET.get("pay") or "").isdigit() else None
+        if pay:
+            ws.append(["Règlement", pay.reference, "", "", "Montant", "%.2f %s" % (pay.amount_native, pay.currency)])
+            ws.append([])
         ws.append(["Commande", "Date", "Produit", "Statut", "Suivi", "Montant dû (EUR)"])
-        rows = qs.filter(status__in=(Order.FULFILLED, Order.SHIPPED, Order.DELIVERED),
-                         supplier_paid_at__isnull=True).order_by("created_at")
+        rows = (pay.orders.all() if pay else qs.filter(status__in=(Order.FULFILLED, Order.SHIPPED, Order.DELIVERED),
+                                                         supplier_paid_at__isnull=True)).order_by("created_at")
         tot = 0.0
         for o in rows:
             ws.append([o.uid, o.created_at.strftime("%Y-%m-%d"), "%s · %d couleurs%s" % (o.format_label, o.colors, " · pinceaux" if o.brushes else ""),
@@ -3656,6 +3671,7 @@ def erp_legal(request):
         ("Contact", "Adresse affichée aux clients pour le SAV et les réclamations.", ["email", "phone"]),
         ("TVA et factures", "Taux 0 = micro-entreprise en franchise (mention art. 293 B du CGI sur la facture).",
          ["vat_rate", "vat_number", "invoice_prefix"]),
+        ("Banque", "Compte débité pour les virements fournisseurs (ordres SEPA générés par l'ERP).", ["bank_iban", "bank_bic"]),
         ("Fabrication", "Zone de fabrication réelle : utilisée uniquement pour la politique de confidentialité (transferts de données). Le site affiche « Fabriqué dans nos ateliers ».",
          ["production_origin"]),
         ("Hébergeur et médiation", "Obligatoires : nom, adresse et téléphone de l'hébergeur, médiateur de la consommation.",
@@ -4133,3 +4149,98 @@ def growth_campaign(request, pk):
         "statuses": Campaign.STATUS, "erp_section": "growth", "gtab": "campaigns",
         "prio_opts": [(1, "Priorité haute uniquement"), (2, "Priorités haute et moyenne"), (3, "Toutes les priorités")],
         "paths": [("/create/", "Création (aperçu gratuit)"), ("/play/", "Jouer (jeu gratuit)"), ("/", "Accueil")]})
+
+
+# ---------------------------------------------------------------- Comptabilite
+@staff_member_required
+def erp_compta(request):
+    """Comptabilite mensuelle : ventes, TVA, remboursements, frais, achats, marge ; rapprochement ; exports."""
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from . import ledger
+    from .models import CompanyInfo, SupplierPayment
+    if request.method == "POST" and request.POST.get("op") == "sync":
+        n = ledger.sync_orders()
+        try:
+            r = ledger.sync_stripe(days=int(request.POST.get("days") or 40))
+        except Exception as exc:
+            logger.exception("Rapprochement Stripe")
+            r = {"error": str(exc)[:200]}
+        if r.get("error"):
+            messages.error(request, "Rapprochement Stripe impossible : %s" % r["error"])
+        elif r.get("skipped"):
+            messages.success(request, "%d vente(s) rattrapée(s) depuis les commandes. %s." % (n, r["skipped"]))
+        else:
+            messages.success(request, "Rapprochement terminé : %d vente(s), %d frais, %d remboursement(s), %d virement(s) "
+                             "Stripe ; %d commande(s) rattrapée(s)." % (r["sales"], r["fees"], r["refunds"], r["payouts"], n))
+        return redirect(request.get_full_path())
+    ledger.sync_orders()        # aucune commande payee hors grand livre
+    start, a, b = ledger.month_bounds(request.GET.get("m"))
+    prev = (start - datetime.timedelta(days=1)).strftime("%Y-%m")
+    nxt = (start + datetime.timedelta(days=32)).replace(day=1)
+    months = []
+    d = timezone.localdate().replace(day=1)
+    for _i in range(12):
+        months.append((d.strftime("%Y-%m"), d))
+        d = (d - datetime.timedelta(days=1)).replace(day=1)
+    rows = list(ledger.entries(a, b).order_by("-date")[:400])
+    return render(request, "admin/erp_compta.html", {
+        **_admin.site.each_context(request), "erp_section": "compta", "m": start.strftime("%Y-%m"), "month": start,
+        "prev": prev, "next": nxt.strftime("%Y-%m") if nxt <= timezone.localdate() else "", "months": months,
+        "s": ledger.summary(a, b), "rows": rows, "oss": ledger.oss_status(start.year),
+        "vat_rate": ledger.vat_rate(), "company": CompanyInfo.get(), "stripe_on": bool(settings.STRIPE_SECRET_KEY),
+        "drafts": SupplierPayment.objects.filter(status="draft").select_related("supplier")})
+
+
+@staff_member_required
+def erp_compta_export(request, month, kind):
+    from . import ledger
+    start, a, b = ledger.month_bounds(month)
+    tag = start.strftime("%Y-%m")
+    if kind == "ventes.csv":
+        resp = HttpResponse(ledger.sales_csv(a, b), content_type="text/csv; charset=utf-8")
+    elif kind == "achats.csv":
+        resp = HttpResponse(ledger.purchases_csv(a, b), content_type="text/csv; charset=utf-8")
+    elif kind == "ecritures.txt":
+        resp = HttpResponse(ledger.fec_lines(a, b), content_type="text/plain; charset=utf-8")
+    elif kind == "factures.zip":
+        resp = HttpResponse(ledger.invoices_zip(a, b), content_type="application/zip")
+    else:
+        raise Http404
+    resp["Content-Disposition"] = 'attachment; filename="paintit_%s_%s"' % (tag, kind)
+    return resp
+
+
+@staff_member_required
+def erp_supplier_payment(request, pk):
+    """Reglement fournisseur : instructions de virement (IBAN, montants, reference), SEPA XML, confirmation."""
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from . import ledger
+    from .models import SupplierPayment
+    pay = SupplierPayment.objects.select_related("supplier").filter(pk=pk).first()
+    if not pay:
+        raise Http404
+    if request.GET.get("sepa") and ledger.sepa_eligible(pay.supplier):
+        resp = HttpResponse(ledger.sepa_xml(pay), content_type="application/xml")
+        resp["Content-Disposition"] = 'attachment; filename="%s.xml"' % pay.reference
+        return resp
+    if request.method == "POST":
+        op = request.POST.get("op")
+        if op == "confirm":
+            try:
+                day = datetime.date.fromisoformat(request.POST.get("paid_at") or "")
+            except ValueError:
+                day = timezone.localdate()
+            ledger.confirm_payment(pay, day, request.POST.get("bank_ref", ""))
+            messages.success(request, "Virement confirmé : %d commande(s) réglée(s), écriture passée en comptabilité."
+                             % pay.orders.count())
+        elif op == "cancel" and ledger.cancel_payment(pay):
+            messages.success(request, "Règlement annulé : les commandes redeviennent à régler.")
+            return redirect(reverse("studio:erp_supplier", args=[pay.supplier_id]) + "#commandes")
+        return redirect(request.path)
+    from .models import CompanyInfo
+    return render(request, "admin/erp_supplier_payment.html", {
+        **_admin.site.each_context(request), "erp_section": "suppliers", "pay": pay, "sup": pay.supplier,
+        "orders": list(pay.orders.order_by("created_at")), "sepa": ledger.sepa_eligible(pay.supplier),
+        "company": CompanyInfo.get()})

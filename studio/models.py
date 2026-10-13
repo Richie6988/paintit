@@ -157,6 +157,9 @@ class Order(models.Model):
     parcel = models.JSONField("Suivi colis", default=dict, blank=True)
     feedback_sent = models.BooleanField(default=False)
     invoice_number = models.CharField("N° de facture", max_length=24, blank=True, default="", db_index=True)
+    refunded_amount = models.FloatField("Remboursé (EUR)", default=0.0)
+    supplier_payment = models.ForeignKey("SupplierPayment", verbose_name="Règlement fournisseur", null=True, blank=True,
+                                         on_delete=models.SET_NULL, related_name="orders")
 
     def assign_invoice_number(self):
         """Numero de facture chronologique et continu (F2026-00001...), attribue une seule fois au paiement."""
@@ -210,6 +213,8 @@ class CompanyInfo(models.Model):
     host = models.TextField("Hébergeur (nom, adresse, téléphone)", blank=True, default="")
     mediator = models.TextField("Médiateur de la consommation (nom, site)", blank=True, default="")
     invoice_prefix = models.CharField("Préfixe des factures", max_length=10, default="F")
+    bank_iban = models.CharField("IBAN de l'entreprise", max_length=40, blank=True, default="")
+    bank_bic = models.CharField("BIC de l'entreprise", max_length=20, blank=True, default="")
     production_origin = models.CharField(
         "Lieu de fabrication des kits", max_length=60, blank=True, default="Europe",
         help_text="Zone de fabrication réelle (ex. Europe) : sert à la politique de confidentialité. "
@@ -775,6 +780,64 @@ class SupplierFile(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SupplierPayment(models.Model):
+    """Reglement d'un lot de commandes a un fournisseur (virement) : prepare -> confirme."""
+    DRAFT, SENT = "draft", "sent"
+    supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name="payments")
+    status = models.CharField(max_length=8, choices=[(DRAFT, "À virer"), (SENT, "Viré")], default=DRAFT)
+    reference = models.CharField("Référence du virement", max_length=40)
+    amount_eur = models.FloatField("Montant (EUR)", default=0.0)
+    currency = models.CharField("Devise du fournisseur", max_length=3, default="EUR")
+    amount_native = models.FloatField("Montant (devise fournisseur)", default=0.0)
+    paid_at = models.DateField("Date du virement", null=True, blank=True)
+    bank_ref = models.CharField("Référence bancaire", max_length=80, blank=True, default="")
+    created_by = models.CharField(max_length=80, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Règlement fournisseur"
+        verbose_name_plural = "Règlements fournisseurs"
+
+    def __str__(self):
+        return self.reference
+
+
+class LedgerEntry(models.Model):
+    """Grand livre simplifie : chaque mouvement d'argent, rapproche de Stripe et des commandes.
+    Montants en EUR, signes du point de vue de l'entreprise (vente +, remboursement -, frais -, achat -)."""
+    KINDS = [("sale", "Vente"), ("refund", "Remboursement"), ("fee", "Frais de paiement"), ("supplier", "Règlement fournisseur"),
+             ("payout", "Virement Stripe → banque")]
+    SOURCES = [("kit", "Kit"), ("digital", "Toile numérique"), ("gallery", "Modèle galerie"), ("supplier", "Fournisseur"),
+               ("stripe", "Stripe")]
+    date = models.DateTimeField(db_index=True)
+    kind = models.CharField(max_length=10, choices=KINDS)
+    source = models.CharField(max_length=10, choices=SOURCES, default="kit")
+    order = models.ForeignKey(Order, null=True, blank=True, on_delete=models.SET_NULL, related_name="ledger")
+    supplier_payment = models.ForeignKey(SupplierPayment, null=True, blank=True, on_delete=models.CASCADE, related_name="ledger")
+    uid = models.CharField("Référence produit", max_length=40, blank=True, default="")
+    label = models.CharField(max_length=200, blank=True, default="")
+    reference = models.CharField("Pièce", max_length=40, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
+    country = models.CharField(max_length=2, blank=True, default="")
+    amount = models.FloatField("Montant TTC (EUR)")
+    vat = models.FloatField("dont TVA (EUR)", default=0.0)
+    fee = models.FloatField("Frais Stripe (EUR)", default=0.0)
+    stripe_id = models.CharField(max_length=80, blank=True, default="", db_index=True)   # pi_/re_/po_ : dedoublonnage
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date"]
+        verbose_name = "Écriture"
+        verbose_name_plural = "Grand livre"
+        constraints = [models.UniqueConstraint(fields=["kind", "stripe_id"], condition=~models.Q(stripe_id=""),
+                                               name="ledger_unique_stripe")]
+
+    @property
+    def net(self):
+        return round(self.amount - self.fee, 2)
 
 
 class ConnectorLog(models.Model):

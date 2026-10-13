@@ -1,0 +1,77 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Comptabilité · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block messages %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_growth_ui.html" %}{% include "admin/_sf_style.html" %}
+<div class="gx sf">
+  <div class="sf-head">
+    <div><h1 style="font-size:1.6rem;font-weight:800">Comptabilité</h1>
+      <p class="gx-muted" style="margin:4px 0 0;font-size:.88rem">Chaque encaissement Stripe, remboursement, frais et règlement fournisseur, prêt pour l'expert-comptable.</p></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a class="gx-btn" href="?m={{ prev }}" aria-label="Mois précédent">←</a>
+      <form method="get"><select name="m" onchange="this.form.submit()" style="height:40px">{% for k, d in months %}<option value="{{ k }}" {% if k == m %}selected{% endif %}>{{ d|date:"F Y"|capfirst }}</option>{% endfor %}</select></form>
+      {% if next %}<a class="gx-btn" href="?m={{ next }}" aria-label="Mois suivant">→</a>{% endif %}
+    </div>
+  </div>
+
+  {% for msg in messages %}<div class="sf-alert {% if msg.tags == 'error' %}bad{% else %}ok{% endif %}"><span>{{ msg }}</span></div>{% endfor %}
+  {% if s.unrecorded %}<div class="sf-alert bad"><span>{{ s.unrecorded }} commande(s) payée(s) absente(s) du grand livre.</span></div>{% endif %}
+  {% if s.missing_fee %}<div class="sf-alert warn"><span>Frais Stripe non rapprochés sur {{ s.missing_fee }} paiement(s).</span>{% if stripe_on %}<form method="post">{% csrf_token %}<button class="gx-btn sm" name="op" value="sync">Rapprocher</button></form>{% endif %}</div>{% endif %}
+  {% for p in drafts %}<div class="sf-alert warn"><span>Virement à effectuer : {{ p.supplier.name }}, {{ p.amount_eur|floatformat:2 }} €{% if p.currency != "EUR" %} ({{ p.amount_native|floatformat:2 }} {{ p.currency }}){% endif %}.</span><a href="/admin-hub/payments/{{ p.pk }}/">Ouvrir</a></div>{% endfor %}
+  {% if oss.over %}<div class="sf-alert bad"><span>Ventes vers l'UE {{ oss.year }} : {{ oss.total|floatformat:"0g" }} €, seuil OSS de 10 000 € dépassé. La TVA du pays du client s'applique : déclarez via le guichet OSS.</span></div>
+  {% elif oss.near %}<div class="sf-alert warn"><span>Ventes vers l'UE {{ oss.year }} : {{ oss.total|floatformat:"0g" }} € ({{ oss.pct }} % du seuil OSS de 10 000 €).</span></div>{% endif %}
+
+  <div class="gx-kpis" style="margin-bottom:16px">
+    <div class="gx-kpi"><div class="l">Chiffre d'affaires HT</div><div class="v">{{ s.ht|floatformat:"2g" }} €</div><div class="s">{{ s.ttc|floatformat:"2g" }} € TTC · {{ s.n_sales }} vente{{ s.n_sales|pluralize }}</div></div>
+    <div class="gx-kpi"><div class="l">TVA collectée</div><div class="v">{{ s.vat|floatformat:"2g" }} €</div><div class="s">taux {{ vat_rate|floatformat:"-2" }} %{% if not vat_rate %} · franchise en base{% endif %}</div></div>
+    <div class="gx-kpi"><div class="l">Achats fournisseurs</div><div class="v">{{ s.purchases|floatformat:"2g" }} €</div><div class="s">{{ s.paid_suppliers|floatformat:"2g" }} € réglés ce mois</div></div>
+    <div class="gx-kpi"><div class="l">Frais de paiement</div><div class="v">{{ s.fees|floatformat:"2g" }} €</div><div class="s">remboursements {{ s.refunds|floatformat:"2g" }} €</div></div>
+    <div class="gx-kpi"><div class="l">Marge brute</div><div class="v"{% if s.margin < 0 %} style="color:var(--bad)"{% endif %}>{{ s.margin|floatformat:"2g" }} €</div><div class="s">{% if s.margin_pct is not None %}{{ s.margin_pct }} % du CA HT{% else %}—{% endif %}</div></div>
+  </div>
+
+  <div class="sf-cols">
+    <div class="sf-card">
+      <div class="sf-card-h"><h2>Écritures du mois</h2><span class="gx-muted">{{ rows|length }} mouvement{{ rows|length|pluralize }}</span></div>
+      <div style="overflow-x:auto;margin-top:10px"><table class="t">
+        <tr><th>Date</th><th>Pièce</th><th>Libellé</th><th style="text-align:right">TTC</th><th style="text-align:right">TVA</th><th style="text-align:right">Frais</th></tr>
+        {% for e in rows %}<tr>
+          <td style="white-space:nowrap">{{ e.date|date:"d/m H:i" }}</td>
+          <td>{% if e.order %}<a href="/admin-hub/orders/{{ e.order_id }}/" style="font-weight:700">{{ e.order.invoice_number|default:e.reference }}</a>{% elif e.supplier_payment %}<a href="/admin-hub/payments/{{ e.supplier_payment_id }}/" style="font-weight:700">{{ e.reference }}</a>{% else %}{{ e.reference }}{% endif %}</td>
+          <td>{{ e.get_kind_display }} · {{ e.get_source_display }}{% if e.email %}<div class="gx-muted">{{ e.email }}{% if e.country %} · {{ e.country }}{% endif %}</div>{% endif %}</td>
+          <td style="text-align:right;font-weight:700{% if e.amount < 0 %};color:var(--bad){% endif %}">{{ e.amount|floatformat:2 }} €</td>
+          <td style="text-align:right">{{ e.vat|floatformat:2 }}</td>
+          <td style="text-align:right">{% if e.fee %}{{ e.fee|floatformat:2 }}{% elif e.kind == "sale" and e.stripe_id %}<span class="gx-muted">?</span>{% else %}—{% endif %}</td>
+        </tr>{% empty %}<tr><td colspan="6" class="gx-muted">Aucun mouvement ce mois-ci.</td></tr>{% endfor %}
+      </table></div>
+    </div>
+    <div>
+      <div class="sf-card">
+        <h2>Ventes par produit</h2>
+        <ul class="sf-list" style="margin-top:6px">
+          <li><span>Kits</span><b>{{ s.by_src.kit|floatformat:2 }} €</b></li>
+          <li><span>Toiles numériques</span><b>{{ s.by_src.digital|floatformat:2 }} €</b></li>
+          <li><span>Modèles galerie</span><b>{{ s.by_src.gallery|floatformat:2 }} €</b></li>
+          <li><span>Virements Stripe → banque</span><b>{{ s.payouts|floatformat:2 }} €</b></li>
+        </ul>
+      </div>
+      <div class="sf-card">
+        <h2>Exports</h2><p class="sub">Pour l'expert-comptable, mois de {{ month|date:"F Y" }}.</p>
+        <div style="display:grid;gap:8px">
+          <a class="gx-btn" href="/admin-hub/compta/{{ m }}/ventes.csv">Journal des ventes (CSV)</a>
+          <a class="gx-btn" href="/admin-hub/compta/{{ m }}/achats.csv">Achats fournisseurs (CSV)</a>
+          <a class="gx-btn" href="/admin-hub/compta/{{ m }}/factures.zip">Factures du mois (PDF, ZIP)</a>
+          <a class="gx-btn" href="/admin-hub/compta/{{ m }}/ecritures.txt">Écritures comptables (format FEC)</a>
+        </div>
+        <p class="gx-muted" style="margin:10px 0 0;font-size:.76rem">Comptes : 580 Stripe, 512 Banque, 707 / 706 Ventes, 44571 TVA, 6278 Frais, 607 Achats, 401 Fournisseurs.</p>
+      </div>
+      <form method="post" class="sf-card">{% csrf_token %}
+        <h2>Rapprochement Stripe</h2><p class="sub">{% if stripe_on %}Importe les ventes, frais réels, remboursements et virements vers la banque. Automatique chaque nuit.{% else %}Stripe n'est pas configuré : seules les commandes sont enregistrées.{% endif %}</p>
+        <div style="display:flex;gap:8px;align-items:center"><select name="days" style="height:40px"><option value="40">40 derniers jours</option><option value="120">4 mois</option><option value="400">13 mois</option></select>
+          <button class="gx-btn pri" name="op" value="sync">Rapprocher</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

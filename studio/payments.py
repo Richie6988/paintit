@@ -110,6 +110,8 @@ def paid_session(session_id, uid=None, kind=None):
         return None
     if kind and meta.get("kind") and meta.get("kind") != kind:
         return None
+    from . import ledger
+    ledger.record_from_session(sess)        # grand livre (idempotent : le webhook enregistre aussi)
     return sess
 
 

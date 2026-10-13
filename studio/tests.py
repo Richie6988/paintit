@@ -684,5 +684,89 @@ class LibraryVisualTests(TestCase):
         self.assertEqual(b.call_args.kwargs["style"]["font"], "anton")
 
 
+@override_settings(MEDIA_ROOT=MEDIA, STRIPE_SECRET_KEY="sk_test_x", DEBUG=False)
+class LedgerTests(TestCase):
+    """Comptabilite : ventes Stripe (tous produits), remboursements, frais, reglements fournisseurs, exports equilibres."""
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from studio.models import CompanyInfo
+        c = CompanyInfo.get(); c.vat_rate = 20.0; c.bank_iban = "FR7630006000011234567890189"; c.bank_bic = "AGRIFRPP"
+        c.legal_name = "PaintIt SAS"; c.save()
+        self.u = User.objects.create_superuser("acc", "acc@x.fr", "pw")
+
+    def _webhook(self, event):
+        with mock.patch("studio.payments.verify_webhook", return_value=event), \
+                mock.patch.object(views, "_fulfill", side_effect=fake_fulfill):
+            return self.client.post("/webhooks/stripe/", data=b"{}", content_type="application/json")
+
+    def test_sales_refunds_fees_and_exports(self):
+        from studio import ledger
+        from studio.models import LedgerEntry
+        o = make_order(total=48.0)
+        sess = {"payment_status": "paid", "metadata": {"uid": o.uid, "kind": "kit"}, "amount_total": 4800,
+                "payment_intent": "pi_1", "customer_details": {"email": "jane@example.com"}}
+        self._webhook({"type": "checkout.session.completed", "data": {"object": sess}})
+        self._webhook({"type": "checkout.session.completed", "data": {"object": sess}})      # rejoue : pas de doublon
+        self._webhook({"type": "checkout.session.completed", "data": {"object": {
+            "payment_status": "paid", "metadata": {"uid": "XYZ", "kind": "digital"}, "amount_total": 99,
+            "payment_intent": "pi_2"}}})
+        sale = LedgerEntry.objects.get(kind="sale", source="kit")
+        self.assertEqual((sale.amount, sale.vat, LedgerEntry.objects.filter(kind="sale").count()), (48.0, 8.0, 2))
+        self._webhook({"type": "charge.refunded", "data": {"object": {"metadata": {"uid": o.uid, "kind": "kit"},
+            "payment_intent": "pi_1", "amount_refunded": 1200, "refunds": {"data": [{"id": "re_1", "amount": 1200}]}}}})
+        o.refresh_from_db()
+        self.assertEqual(o.refunded_amount, 12.0)
+        # rapprochement Stripe : frais reels + virement banque
+        class L:
+            def __init__(self, data): self.data = data
+            def auto_paging_iter(self): return iter(self.data)
+        bts = L([{"id": "txn_1", "type": "charge", "created": 1760000000, "amount": 4800, "fee": 92,
+                  "source": {"id": "ch_1", "payment_intent": "pi_1"}},
+                 {"id": "txn_2", "type": "payout", "created": 1760000000, "amount": -4000, "fee": 0, "source": {"id": "po_1"}}])
+        with mock.patch("stripe.BalanceTransaction.list", return_value=bts), \
+                mock.patch("stripe.PaymentIntent.retrieve", return_value={"metadata": {"uid": o.uid, "kind": "kit"}}):
+            r = ledger.sync_stripe()
+        self.assertEqual((r["fees"], r["payouts"]), (1, 1))
+        self.assertEqual(LedgerEntry.objects.get(kind="sale", stripe_id="pi_1").fee, 0.92)
+        # exports : ecritures en partie double equilibrees
+        import datetime as dt
+        start, a, b = ledger.month_bounds(None)
+        a = a - dt.timedelta(days=4000)
+        lines = [l.split("\t") for l in ledger.fec_lines(a, b).strip().split("\n")[1:]]
+        num = lambda v: float(v.replace(",", "."))
+        self.assertAlmostEqual(sum(num(l[11]) for l in lines), sum(num(l[12]) for l in lines), places=2)
+        self.client.force_login(self.u)
+        with mock.patch("studio.middleware.StaffTwoFactorMiddleware.__call__", lambda m, r: m.get_response(r)):
+            self.assertContains(self.client.get("/admin-hub/compta/"), "Comptabilité")
+            m = timezone_now_month()
+            self.assertEqual(self.client.get("/admin-hub/compta/%s/ventes.csv" % m).status_code, 200)
+            self.assertEqual(self.client.get("/admin-hub/compta/%s/ecritures.txt" % m).status_code, 200)
+
+    def test_supplier_payment_flow(self):
+        from studio.models import Supplier, LedgerEntry
+        sup = Supplier.objects.create(name="Atelier FR", iban="FR7612345678901234567890123", bic="BNPAFRPP")
+        o1 = make_order(uid="P1", status=Order.SHIPPED); o2 = make_order(uid="P2", status=Order.DELIVERED)
+        Order.objects.filter(pk__in=[o1.pk, o2.pk]).update(supplier=sup, cost=12.5)
+        self.client.force_login(self.u)
+        with mock.patch("studio.middleware.StaffTwoFactorMiddleware.__call__", lambda m, r: m.get_response(r)):
+            r = self.client.post("/admin-hub/suppliers/%d/" % sup.pk, {"op": "pay_mark", "oid": [o1.pk, o2.pk]})
+            pay = sup.payments.get()
+            self.assertRedirects(r, "/admin-hub/payments/%d/" % pay.pk, fetch_redirect_response=False)
+            self.assertEqual(pay.amount_eur, 25.0)
+            x = self.client.get("/admin-hub/payments/%d/?sepa=1" % pay.pk).content
+            import xml.dom.minidom
+            doc = xml.dom.minidom.parseString(x)
+            self.assertEqual(doc.getElementsByTagName("InstdAmt")[0].firstChild.data, "25.00")
+            self.client.post("/admin-hub/payments/%d/" % pay.pk, {"op": "confirm", "paid_at": "2026-10-10", "bank_ref": "VIR1"})
+        o1.refresh_from_db()
+        self.assertIsNotNone(o1.supplier_paid_at)
+        self.assertEqual(LedgerEntry.objects.get(kind="supplier").amount, -25.0)
+
+
+def timezone_now_month():
+    from django.utils import timezone
+    return timezone.localdate().strftime("%Y-%m")
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)
