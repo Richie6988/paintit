@@ -634,5 +634,47 @@ class SupplierGridTests(TestCase):
         self.assertEqual(self.sup.order_cost("30x40", 24, country="FR"), round((5.5 + 4.5) * 0.9, 2))
 
 
+class LibraryVisualTests(TestCase):
+    """Bibliotheque : chaque modele recoit un visuel (MarketingAd) ; « Modifier » ouvre le Marketing Corner
+    et la variante regeneree remplace le visuel du modele."""
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from studio.models import PostTemplate
+        self.u = User.objects.create_superuser("lv", "lv@x.fr", "pw")
+        self.t = PostTemplate.objects.create(name="Dog", hook="I turned my dog into a kit", lang="en",
+                                             platforms="reddit,facebook", media_kind="photo")
+
+    def fake_build(self, uid, texts=None, gif_texts=None, links=None, suffix="", style=None, only=None):
+        keys = sorted(only or {"gif_portrait", "slider"})
+        return [(k, k, "/tmp/promo_%s%s.%s" % (k, suffix, "gif" if k.startswith("gif") else "html"),
+                 "gif" if k.startswith("gif") else "web") for k in keys]
+
+    def test_build_and_edit_roundtrip(self):
+        from studio import library_visuals
+        with mock.patch("studio.marketing.build_all", side_effect=self.fake_build):
+            ad = library_visuals.build(self.t, uid="mkt-abc123")
+        self.t.refresh_from_db()
+        self.assertEqual((self.t.ad_uid, ad.kind, ad.texts["gif_title"]), ("mkt-abc123", "gif_portrait", self.t.hook))
+        self.assertEqual(self.t.visual().pk, ad.pk)
+        self.client.force_login(self.u)
+        with mock.patch("studio.middleware.StaffTwoFactorMiddleware.__call__", lambda m, r: m.get_response(r)), \
+                mock.patch("studio.library_visuals.base_canvases", return_value=[]):
+            r = self.client.get("/admin-hub/communities/library/")
+            self.assertContains(r, "/marketing/?from=mkt-abc123&v=%s&tpl=%d" % (self.t.ad_variant, self.t.pk))
+            r = self.client.get("/marketing/?from=mkt-abc123&v=%s&tpl=%d" % (self.t.ad_variant, self.t.pk))
+            self.assertContains(r, 'name="tpl" value="%d"' % self.t.pk)
+            import os
+            from django.conf import settings
+            d = os.path.join(settings.MEDIA_ROOT, "orders", "mkt-abc123")
+            os.makedirs(d, exist_ok=True)
+            open(os.path.join(d, "mkt-abc123_preview.svg"), "w").write("<svg/>")
+            with mock.patch("studio.marketing.build_all", side_effect=self.fake_build) as b:
+                self.client.post("/marketing/", {"tpl": str(self.t.pk), "reuse_uid": "mkt-abc123", "variant": "B2",
+                                                 "s_font": "anton", "s_cta": "#e8862a", "gif_title": "New hook"})
+            self.assertEqual(b.call_args.kwargs["style"]["font"], "anton")
+        self.t.refresh_from_db()
+        self.assertEqual(self.t.ad_variant, "B2")
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)

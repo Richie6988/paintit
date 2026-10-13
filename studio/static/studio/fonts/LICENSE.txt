@@ -1,0 +1,2 @@
+Baloo 2, Poppins, Anton, DM Serif Display, Pacifico : polices Google Fonts sous licence SIL Open Font License 1.1
+(https://openfontlicense.org). Source : https://github.com/google/fonts

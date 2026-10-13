@@ -1829,12 +1829,16 @@ def marketing_page(request):
            "colors": request.POST.get("colors", "24"),
            "campaign": request.POST.get("campaign", "") or request.GET.get("campaign", ""),
            "variant": request.POST.get("variant", "")}
-    from .models import Campaign
+    from .models import Campaign, PostTemplate
     ctx["campaign_names"] = list(Campaign.objects.values_list("name", flat=True))
     texts, gif = ({}, {})
     base = None
+    style = marketing.norm_style(None)
+    tpl_id = request.POST.get("tpl") or request.GET.get("tpl") or ""
+    ctx["tpl"] = PostTemplate.objects.filter(pk=tpl_id).first() if tpl_id.isdigit() else None
     if request.method == "POST":
         texts, gif = _mkt_form_texts(request, marketing)
+        style = marketing.norm_style({k: request.POST.get("s_" + k) for k in ("font", "ink", "accent", "cta", "bg")})
     elif request.GET.get("from"):
         # "Nouvelle variante" depuis la galerie : textes + image d'une variante existante
         ads = list(MarketingAd.objects.filter(image_uid=request.GET["from"],
@@ -1846,11 +1850,16 @@ def marketing_page(request):
                     texts[ad.kind] = ad.texts
                 else:
                     gif = ad.texts
+                style = marketing.norm_style((ad.texts or {}).get("_style"))
             ctx.update(uid=base.image_uid, campaign=base.campaign, link=base.target_url)
             ctx["results"] = ads     # apercus de la variante dupliquee
     ctx["promos"] = [{"key": k, "label": lbl, "slots": marketing.template_slots(k, texts.get(k))}
                      for k, lbl in marketing.TEMPLATES]
     ctx["gif_slots"] = marketing.gif_slots(gif)
+    ctx["style"], ctx["fonts"] = style, marketing.FONTS
+    if base:
+        g = next((a for a in ctx["results"] if a.fmt == "gif"), None)
+        ctx["current_img"] = "/marketing/file/%s/%s/" % (g.image_uid, g.file_name) if g else ""
     if request.method == "POST":
         f = request.FILES.get("image")
         link = (request.POST.get("link") or "").strip() or settings.SITE_URL + "/create/"
@@ -1880,15 +1889,18 @@ def marketing_page(request):
                 keys = [k for k, _l in marketing.TEMPLATES] + ["gif_square", "gif_portrait", "gif_story"]
                 tokens = {k: secrets.token_urlsafe(9) for k in keys}
                 links = {k: "%s/go/%s/" % (settings.SITE_URL, t) for k, t in tokens.items()}
-                produced = marketing.build_all(uid, texts=texts, gif_texts=gif, links=links, suffix=suffix)
+                produced = marketing.build_all(uid, texts=texts, gif_texts=gif, links=links, suffix=suffix, style=style)
                 campaign = (request.POST.get("campaign") or "").strip()[:80]
                 for key, label, path, kind in produced:
                     MarketingAd.objects.create(
                         token=tokens[key], image_uid=uid, campaign=campaign, variant=variant, kind=key,
                         label=label, fmt="gif" if kind == "gif" else "web", file_name=os.path.basename(path),
-                        target_url=link, texts=gif if kind == "gif" else
-                        dict(marketing.template_defaults(key), **texts.get(key, {})))
+                        target_url=link, texts=dict(gif if kind == "gif" else
+                                                    dict(marketing.template_defaults(key), **texts.get(key, {})),
+                                                    _style=style))
                 ctx.update(uid=uid, variant=variant, campaign=campaign)
+                if ctx["tpl"]:      # visuel de la bibliotheque : la nouvelle variante le remplace
+                    PostTemplate.objects.filter(pk=ctx["tpl"].pk).update(ad_uid=uid, ad_variant=variant)
                 ctx["results"] = list(MarketingAd.objects.filter(image_uid=uid, variant=variant).order_by("id"))
             except Exception as exc:
                 logger.exception("Marketing build")
@@ -3788,7 +3800,21 @@ def erp_community_library(request):
         t = PostTemplate.objects.filter(pk=request.POST.get("id")).first()
         try:
             if op == "seed":
-                messages.success(request, "%d modèle(s) ajouté(s) à la bibliothèque." % seed_library())
+                from . import library_visuals
+                messages.success(request, "%d modèle(s) ajouté(s). Leurs visuels se génèrent en arrière-plan." % seed_library())
+                library_visuals.build_missing_async()
+            elif op == "visuals":
+                from . import library_visuals
+                if not library_visuals.base_canvases():
+                    messages.error(request, "Aucune toile disponible : ajoutez d'abord des modèles au catalogue.")
+                else:
+                    library_visuals.build_missing_async()
+                    messages.success(request, "Génération des visuels lancée. Rechargez la page dans une minute.")
+            elif op == "visual" and t:
+                from . import library_visuals
+                ad = library_visuals.build(t)
+                (messages.success if ad else messages.error)(
+                    request, "Visuel généré." if ad else "Aucune toile disponible pour générer le visuel.")
             elif op in ("save", "new"):
                 t = t if op == "save" and t else PostTemplate()
                 for f in ("name", "category", "lang", "platforms", "hook", "body", "media_kind", "media_brief", "target_path"):
@@ -3841,10 +3867,22 @@ def erp_community_library(request):
     codes = {}
     for o in Outreach.objects.exclude(template=None).values("template_id", "code"):
         codes.setdefault(o["template_id"], []).append(o["code"])
+    from .models import MarketingAd
+    from . import library_visuals
+    ads = {}
+    for a in MarketingAd.objects.filter(image_uid__in=[t.ad_uid for t in tpls if t.ad_uid]):
+        ads.setdefault((a.image_uid, a.variant), []).append(a)
+    missing = 0
     for t in tpls:
         t.orders = sum(conv.get(c, 0) for c in codes.get(t.pk, []))
+        group = ads.get((t.ad_uid, t.ad_variant), [])
+        want = t.visual_kind()
+        t.vis = next((a for a in group if a.kind == want), None) or next((a for a in group if a.fmt == "gif"), None)
+        missing += t.media_kind != "text" and not t.vis
+    if missing and library_visuals.base_canvases():
+        library_visuals.build_missing_async()      # visuels prets d'office : generes en arriere-plan
     comms = list(Community.objects.filter(active=True))
-    return render(request, "admin/erp_community_library.html", {
+    return render(request, "admin/erp_community_library.html", {"missing_visuals": missing,
         **_admin.site.each_context(request), "tpls": tpls, "comms": comms, "cat": cat, "lang": lang, "plat": plat,
         "categories": PostTemplate.CATEGORIES, "medias": PostTemplate.MEDIA,
         "langs": sorted(set(PostTemplate.objects.values_list("lang", flat=True))),

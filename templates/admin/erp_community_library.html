@@ -21,7 +21,11 @@
  .cl{max-height:180px;overflow:auto;border:1px solid #eee;border-radius:8px;padding:6px;display:grid;gap:3px}
  .cl label{display:flex;gap:6px;align-items:center;font-size:.8rem}
  .cl label .muted{font-size:.7rem}
- .tp img.mprev{max-width:100%;max-height:140px;border-radius:8px;object-fit:cover}
+ .tp .vis{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:10px;background:#f2f4f8}
+ .tp .vis-wrap{position:relative;display:block}
+ .tp .vis-wrap span{position:absolute;right:8px;bottom:8px;background:rgba(18,34,79,.85);color:#fff;font-size:.74rem;font-weight:800;padding:5px 10px;border-radius:999px;opacity:0;transition:opacity .15s}
+ .tp .vis-wrap:hover span{opacity:1}
+ .tp .vis-wait{display:grid;place-items:center;color:#7a869e;font-size:.82rem;font-weight:700;border:1px dashed #cfd7e6}
  .filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
  .filters a{font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:999px;background:#f1f1f1;color:#303030 !important;text-decoration:none}
  .filters a.on{background:#12224f;color:#fff !important}
@@ -30,8 +34,9 @@
   <div class="erp-head">
     <div><a href="/admin-hub/communities/" class="muted" style="font-weight:700">← Communautés</a>
       <h1>Bibliothèque de publications</h1>
-      <div class="muted">Accroches et publications multimédia prêtes à l'emploi. Remplacez les [CROCHETS] par de vrais détails ; <code>{link}</code> devient un lien traqué unique pour chaque communauté.</div></div>
+      <div class="muted">Publications prêtes à l'emploi, visuel compris. Cliquez sur un visuel pour changer sa photo, ses textes ou son style. Remplacez les [CROCHETS] par de vrais détails ; <code>{link}</code> devient un lien traqué par communauté.</div></div>
     <form method="post" style="display:flex;gap:6px">{% csrf_token %}
+      {% if missing_visuals %}<button class="pbtn" name="op" value="visuals" title="{{ missing_visuals }} visuel(s) manquant(s)">Générer les visuels ({{ missing_visuals }})</button>{% endif %}
       <button class="pbtn{% if not tpls %} pri{% endif %}" name="op" value="seed">{% if tpls %}Ajouter les modèles manquants{% else %}Charger la bibliothèque (46 modèles){% endif %}</button></form>
   </div>
 
@@ -60,11 +65,14 @@
     <div class="tp {% if not t.active %}off{% endif %}">
       <div class="meta"><span class="chipx lng">{{ t.lang|upper }}</span><span class="chipx cat">{{ t.get_category_display }}</span>
         <span class="chipx med">{{ t.get_media_kind_display }}</span>{% for p in t.platform_list %}<span class="chipx">{{ p }}</span>{% endfor %}</div>
+      {% if t.media %}{% with u=t.media.url %}{% if ".mp4" in u or ".webm" in u or ".mov" in u %}<video class="vis" src="{{ u }}" controls></video>{% else %}<img class="vis" src="{{ u }}" alt="">{% endif %}{% endwith %}
+      {% elif t.vis %}<a class="vis-wrap" href="/marketing/?from={{ t.ad_uid }}&v={{ t.ad_variant|urlencode }}&tpl={{ t.pk }}" title="Modifier le visuel"><img class="vis" src="/marketing/file/{{ t.vis.image_uid }}/{{ t.vis.file_name }}/" alt="" loading="lazy"><span>Modifier le visuel</span></a>
+      {% elif t.media_kind != "text" %}<div class="vis vis-wait">Visuel en préparation…</div>{% endif %}
       <h3>{{ t.hook }}</h3>
-      {% if t.media %}{% with u=t.media.url %}{% if ".mp4" in u or ".webm" in u or ".mov" in u %}<video src="{{ u }}" controls style="max-width:100%;max-height:160px;border-radius:8px"></video>{% else %}<img class="mprev" src="{{ u }}" alt="">{% endif %}{% endwith %}{% endif %}
       {% if t.body %}<div class="body">{{ t.body }}</div>{% endif %}
       {% if t.media_brief %}<div class="brief">🎬 {{ t.media_brief }}</div>{% endif %}
       <div class="stats">{{ t.uses }} envoi{{ t.uses|pluralize }} · {{ t.uclicks|default:0 }} visiteur{{ t.uclicks|default:0|pluralize }} · {{ t.orders }} vente{{ t.orders|pluralize }} · cible {{ t.target_path }}</div>
+      {% if t.vis %}<a href="/marketing/?from={{ t.ad_uid }}&v={{ t.ad_variant|urlencode }}&tpl={{ t.pk }}" style="font-weight:700;font-size:.8rem;color:#2f6bf2">🎨 Modifier le visuel (photo, textes, style)</a>{% endif %}
       <details><summary>📤 Envoyer vers des communautés</summary>
         <form method="post" style="margin-top:6px;display:grid;gap:6px">{% csrf_token %}<input type="hidden" name="op" value="use"><input type="hidden" name="id" value="{{ t.pk }}">
           <div class="cl">{% for c in comms %}<label><input type="checkbox" name="communities" value="{{ c.pk }}" style="width:auto"> {{ c.name }}{% if c.platform in t.platforms and c.lang == t.lang %} <b style="color:#1e8848;font-size:.7rem">✓ adapté</b>{% endif %} <span class="muted">· {{ c.get_platform_display }} · {{ c.lang|upper }}{% if c.promo == "forbidden" %} · ⛔ autopromo interdite{% endif %}</span></label>{% empty %}<span class="muted">Chargez d'abord l'audit des communautés.</span>{% endfor %}</div>
@@ -87,6 +95,7 @@
           {% if t.media %}<label class="sw"><input type="checkbox" name="media_clear" value="1"> Retirer le média</label>{% endif %}
           <div style="display:flex;gap:6px;justify-content:space-between">
             <span style="display:flex;gap:6px"><button class="pbtn sm" name="op" value="dup">Dupliquer</button>
+              {% if t.media_kind != "text" %}<button class="pbtn sm" name="op" value="visual" title="Regénère le visuel à partir de l'accroche">Nouveau visuel</button>{% endif %}
               <button class="pbtn sm" name="op" value="del" data-confirm="Supprimer ce modèle ?" data-danger style="color:#b42318">Supprimer</button></span>
             <button class="pbtn pri sm">Enregistrer</button></div>
         </form></details>

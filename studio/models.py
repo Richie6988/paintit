@@ -881,6 +881,9 @@ class PostTemplate(models.Model):
     media_kind = models.CharField("Média", max_length=12, choices=MEDIA, default="photo")
     media_brief = models.TextField("Brief média (quoi montrer)", blank=True, default="")
     media = models.FileField("Fichier média", upload_to="community/", blank=True, null=True)
+    # Visuel genere par le Marketing Corner (MarketingAd image_uid + variant) : pret d'office, modifiable
+    ad_uid = models.CharField("Visuel : image", max_length=40, blank=True, default="")
+    ad_variant = models.CharField("Visuel : variante", max_length=40, blank=True, default="")
     target_path = models.CharField("Page cible", max_length=120, default="/create/")
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -893,6 +896,22 @@ class PostTemplate(models.Model):
 
     def __str__(self):
         return self.name
+
+    def visual_kind(self):
+        """Format du visuel adapte au media et aux canaux : story (video), carre (Reddit seul), portrait sinon."""
+        if self.media_kind == "video":
+            return "gif_story"
+        pl = self.platform_list()
+        return "gif_square" if pl and all(p in ("reddit", "forum", "discord") for p in pl) else "gif_portrait"
+
+    def visual(self):
+        """Visuel affiche dans la bibliotheque (MarketingAd) ou None."""
+        if not self.ad_uid:
+            return None
+        ads = list(MarketingAd.objects.filter(image_uid=self.ad_uid, variant=self.ad_variant))
+        want = self.visual_kind()
+        return next((a for a in ads if a.kind == want), None) or next((a for a in ads if a.fmt == "gif"), None) \
+            or (ads[0] if ads else None)
 
     def platform_list(self):
         return [p.strip() for p in (self.platforms or "").split(",") if p.strip()]

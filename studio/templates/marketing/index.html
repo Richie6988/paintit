@@ -31,21 +31,34 @@ textarea{resize:vertical;min-height:52px}
 #overlay{position:fixed;inset:0;background:rgba(8,10,16,.82);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:50}#overlay.show{display:flex}
 .spin{width:52px;height:52px;border:4px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}#overlay p{margin-top:16px;font-weight:600}
 .hint{color:var(--mut);font-size:12px;margin-top:4px}
+.drop{min-height:220px}.drop .swap{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(11,14,20,.8);color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;z-index:2}
 .top .nav a{color:var(--txt);text-decoration:none;font-size:13px;font-weight:600;margin-left:14px;background:var(--bg3);border:1px solid var(--line);padding:7px 12px;border-radius:9px}
 .panel.ok{border-color:#3fd07a;background:#132019}.panel.ok a{color:var(--acc)}
 code{background:var(--bg3);padding:1px 5px;border-radius:5px}
+@font-face{font-family:'mk-baloo';src:url({% static 'studio/fonts/Baloo2-Bold.ttf' %})}@font-face{font-family:'mk-poppins';src:url({% static 'studio/fonts/Poppins-Bold.ttf' %})}@font-face{font-family:'mk-anton';src:url({% static 'studio/fonts/Anton-Regular.ttf' %})}@font-face{font-family:'mk-dmserif';src:url({% static 'studio/fonts/DMSerifDisplay-Regular.ttf' %})}@font-face{font-family:'mk-pacifico';src:url({% static 'studio/fonts/Pacifico-Regular.ttf' %})}
+.fonts{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:6px}
+.fo{margin:0;text-transform:none;letter-spacing:0;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:10px 6px;text-align:center;background:var(--bg3);display:flex;flex-direction:column;gap:4px}
+.fo input{display:none}.fo span{font-size:24px;color:var(--txt)}.fo small{font-size:10.5px;color:var(--mut)}
+.fo:has(input:checked){border-color:var(--acc);box-shadow:0 0 0 2px rgba(108,140,255,.35)}
+.colors{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-content:start;margin-top:30px}
+.co{margin:0;text-transform:none;letter-spacing:0;display:flex;flex-direction:column;gap:6px;font-size:12px}
+.co input{width:100%;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--bg3);padding:3px;cursor:pointer}
 </style></head><body>
 <div class="top"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div>Marketing <span>Corner</span><small>Tous les textes éditables · chaque génération = une variante A/B enregistrée dans la galerie</small></div>
 <div class="nav"><a href="/admin-hub/marketing/">📊 Galerie A/B &amp; clics</a><a href="/admin-hub/">← ERP</a></div></div></div>
 <div class="wrap">
 <form method="post" enctype="multipart/form-data" id="mform">{% csrf_token %}
+  {% if tpl %}<input type="hidden" name="tpl" value="{{ tpl.pk }}">
+  <div class="panel ok" style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><span>Visuel du modèle <b>« {{ tpl.name }} »</b> de la bibliothèque : la variante générée le remplacera.</span>
+    <a href="/admin-hub/communities/library/" style="font-weight:700">← Bibliothèque</a></div>{% endif %}
   <div class="panel">
     <div class="row2">
       <div>
         <label>Image du produit</label>
         <label class="drop" id="drop"><input type="file" name="image" id="file" accept="image/*" hidden {% if not results %}required{% endif %}>
-          <img id="thumb" hidden alt=""><span id="dl">Glissez une image<br><em>ou cliquez</em></span></label>
-        {% if uid %}<input type="hidden" name="reuse_uid" value="{{ uid }}"><p class="hint">Image conservée — modifiez les textes puis générez une nouvelle variante (A/B).</p>{% endif %}
+          <img id="thumb" {% if current_img %}src="{{ current_img }}"{% else %}hidden{% endif %} alt=""><span id="dl" {% if current_img %}hidden{% endif %}>Glissez une image<br><em>ou cliquez</em></span>
+          {% if current_img %}<span class="swap">Changer la photo</span>{% endif %}</label>
+        {% if uid %}<input type="hidden" name="reuse_uid" value="{{ uid }}"><p class="hint">Photo actuelle conservée. Déposez une nouvelle photo pour tout régénérer (toile, toile numérotée, pages et GIF).</p>{% endif %}
       </div>
       <div>
         <label>Lien cible (où mène le clic)</label><input type="text" name="link" value="{{ link }}">
@@ -53,6 +66,20 @@ code{background:var(--bg3);padding:1px 5px;border-radius:5px}
         <div class="row2"><div><label>Campagne</label><input type="text" name="campaign" value="{{ campaign }}" placeholder="Fête des mères" list="camplist"><datalist id="camplist">{% for n in campaign_names %}<option value="{{ n }}">{% endfor %}</datalist></div>
         <div><label>Nom de la variante</label><input type="text" name="variant" value="" placeholder="auto : A, B, C…"></div></div>
         <label>Couleurs de la toile</label><input type="number" name="colors" value="{{ colors }}" min="2" max="48">
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3 style="margin-top:0">Style <span style="color:var(--mut);font-weight:400;font-size:13px">— appliqué aux pages et aux GIF</span></h3>
+    <div class="row2">
+      <div><label>Police des titres</label>
+        <div class="fonts">{% for k, l, f in fonts %}<label class="fo"><input type="radio" name="s_font" value="{{ k }}" {% if style.font == k %}checked{% endif %}><span style="font-family:'mk-{{ k }}'">Aa</span><small>{{ l }}</small></label>{% endfor %}</div></div>
+      <div class="colors">
+        <label class="co"><span>Titres</span><input type="color" name="s_ink" value="{{ style.ink }}"></label>
+        <label class="co"><span>Accent</span><input type="color" name="s_accent" value="{{ style.accent }}"></label>
+        <label class="co"><span>Bouton</span><input type="color" name="s_cta" value="{{ style.cta }}"></label>
+        <label class="co"><span>Fond</span><input type="color" name="s_bg" value="{{ style.bg }}"></label>
       </div>
     </div>
   </div>

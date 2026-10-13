@@ -52,6 +52,53 @@ DEFAULT_SUB = {
     "zoom": "Une pr\u00e9cision qui capture l'\u00e9motion\nDe vraies peintures, de vraies couleurs\nAper\u00e7u gratuit",
 }
 
+# ---------- Styles (police + couleurs), communs aux pages web et aux GIF ----------
+_FONT_DIR = os.path.join(settings.BASE_DIR, "studio", "static", "studio", "fonts")
+FONTS = [("baloo", "Baloo 2 (PaintIt)", "Baloo2-Bold.ttf"), ("poppins", "Poppins", "Poppins-Bold.ttf"),
+         ("anton", "Anton (impact)", "Anton-Regular.ttf"), ("dmserif", "DM Serif (élégant)", "DMSerifDisplay-Regular.ttf"),
+         ("pacifico", "Pacifico (manuscrit)", "Pacifico-Regular.ttf")]
+STYLE_DEFAULT = {"font": "baloo", "ink": "#12224f", "accent": "#2f6bf2", "cta": "#2f6bf2", "bg": "#eef3fb"}
+
+
+def norm_style(style):
+    """Style valide (police connue, couleurs #RRGGBB) ; valeurs par defaut sinon."""
+    import re
+    out = dict(STYLE_DEFAULT)
+    for k, v in (style or {}).items():
+        if k == "font" and v in {f[0] for f in FONTS}:
+            out[k] = v
+        elif k in ("ink", "accent", "cta", "bg") and isinstance(v, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", v.strip()):
+            out[k] = v.strip().lower()
+    return out
+
+
+def font_path(key):
+    f = next((f for f in FONTS if f[0] == key), FONTS[0])
+    return os.path.join(_FONT_DIR, f[2])
+
+
+def _rgb(h, a=255):
+    h = h.lstrip("#")
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), a)
+
+
+def apply_style(html, style):
+    """Police (embarquee en base64 : la page reste autonome) + couleurs, injectees apres les styles du gabarit."""
+    st = norm_style(style)
+    if st == STYLE_DEFAULT:
+        return html
+    css = ""
+    if st["font"] != "baloo":
+        with open(font_path(st["font"]), "rb") as fh:
+            b64 = base64.b64encode(fh.read()).decode()
+        css += "@font-face{font-family:'PIStyle';src:url(data:font/ttf;base64,%s) format('truetype')}" % b64
+        css += ".magic,.magic *,.brand b,.brand b *,.claim,.claim *,.cta,.tag,.sub{font-family:'PIStyle','Baloo 2',Inter,sans-serif !important}"
+    css += (".magic,.brand b,.claim{color:%(ink)s !important}.magic .em,.brand b i,.claim .em{color:%(accent)s !important}"
+            ".cta{background:%(cta)s !important}.card{background:linear-gradient(120deg,#ffffff,%(bg)s) !important}") % st
+    tag = "<style>%s</style>" % css
+    return html.replace("</head>", tag + "</head>", 1) if "</head>" in html else tag + html
+
+
 _ANIM_CSS = ('<style>.magic{animation:mgin .8s cubic-bezier(.2,1.2,.3,1) both}'
              '@keyframes mgin{from{opacity:0;transform:translateY(22px) scale(.96)}to{opacity:1;transform:none}}'
              '.magic .em{display:inline-block;animation:mgpop 2.6s ease-in-out infinite}'
@@ -244,10 +291,11 @@ document.querySelectorAll('.cta').forEach(function(el){el.style.cursor='pointer'
 });</script>""" % _json.dumps(link))
 
 
-def build_all(uid, texts=None, gif_texts=None, links=None, suffix=""):
+def build_all(uid, texts=None, gif_texts=None, links=None, suffix="", style=None, only=None):
     """Genere les promos (gabarits valides + produit injecte + TOUS les textes) + les 3 GIF.
     texts : {gabarit: {slot: texte}} ; gif_texts : {gif_title, gif_cta, gif_footer} ;
-    links : {cle de sortie: url traquee} ; suffix : distingue les fichiers d'une variante.
+    links : {cle de sortie: url traquee} ; suffix : distingue les fichiers d'une variante ;
+    style : police + couleurs (norm_style) ; only : sous-ensemble de cles a produire (ex. {"gif_portrait"}).
     Renvoie [(cle, libelle, chemin, 'web'|'gif')]."""
     a = _assets(uid)
     if not a["preview"]:
@@ -262,11 +310,12 @@ def build_all(uid, texts=None, gif_texts=None, links=None, suffix=""):
     produced = []
     for key, label in TEMPLATES:
         tpl = os.path.join(_TPL_DIR, "%s.html" % key)
-        if not os.path.exists(tpl):
+        if not os.path.exists(tpl) or (only and key not in only):
             continue
         html = open(tpl, encoding="utf-8").read()
         html = _inject(html, preview_svg, template_svg, a["source"])
         html = apply_texts(html, dict(template_defaults(key), **(texts.get(key) or {})))
+        html = apply_style(html, style)
         link = links.get(key, "")
         if link:
             html = _re.sub(r'href="https?://[^"]*paintit[^"]*"', 'href="%s"' % _esc(link), html)
@@ -278,14 +327,16 @@ def build_all(uid, texts=None, gif_texts=None, links=None, suffix=""):
     for fmt, (ratio, flabel) in {"square": ((1, 1), "Carré , FB/Insta feed"),
                                  "portrait": ((4, 5), "Portrait , Insta feed"),
                                  "story": ((9, 16), "Story , 9:16")}.items():
+        if only and "gif_" + fmt not in only:
+            continue
         gif = build_gif(uid, os.path.join(outdir, "promo_%s%s.gif" % (fmt, suffix)),
-                        title=gt["gif_title"], message=gt["gif_cta"], caption=gt["gif_footer"], ratio=ratio)
+                        title=gt["gif_title"], message=gt["gif_cta"], caption=gt["gif_footer"], ratio=ratio, style=style)
         if gif:
             produced.append(("gif_" + fmt, "GIF " + flabel, gif, "gif"))
     return produced
 
 
-def build_gif(uid, out_path, brand="PaintIt", link="", title="", message="", ratio=(4, 5), caption=None):
+def build_gif(uid, out_path, brand="PaintIt", link="", title="", message="", ratio=(4, 5), caption=None, style=None):
     """GIF de concatenation : photo -> toile coloriee -> toile numerotee, avec fondu + logo/marque."""
     from PIL import Image, ImageDraw, ImageFont
     d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
@@ -325,11 +376,16 @@ def build_gif(uid, out_path, brand="PaintIt", link="", title="", message="", rat
             lw = 150; logo_im = logo_im.resize((lw, max(1, int(logo_im.height * lw / logo_im.width))))
         except Exception:
             logo_im = None
+    st = norm_style(style)
+    fpath = font_path(st["font"])
+
     def _font(sz):
-        try:
-            return ImageFont.truetype("DejaVuSans-Bold.ttf", int(sz))
-        except Exception:
-            return ImageFont.load_default()
+        for f in (fpath, "DejaVuSans-Bold.ttf"):
+            try:
+                return ImageFont.truetype(f, int(sz))
+            except Exception:
+                continue
+        return ImageFont.load_default()
     if caption is None:
         caption = link.replace("https://", "").replace("http://", "") if link else ""
 
@@ -389,7 +445,7 @@ def build_gif(uid, out_path, brand="PaintIt", link="", title="", message="", rat
             px, py = (W - pw) / 2, H - 34 - ph
             pill = Image.new("RGBA", (int(pw), int(ph)), (0, 0, 0, 0))
             pd = ImageDraw.Draw(pill)
-            pd.rounded_rectangle([0, 0, pw - 1, ph - 1], radius=int(ph / 2), fill=(47, 107, 242, 255))
+            pd.rounded_rectangle([0, 0, pw - 1, ph - 1], radius=int(ph / 2), fill=_rgb(st["cta"]))
             fr.alpha_composite(pill, (int(px), int(py)))
             dr.text((px + 22, py + 10), cta_txt, font=fc, fill=(255, 255, 255, 255))
         # URL discrete en bas
