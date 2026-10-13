@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 MAX_ATTEMPTS = 5
 FAIL_PREFIX = "Echec transmission"
 OK_PREFIX = "Transmise a"
+SKIP_PREFIX = "Transmission annulee"   # decision staff : ne pas (re)transmettre (commande de test...)
+WOO_CHANNEL = "WooCommerce : mise a disposition de l'ERP"
 
 STATUS_MAP = {"in_production": "fulfilled", "accepted": "fulfilled", "shipped": "shipped",
               "delivered": "delivered", "failed": "failed", "cancelled": "failed"}
@@ -88,7 +90,7 @@ def _send(sup, payload):
         # Connecteur WooCommerce : l'ERP du fournisseur vient chercher la commande (/wc-api/v3/orders)
         if not (sup.woo or {}).get("ck"):
             return False, "WooCommerce", "cles API non generees (fiche fournisseur)"
-        return True, "WooCommerce : mise a disposition de l'ERP", ""
+        return True, WOO_CHANNEL, ""
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     if sup.integration == "api" and sup.api_url:
         import urllib.request
@@ -213,7 +215,7 @@ def pending_retries():
     from .models import Order, OrderEvent
     out = []
     for o in Order.objects.filter(status__in=(Order.PAID, Order.FULFILLED)):
-        evs = list(OrderEvent.objects.filter(order=o, kind="action", text__regex=r"^(%s|%s)" % (FAIL_PREFIX, OK_PREFIX))
+        evs = list(OrderEvent.objects.filter(order=o, kind="action", text__regex=r"^(%s|%s|%s)" % (FAIL_PREFIX, OK_PREFIX, SKIP_PREFIX))
                    .order_by("-at").values_list("text", flat=True)[:MAX_ATTEMPTS + 1])
         if evs and evs[0].startswith(FAIL_PREFIX):
             fails = 0

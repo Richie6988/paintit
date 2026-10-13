@@ -465,7 +465,8 @@ class WooConnectorTests(TestCase):
         self.sup = Supplier.objects.create(name="Yingsa", checkout="kit", integration="woo")
         self.keys = woo_api.generate_keys(self.sup)
         self.o = make_order(status=Order.FULFILLED)
-        Order.objects.filter(pk=self.o.pk).update(supplier=self.sup)
+        from studio import integrations
+        self.assertTrue(integrations.dispatch({"uid": self.o.uid}, {}, sup=self.sup))
         make_order(uid="OTHER000-0000", status=Order.PAID)          # autre fournisseur / non transmise
         self.auth = {"consumer_key": self.keys["ck"], "consumer_secret": self.keys["cs"]}
 
@@ -517,7 +518,8 @@ class WooConnectorTests(TestCase):
         self.assertEqual(r.json()["order"]["status"], "completed")
         # note de suivi (format libre)
         o2 = make_order(uid="NOTE0000-0001", status=Order.FULFILLED)
-        Order.objects.filter(pk=o2.pk).update(supplier=self.sup)
+        from studio import integrations
+        integrations.dispatch({"uid": o2.uid}, {}, sup=self.sup)
         r = self.client.post("/wc-api/v3/orders/%d/notes?%s" % (o2.pk, urlencode(self.auth)),
                              json.dumps({"order_note": {"note": "Tracking number: LX123456789CN carrier: 4PX"}}),
                              content_type="application/json")
@@ -526,6 +528,8 @@ class WooConnectorTests(TestCase):
         self.assertEqual((o2.status, o2.tracking_number), (Order.SHIPPED, "LX123456789CN"))
         # commande hors perimetre
         other = Order.objects.get(uid="OTHER000-0000")
+        self.assertEqual(self.client.get("/wc-api/v3/orders/%d" % other.pk, self.auth).status_code, 404)
+        Order.objects.filter(pk=other.pk).update(supplier=self.sup)     # rattachee mais jamais transmise via Woo
         self.assertEqual(self.client.get("/wc-api/v3/orders/%d" % other.pk, self.auth).status_code, 404)
         from studio.models import ConnectorLog
         self.assertTrue(ConnectorLog.objects.filter(supplier=self.sup, method="PUT").exists())

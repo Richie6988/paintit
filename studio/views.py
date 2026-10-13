@@ -2306,6 +2306,22 @@ def erp_supplier(request, pk):
                         request, "%d commande(s) créée(s) dans Shopify%s." % (n, (", %d échec(s) (voir journal)" % ko) if ko else ""))
             except Exception as exc:
                 messages.error(request, "Shopify : %s" % exc)
+        elif op in ("retry_now", "retry_skip"):
+            from . import integrations
+            ids = set(request.POST.getlist("oid"))
+            todo = [o for o in integrations.pending_retries() if o.supplier_id == sup.pk and (not ids or str(o.pk) in ids)]
+            n = 0
+            for o in todo:
+                if op == "retry_now":
+                    if _notify_supplier(_order_from_row(o), _shipping_from_row(o), sup=sup, user=user):
+                        n += 1
+                        Order.objects.filter(pk=o.pk, status=Order.PAID).update(status=Order.FULFILLED)
+                else:
+                    OrderEvent.objects.create(order=o, kind="action", user=user,
+                                              text="%s : ne pas transmettre à %s" % (integrations.SKIP_PREFIX, sup.name))
+                    n += 1
+            messages.success(request, ("%d/%d commande(s) transmise(s) via %s." % (n, len(todo), sup.get_integration_display()))
+                             if op == "retry_now" else "%d commande(s) retirée(s) des relances (non transmises)." % n)
         elif op == "channel":
             ch = request.POST.get("integration", "")
             if ch in dict(Supplier.INTEGRATIONS) and ch != sup.integration:
@@ -2380,8 +2396,11 @@ def erp_supplier(request, pk):
     sample_in = {"uid": sample_out["order"]["uid"], "status": "shipped", "carrier": "Colissimo",
                  "tracking_number": "6A12345678901", "tracking_url": "https://www.laposte.fr/outils/suivre-vos-envois?code=6A12345678901",
                  "supplier_ref": "SUP-000123", "message": "Colis remis au transporteur"}
-    automation = {"callback": integrations.callback_url(sup), "retries": len([x for x in integrations.pending_retries()
-                                                                              if x.supplier_id == sup.pk]),
+    from datetime import timedelta
+    from django.db import models
+    from .models import ConnectorLog
+    retries = [x for x in integrations.pending_retries() if x.supplier_id == sup.pk]
+    automation = {"callback": integrations.callback_url(sup), "retries": len(retries), "retry_rows": retries,
                   "out": _json.dumps(sample_out, ensure_ascii=False, indent=2),
                   "in": _json.dumps(sample_in, ensure_ascii=False, indent=2)}
     due = list(Order.objects.filter(supplier=sup, status__in=(Order.FULFILLED, Order.SHIPPED, Order.DELIVERED),
@@ -2392,7 +2411,9 @@ def erp_supplier(request, pk):
         "xl": (sup.offer or {}).get("xlsx") or {},
         "channels": SUPPLIER_CHANNELS,
         "woo": sup.woo or {}, "woo_site": settings.SITE_URL,
-        "woo_logs": sup.connector_logs.all()[:15] if sup.integration == "woo" or (sup.woo or {}).get("ck") else [],
+        "woo_logs": (ConnectorLog.objects.filter(models.Q(supplier=sup) | models.Q(
+                         supplier__isnull=True, at__gte=timezone.now() - timedelta(days=7)))[:20]
+                     if sup.integration == "woo" else []),
         "shop": sup.shopify or {}, "shop_hook": __import__("studio.shopify", fromlist=["x"]).webhook_url(sup),
         "shop_pending": Order.objects.filter(supplier=sup, shopify_order_id="", status__in=(Order.PAID, Order.FULFILLED)).count(),
         **_admin.site.each_context(request), "sup": sup, "tab": tab, "rows": rows,

@@ -89,9 +89,9 @@
           <button class="pbtn{% if not woo.ck %} pri{% endif %}" name="op" value="woo_keys"{% if woo.ck %} data-confirm="Régénérer les clés ? L'ERP devra être reconfiguré." data-ok="Régénérer"{% endif %}>{% if woo.ck %}Régénérer les clés{% else %}Générer les clés API{% endif %}</button>
           {% if woo.ck %}<button class="pbtn" name="op" value="woo_revoke" data-confirm="Couper l'accès de l'ERP ?" data-danger style="color:#b42318">Révoquer</button>{% endif %}
         </form>
-        <div class="muted" style="font-size:.74rem;margin-top:8px">{% if woo.created %}Clés du {{ woo.created|slice:":10" }}{% endif %}{% if woo.last_seen %} · dernier appel de l'ERP : {{ woo.last_seen|slice:":10" }} {{ woo.last_seen|slice:"11:16" }}{% endif %}</div>
+        <div class="muted" style="font-size:.74rem;margin-top:8px">{% if woo.created %}Clés du {{ woo.created|slice:":10" }}{% endif %}{% if woo.last_seen %} · dernier appel authentifié de l'ERP : {{ woo.last_seen|slice:":10" }} {{ woo.last_seen|slice:"11:16" }} UTC{% else %} · <b>l'ERP n'a encore lu aucune commande</b> : dans MangoERP → 订单 (Commandes) → 同步订单 (synchroniser), choisir la boutique PaintIt{% endif %}</div>
         {% if woo_logs %}
-        <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700;font-size:.82rem">Journal des appels ({{ woo_logs|length }} derniers)</summary>
+        <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700;font-size:.82rem">Journal des appels de l'ERP ({{ woo_logs|length }} derniers, y compris refusés)</summary>
           <table style="width:100%;font-size:.74rem;margin-top:6px">
             {% for l in woo_logs %}<tr><td>{{ l.at|date:"d/m H:i" }}</td><td><b>{{ l.method }}</b> {{ l.path }}{% if l.query %}?{{ l.query|truncatechars:60 }}{% endif %}</td>
               <td>{% if l.status < 300 %}<span class="bdg2 ok">{{ l.status }}</span>{% else %}<span class="bdg2 err">{{ l.status }}</span>{% endif %}</td><td class="muted">{{ l.note }}</td></tr>
@@ -129,7 +129,13 @@
             <button class="pbtn sm" name="op" value="auto" title="{% if sup.auto_dispatch %}Chaque commande payée est transmise immédiatement, relancée en cas d'échec.{% else %}Les commandes payées attendent votre validation.{% endif %}">Passer en {% if sup.auto_dispatch %}manuel{% else %}automatique{% endif %}</button>
             {% if sup.integration != "woo" %}<button class="pbtn sm pri" name="op" value="test">Tester la connexion</button>{% endif %}</form>
         </div>
-        {% if automation.retries %}<div class="banner warn" style="margin:10px 0 0"><span>{{ automation.retries }} commande{{ automation.retries|pluralize }} en attente de relance automatique.</span></div>{% endif %}
+        {% if automation.retries %}<form method="post" class="banner warn" style="margin:10px 0 0;display:block">{% csrf_token %}
+          <b>{{ automation.retries }} commande{{ automation.retries|pluralize }} dont la transmission a échoué</b> (relance automatique toutes les 15 min). Décidez lesquelles doivent partir en production{% if sup.integration == "woo" %} : une commande transmise devient visible pour l'ERP et sera fabriquée{% endif %}.
+          <div style="display:flex;flex-direction:column;gap:3px;margin:8px 0;font-size:.82rem">{% for o in automation.retry_rows %}<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="oid" value="{{ o.pk }}" checked style="width:auto">
+            <a href="/admin/studio/order/{{ o.pk }}/change/">{{ o.uid }}</a> · {{ o.created_at|date:"d/m/Y" }} · {{ o.customer_name|truncatechars:24 }} · {{ o.format_label }} · {{ o.total|floatformat:2 }} €</label>{% endfor %}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="pbtn sm pri" name="op" value="retry_now" data-confirm="Transmettre les commandes cochées à {{ sup.name }} ?" data-ok="Transmettre">Transmettre les cochées</button>
+            <button class="pbtn sm" name="op" value="retry_skip" data-confirm="Ne jamais transmettre les commandes cochées (tests, doublons) ?" data-ok="Retirer">Ne pas transmettre (tests)</button></div>
+        </form>{% endif %}
 
         {% if sup.integration == "api" or sup.integration == "email" %}
         <details class="chx"><summary>Guide technique &amp; URL de retour</summary>

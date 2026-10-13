@@ -25,7 +25,8 @@ class Command(BaseCommand):
         # payees depuis > 10 min, jamais transmises, fournisseur kit en mode automatique
         kit = Supplier.for_checkout("kit")
         if kit and kit.auto_dispatch:
-            sent = OrderEvent.objects.filter(kind="action", text__startswith=integrations.OK_PREFIX).values("order_id")
+            sent = OrderEvent.objects.filter(kind="action", text__regex=r"^(%s|%s)" % (
+                integrations.OK_PREFIX, integrations.SKIP_PREFIX)).values("order_id")
             for o in Order.objects.filter(status__in=(Order.PAID, Order.FULFILLED), supplier__isnull=True,
                                           created_at__lt=timezone.now() - datetime.timedelta(minutes=10),
                                           created_at__gte=timezone.now() - datetime.timedelta(days=30)) \

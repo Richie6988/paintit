@@ -213,8 +213,13 @@ def order_rest(o):
 
 # ---------------------------------------------------------------- requetes
 def _scope(sup):
-    from .models import Order
-    return Order.objects.filter(supplier=sup, status__in=Order.PAID_STATUSES + (Order.FAILED,))
+    """Commandes de ce fournisseur effectivement transmises via ce connecteur (pas les anciennes envoyees
+    par e-mail/Shopify, ni les commandes de test annulees) : l'ERP ne voit que ce qu'il doit produire."""
+    from .models import Order, OrderEvent
+    from .integrations import OK_PREFIX, WOO_CHANNEL
+    sent = OrderEvent.objects.filter(kind="action", text__startswith=OK_PREFIX, text__contains=WOO_CHANNEL,
+                                     order__supplier=sup).values("order_id")
+    return Order.objects.filter(supplier=sup, pk__in=sent, status__in=Order.PAID_STATUSES + (Order.FAILED,))
 
 
 def _parse_dt(v):
