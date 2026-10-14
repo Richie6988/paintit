@@ -1,6 +1,6 @@
 {% extends "studio/base.html" %}
 {% load i18n %}
-{% block title %}{{ page.title }} | PaintIt{% endblock %}
+{% block title %}PaintIt · {{ page.title }}{% endblock %}
 {% block meta_description %}{{ page.desc }}{% endblock %}
 {% block jsonld %}<script type="application/ld+json">{{ ld_faq }}</script>
   <script type="application/ld+json">{{ ld_crumb }}</script>{% if ld_product %}

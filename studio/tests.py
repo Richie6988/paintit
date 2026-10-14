@@ -778,6 +778,8 @@ class SeoLandingTests(TestCase):
         self.assertRedirects(self.client.get("/en/peinture-par-numeros-adulte/"), "/en/paint-by-numbers-for-adults/",
                              status_code=301, fetch_redirect_response=False)
         self.assertEqual(self.client.get("/pas-une-page/").status_code, 404)
+        self.assertRedirects(self.client.get("/peinture-par-numeros-animal/"), "/peinture-par-numeros-personnalisee/",
+                             status_code=301, fetch_redirect_response=False)      # page retiree
         self.assertContains(self.client.get("/sitemap.xml"), "/it/come-dipingere-con-i-numeri/")
         self.assertContains(self.client.get("/"), "/peinture-par-numeros-enfant/")     # maillage (pied de page)
         from studio.seo import indexnow_key

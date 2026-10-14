@@ -7,7 +7,10 @@ FAQ (donnees structurees), liens internes vers les autres pages et vers la creat
 Les chiffres (prix, formats, delais, couleurs) viennent des tarifs en vigueur : {price}, {formats}, {days}, {colors}.
 """
 
-TOPICS = ["custom", "adult", "kids", "pet", "gift", "guide"]
+TOPICS = ["custom", "adult", "kids", "gift", "guide"]
+# anciennes adresses retirees -> page equivalente (301)
+RETIRED = {"peinture-par-numeros-animal": "custom", "pet-paint-by-numbers": "custom", "malen-nach-zahlen-haustier": "custom",
+           "pintar-por-numeros-mascota": "custom", "dipingere-con-i-numeri-animali": "custom"}
 
 PAGES = {
     # ------------------------------------------------------------------ FRANÇAIS
@@ -44,7 +47,7 @@ PAGES = {
             "title": "Peinture par numéros adulte : kit à partir de votre photo",
             "desc": "Peinture par numéros pour adulte, détaillée et relaxante, créée à partir de votre photo. 3 niveaux de détail, jusqu'à 48 couleurs, aperçu gratuit.",
             "h1": "Peinture par numéros pour adulte",
-            "lead": "Une activité créative et apaisante : quelques heures de concentration, un vrai tableau au mur à la fin. Et cette fois, c'est votre photo.",
+            "lead": "Avec PaintIt, une activité créative et apaisante : quelques heures de concentration, un vrai tableau au mur à la fin. Et cette fois, c'est votre photo.",
             "sections": [
                 ("Un niveau de détail adapté à vous", [
                     "Trois densités de zones : Facile pour une première toile, Moyen pour un bon équilibre, Expert pour un rendu très fin, idéal pour les portraits.",
@@ -69,7 +72,7 @@ PAGES = {
             "title": "Peinture par numéros enfant, dès 4 ans, avec sa photo",
             "desc": "Peinture par numéros pour enfant dès 4 ans : grandes zones, peu de couleurs, à partir d'une photo qu'il aime. Testez gratuitement en ligne.",
             "h1": "Peinture par numéros pour enfant",
-            "lead": "Peindre son chien, sa maison ou un souvenir de vacances : la peinture par numéros apprend la patience et la précision, avec une vraie fierté à la fin.",
+            "lead": "Avec PaintIt, votre enfant peint sa maison, sa famille ou un souvenir de vacances : la peinture par numéros apprend la patience et la précision, avec une vraie fierté à la fin.",
             "sections": [
                 ("Simple dès 4 ans", [
                     "Choisissez le niveau Facile et 12 ou 24 couleurs : les zones sont grandes et faciles à remplir.",
@@ -85,32 +88,12 @@ PAGES = {
                 ("Quel format choisir ?", "Un petit format ({format_min}) pour une première toile, terminée en quelques séances."),
             ],
         },
-        "pet": {
-            "slug": "peinture-par-numeros-animal",
-            "title": "Peinture par numéros de votre animal (chien, chat…)",
-            "desc": "Transformez la photo de votre chien, chat ou cheval en peinture par numéros personnalisée. Aperçu gratuit, kit livré gratuitement dès {price} €.",
-            "h1": "Peinture par numéros de votre animal",
-            "lead": "Votre chien, votre chat, votre cheval : faites de leur photo préférée un tableau peint de vos mains.",
-            "sections": [
-                ("Les bonnes photos d'animaux", [
-                    "Une photo prise à hauteur de l'animal, avec les yeux bien nets, donne le meilleur résultat. Recadrez au plus près pour que l'animal occupe la toile.",
-                    "Le pelage gagne à être peint en 36 ou 48 couleurs et en niveau Moyen ou Expert.",
-                ]),
-                ("Un hommage durable", [
-                    "Beaucoup de nos clients peignent un compagnon disparu : un tableau personnel, bien plus qu'une photo encadrée.",
-                ]),
-            ],
-            "faq": [
-                ("Le résultat est-il ressemblant ?", "Vous le voyez avant d'acheter : l'aperçu montre exactement la toile que vous recevrez."),
-                ("Combien de couleurs pour un pelage ?", "36 ou 48 couleurs pour les nuances du pelage, 24 suffisent pour un animal au poil uni."),
-            ],
-        },
         "gift": {
             "slug": "cadeau-peinture-par-numeros",
             "title": "Cadeau peinture par numéros personnalisé",
             "desc": "Un cadeau original et personnel : une peinture par numéros créée à partir d'une photo souvenir. Fête des mères, Noël, anniversaire. Livraison offerte.",
             "h1": "Offrez une peinture par numéros personnalisée",
-            "lead": "Un souvenir commun qui devient un tableau à peindre : un cadeau qu'on ne trouve dans aucun magasin.",
+            "lead": "Avec PaintIt, un souvenir commun devient un tableau à peindre : un cadeau qu'on ne trouve dans aucun magasin.",
             "sections": [
                 ("Pour quelles occasions ?", [
                     "Fête des mères et des pères, anniversaire, Noël, départ à la retraite, naissance : une photo de famille ou de moments partagés touche toujours juste.",
@@ -131,7 +114,7 @@ PAGES = {
             "title": "Comment faire une peinture par numéros : guide et astuces",
             "desc": "Guide complet de la peinture par numéros : matériel, ordre des couleurs, techniques, erreurs à éviter et finitions. Conseils pour un résultat net.",
             "h1": "Comment faire une peinture par numéros",
-            "lead": "Le principe est simple, quelques gestes font la différence entre un tableau correct et un très beau tableau.",
+            "lead": "Les conseils PaintIt : le principe est simple, quelques gestes font la différence entre un tableau correct et un très beau tableau.",
             "sections": [
                 ("Le matériel", [
                     "Une toile pré-imprimée avec les zones et leurs numéros, des pots de peinture acrylique numérotés, deux ou trois pinceaux (un fin, un moyen), un verre d'eau et un chiffon.",
@@ -187,7 +170,7 @@ PAGES = {
             "title": "Paint by numbers for adults, from your own photo",
             "desc": "Detailed, relaxing paint by numbers for adults made from your photo. Three detail levels, up to 48 colours, free preview.",
             "h1": "Paint by numbers for adults",
-            "lead": "A calming creative hobby: a few hours of focus and a real painting on your wall. This time, it's your photo.",
+            "lead": "With PaintIt, a calming creative hobby: a few hours of focus and a real painting on your wall. This time, it's your photo.",
             "sections": [
                 ("Detail that suits you", [
                     "Three area densities: Easy for a first canvas, Medium for balance, Expert for very fine detail, ideal for portraits. Up to {colors_max} colours for subtle shading.",
@@ -206,7 +189,7 @@ PAGES = {
             "title": "Paint by numbers for kids, from age 4",
             "desc": "Paint by numbers for kids from age 4: big areas, few colours, made from a photo they love. Try it free online.",
             "h1": "Paint by numbers for kids",
-            "lead": "Painting their dog, their house or a holiday memory: paint by numbers builds patience and precision, with real pride at the end.",
+            "lead": "With PaintIt, kids paint their house, their family or a holiday memory: paint by numbers builds patience and precision, with real pride at the end.",
             "sections": [
                 ("Easy from age 4", [
                     "Pick the Easy level and 12 or 24 colours: areas are large and simple to fill. Kids can try the free online painting game first to understand how it works.",
@@ -220,30 +203,12 @@ PAGES = {
                 ("Which size?", "A small size ({format_min}) for a first canvas, finished in a few sessions."),
             ],
         },
-        "pet": {
-            "slug": "pet-paint-by-numbers",
-            "title": "Pet paint by numbers: your dog or cat on canvas",
-            "desc": "Turn a photo of your dog, cat or horse into a custom paint by numbers. Free preview, kit shipped free from €{price}.",
-            "h1": "Paint by numbers of your pet",
-            "lead": "Your dog, cat or horse: make their best photo a painting by your own hand.",
-            "sections": [
-                ("Great pet photos", [
-                    "A photo taken at the animal's eye level, with sharp eyes, gives the best result. Crop close so your pet fills the canvas. Fur looks best with 36 or 48 colours.",
-                ]),
-                ("A lasting tribute", [
-                    "Many customers paint a pet they lost: a personal painting, far more than a framed photo.",
-                ]),
-            ],
-            "faq": [
-                ("Will it look like my pet?", "You see it before buying: the preview shows exactly the canvas you will receive."),
-            ],
-        },
         "gift": {
             "slug": "paint-by-numbers-gift",
             "title": "Personalised paint by numbers gift",
             "desc": "An original, personal gift: paint by numbers made from a treasured photo. Mother's Day, Christmas, birthdays. Free shipping.",
             "h1": "Give a personalised paint by numbers",
-            "lead": "A shared memory turned into a painting to make: a gift you won't find in any shop.",
+            "lead": "With PaintIt, a shared memory becomes a painting to make: a gift you won't find in any shop.",
             "sections": [
                 ("For every occasion", [
                     "Mother's and Father's Day, birthdays, Christmas, retirement, a new baby: a family photo always hits the mark.",
@@ -261,7 +226,7 @@ PAGES = {
             "title": "How to paint by numbers: complete guide and tips",
             "desc": "Complete paint by numbers guide: materials, colour order, techniques, mistakes to avoid and finishing. Tips for a clean result.",
             "h1": "How to paint by numbers",
-            "lead": "The principle is simple; a few habits make the difference between a decent painting and a beautiful one.",
+            "lead": "PaintIt tips: the principle is simple; a few habits make the difference between a decent painting and a beautiful one.",
             "sections": [
                 ("Materials", [
                     "A pre-printed canvas with numbered areas, numbered acrylic paint pots, two or three brushes (fine and medium), a glass of water and a cloth.",
@@ -305,7 +270,7 @@ PAGES = {
             "title": "Malen nach Zahlen für Erwachsene, nach eigenem Foto",
             "desc": "Detailreiches Malen nach Zahlen für Erwachsene nach Ihrem Foto: drei Schwierigkeitsstufen, bis zu 48 Farben, kostenlose Vorschau.",
             "h1": "Malen nach Zahlen für Erwachsene",
-            "lead": "Ein entspannendes Hobby mit echtem Ergebnis an der Wand – diesmal mit Ihrem eigenen Foto.",
+            "lead": "Mit PaintIt: ein entspannendes Hobby mit echtem Ergebnis an der Wand – diesmal mit Ihrem eigenen Foto.",
             "sections": [
                 ("Der passende Detailgrad", [
                     "Drei Stufen: Leicht, Mittel und Experte (ideal für Porträts). Bis zu {colors_max} Farben für feine Übergänge. Rechnen Sie mit 10 bis 40 Stunden.",
@@ -318,27 +283,18 @@ PAGES = {
             "title": "Malen nach Zahlen für Kinder ab 4 Jahren",
             "desc": "Malen nach Zahlen für Kinder ab 4: große Felder, wenige Farben, nach einem Lieblingsfoto. Kostenlos online ausprobieren.",
             "h1": "Malen nach Zahlen für Kinder",
-            "lead": "Den eigenen Hund oder ein Urlaubsfoto malen: fördert Geduld und Genauigkeit.",
+            "lead": "Mit PaintIt malen Kinder ihr Zuhause, ihre Familie oder ein Urlaubsfoto: fördert Geduld und Genauigkeit.",
             "sections": [
                 ("Einfach ab 4 Jahren", ["Stufe Leicht mit 12 oder 24 Farben wählen: große, einfache Felder. Vorher kostenlos das Online-Malspiel testen."]),
             ],
             "faq": [("Ab welchem Alter?", "Ab 4 Jahren mit Begleitung, selbstständig ab etwa 7 bis 8 Jahren.")],
-        },
-        "pet": {
-            "slug": "malen-nach-zahlen-haustier",
-            "title": "Malen nach Zahlen: Ihr Haustier auf Leinwand",
-            "desc": "Hund, Katze oder Pferd als Malen nach Zahlen nach Ihrem Foto. Kostenlose Vorschau, Versand kostenlos ab {price} €.",
-            "h1": "Malen nach Zahlen von Ihrem Haustier",
-            "lead": "Machen Sie das schönste Foto Ihres Tieres zu einem selbst gemalten Bild.",
-            "sections": [("Gute Tierfotos", ["Auf Augenhöhe fotografiert, mit scharfen Augen. Für Fell 36 oder 48 Farben wählen."])],
-            "faq": [("Wird es meinem Tier ähnlich sehen?", "Sie sehen es vor dem Kauf: die Vorschau zeigt genau Ihre Leinwand.")],
         },
         "gift": {
             "slug": "malen-nach-zahlen-geschenk",
             "title": "Malen nach Zahlen als persönliches Geschenk",
             "desc": "Ein persönliches Geschenk: Malen nach Zahlen nach einem Erinnerungsfoto. Muttertag, Weihnachten, Geburtstag. Kostenloser Versand.",
             "h1": "Malen nach Zahlen verschenken",
-            "lead": "Eine gemeinsame Erinnerung als Bild zum Selbermalen – ein Geschenk, das es in keinem Laden gibt.",
+            "lead": "Mit PaintIt wird eine gemeinsame Erinnerung zum Bild zum Selbermalen – ein Geschenk, das es in keinem Laden gibt.",
             "sections": [("Rechtzeitig bestellen", ["Kostenloser Versand in {days} Werktagen, auch direkt an die beschenkte Person."])],
             "faq": [("Kann direkt an den Empfänger geliefert werden?", "Ja, geben Sie einfach dessen Adresse an.")],
         },
@@ -347,7 +303,7 @@ PAGES = {
             "title": "Malen nach Zahlen: Anleitung und Tipps",
             "desc": "Anleitung Malen nach Zahlen: Material, Reihenfolge der Farben, Techniken und Fehler vermeiden.",
             "h1": "Anleitung: Malen nach Zahlen",
-            "lead": "Einfaches Prinzip – mit ein paar Tricks wird das Bild deutlich schöner.",
+            "lead": "PaintIt-Tipps: einfaches Prinzip – mit ein paar Tricks wird das Bild deutlich schöner.",
             "sections": [("Schritte", ["Bei Tageslicht arbeiten, immer nur eine Farbe öffnen, mit den dunkelsten Farben oder von oben nach unten beginnen, Zahlen und Konturen vollständig abdecken: lieber zwei dünne Schichten."])],
             "faq": [("Wie verschwinden die Zahlen?", "Mit einer zweiten dünnen Schicht nach dem Trocknen.")],
         },
@@ -371,7 +327,7 @@ PAGES = {
             "title": "Pintar por números para adultos con tu propia foto",
             "desc": "Pintar por números para adultos, detallado y relajante, a partir de tu foto. Tres niveles, hasta 48 colores, vista previa gratis.",
             "h1": "Pintar por números para adultos",
-            "lead": "Una afición relajante con un cuadro real al final, esta vez con tu foto.",
+            "lead": "Con PaintIt, una afición relajante con un cuadro real al final, esta vez con tu foto.",
             "sections": [("El nivel adecuado", ["Tres niveles: Fácil, Medio y Experto (ideal para retratos). Hasta {colors_max} colores. Entre 10 y 40 horas según formato."])],
             "faq": [("¿Qué nivel para un retrato?", "Experto: sus zonas más finas reproducen mejor el rostro.")],
         },
@@ -380,25 +336,16 @@ PAGES = {
             "title": "Pintar por números para niños desde 4 años",
             "desc": "Pintar por números para niños desde 4 años: zonas grandes, pocos colores, con su foto favorita. Pruébalo gratis online.",
             "h1": "Pintar por números para niños",
-            "lead": "Pintar su perro o un recuerdo de vacaciones desarrolla la paciencia y la precisión.",
+            "lead": "Con PaintIt, los niños pintan su casa, su familia o un recuerdo de vacaciones desarrolla la paciencia y la precisión.",
             "sections": [("Fácil desde 4 años", ["Nivel Fácil con 12 o 24 colores: zonas grandes y sencillas. Antes, prueba gratis el juego online."])],
             "faq": [("¿Desde qué edad?", "Desde 4 años con ayuda, solos hacia los 7 u 8 años.")],
-        },
-        "pet": {
-            "slug": "pintar-por-numeros-mascota",
-            "title": "Pintar por números de tu mascota",
-            "desc": "Convierte la foto de tu perro, gato o caballo en un cuadro para pintar por números. Vista previa gratis, envío gratis desde {price} €.",
-            "h1": "Pintar por números de tu mascota",
-            "lead": "Haz de la mejor foto de tu mascota un cuadro pintado por ti.",
-            "sections": [("Buenas fotos", ["Foto a la altura del animal, con los ojos nítidos. Para el pelaje, 36 o 48 colores."])],
-            "faq": [("¿Se parecerá a mi mascota?", "Lo ves antes de comprar: la vista previa muestra tu lienzo exacto.")],
         },
         "gift": {
             "slug": "regalo-pintar-por-numeros",
             "title": "Regalo original: pintar por números personalizado",
             "desc": "Un regalo original y personal: pintar por números a partir de una foto recuerdo. Día de la Madre, Navidad, cumpleaños. Envío gratis.",
             "h1": "Regala un cuadro para pintar por números",
-            "lead": "Un recuerdo compartido convertido en un cuadro para pintar: un regalo que no está en ninguna tienda.",
+            "lead": "Con PaintIt, un recuerdo compartido convertido en un cuadro para pintar: un regalo que no está en ninguna tienda.",
             "sections": [("Pide a tiempo", ["Envío gratis en {days} días laborables, también directamente al destinatario."])],
             "faq": [("¿Podéis enviarlo al destinatario?", "Sí, indica su dirección al hacer el pedido.")],
         },
@@ -407,7 +354,7 @@ PAGES = {
             "title": "Cómo pintar por números: guía y consejos",
             "desc": "Guía para pintar por números: material, orden de colores, técnicas y errores que evitar.",
             "h1": "Cómo pintar por números",
-            "lead": "El principio es simple; algunos trucos marcan la diferencia.",
+            "lead": "Consejos PaintIt: el principio es simple; algunos trucos marcan la diferencia.",
             "sections": [("Pasos", ["Trabaja con luz natural, abre un solo color cada vez, empieza por los más oscuros o de arriba abajo y cubre bien números y contornos: mejor dos capas finas."])],
             "faq": [("¿Cómo ocultar los números?", "Con una segunda capa fina cuando la primera esté seca.")],
         },
@@ -431,7 +378,7 @@ PAGES = {
             "title": "Dipingere con i numeri per adulti dalla tua foto",
             "desc": "Dipingere con i numeri per adulti, dettagliato e rilassante, dalla tua foto. Tre livelli, fino a 48 colori, anteprima gratuita.",
             "h1": "Dipingere con i numeri per adulti",
-            "lead": "Un hobby rilassante con un vero quadro alla fine, questa volta con la tua foto.",
+            "lead": "Con PaintIt, un hobby rilassante con un vero quadro alla fine, questa volta con la tua foto.",
             "sections": [("Il livello giusto", ["Tre livelli: Facile, Medio ed Esperto (ideale per i ritratti). Fino a {colors_max} colori. Da 10 a 40 ore secondo il formato."])],
             "faq": [("Quale livello per un ritratto?", "Esperto: le zone più fini rendono meglio i lineamenti.")],
         },
@@ -440,25 +387,16 @@ PAGES = {
             "title": "Dipingere con i numeri per bambini dai 4 anni",
             "desc": "Dipingere con i numeri per bambini dai 4 anni: zone grandi, pochi colori, dalla loro foto preferita. Prova gratis online.",
             "h1": "Dipingere con i numeri per bambini",
-            "lead": "Dipingere il proprio cane o un ricordo delle vacanze sviluppa pazienza e precisione.",
+            "lead": "Con PaintIt, i bambini dipingono la loro casa, la famiglia o un ricordo delle vacanze sviluppa pazienza e precisione.",
             "sections": [("Facile dai 4 anni", ["Livello Facile con 12 o 24 colori: zone grandi e semplici. Prima, prova gratis il gioco online."])],
             "faq": [("Da che età?", "Dai 4 anni con un adulto, da soli verso i 7-8 anni.")],
-        },
-        "pet": {
-            "slug": "dipingere-con-i-numeri-animali",
-            "title": "Dipingere con i numeri il tuo animale",
-            "desc": "Trasforma la foto del tuo cane, gatto o cavallo in un quadro da dipingere con i numeri. Anteprima gratuita, spedizione gratuita da {price} €.",
-            "h1": "Dipingere con i numeri il tuo animale",
-            "lead": "Fai della foto più bella del tuo animale un quadro dipinto da te.",
-            "sections": [("Buone foto", ["Scatta all'altezza dell'animale, con gli occhi nitidi. Per il pelo, 36 o 48 colori."])],
-            "faq": [("Somiglierà al mio animale?", "Lo vedi prima di acquistare: l'anteprima mostra la tua tela esatta.")],
         },
         "gift": {
             "slug": "regalo-dipingere-con-i-numeri",
             "title": "Regalo originale: dipingere con i numeri personalizzato",
             "desc": "Un regalo originale e personale: dipingere con i numeri da una foto ricordo. Festa della mamma, Natale, compleanni. Spedizione gratuita.",
             "h1": "Regala un quadro da dipingere con i numeri",
-            "lead": "Un ricordo condiviso diventa un quadro da dipingere: un regalo che non si trova in nessun negozio.",
+            "lead": "Con PaintIt, un ricordo condiviso diventa un quadro da dipingere: un regalo che non si trova in nessun negozio.",
             "sections": [("Ordina in tempo", ["Spedizione gratuita in {days} giorni lavorativi, anche direttamente al destinatario."])],
             "faq": [("Potete spedire al destinatario?", "Sì, inserisci il suo indirizzo all'ordine.")],
         },
@@ -467,7 +405,7 @@ PAGES = {
             "title": "Come dipingere con i numeri: guida e consigli",
             "desc": "Guida per dipingere con i numeri: materiale, ordine dei colori, tecniche ed errori da evitare.",
             "h1": "Come dipingere con i numeri",
-            "lead": "Il principio è semplice; qualche trucco fa la differenza.",
+            "lead": "Consigli PaintIt: il principio è semplice; qualche trucco fa la differenza.",
             "sections": [("Passaggi", ["Lavora con luce naturale, apri un colore alla volta, inizia dai più scuri o dall'alto verso il basso e copri bene numeri e contorni: meglio due mani sottili."])],
             "faq": [("Come nascondere i numeri?", "Con una seconda mano sottile quando la prima è asciutta.")],
         },
@@ -477,11 +415,11 @@ PAGES = {
 NAV_LABEL = {"fr": "Peinture par numéros", "en": "Paint by numbers", "de": "Malen nach Zahlen",
              "es": "Pintar por números", "it": "Dipingere con i numeri"}
 SHORT = {  # libelles courts (pied de page / liens)
-    "fr": {"custom": "Personnalisée", "adult": "Adulte", "kids": "Enfant", "pet": "Animaux", "gift": "Idée cadeau", "guide": "Guide et astuces"},
-    "en": {"custom": "Custom", "adult": "For adults", "kids": "For kids", "pet": "Pets", "gift": "Gift idea", "guide": "How-to guide"},
-    "de": {"custom": "Eigenes Foto", "adult": "Erwachsene", "kids": "Kinder", "pet": "Haustiere", "gift": "Geschenk", "guide": "Anleitung"},
-    "es": {"custom": "Personalizado", "adult": "Adultos", "kids": "Niños", "pet": "Mascotas", "gift": "Regalo", "guide": "Guía"},
-    "it": {"custom": "Personalizzato", "adult": "Adulti", "kids": "Bambini", "pet": "Animali", "gift": "Regalo", "guide": "Guida"},
+    "fr": {"custom": "Personnalisée", "adult": "Adulte", "kids": "Enfant", "gift": "Idée cadeau", "guide": "Guide et astuces"},
+    "en": {"custom": "Custom", "adult": "For adults", "kids": "For kids", "gift": "Gift idea", "guide": "How-to guide"},
+    "de": {"custom": "Eigenes Foto", "adult": "Erwachsene", "kids": "Kinder", "gift": "Geschenk", "guide": "Anleitung"},
+    "es": {"custom": "Personalizado", "adult": "Adultos", "kids": "Niños", "gift": "Regalo", "guide": "Guía"},
+    "it": {"custom": "Personalizzato", "adult": "Adulti", "kids": "Bambini", "gift": "Regalo", "guide": "Guida"},
 }
 
 
@@ -501,6 +439,8 @@ def find(slug):
         for topic, p in pages.items():
             if p["slug"] == slug:
                 return lang, topic
+    if slug in RETIRED:
+        return "", RETIRED[slug]
     return None, None
 
 
