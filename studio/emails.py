@@ -101,9 +101,11 @@ def send_order_confirmation(order, shipping):
     T = STR.get((order.get("lang") or "en")[:2], STR["en"])
     uid = order["uid"]
     d = order.get("discount")
-    total = order.get("total", order["price"])
+    lang = (order.get("lang") or "en")[:2]
+    money = lambda x: ("%.2f" % float(x or 0)) if lang == "en" else ("%.2f" % float(x or 0)).replace(".", ",")
     brushes_amt = order.get("brushes_amount", 0.0)
-    canvas = round(order["price"] - brushes_amt, 2)
+    canvas = money(order["price"] - brushes_amt)
+    total = money(order.get("total", order["price"]))
     orient = T["orient"].get(order.get("orientation", ""), order.get("orientation", ""))
     addr2 = (", " + shipping["address2"]) if shipping.get("address2") else ""
     phone = ("%s %s" % (shipping.get("phone_code", ""), shipping.get("phone", ""))).strip()
@@ -117,9 +119,9 @@ def send_order_confirmation(order, shipping):
         "%s : %s EUR" % (T["subtotal"], canvas),
     ]
     if brushes_amt:
-        lines.append("%s : +%s EUR" % (T["brushes"], brushes_amt))
+        lines.append("%s : +%s EUR" % (T["brushes"], money(brushes_amt)))
     if d:
-        lines.append("%s (%s) : -%s EUR" % (T["discount"], d["code"], d["amount"]))
+        lines.append("%s (%s) : -%s EUR" % (T["discount"], d["code"], money(d["amount"])))
     lines += ["%s : %s" % (T["shipping"], T["free"]),
               "%s : %s EUR" % (T["total"], total), "",
               "%s :" % T["deliver_to"], shipping.get("full_name", ""),
@@ -131,10 +133,10 @@ def send_order_confirmation(order, shipping):
 
     d_row = ('<tr><td style="padding:6px 0;color:#5b647a">%s (%s)</td>'
              '<td align="right" style="padding:6px 0">-%s &euro;</td></tr>'
-             % (T["discount"], d["code"], d["amount"])) if d else ""
+             % (T["discount"], d["code"], money(d["amount"]))) if d else ""
     b_row = ('<tr><td style="padding:6px 0;color:#5b647a">%s</td>'
              '<td align="right" style="padding:6px 0">+%s &euro;</td></tr>'
-             % (T["brushes"], brushes_amt)) if brushes_amt else ""
+             % (T["brushes"], money(brushes_amt))) if brushes_amt else ""
 
     html = (
         '<div style="background:#eef2f9;padding:24px 0;font-family:Arial,Helvetica,sans-serif">'

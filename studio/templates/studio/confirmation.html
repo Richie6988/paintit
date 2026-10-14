@@ -11,9 +11,9 @@
   <div class="recap">
     <ul>
       <li>{% trans "Produit" %} : {{ order.format_label }} ({{ order.orientation }}), {{ order.colors }} {% trans "couleurs" %}</li>
-      <li>{% trans "Sous-total" %} : {{ order.price }} &euro;</li>
-      {% if discount %}<li>{% trans "Remise" %} {{ discount.code }} : -{{ discount.amount }} &euro;</li>{% endif %}
-      <li><b>{% trans "Total" %} : {{ total }} &euro;</b></li>
+      <li>{% trans "Sous-total" %} : {{ order.price|floatformat:2 }} &euro;</li>
+      {% if discount %}<li>{% trans "Remise" %} {{ discount.code }} : -{{ discount.amount|floatformat:2 }} &euro;</li>{% endif %}
+      <li><b>{% trans "Total" %} : {{ total|floatformat:2 }} &euro;</b></li>
     </ul>
   </div>
 

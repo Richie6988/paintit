@@ -24,9 +24,9 @@
   </form>
 
   <div class="totals">
-    <div class="line"><span>{% trans "Sous-total" %}</span><span>{{ order.price }} &euro;</span></div>
-    {% if discount %}<div class="line disc"><span>{% trans "Remise" %} ({{ discount.code }}, -{{ discount.percent }}%)</span><span>-{{ discount.amount }} &euro;</span></div>{% endif %}
-    <div class="line grand"><span>{% trans "Total" %}</span><span>{{ total }} &euro;</span></div>
+    <div class="line"><span>{% trans "Sous-total" %}</span><span>{{ order.price|floatformat:2 }} &euro;</span></div>
+    {% if discount %}<div class="line disc"><span>{% trans "Remise" %} ({{ discount.code }}, -{{ discount.percent }}%)</span><span>-{{ discount.amount|floatformat:2 }} &euro;</span></div>{% endif %}
+    <div class="line grand"><span>{% trans "Total" %}</span><span>{{ total|floatformat:2 }} &euro;</span></div>
   </div>
 
 

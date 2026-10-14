@@ -10,7 +10,7 @@
     <li>{% trans "Matière" %} : {{ spec.material }}</li>
     <li>{% trans "Cadre" %} : {{ spec.frame }}</li>
     {% if spec.glass %}<li>{% trans "Sous verre" %}</li>{% endif %}
-    <li><b>{% trans "Total" %} : {{ total }} &euro;</b></li>
+    <li><b>{% trans "Total" %} : {{ total|floatformat:2 }} &euro;</b></li>
   </ul></div>
   <div class="actions">
     <a class="ghost" href="{% url 'studio:paint_portal' %}">{% trans "Retour à la galerie" %}</a>
