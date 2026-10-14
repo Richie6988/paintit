@@ -69,6 +69,17 @@ class DeliveryForm(forms.Form):
     city = forms.CharField(label=_("Ville"), max_length=120)
     country = forms.ChoiceField(choices=address.COUNTRY_CHOICES, initial="France", label=_("Pays"))
 
+    AUTOCOMPLETE = {"full_name": "shipping name", "email": "email", "phone_code": "tel-country-code",
+                    "phone": "tel-national", "address1": "shipping address-line1", "address2": "shipping address-line2",
+                    "postal_code": "shipping postal-code", "city": "shipping address-level2",
+                    "country": "shipping country-name"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, ac in self.AUTOCOMPLETE.items():      # remplissage automatique du navigateur
+            self.fields[name].widget.attrs["autocomplete"] = ac
+        self.fields["phone"].widget.attrs["inputmode"] = "tel"
+
     def clean(self):
         cleaned = super().clean()
         errors = address.validate(cleaned)
@@ -82,3 +93,10 @@ class ContactForm(forms.Form):
     email = forms.EmailField(label=_("E-mail"))
     subject = forms.CharField(label=_("Sujet"), max_length=140)
     message = forms.CharField(label=_("Message"), widget=forms.Textarea)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["name"].widget.attrs["autocomplete"] = "name"
+        self.fields["email"].widget.attrs["autocomplete"] = "email"
+        self.fields["subject"].widget.attrs["autocomplete"] = "off"
+        self.fields["message"].widget.attrs["autocomplete"] = "off"

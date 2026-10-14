@@ -19,7 +19,7 @@
 
   <form method="post" class="code-row">
     {% csrf_token %}
-    <input type="text" name="code" placeholder="{% trans 'Code de réduction' %}" value="{% if discount %}{{ discount.code }}{% else %}{{ prefill_code }}{% endif %}">
+    <input type="text" name="code" autocomplete="off" autocapitalize="characters" placeholder="{% trans 'Code de réduction' %}" value="{% if discount %}{{ discount.code }}{% else %}{{ prefill_code }}{% endif %}">
     <button class="ghost" type="submit">{% trans "Appliquer" %}</button>
   </form>
 

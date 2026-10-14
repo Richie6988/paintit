@@ -17,7 +17,7 @@
       </div>
       <label class="field"><span>{% trans "Votre avis (facultatif)" %}</span>
         <textarea name="text" rows="5" maxlength="2000" placeholder="{% trans 'Qualité de la toile, des couleurs, plaisir de peindre, livraison…' %}">{{ r.text|default:'' }}</textarea></label>
-      <label class="field"><span>{% trans "Nom affiché" %}</span><input type="text" name="author" maxlength="60" value="{{ r.author|default:default_name }}"></label>
+      <label class="field"><span>{% trans "Nom affiché" %}</span><input type="text" name="author" autocomplete="nickname" maxlength="60" value="{{ r.author|default:default_name }}"></label>
       <button class="cta" type="submit">{% trans "Publier mon avis" %}</button>
     </form>
   {% endif %}

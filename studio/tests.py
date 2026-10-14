@@ -742,6 +742,20 @@ class LedgerTests(TestCase):
             self.assertEqual(self.client.get("/admin-hub/compta/%s/ventes.csv" % m).status_code, 200)
             self.assertEqual(self.client.get("/admin-hub/compta/%s/ecritures.txt" % m).status_code, 200)
 
+    def test_paid_session_with_real_stripe_object(self):
+        """stripe-python >= 12 : les objets n'ont plus .get() -> le retour de paiement ne doit pas planter."""
+        import stripe
+        from studio import payments
+        from studio.models import LedgerEntry
+        o = make_order(uid="S1", total=52.7)
+        sess = stripe.checkout.Session.construct_from({
+            "id": "cs_1", "payment_status": "paid", "metadata": {"uid": "S1", "kind": "kit"}, "client_reference_id": "S1",
+            "amount_total": 5270, "payment_intent": "pi_s1", "created": 1760450000,
+            "customer_details": {"email": "r@g.fr"}}, "sk_test_x")
+        with mock.patch("stripe.checkout.Session.retrieve", return_value=sess):
+            self.assertTrue(payments.paid_session("cs_1", uid="S1", kind="kit"))
+        self.assertEqual(LedgerEntry.objects.get(stripe_id="pi_s1").amount, 52.7)
+
     def test_supplier_payment_flow(self):
         from studio.models import Supplier, LedgerEntry
         sup = Supplier.objects.create(name="Atelier FR", iban="FR7612345678901234567890123", bic="BNPAFRPP")

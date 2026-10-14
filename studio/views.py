@@ -1400,7 +1400,7 @@ def stripe_webhook(request):
             try:
                 import stripe as _stripe
                 _stripe.api_key = settings.STRIPE_SECRET_KEY
-                uid = (_stripe.PaymentIntent.retrieve(obj["payment_intent"]).get("metadata") or {}).get("uid")
+                uid = (payments.plain(_stripe.PaymentIntent.retrieve(obj["payment_intent"])).get("metadata") or {}).get("uid")
             except Exception:
                 logger.exception("Stripe %s", etype)
         r = Order.objects.filter(uid=uid).first() if uid else None

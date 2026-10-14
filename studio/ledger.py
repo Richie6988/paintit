@@ -141,7 +141,9 @@ def sync_stripe(days=40):
     since = int((timezone.now() - datetime.timedelta(days=days)).timestamp())
     out = {"sales": 0, "fees": 0, "refunds": 0, "payouts": 0}
     bts = stripe.BalanceTransaction.list(created={"gte": since}, limit=100, expand=["data.source"])
+    from .payments import plain
     for bt in bts.auto_paging_iter():
+        bt = plain(bt)
         when = datetime.datetime.fromtimestamp(bt["created"], datetime.timezone.utc)
         src = bt.get("source") or {}
         typ = bt["type"]
@@ -150,7 +152,7 @@ def sync_stripe(days=40):
                 pi_id = src.get("payment_intent") if isinstance(src, dict) else ""
                 meta = {}
                 if pi_id:
-                    meta = (stripe.PaymentIntent.retrieve(pi_id).get("metadata") or {})
+                    meta = (plain(stripe.PaymentIntent.retrieve(pi_id)).get("metadata") or {})
                 if record_sale(meta.get("kind", "kit"), meta.get("uid", ""), bt["amount"] / 100.0, date=when,
                                stripe_id=pi_id or src.get("id", ""),
                                email=((src.get("billing_details") or {}).get("email") or "") if isinstance(src, dict) else ""):
@@ -160,7 +162,7 @@ def sync_stripe(days=40):
                 out["fees"] += n
             elif typ in ("refund", "payment_refund"):
                 pi_id = src.get("payment_intent") if isinstance(src, dict) else ""
-                meta = stripe.PaymentIntent.retrieve(pi_id).get("metadata") or {} if pi_id else {}
+                meta = (plain(stripe.PaymentIntent.retrieve(pi_id)).get("metadata") or {}) if pi_id else {}
                 if record_refund(src.get("id", bt["id"]), -bt["amount"] / 100.0, uid=meta.get("uid", ""),
                                  kind=meta.get("kind", "kit"), date=when, payment_intent=pi_id or ""):
                     out["refunds"] += 1

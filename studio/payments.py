@@ -13,6 +13,17 @@ except ImportError:
     stripe = None
 
 
+def plain(obj):
+    """Objet Stripe -> dict/list Python natifs (stripe-python >= 12 n'expose plus .get() sur ses objets)."""
+    if hasattr(obj, "to_dict"):
+        obj = obj.to_dict()
+    if isinstance(obj, dict):
+        return {k: plain(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [plain(x) for x in obj]
+    return obj
+
+
 def stripe_live():
     return bool(settings.STRIPE_SECRET_KEY and stripe)
 
@@ -100,7 +111,7 @@ def paid_session(session_id, uid=None, kind=None):
         return None
     stripe.api_key = settings.STRIPE_SECRET_KEY
     try:
-        sess = stripe.checkout.Session.retrieve(session_id)
+        sess = plain(stripe.checkout.Session.retrieve(session_id))
     except Exception:
         return None
     meta = sess.get("metadata") or {}
@@ -119,11 +130,11 @@ def session_is_paid(session_id):
     """Verifie qu'une session Checkout est bien payee."""
     stripe.api_key = settings.STRIPE_SECRET_KEY
     try:
-        sess = stripe.checkout.Session.retrieve(session_id)
+        sess = plain(stripe.checkout.Session.retrieve(session_id))
         return sess.get("payment_status") == "paid", (sess.get("metadata") or {}).get("uid")
     except Exception:
         return False, None
 
 
 def verify_webhook(payload, sig_header):
-    return stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_WEBHOOK_SECRET)
+    return plain(stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_WEBHOOK_SECRET))
