@@ -4300,3 +4300,71 @@ def erp_supplier_payment(request, pk):
         **_admin.site.each_context(request), "erp_section": "suppliers", "pay": pay, "sup": pay.supplier,
         "orders": list(pay.orders.order_by("created_at")), "sepa": ledger.sepa_eligible(pay.supplier),
         "company": CompanyInfo.get()})
+
+
+# ---------------- Croissance : videos « satisfying » TikTok ----------------
+HOOKS = ["Attends la fin…", "Regarde-la se remplir", "Ta photo → peinture par numéros",
+         "Couleur après couleur", "Zone par zone, jusqu'à la dernière"]
+
+
+@staff_member_required
+def erp_videos(request):
+    """Videos TikTok / Reels / Shorts : une toile du catalogue se remplit (rendu serveur, musique generee)."""
+    import random
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from . import satisfying
+    from .models import SocialVideo
+    srcs = satisfying.sources()
+    titles = dict(srcs)
+    if request.method == "POST":
+        op = request.POST.get("op")
+        if op == "create":
+            uid = request.POST.get("canvas", "")
+            if uid not in titles:                          # liste blanche : catalogue / studio uniquement
+                messages.error(request, "Choisissez une toile du catalogue.")
+                return redirect(request.path)
+            try:
+                dur = float(request.POST.get("duration") or 0)
+            except ValueError:
+                dur = 0
+            n = max(1, min(3, int(request.POST.get("count") or 1)))
+            for i in range(n):
+                d = min(70.0, max(61.0, dur)) if dur else round(random.uniform(61, 70), 1)
+                v = SocialVideo.objects.create(
+                    canvas_uid=uid, title=titles[uid][:120], mode=request.POST.get("mode") == "colors" and "colors" or "random",
+                    duration=d, hook=request.POST.get("hook", "")[:120], end_title=request.POST.get("end_title", "")[:120],
+                    end_sub=request.POST.get("end_sub", "")[:120], music=bool(request.POST.get("music")),
+                    seed=random.randint(1, 10 ** 6))
+                satisfying.enqueue(v)
+            messages.success(request, "%d vidéo(s) en cours de génération (environ 2 à 3 min chacune)." % n)
+        elif op == "delete":
+            v = SocialVideo.objects.filter(pk=request.POST.get("id")).first()
+            if v and v.status in ("done", "error"):
+                for ext in ("mp4", "jpg"):
+                    if os.path.exists(v.path(ext)):
+                        os.remove(v.path(ext))
+                v.delete()
+        return redirect(request.path)
+    satisfying.mark_stale()
+    videos = list(SocialVideo.objects.all()[:60])
+    if request.GET.get("format") == "json":
+        return JsonResponse({"videos": [{"id": v.id, "status": v.status, "progress": v.progress} for v in videos]})
+    caption = "%s\n\n%s" % (satisfying.CAPTIONS["fr"], satisfying.HASHTAGS)
+    return render(request, "admin/erp_videos.html", {
+        **_admin.site.each_context(request), "videos": videos, "sources": srcs, "hooks": HOOKS,
+        "caption": caption, "caption_en": "%s\n\n%s" % (satisfying.CAPTIONS["en"], satisfying.HASHTAGS),
+        "pending": any(v.status in ("queued", "running") for v in videos),
+        "erp_section": "growth", "gtab": "videos"})
+
+
+@staff_member_required
+def erp_video_file(request, pk, ext):
+    from .models import SocialVideo
+    v = SocialVideo.objects.filter(pk=pk, status="done").first()
+    if not v or ext not in ("mp4", "jpg") or not os.path.isfile(v.path(ext)):
+        raise Http404
+    resp = FileResponse(open(v.path(ext), "rb"), content_type="video/mp4" if ext == "mp4" else "image/jpeg")
+    if request.GET.get("dl"):
+        resp["Content-Disposition"] = 'attachment; filename="%s"' % v.file_name
+    return resp

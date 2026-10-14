@@ -1,0 +1,124 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Vidéos TikTok · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .vf{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;align-items:end}
+ .vf label{display:grid;gap:4px;font-size:.78rem;font-weight:700;color:#33415c}
+ .vf input,.vf select{width:100%;box-sizing:border-box;font-size:.86rem;height:38px;padding:0 10px;border:1px solid #d4d4d4;border-radius:9px;background:#fff}
+ .vf .chk{display:flex;align-items:center;gap:6px;white-space:nowrap}
+ .vf .chk input{width:auto;height:auto}
+ .vf .go{display:flex;align-items:center;justify-content:space-between;gap:10px;height:38px}
+ .vl{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+ .vc{background:#fff;border:1px solid #e3e3e3;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
+ .vc video,.vc .ph{width:100%;aspect-ratio:9/16;border-radius:10px;background:#f2f4f8;object-fit:cover;display:block}
+ .vc .ph{display:grid;place-items:center;color:#7a869e;font-size:.84rem;font-weight:700;border:1px dashed #cfd7e6;text-align:center;padding:12px;box-sizing:border-box}
+ .vc h3{margin:0;font-size:.88rem;color:#12224f;line-height:1.3}
+ .vc .meta{font-size:.74rem;color:#6d7175}
+ .bar{height:6px;border-radius:9px;background:#e8edf5;overflow:hidden;width:80%;margin-top:8px}
+ .bar i{display:block;height:100%;background:#2f6bf2;transition:width .4s}
+ .vc .acts{display:flex;gap:6px;flex-wrap:wrap}
+ .cap{display:grid;gap:6px}
+ .cap textarea{width:100%;box-sizing:border-box;font-size:.82rem;min-height:92px}
+ .tips{font-size:.8rem;color:#33415c;margin:0;padding-left:18px;line-height:1.55}
+</style>
+<div class="erp gx">
+  <div class="erp-head">
+    <div><h1>Vidéos TikTok</h1>
+      <div class="muted">Une toile du catalogue se remplit zone par zone, sans numéros ni interface, en format vertical 9:16 et 1080×1920. La musique est générée par le logiciel et donc libre de droits. Seules les toiles du catalogue et du studio créatif sont utilisables, jamais une photo client.</div></div>
+  </div>
+  {% include "admin/_growth_ui.html" %}{% include "admin/_growth_tabs.html" %}
+
+  <div class="card">
+    {% if sources %}
+    <form method="post" class="vf">{% csrf_token %}<input type="hidden" name="op" value="create">
+      <label style="grid-column:span 2">Toile
+        <select name="canvas" required>{% for uid, t in sources %}<option value="{{ uid }}">{{ t }}</option>{% endfor %}</select></label>
+      <label>Remplissage
+        <select name="mode"><option value="random">Aléatoire (accélère)</option><option value="colors">Couleur par couleur</option></select></label>
+      <label>Durée (61 à 70 s)
+        <input type="number" name="duration" min="61" max="70" step="0.5" placeholder="Aléatoire"></label>
+      <label>Accroche (en haut)
+        <input name="hook" list="hooks" maxlength="120" value="Attends la fin…"><datalist id="hooks">{% for h in hooks %}<option value="{{ h }}">{% endfor %}</datalist></label>
+      <label>Titre de fin <input name="end_title" maxlength="120" value="Ta photo en peinture par numéros"></label>
+      <label>Sous-titre de fin <input name="end_sub" maxlength="120" value="Crée la tienne en quelques minutes"></label>
+      <label>Variantes
+        <select name="count"><option value="1">1 vidéo</option><option value="2">2 vidéos</option><option value="3">3 vidéos</option></select></label>
+      <div class="go"><label class="chk"><input type="checkbox" name="music" value="1" checked> Musique générée</label>
+        <button class="pbtn pri">Générer</button></div>
+    </form>
+    {% else %}
+    <p class="muted">Aucune toile disponible : ajoutez d'abord des modèles au catalogue ou des images au studio créatif.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <details><summary style="cursor:pointer;font-weight:800;color:#12224f">Publier sur TikTok : légende et conseils</summary>
+      <div class="cap" style="margin-top:10px">
+        <textarea id="cap-fr" readonly>{{ caption }}</textarea>
+        <div class="acts"><button type="button" class="pbtn" data-copy="cap-fr">Copier la légende FR</button>
+          <button type="button" class="pbtn" data-copy="cap-en">Copier la légende EN</button></div>
+        <textarea id="cap-en" readonly hidden>{{ caption_en }}</textarea>
+        <ul class="tips">
+          <li>Un lien dans une vidéo TikTok n'est pas cliquable. Mettez <b>paintit.click</b> en lien dans la bio ; la vidéo y renvoie (« lien en bio »).</li>
+          <li>Pour la portée, vous pouvez remplacer la musique par un son tendance dans l'application TikTok, en baissant le volume du son d'origine.</li>
+          <li>Publiez régulièrement en alternant les deux modes, puis gardez le format qui retient le mieux (taux de visionnage complet).</li>
+        </ul>
+      </div>
+    </details>
+  </div>
+
+  {% if videos %}
+  <div class="vl">
+    {% for v in videos %}
+    <div class="vc" data-id="{{ v.id }}" data-status="{{ v.status }}">
+      {% if v.status == "done" %}
+        <video controls preload="none" playsinline poster="/admin-hub/videos/{{ v.id }}.jpg" src="/admin-hub/videos/{{ v.id }}.mp4"></video>
+      {% elif v.status == "error" %}
+        <div class="ph" style="color:#b42318">Échec du rendu<br><span style="font-weight:500">{{ v.error|truncatechars:160 }}</span></div>
+      {% else %}
+        <div class="ph"><div>{% if v.status == "running" %}Rendu en cours… <span class="pct">{% widthratio v.progress 1 100 %}</span> %{% else %}En attente{% endif %}
+          <div class="bar"><i style="width:{% widthratio v.progress 1 100 %}%"></i></div></div></div>
+      {% endif %}
+      <h3>{{ v.title }}</h3>
+      <div class="meta">{{ v.get_mode_display }} · {{ v.duration|floatformat:0 }} s{% if not v.music %} · sans musique{% endif %} · {{ v.created_at|date:"d/m H:i" }}</div>
+      <div class="acts">
+        {% if v.status == "done" %}<a class="pbtn pri" href="/admin-hub/videos/{{ v.id }}.mp4?dl=1">Télécharger</a>{% endif %}
+        {% if v.status == "done" or v.status == "error" %}
+        <form method="post" onsubmit="return confirm('Supprimer cette vidéo ?')">{% csrf_token %}<input type="hidden" name="op" value="delete"><input type="hidden" name="id" value="{{ v.id }}"><button class="pbtn">Supprimer</button></form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+<script>
+document.querySelectorAll("[data-copy]").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var t = document.getElementById(b.dataset.copy).value, old = b.textContent;
+    navigator.clipboard.writeText(t).then(function () { b.textContent = "Copié ✓"; setTimeout(function () { b.textContent = old; }, 1500); });
+  });
+});
+{% if pending %}
+(function poll() {
+  setTimeout(function () {
+    fetch("?format=json", {credentials: "same-origin"}).then(function (r) { return r.json(); }).then(function (d) {
+      var reload = false;
+      d.videos.forEach(function (v) {
+        var c = document.querySelector('.vc[data-id="' + v.id + '"]');
+        if (!c) return;
+        if (c.dataset.status !== v.status) reload = true;
+        var pct = Math.round(v.progress * 100), i = c.querySelector(".bar i"), p = c.querySelector(".pct");
+        if (i) i.style.width = pct + "%";
+        if (p) p.textContent = pct;
+      });
+      if (reload) location.reload(); else poll();
+    }).catch(poll);
+  }, 3000);
+})();
+{% endif %}
+</script>
+{% endblock %}

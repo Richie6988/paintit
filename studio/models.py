@@ -1,4 +1,5 @@
 import os
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -1054,3 +1055,35 @@ class Campaign(models.Model):
         chans = ", ".join(pf.get(x, x) for x in self.platform_list()) or "Tous canaux"
         langs = " · ".join(x.upper() for x in self.lang_list())
         return {"zones": zones, "channels": chans, "langs": langs}
+
+
+class SocialVideo(models.Model):
+    """Video « satisfying » (TikTok / Reels / Shorts) generee a partir d'une toile du catalogue (jamais d'une photo client)."""
+    MODES = [("random", "Aléatoire (accélère à la fin)"), ("colors", "Couleur après couleur")]
+    STATUS = [("queued", "En attente"), ("running", "En cours"), ("done", "Prête"), ("error", "Erreur")]
+    canvas_uid = models.CharField("Toile", max_length=40)
+    title = models.CharField(max_length=120, blank=True, default="")
+    mode = models.CharField(max_length=8, choices=MODES, default="random")
+    duration = models.FloatField("Durée (s)", default=65)
+    hook = models.CharField("Accroche", max_length=120, blank=True, default="")
+    end_title = models.CharField("Titre de fin", max_length=120, blank=True, default="")
+    end_sub = models.CharField("Sous-titre de fin", max_length=120, blank=True, default="")
+    music = models.BooleanField("Musique", default=True)
+    seed = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=8, choices=STATUS, default="queued")
+    progress = models.FloatField(default=0)
+    error = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Vidéo TikTok"
+        verbose_name_plural = "Vidéos TikTok"
+
+    def path(self, ext="mp4"):
+        return os.path.join(settings.MEDIA_ROOT, "social", "video-%d.%s" % (self.pk, ext))
+
+    @property
+    def file_name(self):
+        return "paintit-%s-%d.mp4" % (self.mode, self.pk)

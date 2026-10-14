@@ -2,6 +2,8 @@
 import os
 import shutil
 import tempfile
+
+import numpy as np
 from unittest import mock
 
 from django.core.cache import cache
@@ -803,3 +805,54 @@ class SeoLandingTests(TestCase):
 
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+class SatisfyingVideoTests(TestCase):
+    UID = "lib-video-test"
+
+    def setUp(self):
+        import json
+        from django.contrib.auth.models import User
+        d = os.path.join(MEDIA, "orders", self.UID)
+        os.makedirs(d, exist_ok=True)
+        # deux zones : un carre troue (evenodd) et le carre du trou
+        svg = ('<svg viewBox="0 0 100 100"><path data-n="1" d="M 0 0 L 100 0 L 100 100 L 0 100 Z M 30 30 L 70 30 L 70 70 L 30 70 Z"/>'
+               '<path data-n="2" d="M 30 30 L 70 30 L 70 70 L 30 70 Z"/></svg>')
+        open(os.path.join(d, self.UID + "_digipaint.svg"), "w").write(svg)
+        json.dump([{"number": 1, "rgb": [200, 40, 40]}, {"number": 2, "rgb": [20, 40, 200]}],
+                  open(os.path.join(d, self.UID + "_colors.json"), "w"))
+        DigitalCanvas.objects.create(uid=self.UID, source="library", title="Rose")
+        DigitalCanvas.objects.create(uid="client-photo", source="digital")      # commande client : jamais proposee
+        User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
+        self.client.login(username="boss", password="pw-Secret-123")
+
+    def test_zones_cover_canvas_and_only_catalogue_sources(self):
+        from studio import satisfying
+        labels, colors, numbers, areas, edge = satisfying.load_zones(self.UID, 100, 100)
+        self.assertEqual((labels < 0).mean(), 0)                               # trou rempli par la zone 2
+        self.assertEqual(int(numbers[labels[50, 50]]), 2)
+        self.assertEqual(int(numbers[labels[5, 5]]), 1)
+        self.assertEqual([u for u, _t in satisfying.sources()], [self.UID])
+        start = satisfying.schedule(50, np.arange(50) % 5, "random", 60)
+        self.assertTrue(start.min() >= 0 and start.max() <= 60)
+
+    def test_render_short_video(self):
+        from studio import satisfying
+        out = os.path.join(MEDIA, "t.mp4")
+        satisfying.render(self.UID, out, duration=1.0, hook="Attends la fin 🎨", end_title="Fin", end_sub="x")
+        self.assertGreater(os.path.getsize(out), 1000)
+
+    def test_admin_page_whitelists_canvas(self):
+        from studio.models import SocialVideo
+        self.assertContains(self.client.get("/admin-hub/videos/"), "Vidéos TikTok")
+        with mock.patch("studio.satisfying.enqueue") as enq:
+            self.client.post("/admin-hub/videos/", {"op": "create", "canvas": "client-photo"})
+            self.assertEqual(SocialVideo.objects.count(), 0)
+            self.client.post("/admin-hub/videos/", {"op": "create", "canvas": self.UID, "count": "2", "music": "1"})
+        self.assertEqual(SocialVideo.objects.count(), 2)
+        self.assertEqual(enq.call_count, 2)
+        self.assertTrue(all(61 <= v.duration <= 70 for v in SocialVideo.objects.all()))
+        v = SocialVideo.objects.first()
+        self.assertEqual(self.client.get("/admin-hub/videos/?format=json").json()["videos"][0]["status"], "queued")
+        self.assertEqual(self.client.get("/admin-hub/videos/%d.mp4" % v.pk).status_code, 404)
