@@ -40,13 +40,13 @@
         <select name="mode"><option value="random">Aléatoire (accélère)</option><option value="colors">Couleur par couleur</option></select></label>
       <label>Durée (61 à 70 s)
         <input type="number" name="duration" min="61" max="70" step="0.5" placeholder="Aléatoire"></label>
-      <label>Accroche (en haut)
-        <input name="hook" list="hooks" maxlength="120" value="Attends la fin…"><datalist id="hooks">{% for h in hooks %}<option value="{{ h }}">{% endfor %}</datalist></label>
-      <label>Titre de fin <input name="end_title" maxlength="120" value="Ta photo en peinture par numéros"></label>
-      <label>Sous-titre de fin <input name="end_sub" maxlength="120" value="Crée la tienne en quelques minutes"></label>
+      <label style="grid-column:span 2">Accroche (en haut) · {zones} et {colors} = chiffres réels de la toile
+        <input name="hook" list="hooks" maxlength="120" value="{{ hooks.0 }}"><datalist id="hooks">{% for h in hooks %}<option value="{{ h }}">{% endfor %}</datalist></label>
+      <label>Musique générée
+        <select name="music_style">{% for k, l in music_styles %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select></label>
       <label>Variantes
         <select name="count"><option value="1">1 vidéo</option><option value="2">2 vidéos</option><option value="3">3 vidéos</option></select></label>
-      <div class="go"><label class="chk"><input type="checkbox" name="music" value="1" checked> Musique générée</label>
+      <div class="go" style="justify-content:flex-end">
         <button class="pbtn pri">Générer</button></div>
     </form>
     {% else %}
@@ -83,7 +83,7 @@
           <div class="bar"><i style="width:{% widthratio v.progress 1 100 %}%"></i></div></div></div>
       {% endif %}
       <h3>{{ v.title }}</h3>
-      <div class="meta">{{ v.get_mode_display }} · {{ v.duration|floatformat:0 }} s{% if not v.music %} · sans musique{% endif %} · {{ v.created_at|date:"d/m H:i" }}</div>
+      <div class="meta">{{ v.get_mode_display }} · {{ v.duration|floatformat:0 }} s{% if v.music %} · musique {{ v.music_style }}{% else %} · sans musique{% endif %} · {{ v.created_at|date:"d/m H:i" }}</div>
       <div class="acts">
         {% if v.status == "done" %}<a class="pbtn pri" href="/admin-hub/videos/{{ v.id }}.mp4?dl=1">Télécharger</a>{% endif %}
         {% if v.status == "done" or v.status == "error" %}

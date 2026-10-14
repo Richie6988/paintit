@@ -840,8 +840,10 @@ class SatisfyingVideoTests(TestCase):
     def test_render_short_video(self):
         from studio import satisfying
         out = os.path.join(MEDIA, "t.mp4")
-        satisfying.render(self.UID, out, duration=1.0, hook="Attends la fin 🎨", end_title="Fin", end_sub="x")
-        self.assertGreater(os.path.getsize(out), 1000)
+        for style in ("ambient", "electro", "space", "none"):
+            satisfying.render(self.UID, out, duration=1.0, hook="{zones} zones, {colors} colors 🎨", music_style=style)
+            self.assertGreater(os.path.getsize(out), 1000)
+        self.assertEqual(satisfying.hook_text("{zones} zones / {colors}", 869, 32), "869 zones / 32")
 
     def test_admin_page_whitelists_canvas(self):
         from studio.models import SocialVideo
@@ -849,10 +851,10 @@ class SatisfyingVideoTests(TestCase):
         with mock.patch("studio.satisfying.enqueue") as enq:
             self.client.post("/admin-hub/videos/", {"op": "create", "canvas": "client-photo"})
             self.assertEqual(SocialVideo.objects.count(), 0)
-            self.client.post("/admin-hub/videos/", {"op": "create", "canvas": self.UID, "count": "2", "music": "1"})
+            self.client.post("/admin-hub/videos/", {"op": "create", "canvas": self.UID, "count": "2", "music_style": "space"})
         self.assertEqual(SocialVideo.objects.count(), 2)
         self.assertEqual(enq.call_count, 2)
-        self.assertTrue(all(61 <= v.duration <= 70 for v in SocialVideo.objects.all()))
+        self.assertTrue(all(61 <= v.duration <= 70 and v.music_style == "space" for v in SocialVideo.objects.all()))
         v = SocialVideo.objects.first()
         self.assertEqual(self.client.get("/admin-hub/videos/?format=json").json()["videos"][0]["status"], "queued")
         self.assertEqual(self.client.get("/admin-hub/videos/%d.mp4" % v.pk).status_code, 404)

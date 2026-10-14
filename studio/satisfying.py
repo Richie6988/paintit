@@ -19,7 +19,8 @@ from django.conf import settings
 from PIL import Image, ImageDraw, ImageFont
 
 W, H, FPS = 1080, 1920, 30
-INTRO, OUTRO = 1.2, 3.8                       # toile vide au debut, toile finie + carte de fin
+INTRO, OUTRO = 0.3, 3.4                       # ca demarre tout de suite ; fin = toile finie + nom qui se colorie
+TOP, SIDE, CANVAS_H = 330, 24, 1250            # zone accroche en haut, marges laterales, hauteur max de la toile
 BG = (247, 244, 238)
 INK = (18, 34, 79)
 _PATH_RX = re.compile(r'<path\b[^>]*?data-n="(\d+)"[^>]*?d="([^"]+)"', re.S)
@@ -60,7 +61,8 @@ def _palette(uid):
 
 def load_zones(uid, box_w, box_h):
     """-> (labels HxW int32 [-1 = fond], zone_colors (N,3) uint8, zone_numbers (N,), area (N,), outline mask)"""
-    svg = open(_svg_path(uid), encoding="utf-8").read()
+    with open(_svg_path(uid), encoding="utf-8") as fh:
+        svg = fh.read()
     vb = re.search(r'viewBox="([\d.\s-]+)"', svg)
     vx, vy, vw, vh = [float(x) for x in vb.group(1).split()]
     scale = min(box_w / vw, box_h / vh)
@@ -104,64 +106,133 @@ def _area(pts):
     return 0.5 * sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]))
 
 
-def schedule(n_zones, numbers, mode, fill_seconds, seed=0):
-    """Instant de debut de remplissage de chaque zone (secondes, a partir de la fin de l'intro)."""
+def schedule(n_zones, numbers, mode, fill_seconds, seed=0, areas=None):
+    """Instant de debut de remplissage de chaque zone (secondes, a partir de la fin de l'intro).
+    Rythme : c(u) = N (0.3 u + 0.7 u^3) -> ca demarre tout de suite (part lineaire) et explose a la fin (part cubique)."""
     rng = np.random.default_rng(seed)
-    if mode == "colors":
-        order_cols = list(dict.fromkeys(rng.permutation(np.unique(numbers)).tolist()))
-        groups = [np.where(numbers == c)[0] for c in order_cols]
-        # chaque couleur recoit un temps proportionnel a son nombre de zones, avec une acceleration globale
-        start = np.zeros(n_zones)
-        k = 1.8
-        total = n_zones
-        done = 0
-        for g in groups:
-            idx = rng.permutation(g)
-            for j, z in enumerate(idx):
-                frac = (done + j) / max(1, total)
-                start[z] = fill_seconds * frac ** (1 / k)
-            done += len(idx)
-        return start
-    order = rng.permutation(n_zones)
-    k = 2.2                                     # c(t) = N (t/T)^k : lent au debut, tres rapide a la fin
+    u = np.linspace(0, 1, 2001)
+    frac = 0.3 * u + 0.7 * u ** 3
+    when = lambda rank: fill_seconds * np.interp(rank / max(1, n_zones), frac, u)
     start = np.zeros(n_zones)
+    if mode == "colors":
+        order_cols = rng.permutation(np.unique(numbers)).tolist()
+        rank = 0
+        for c in order_cols:
+            for z in rng.permutation(np.where(numbers == c)[0]):
+                start[z] = when(rank); rank += 1
+        return start
+    # aleatoire, mais les grandes zones sortent plutot en premier : la toile prend vie des la 1re seconde
+    w = np.ones(n_zones) if areas is None else np.maximum(np.asarray(areas, float), 1e-6) ** 0.35
+    order = np.argsort(-rng.random(n_zones) ** (1.0 / w))
     for rank, z in enumerate(order):
-        start[z] = fill_seconds * (rank / max(1, n_zones)) ** (1 / k)
+        start[z] = when(rank)
     return start
 
 
-def music(path, duration, fill_end, seed=0, sr=44100):
-    """Musique d'ambiance generee (libre de droits) : nappe d'accords + arpege dont le tempo suit le remplissage."""
-    rng = np.random.default_rng(seed)
-    t = np.arange(int(duration * sr)) / sr
-    out = np.zeros_like(t)
-    prog = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]]   # Am F C G
-    hz = lambda m: 440.0 * 2 ** ((m - 69) / 12)
-    bar = 4.0
-    for i, start in enumerate(np.arange(0, duration, bar)):
-        chord = prog[i % len(prog)]
-        a, b = int(start * sr), int(min(duration, start + bar + 1.0) * sr)
-        tt = t[a:b] - start
-        env = np.minimum(1, tt / 0.8) * np.exp(-np.maximum(0, tt - bar) * 3)
-        for m in chord:
-            out[a:b] += 0.05 * env * (np.sin(2 * np.pi * hz(m) * tt) + 0.3 * np.sin(2 * np.pi * hz(m) * 2 * tt))
-    # arpege : intervalle entre notes de 0.5 s a 0.12 s a mesure que la toile se remplit
-    pos = 0.6
-    step = 0
-    while pos < duration - 0.3:
-        prog_i = int(pos // bar) % len(prog)
-        m = prog[prog_i][step % 3] + 12 * (1 + (step // 3) % 2)
-        a = int(pos * sr); n = int(0.6 * sr)
-        tt = np.arange(min(n, len(t) - a)) / sr
-        out[a:a + len(tt)] += 0.07 * np.exp(-tt * 6) * np.sin(2 * np.pi * hz(m) * tt)
-        frac = min(1.0, pos / max(1e-3, fill_end))
-        pos += 0.5 - 0.38 * frac ** 2 if pos < fill_end else 0.5
-        step += 1
-    # « ding » final
-    a = int(fill_end * sr)
-    tt = np.arange(min(int(2.5 * sr), len(t) - a)) / sr
+# ---------------- Musique generee (libre de droits) ----------------
+MUSIC_STYLES = [("ambient", "Douce"), ("electro", "Électro"), ("space", "Space"), ("none", "Aucune")]
+_hz = lambda m: 440.0 * 2 ** ((m - 69) / 12)
+
+
+def _add(out, sr, at, sig):
+    a = int(at * sr)
+    if a >= len(out):
+        return
+    sig = sig[:len(out) - a]
+    out[a:a + len(sig)] += sig
+
+
+def _tone(sr, dur, f, amp, decay, harm=(1.0,), detune=0.0):
+    tt = np.arange(int(dur * sr)) / sr
+    s = sum(h * np.sin(2 * np.pi * f * (k + 1) * tt) for k, h in enumerate(harm) if h)
+    if detune:
+        s = s + np.sin(2 * np.pi * f * (1 + detune) * tt)
+    return amp * np.exp(-tt * decay) * s
+
+
+def _ding(out, sr, at):
     for m in (72, 76, 79, 84):
-        out[a:a + len(tt)] += 0.06 * np.exp(-tt * 2.2) * np.sin(2 * np.pi * hz(m) * tt)
+        _add(out, sr, at, _tone(sr, 2.5, _hz(m), 0.06, 2.2))
+
+
+def _ambient(out, sr, duration, fill_end):
+    prog = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]]   # Am F C G
+    bar = 4.0
+    t = np.arange(int((bar + 1) * sr)) / sr
+    for i, st in enumerate(np.arange(0, duration, bar)):
+        env = np.minimum(1, t / 0.8) * np.exp(-np.maximum(0, t - bar) * 3)
+        for m in prog[i % 4]:
+            _add(out, sr, st, 0.05 * env * (np.sin(2 * np.pi * _hz(m) * t) + 0.3 * np.sin(4 * np.pi * _hz(m) * t)))
+    pos, step = 0.3, 0
+    while pos < duration - 0.3:
+        m = prog[int(pos // bar) % 4][step % 3] + 12 * (1 + (step // 3) % 2)
+        _add(out, sr, pos, _tone(sr, 0.6, _hz(m), 0.07, 6))
+        f = min(1.0, pos / max(1e-3, fill_end))
+        pos += 0.42 - 0.3 * f ** 2 if pos < fill_end else 0.5
+        step += 1
+
+
+def _electro(out, sr, duration, fill_end, rng):
+    prog = [[45, 57, 60, 64], [41, 53, 57, 60], [48, 55, 60, 64], [43, 55, 59, 62]]   # Am F C G (basse + accord)
+    beat = 60 / 124.0
+    tk = np.arange(int(0.35 * sr)) / sr
+    kick = 0.32 * np.sin(2 * np.pi * (45 * tk + 90 / 18 * (1 - np.exp(-18 * tk)))) * np.exp(-tk * 9)
+    nz = rng.standard_normal(int(0.06 * sr)); hat = 0.05 * np.diff(nz, prepend=0) * np.exp(-np.arange(len(nz)) / sr * 60)
+    saw = [1, .5, .33, .25, .2, .16]
+    i, pos = 0, 0.0
+    while pos < min(duration, fill_end + 0.05):
+        bar = int(i // 4)
+        ch = prog[bar % 4]
+        f = pos / max(1e-3, fill_end)
+        _add(out, sr, pos, kick)
+        if f > 0.12:
+            _add(out, sr, pos + beat / 2, hat)
+        for e in (0, 0.5):                                          # basse en croches
+            _add(out, sr, pos + e * beat, _tone(sr, beat * 0.45, _hz(ch[0]), 0.05, 9, saw))
+        if f > 0.35:                                                # arpege en doubles croches
+            for q in range(4):
+                m = ch[1 + (i * 4 + q) % 3] + 12
+                _add(out, sr, pos + q * beat / 4, _tone(sr, beat / 3, _hz(m), 0.03 + 0.02 * f, 14, (1, 0, .33, 0, .2)))
+        if i % 4 == 0:                                              # nappe
+            for m in ch[1:]:
+                _add(out, sr, pos, _tone(sr, beat * 4, _hz(m), 0.018, 0.6, (1, .4), 0.004))
+        i += 1; pos += beat
+    for m in prog[0][1:]:                                           # apres le « drop » : nappe seule
+        _add(out, sr, fill_end, _tone(sr, max(0.5, duration - fill_end), _hz(m), 0.03, 0.5, (1, .4), 0.004))
+
+
+def _space(out, sr, duration, fill_end, rng):
+    prog = [[50, 57, 62, 64], [46, 53, 58, 62], [41, 48, 53, 57], [48, 55, 60, 62]]   # Dm9 Bb F Cadd9
+    bar = 6.0
+    for i, st in enumerate(np.arange(-1, duration, bar)):
+        tt = np.arange(int((bar + 2.5) * sr)) / sr
+        env = np.minimum(1, tt / 2.0) * np.exp(-np.maximum(0, tt - bar) * 1.2) * (0.8 + 0.2 * np.sin(2 * np.pi * 0.25 * tt))
+        for k, m in enumerate(prog[i % 4]):
+            f = _hz(m)
+            s = np.sin(2 * np.pi * f * tt) + np.sin(2 * np.pi * f * 1.004 * tt) + 0.25 * np.sin(2 * np.pi * f * 2.002 * tt)
+            _add(out, sr, max(0, st), (0.035 if k else 0.05) * env * s)
+    penta = [74, 76, 79, 81, 83, 86, 88, 91]
+    pos = 0.4
+    while pos < fill_end:                                           # etoiles : de plus en plus denses
+        f = pos / max(1e-3, fill_end)
+        _add(out, sr, pos, _tone(sr, 1.6, _hz(int(rng.choice(penta))), 0.045, 3.5, (1, 0, .15)))
+        pos += max(0.11, 0.9 - 0.8 * f ** 1.5) * rng.uniform(0.7, 1.3)
+    d = int(0.38 * sr)                                              # echo spatial
+    for _ in range(3):
+        out[d:] += 0.42 * out[:-d]
+
+
+def music(path, duration, fill_end, seed=0, sr=44100, style="ambient"):
+    """Musique generee par le code (donc libre de droits), synchronisee sur le remplissage + « ding » final."""
+    rng = np.random.default_rng(seed)
+    out = np.zeros(int(duration * sr))
+    if style == "electro":
+        _electro(out, sr, duration, fill_end, rng)
+    elif style == "space":
+        _space(out, sr, duration, fill_end, rng)
+    else:
+        _ambient(out, sr, duration, fill_end)
+    _ding(out, sr, fill_end)
     out *= 0.9 / max(1e-6, np.abs(out).max())
     fade = min(len(out), int(1.2 * sr))
     out[-fade:] *= np.linspace(1, 0, fade)
@@ -176,45 +247,49 @@ def _clean(text):
     return " ".join("".join(ch for ch in (text or "") if ord(ch) < 0x2190).split())
 
 
-def _text_layer(hook, end_title, end_sub):
-    """Calques texte pre-calcules (RGBA) : accroche en haut, marque en bas, carte de fin."""
-    hook, end_title, end_sub = _clean(hook), _clean(end_title), _clean(end_sub)
-    top = Image.new("RGBA", (W, 330), (0, 0, 0, 0))
+def _text_layer(hook):
+    """Accroche en haut (RGBA pre-calcule)."""
+    hook = _clean(hook)
+    top = Image.new("RGBA", (W, TOP), (0, 0, 0, 0))
     d = ImageDraw.Draw(top)
     if hook:
-        f = _font(64)
-        lines = _wrap(d, hook, f, W - 140)
-        y = 150                                 # sous la barre « Abonnements | Pour toi » de TikTok
-        for l in lines[:2]:
+        f = _font(62)
+        lines = _wrap(d, hook, f, W - 120)[:3]
+        y = 120 + (3 - len(lines)) * 36
+        for l in lines:
             bw = d.textbbox((0, 0), l, font=f)[2]
             d.text(((W - bw) / 2, y), l, font=f, fill=INK)
-            y += 78
-    bottom = Image.new("RGBA", (W, 80), (0, 0, 0, 0))
-    d = ImageDraw.Draw(bottom)
-    f = _font(46)
-    txt = "paintit.click"
-    bw = d.textbbox((0, 0), txt, font=f)[2]
-    d.text(((W - bw) / 2, 8), txt, font=f, fill=(*INK, 230))
-    # carte de fin dans la zone sure (TikTok masque ~150 px en haut, ~400 px en bas et la colonne de droite)
-    end = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(end)
-    cy = 960
-    d.rounded_rectangle([60, cy, W - 60, cy + 540], radius=40, fill=(18, 34, 79, 240))
-    f1, f2 = _font(84), _font(50)
-    y = cy + 50
-    for l in _wrap(d, end_title, f1, W - 120)[:2]:
-        bw = d.textbbox((0, 0), l, font=f1)[2]
-        d.text(((W - bw) / 2, y), l, font=f1, fill=(255, 255, 255)); y += 100
-    for l in _wrap(d, end_sub, f2, W - 140)[:2]:
-        bw = d.textbbox((0, 0), l, font=f2)[2]
-        d.text(((W - bw) / 2, y + 10), l, font=f2, fill=(205, 218, 245)); y += 64
-    pill = "paintit.click"
-    fp = _font(60)
-    bw = d.textbbox((0, 0), pill, font=fp)[2]
-    px, py = (W - bw - 90) / 2, cy + 380
-    d.rounded_rectangle([px, py, px + bw + 90, py + 110], radius=55, fill=(47, 107, 242))
-    d.text((px + 45, py + 14), pill, font=fp, fill=(255, 255, 255))
-    return np.array(top), np.array(bottom), np.array(end)
+            y += 74
+    return np.array(top)
+
+
+BRAND = "paintit.click"
+
+
+def _brand_letters(colors):
+    """Le nom sous la toile, lettre par lettre : version « a peindre » (contour) et version coloriee (palette de la toile)."""
+    f = _font(124)
+    probe = ImageDraw.Draw(Image.new("L", (1, 1)))
+    l, t, r, b = probe.textbbox((0, 0), BRAND, font=f, stroke_width=4)
+    bw, bh = r - l, b - t
+    import colorsys
+    # toutes les couleurs de la toile (sauf les trop claires, illisibles sur le fond), etalees par teinte
+    pal = sorted({tuple(int(v) for v in c) for c in colors.astype(int) if c.sum() < 3 * 215},
+                 key=lambda c: colorsys.rgb_to_hsv(*(v / 255 for v in c))[0])
+    nl = sum(1 for ch in BRAND if ch not in " .")
+    vivid = [pal[int(i * len(pal) / nl)] for i in range(nl)] if pal else [INK]
+    empty = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
+    ImageDraw.Draw(empty).text((-l, -t), BRAND, font=f, fill=(255, 255, 255), stroke_width=4, stroke_fill=(150, 158, 175))
+    letters, k = [], 0
+    for i, ch in enumerate(BRAND):
+        if ch == " ":
+            continue
+        x0 = int(probe.textlength(BRAND[:i], font=f))
+        im = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
+        c = vivid[k % len(vivid)] if ch != "." else INK
+        ImageDraw.Draw(im).text((-l + x0, -t), ch, font=f, fill=c, stroke_width=4, stroke_fill=tuple(int(v * 0.6) for v in c))
+        letters.append(np.array(im)); k += ch != "."
+    return np.array(empty), letters
 
 
 def _wrap(d, text, f, maxw):
@@ -230,44 +305,49 @@ def _wrap(d, text, f, maxw):
     return lines
 
 
-def _blend(frame, layer, x, y):
+def _blend(frame, layer, x, y, k=1.0):
     h, w = layer.shape[:2]
-    a = layer[..., 3:4].astype(np.float32) / 255.0
+    a = layer[..., 3:4].astype(np.float32) * (k / 255.0)
     roi = frame[y:y + h, x:x + w].astype(np.float32)
     frame[y:y + h, x:x + w] = (roi * (1 - a) + layer[..., :3] * a).astype(np.uint8)
 
 
+def hook_text(hook, n_zones, n_colors):
+    """Remplace {zones} et {colors} par les vrais chiffres de la toile."""
+    return (hook or "").replace("{zones}", str(n_zones)).replace("{colors}", str(n_colors))
+
+
 def render(uid, out_path, mode="random", duration=65.0, hook="", end_title="", end_sub="", with_music=True,
-           seed=0, progress=None):
+           seed=0, progress=None, music_style="ambient"):
     """Genere la video MP4. -> chemin. `progress(f)` recoit 0..1."""
     import imageio_ffmpeg
-    box_w, box_h = W - 120, H - 330 - 520
-    labels, colors, numbers, areas, edge = load_zones(uid, box_w, box_h)
+    from PIL import ImageFilter
+    labels, colors, numbers, areas, edge = load_zones(uid, W - 2 * SIDE, CANVAS_H)
     n = len(colors)
     ch, cw = labels.shape
-    ox, oy = (W - cw) // 2, 330
+    ox, oy = (W - cw) // 2, TOP + (CANVAS_H - ch) // 2
     fill_seconds = max(10.0, duration - INTRO - OUTRO)
-    start = schedule(n, numbers, mode, fill_seconds, seed) + INTRO
+    start = schedule(n, numbers, mode, fill_seconds, seed, areas) + INTRO
     fade = 0.22
-    top, bottom, end = _text_layer(hook, end_title, end_sub)
+    top = _text_layer(hook_text(hook, n, len(np.unique(numbers))))
+    empty, letters = _brand_letters(colors)
+    bx, by = (W - empty.shape[1]) // 2, oy + ch + 36
     col = colors.astype(np.float32)
     lab = np.where(labels < 0, n, labels)                       # index n = fond (blanc)
     edge_idx = np.nonzero(edge.ravel())[0]
     edge_rgb = np.array([190, 196, 210], np.uint8)
     base = np.zeros((H, W, 3), np.uint8); base[:] = BG
     sh = Image.new("L", (W, H), 0)
-    ImageDraw.Draw(sh).rounded_rectangle([ox - 6, oy + 10, ox + cw + 6, oy + ch + 22], radius=18, fill=60)
-    from PIL import ImageFilter
-    sh = np.array(sh.filter(ImageFilter.GaussianBlur(18)), np.float32)[..., None] / 255.0
+    ImageDraw.Draw(sh).rounded_rectangle([ox - 4, oy + 8, ox + cw + 4, oy + ch + 18], radius=14, fill=60)
+    sh = np.array(sh.filter(ImageFilter.GaussianBlur(16)), np.float32)[..., None] / 255.0
     base = (base * (1 - sh * 0.5)).astype(np.uint8)
-    by = min(oy + ch + 28, H - 480)
-    base_top = base.copy(); _blend(base_top, top, 0, 0); _blend(base_top, bottom, 0, by)
-    base_end = base.copy()
+    _blend(base, top, 0, 0); _blend(base, empty, bx, by)
     total_frames = int(duration * FPS)
     tmp_audio = out_path + ".wav"
     fill_end = float(start.max() + fade)
+    with_music = with_music and music_style != "none"
     if with_music:
-        music(tmp_audio, duration, fill_end, seed)
+        music(tmp_audio, duration, fill_end, seed, style=music_style)
     cmd = [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
            "-s", "%dx%d" % (W, H), "-r", str(FPS), "-i", "-"]
     if with_music:
@@ -275,6 +355,7 @@ def render(uid, out_path, mode="random", duration=65.0, hook="", end_title="", e
     cmd += ["-c:v", "libx264", "-preset", "fast", "-crf", "20", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
             out_path]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    step = 0.11                                                 # une lettre du nom se colorie toutes les 0.11 s
     try:
         pal = np.zeros((n + 1, 3), np.float32); pal[n] = 255
         for fi in range(total_frames):
@@ -285,12 +366,13 @@ def render(uid, out_path, mode="random", duration=65.0, hook="", end_title="", e
             done = t > fill_end
             if not done:
                 canvas.reshape(-1, 3)[edge_idx] = edge_rgb            # contours des zones (sans numeros)
-            frame = (base_top if not done else base_end).copy()
+            frame = base.copy()
             frame[oy:oy + ch, ox:ox + cw] = canvas
-            if t > fill_end + 0.6:
-                k = min(1.0, (t - fill_end - 0.6) / 0.5)
-                layer = end.copy(); layer[..., 3] = (layer[..., 3] * k).astype(np.uint8)
-                _blend(frame, layer, 0, 0)
+            if t > fill_end + 0.2:                                    # fin : le nom se colorie lettre par lettre
+                for i, layer in enumerate(letters):
+                    k = min(1.0, (t - fill_end - 0.2 - i * step) / 0.18)
+                    if k > 0:
+                        _blend(frame, layer, bx, by, k)
             proc.stdin.write(frame.tobytes())
             if progress and fi % 30 == 0:
                 progress(fi / total_frames)
@@ -344,8 +426,8 @@ def _job(pk):
                 last[0] = f
                 SocialVideo.objects.filter(pk=pk).update(progress=round(f, 3))
         tmp = v.path() + ".part.mp4"
-        render(v.canvas_uid, tmp, mode=v.mode, duration=v.duration, hook=v.hook, end_title=v.end_title,
-               end_sub=v.end_sub, with_music=v.music, seed=v.seed, progress=prog)
+        render(v.canvas_uid, tmp, mode=v.mode, duration=v.duration, hook=v.hook, with_music=v.music,
+               music_style=v.music_style, seed=v.seed, progress=prog)
         os.replace(tmp, v.path())
         thumbnail(v.canvas_uid, v.path("jpg"))
         SocialVideo.objects.filter(pk=pk).update(status="done", progress=1, error="")

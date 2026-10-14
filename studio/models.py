@@ -1069,6 +1069,7 @@ class SocialVideo(models.Model):
     end_title = models.CharField("Titre de fin", max_length=120, blank=True, default="")
     end_sub = models.CharField("Sous-titre de fin", max_length=120, blank=True, default="")
     music = models.BooleanField("Musique", default=True)
+    music_style = models.CharField("Style de musique", max_length=10, default="ambient")
     seed = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=8, choices=STATUS, default="queued")
     progress = models.FloatField(default=0)

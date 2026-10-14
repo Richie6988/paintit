@@ -4303,8 +4303,9 @@ def erp_supplier_payment(request, pk):
 
 
 # ---------------- Croissance : videos « satisfying » TikTok ----------------
-HOOKS = ["Attends la fin…", "Regarde-la se remplir", "Ta photo → peinture par numéros",
-         "Couleur après couleur", "Zone par zone, jusqu'à la dernière"]
+HOOKS = ["How long would it take you to paint {zones} zones with {colors} colors?",
+         "Combien de temps pour peindre {zones} zones avec {colors} couleurs ?",
+         "Wait for the last zone…", "Your photo → paint by numbers", "Attends la fin…"]
 
 
 @staff_member_required
@@ -4329,12 +4330,13 @@ def erp_videos(request):
             except ValueError:
                 dur = 0
             n = max(1, min(3, int(request.POST.get("count") or 1)))
+            style = request.POST.get("music_style", "ambient")
+            style = style if style in dict(satisfying.MUSIC_STYLES) else "ambient"
             for i in range(n):
                 d = min(70.0, max(61.0, dur)) if dur else round(random.uniform(61, 70), 1)
                 v = SocialVideo.objects.create(
                     canvas_uid=uid, title=titles[uid][:120], mode=request.POST.get("mode") == "colors" and "colors" or "random",
-                    duration=d, hook=request.POST.get("hook", "")[:120], end_title=request.POST.get("end_title", "")[:120],
-                    end_sub=request.POST.get("end_sub", "")[:120], music=bool(request.POST.get("music")),
+                    duration=d, hook=request.POST.get("hook", "")[:120], music=style != "none", music_style=style,
                     seed=random.randint(1, 10 ** 6))
                 satisfying.enqueue(v)
             messages.success(request, "%d vidéo(s) en cours de génération (environ 2 à 3 min chacune)." % n)
@@ -4353,6 +4355,7 @@ def erp_videos(request):
     caption = "%s\n\n%s" % (satisfying.CAPTIONS["fr"], satisfying.HASHTAGS)
     return render(request, "admin/erp_videos.html", {
         **_admin.site.each_context(request), "videos": videos, "sources": srcs, "hooks": HOOKS,
+        "music_styles": satisfying.MUSIC_STYLES,
         "caption": caption, "caption_en": "%s\n\n%s" % (satisfying.CAPTIONS["en"], satisfying.HASHTAGS),
         "pending": any(v.status in ("queued", "running") for v in videos),
         "erp_section": "growth", "gtab": "videos"})
