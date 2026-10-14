@@ -4,6 +4,29 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _load_env_file(path):
+    """Charge <projet>/.env (CLE=valeur par ligne) : meme configuration pour le site (systemd), le cron et le shell.
+    Les variables deja definies dans l'environnement restent prioritaires."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, val = line.split("=", 1)
+                key, val = key.strip().removeprefix("export ").strip(), val.strip()
+                if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+                    val = val[1:-1]
+                elif " #" in val:               # commentaire en fin de ligne
+                    val = val.split(" #", 1)[0].rstrip()
+                os.environ.setdefault(key, val)
+    except FileNotFoundError:
+        pass
+
+
+_load_env_file(BASE_DIR / ".env")
+
+
 def env_bool(name, default="0"):
     return os.environ.get(name, default) == "1"
 
