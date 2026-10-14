@@ -9,6 +9,7 @@
  .vf label{display:grid;gap:4px;font-size:.78rem;font-weight:700;color:#33415c}
  .vf input,.vf select{width:100%;box-sizing:border-box;font-size:.86rem;height:38px;padding:0 10px;border:1px solid #d4d4d4;border-radius:9px;background:#fff}
  .vf label[hidden]{display:none}
+ .hk{display:flex;gap:6px}.hk select{flex:1}.hk .pbtn{white-space:nowrap}
  .vf .chk{display:flex;align-items:center;gap:6px;white-space:nowrap}
  .vf .chk input{width:auto;height:auto}
  .vf .go{display:flex;align-items:center;justify-content:space-between;gap:10px;height:38px}
@@ -23,6 +24,8 @@
  .pk.imp img{position:absolute;inset:0}
  .imp-t{position:static!important;background:none!important;color:#2f6bf2!important;font-size:.8rem!important;display:grid;gap:2px;white-space:normal!important}
  .imp-t small{color:#7a869e;font-weight:600}
+ .ttl{display:flex;gap:4px}.ttl input{flex:1;min-width:0;font-size:.78rem;border:1px solid #e3e7ef;border-radius:8px;padding:6px 8px;background:#fafbfd}
+ .ttl .pbtn{padding:5px 9px}
  .vl{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
  .vc{background:#fff;border:1px solid #e3e3e3;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
  .vc video,.vc .ph{width:100%;aspect-ratio:9/16;border-radius:10px;background:#f2f4f8;object-fit:cover;display:block}
@@ -64,12 +67,13 @@
       <label>Durée (61 à 70 s)
         <input type="number" name="duration" min="61" max="70" step="0.5" placeholder="Aléatoire"></label>
       <label style="grid-column:span 2">Accroche (en haut) · {zones} et {colors} = chiffres réels de la toile
-        <input name="hook" list="hooks" maxlength="120" value="{{ hooks.0 }}"><datalist id="hooks">{% for h in hooks %}<option value="{{ h }}">{% endfor %}</datalist></label>
+        <div class="hk"><select id="hook-pick">{% for g, lines in hooks %}<optgroup label="{{ g }}">{% for h in lines %}<option>{{ h }}</option>{% endfor %}</optgroup>{% endfor %}<option value="">Texte libre…</option></select></div>
+        <input name="hook" id="hook" maxlength="120" value="{{ hooks.0.1.0 }}" placeholder="Votre accroche (ou vide = sans texte)"></label>
       <label>Musique générée
         <select name="music_style">{% for k, l in music_styles %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select></label>
       <label>Variantes
         <select name="count"><option value="1">1 vidéo</option><option value="2">2 vidéos</option><option value="3">3 vidéos</option></select></label>
-      <div class="go" style="justify-content:flex-end">
+      <div class="go"><label class="chk"><input type="checkbox" name="before_after" value="1" checked> Avant / après (photo 1 s)</label>
         <button class="pbtn pri">Générer</button></div>
     </form>
   </div>
@@ -103,8 +107,11 @@
           <div class="bar"><i style="width:{% widthratio v.progress 1 100 %}%"></i></div></div></div>
       {% endif %}
       <h3>{{ v.title }}</h3>
-      <div class="meta">{{ v.get_mode_display }} · {{ v.duration|floatformat:0 }} s{% if v.music %} · musique {{ v.music_style }}{% else %} · sans musique{% endif %} · {{ v.created_at|date:"d/m H:i" }}</div>
-      <div class="acts">
+      <div class="meta">{{ v.get_mode_display }} · {{ v.duration|floatformat:0 }} s{% if v.before_after %} · avant/après{% endif %}{% if v.music %} · musique {{ v.music_style }}{% else %} · sans musique{% endif %} · {{ v.created_at|date:"d/m H:i" }}</div>
+      {% if v.status == "done" %}
+      <div class="ttl" data-i="{{ v.id }}"><input readonly aria-label="Titre TikTok">
+        <button type="button" class="pbtn" data-next title="Autre titre">↻</button><button type="button" class="pbtn" data-cp>Copier</button></div>
+      {% endif %}      <div class="acts">
         {% if v.status == "done" %}<a class="pbtn pri" href="/admin-hub/videos/{{ v.id }}.mp4?dl=1">Télécharger</a>{% endif %}
         {% if v.status == "done" or v.status == "error" %}
         <form method="post" onsubmit="return confirm('Supprimer cette vidéo ?')">{% csrf_token %}<input type="hidden" name="op" value="delete"><input type="hidden" name="id" value="{{ v.id }}"><button class="pbtn">Supprimer</button></form>
@@ -115,7 +122,20 @@
   </div>
   {% endif %}
 </div>
+{{ titles|json_script:"vtitles" }}
 <script>
+(function () {
+  var T = JSON.parse(document.getElementById("vtitles").textContent), tags = "{{ hashtags|escapejs }}";
+  document.querySelectorAll(".ttl").forEach(function (box) {
+    var i = (+box.dataset.i) % T.length, inp = box.querySelector("input");
+    var show = function () { inp.value = T[i] + " " + tags; };
+    show();
+    box.querySelector("[data-next]").addEventListener("click", function () { i = (i + 1) % T.length; show(); });
+    box.querySelector("[data-cp]").addEventListener("click", function (e) {
+      var b = e.target; navigator.clipboard.writeText(inp.value).then(function () { b.textContent = "✓"; setTimeout(function () { b.textContent = "Copier"; }, 1200); });
+    });
+  });
+})();
 (function () {
   var f = document.getElementById("vimg"), prev = document.getElementById("vimg-prev"), card = f.closest(".pk");
   f.addEventListener("change", function () {
@@ -139,6 +159,17 @@
     if (f.files && f.files[0]) { b.textContent = "Création de la toile…"; }
     b.disabled = true;
   });
+})();
+(function () {
+  var pick = document.getElementById("hook-pick"), inp = document.getElementById("hook");
+  pick.addEventListener("change", function () { inp.value = pick.value; if (!pick.value) inp.focus(); });
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "pbtn"; b.textContent = "Au hasard";
+  b.addEventListener("click", function () {
+    var o = pick.querySelectorAll("optgroup option"), r = o[Math.floor(Math.random() * o.length)];
+    pick.value = r.value; inp.value = r.value;
+  });
+  pick.after(b);
 })();
 document.querySelectorAll("[data-copy]").forEach(function (b) {
   b.addEventListener("click", function () {

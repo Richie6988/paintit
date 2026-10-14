@@ -853,14 +853,15 @@ class SatisfyingVideoTests(TestCase):
 
     def test_admin_page_whitelists_canvas(self):
         from studio.models import SocialVideo
-        self.assertContains(self.client.get("/admin-hub/videos/"), "Vidéos TikTok")
+        r = self.client.get("/admin-hub/videos/")
+        self.assertContains(r, "Vidéos TikTok"); self.assertContains(r, "It takes patience"); self.assertContains(r, "vtitles")
         with mock.patch("studio.satisfying.enqueue") as enq:
             self.client.post("/admin-hub/videos/", {"op": "create", "canvas": "client-photo"})
             self.assertEqual(SocialVideo.objects.count(), 0)
-            self.client.post("/admin-hub/videos/", {"op": "create", "canvas": self.UID, "count": "2", "music_style": "space"})
+            self.client.post("/admin-hub/videos/", {"op": "create", "canvas": self.UID, "count": "2", "music_style": "space", "before_after": "1"})
         self.assertEqual(SocialVideo.objects.count(), 2)
         self.assertEqual(enq.call_count, 2)
-        self.assertTrue(all(61 <= v.duration <= 70 and v.music_style == "space" for v in SocialVideo.objects.all()))
+        self.assertTrue(all(61 <= v.duration <= 70 and v.music_style == "space" and v.before_after for v in SocialVideo.objects.all()))
         v = SocialVideo.objects.first()
         self.assertEqual(self.client.get("/admin-hub/videos/?format=json").json()["videos"][0]["status"], "queued")
         self.assertEqual(self.client.get("/admin-hub/videos/%d.mp4" % v.pk).status_code, 404)

@@ -4303,9 +4303,64 @@ def erp_supplier_payment(request, pk):
 
 
 # ---------------- Croissance : videos « satisfying » TikTok ----------------
-HOOKS = ["How long would it take you to paint {zones} zones with {colors} colors?",
-         "Combien de temps pour peindre {zones} zones avec {colors} couleurs ?",
-         "Wait for the last zone…", "Your photo → paint by numbers", "Attends la fin…"]
+HOOKS = [   # (groupe, [accroches]) ; {zones} et {colors} = chiffres reels de la toile
+    ("Questions", [
+        "How long would it take you to paint {zones} zones with {colors} colors?",
+        "Could you paint {zones} zones without giving up?",
+        "Guess the picture before the last zone",
+        "Which color would you start with?",
+        "How many hours would this take you?",
+        "Would you have the patience for {colors} colors?",
+        "Can you guess what it is yet?",
+        "Rate this from 1 to 10 when it's done",
+    ]),
+    ("Patience & calme", [
+        "It takes patience",
+        "Patience, one zone at a time",
+        "Slow down. Breathe. Paint.",
+        "One zone at a time",
+        "Your daily dose of calm",
+        "Therapy, but with paint",
+        "Phone down, brush up",
+        "The most relaxing minute of your day",
+        "No talent needed, just patience",
+        "Small zones, big calm",
+    ]),
+    ("Satisfying", [
+        "Wait for the last zone",
+        "Wait for the end",
+        "Watch it come to life",
+        "{zones} zones. {colors} colors. 1 minute.",
+        "This is oddly satisfying",
+        "Don't scroll before the last zone",
+        "From blank to beautiful",
+        "Every zone counts",
+        "The last zone hits different",
+        "POV: you finally finish it",
+    ]),
+    ("Photo -> kit", [
+        "Your photo -> paint by numbers",
+        "Turn any photo into a paint by numbers",
+        "This was a photo",
+        "Imagine this with your own photo",
+        "Your pet, your trip, your family: in {colors} colors",
+        "Paint your own memories",
+        "A gift idea that takes patience",
+        "Send this to someone who needs a new hobby",
+    ]),
+    ("Français", [
+        "Combien de temps pour peindre {zones} zones avec {colors} couleurs ?",
+        "Il faut de la patience",
+        "Une zone à la fois",
+        "Attends la fin",
+        "Attends la dernière zone",
+        "Ta photo -> peinture par numéros",
+        "Ta dose de calme du jour",
+        "Pose ton téléphone, prends un pinceau",
+        "Tu tiendrais jusqu'à la dernière zone ?",
+        "C'était une simple photo",
+    ]),
+]
 
 
 @staff_member_required
@@ -4357,7 +4412,7 @@ def erp_videos(request):
                 d = min(70.0, max(61.0, dur)) if dur else round(random.uniform(61, 70), 1)
                 v = SocialVideo.objects.create(
                     canvas_uid=uid, title=titles[uid][:120], mode=request.POST.get("mode") == "colors" and "colors" or "random",
-                    duration=d, hook=request.POST.get("hook", "")[:120], music=style != "none", music_style=style,
+                    duration=d, hook=request.POST.get("hook", "")[:120], music=style != "none", music_style=style, before_after=bool(request.POST.get("before_after")),
                     seed=random.randint(1, 10 ** 6))
                 satisfying.enqueue(v)
             messages.success(request, "%d vidéo(s) en cours de génération (environ 2 à 3 min chacune)." % n)
@@ -4377,6 +4432,7 @@ def erp_videos(request):
     return render(request, "admin/erp_videos.html", {
         **_admin.site.each_context(request), "videos": videos, "sources": srcs, "hooks": HOOKS,
         "music_styles": satisfying.MUSIC_STYLES,
+        "titles": satisfying.TITLES["en"] + satisfying.TITLES["fr"], "hashtags": satisfying.HASHTAGS,
         "caption": caption, "caption_en": "%s\n\n%s" % (satisfying.CAPTIONS["fr"], satisfying.HASHTAGS),
         "pending": any(v.status in ("queued", "running") for v in videos),
         "erp_section": "growth", "gtab": "videos"})

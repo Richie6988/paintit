@@ -20,6 +20,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 W, H, FPS = 1080, 1920, 30
 INTRO, OUTRO = 0.3, 3.4                       # ca demarre tout de suite ; fin = toile finie + nom qui se colorie
+PHOTO_HOLD, PHOTO_FADE = 1.2, 0.4              # avant / apres : photo affichee 1.2 s puis fondu vers la toile vierge
 TOP, SIDE, CANVAS_H = 330, 24, 1250            # zone accroche en haut, marges laterales, hauteur max de la toile
 BG = (247, 244, 238)
 INK = (18, 34, 79)
@@ -301,9 +302,8 @@ def _star(size=56):
     return np.clip(a, 0, 1).astype(np.float32)[..., None]
 
 
-def _counter(done, total):
-    """Compteur de zones (code « satisfying » TikTok) : petite pastille sombre."""
-    txt = "%d / %d" % (done, total)
+def _counter(txt):
+    """Pastille sombre (compteur de zones, etiquette « Photo ») : code « satisfying » TikTok."""
     f = _font(38)
     probe = ImageDraw.Draw(Image.new("L", (1, 1)))
     l, t, r, b = probe.textbbox((0, 0), txt, font=f)
@@ -334,13 +334,27 @@ def _blend(frame, layer, x, y, k=1.0):
     frame[y:y + h, x:x + w] = (roi * (1 - a) + layer[..., :3] * a).astype(np.uint8)
 
 
+def _photo(uid, cw, ch):
+    """Photo d'origine recadree (cover) au format de la toile, ou None si absente."""
+    from .pipeline import source_file
+    p = source_file(os.path.join(settings.MEDIA_ROOT, "orders", uid), uid)
+    if not p:
+        return None
+    try:
+        from PIL import ImageOps
+        im = ImageOps.exif_transpose(Image.open(p)).convert("RGB")
+        return np.array(ImageOps.fit(im, (cw, ch), Image.LANCZOS))
+    except Exception:
+        return None
+
+
 def hook_text(hook, n_zones, n_colors):
     """Remplace {zones} et {colors} par les vrais chiffres de la toile."""
     return (hook or "").replace("{zones}", str(n_zones)).replace("{colors}", str(n_colors))
 
 
 def render(uid, out_path, mode="random", duration=65.0, hook="", end_title="", end_sub="", with_music=True,
-           seed=0, progress=None, music_style="ambient"):
+           seed=0, progress=None, music_style="ambient", before_after=False):
     """Genere la video MP4. -> chemin. `progress(f)` recoit 0..1."""
     import imageio_ffmpeg
     from PIL import ImageFilter
@@ -348,8 +362,11 @@ def render(uid, out_path, mode="random", duration=65.0, hook="", end_title="", e
     n = len(colors)
     ch, cw = labels.shape
     ox, oy = (W - cw) // 2, TOP + (CANVAS_H - ch) // 2
-    fill_seconds = max(10.0, duration - INTRO - OUTRO)
-    start = schedule(n, numbers, mode, fill_seconds, seed, areas) + INTRO
+    photo = _photo(uid, cw, ch) if before_after else None        # avant / apres : la photo d'origine d'abord
+    intro = INTRO + (PHOTO_HOLD + PHOTO_FADE if photo is not None else 0)
+    fill_seconds = max(10.0, duration - intro - OUTRO)
+    start = schedule(n, numbers, mode, fill_seconds, seed, areas) + intro
+    photo_tag = _counter("Photo")
     fade = 0.22
     top = _text_layer(hook_text(hook, n, len(np.unique(numbers))))
     brand = _brand_mask()
@@ -399,11 +416,14 @@ def render(uid, out_path, mode="random", duration=65.0, hook="", end_title="", e
             if not done:
                 canvas.reshape(-1, 3)[edge_idx] = edge_rgb            # contours des zones (sans numeros)
             frame = base.copy()
+            if photo is not None and t < PHOTO_HOLD + PHOTO_FADE:
+                k = min(1.0, max(0.0, (t - PHOTO_HOLD) / PHOTO_FADE))
+                canvas = (photo * (1 - k) + canvas * k).astype(np.uint8)
             frame[oy:oy + ch, ox:ox + cw] = canvas
             filled = int((t >= start + fade).sum())
             if filled not in counters:
-                counters[filled] = _counter(filled, n)
-            cn = counters[filled]
+                counters[filled] = _counter("%d / %d" % (filled, n))
+            cn = photo_tag if photo is not None and t < PHOTO_HOLD else counters[filled]
             _blend(frame, cn, ox + 18, oy + ch - cn.shape[0] - 18)
             te = t - fill_end
             if te > 0:
@@ -453,10 +473,27 @@ def thumbnail(uid, out_path):
 
 
 CAPTIONS = {
-    "fr": "Attends la fin 😮‍💨 Une photo devient une peinture par numéros, zone par zone. Combien de temps tu mettrais ? Dis-le en commentaire 👇 Crée la tienne : lien en bio",
-    "en": "Wait for the end 😮‍💨 A photo turned into a paint by numbers, zone by zone. How long would it take you? Tell me in the comments 👇 Make yours: link in bio",
+    "fr": "Attends la fin 😮‍💨 Une photo devient une peinture par numéros, zone par zone. Combien de temps tu mettrais ? Dis-le en commentaire 👇",
+    "en": "Wait for the end 😮‍💨 A photo turned into a paint by numbers, zone by zone. How long would it take you? Tell me in the comments 👇",
 }
-HASHTAGS = "#satisfying #oddlysatisfying #paintbynumbers #asmr #artsatisfying #fyp #foryou #paintit"
+# Titres facon TikTok : ton perso, minuscules, pas de discours commercial (le lien reste dans la bio)
+TITLES = {
+    "en": [
+        "wait for it…", "the last zone 🤌", "why is this so satisfying", "pov: you can't stop watching",
+        "me pretending i have this much patience", "it started as a photo", "rate the final result 1-10",
+        "the ending though 😮‍💨", "couldn't stop watching this", "that last color…", "this is my therapy now",
+        "watch till the end", "i'd never finish this irl", "no thoughts just colors", "how long would it take you? be honest",
+        "should i do another one?", "zone by zone 🎨", "the glow at the end ✨", "guess the picture before it's done",
+        "it takes patience", "the before & after 👀", "calmest minute of your day",
+    ],
+    "fr": [
+        "attends la fin…", "la dernière zone 🤌", "pourquoi c'est aussi satisfaisant", "pov : tu peux plus décrocher",
+        "c'était juste une photo", "note le résultat de 1 à 10", "moi qui fais semblant d'avoir cette patience",
+        "ma thérapie maintenant", "regarde jusqu'à la fin", "zone par zone 🎨", "il faut de la patience",
+        "le avant / après 👀", "tu mettrais combien de temps ? sois honnête", "j'en refais une ?",
+    ],
+}
+HASHTAGS = "#satisfying #paintbynumbers #oddlysatisfying #asmr #fyp"
 
 
 # ---------------- File de rendu (un rendu a la fois : c'est gourmand en CPU) ----------------
@@ -484,7 +521,7 @@ def _job(pk):
                 SocialVideo.objects.filter(pk=pk).update(progress=round(f, 3))
         tmp = v.path() + ".part.mp4"
         render(v.canvas_uid, tmp, mode=v.mode, duration=v.duration, hook=v.hook, with_music=v.music,
-               music_style=v.music_style, seed=v.seed, progress=prog)
+               music_style=v.music_style, seed=v.seed, progress=prog, before_after=v.before_after)
         os.replace(tmp, v.path())
         thumbnail(v.canvas_uid, v.path("jpg"))
         SocialVideo.objects.filter(pk=pk).update(status="done", progress=1, error="")
