@@ -159,6 +159,8 @@ LOGGING = {
 
 # --- Paiement Stripe ---
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+# IndexNow (Bing, Yandex...) : cle fixe, servie a /<cle>.txt ; vide = derivee de DJANGO_SECRET_KEY
+INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "")
 # Suivi colis international (AfterShip) : arrivee dans le pays + n° du transporteur national -> e-mail client
 AFTERSHIP_API_KEY = os.environ.get("AFTERSHIP_API_KEY", "")
 # Suivi des communautes (lecture seule) : app Reddit de type « script » (https://www.reddit.com/prefs/apps)
