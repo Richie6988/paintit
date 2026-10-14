@@ -8,9 +8,21 @@
  .vf{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;align-items:end}
  .vf label{display:grid;gap:4px;font-size:.78rem;font-weight:700;color:#33415c}
  .vf input,.vf select{width:100%;box-sizing:border-box;font-size:.86rem;height:38px;padding:0 10px;border:1px solid #d4d4d4;border-radius:9px;background:#fff}
+ .vf label[hidden]{display:none}
  .vf .chk{display:flex;align-items:center;gap:6px;white-space:nowrap}
  .vf .chk input{width:auto;height:auto}
  .vf .go{display:flex;align-items:center;justify-content:space-between;gap:10px;height:38px}
+ .pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;max-height:330px;overflow:auto;padding:2px}
+ .pk{position:relative;display:block!important;cursor:pointer;border-radius:12px;overflow:hidden;border:2px solid #e3e7ef;aspect-ratio:4/5;background:#f2f4f8}
+ .pk input{position:absolute;opacity:0;pointer-events:none}
+ .pk img{width:100%;height:100%;object-fit:cover;display:block}
+ .pk span{position:absolute;left:0;right:0;bottom:0;padding:14px 6px 5px;font-size:.66rem;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.65));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .pk:has(input:checked){border-color:#2f6bf2;box-shadow:0 0 0 3px rgba(47,107,242,.25)}
+ .pk.imp{border-style:dashed;display:grid!important;place-items:center;text-align:center}
+ .pk.imp.on{border-style:solid;border-color:#2f6bf2;box-shadow:0 0 0 3px rgba(47,107,242,.25)}
+ .pk.imp img{position:absolute;inset:0}
+ .imp-t{position:static!important;background:none!important;color:#2f6bf2!important;font-size:.8rem!important;display:grid;gap:2px;white-space:normal!important}
+ .imp-t small{color:#7a869e;font-weight:600}
  .vl{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
  .vc{background:#fff;border:1px solid #e3e3e3;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
  .vc video,.vc .ph{width:100%;aspect-ratio:9/16;border-radius:10px;background:#f2f4f8;object-fit:cover;display:block}
@@ -27,15 +39,26 @@
 <div class="erp gx">
   <div class="erp-head">
     <div><h1>Vidéos TikTok</h1>
-      <div class="muted">Une toile du catalogue se remplit zone par zone, sans numéros ni interface, en format vertical 9:16 et 1080×1920. La musique est générée par le logiciel et donc libre de droits. Seules les toiles du catalogue et du studio créatif sont utilisables, jamais une photo client.</div></div>
+      <div class="muted">Une image se remplit zone par zone, sans numéros ni interface, en format vertical 9:16 et 1080×1920. La musique est générée par le logiciel et donc libre de droits. Sources : vos images importées, le catalogue et le studio créatif. Jamais une photo client.</div></div>
   </div>
   {% include "admin/_growth_ui.html" %}{% include "admin/_growth_tabs.html" %}
 
   <div class="card">
-    {% if sources %}
-    <form method="post" class="vf">{% csrf_token %}<input type="hidden" name="op" value="create">
-      <label style="grid-column:span 2">Toile
-        <select name="canvas" required>{% for uid, t in sources %}<option value="{{ uid }}">{{ t }}</option>{% endfor %}</select></label>
+    <form method="post" class="vf" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="op" value="create">
+      <div class="pick" style="grid-column:1/-1">
+        <label class="pk imp" title="Importer une image depuis l'ordinateur">
+          <input type="file" name="image" accept="image/*" id="vimg">
+          <img id="vimg-prev" alt="" hidden>
+          <span class="imp-t"><b>+ Importer une image</b><small>depuis l'ordinateur</small></span>
+        </label>
+        {% for uid, t in sources %}
+        <label class="pk"><input type="radio" name="canvas" value="{{ uid }}"{% if forloop.first %} checked{% endif %}>
+          <img loading="lazy" src="/preview/img/{{ uid }}/source/" onerror="this.onerror=null;this.src='/preview/img/{{ uid }}/preview/'" alt="">
+          <span>{{ t }}</span></label>
+        {% endfor %}
+      </div>
+      <label id="vcol" hidden>Couleurs de la toile importée
+        <select name="colors"><option value="12">12</option><option value="18">18</option><option value="24" selected>24</option><option value="36">36</option></select></label>
       <label>Remplissage
         <select name="mode"><option value="random">Aléatoire (accélère)</option><option value="colors">Couleur par couleur</option></select></label>
       <label>Durée (61 à 70 s)
@@ -49,17 +72,14 @@
       <div class="go" style="justify-content:flex-end">
         <button class="pbtn pri">Générer</button></div>
     </form>
-    {% else %}
-    <p class="muted">Aucune toile disponible : ajoutez d'abord des modèles au catalogue ou des images au studio créatif.</p>
-    {% endif %}
   </div>
 
   <div class="card">
     <details><summary style="cursor:pointer;font-weight:800;color:#12224f">Publier sur TikTok : légende et conseils</summary>
       <div class="cap" style="margin-top:10px">
         <textarea id="cap-fr" readonly>{{ caption }}</textarea>
-        <div class="acts"><button type="button" class="pbtn" data-copy="cap-fr">Copier la légende FR</button>
-          <button type="button" class="pbtn" data-copy="cap-en">Copier la légende EN</button></div>
+        <div class="acts"><button type="button" class="pbtn" data-copy="cap-fr">Copier la légende EN</button>
+          <button type="button" class="pbtn" data-copy="cap-en">Copier la légende FR</button></div>
         <textarea id="cap-en" readonly hidden>{{ caption_en }}</textarea>
         <ul class="tips">
           <li>Un lien dans une vidéo TikTok n'est pas cliquable. Mettez <b>paintit.click</b> en lien dans la bio ; la vidéo y renvoie (« lien en bio »).</li>
@@ -96,6 +116,30 @@
   {% endif %}
 </div>
 <script>
+(function () {
+  var f = document.getElementById("vimg"), prev = document.getElementById("vimg-prev"), card = f.closest(".pk");
+  f.addEventListener("change", function () {
+    var ok = f.files && f.files[0];
+    card.classList.toggle("on", !!ok);
+    document.getElementById("vcol").hidden = !ok;
+    card.querySelector(".imp-t").hidden = !!ok;
+    if (ok) {
+      prev.src = URL.createObjectURL(f.files[0]); prev.hidden = false;
+      document.querySelectorAll('input[name=canvas]').forEach(function (r) { r.checked = false; });
+    }
+  });
+  document.querySelectorAll('input[name=canvas]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      f.value = ""; prev.hidden = true; card.classList.remove("on");
+      card.querySelector(".imp-t").hidden = false; document.getElementById("vcol").hidden = true;
+    });
+  });
+  f.closest("form").addEventListener("submit", function (e) {
+    var b = e.target.querySelector(".pbtn.pri");
+    if (f.files && f.files[0]) { b.textContent = "Création de la toile…"; }
+    b.disabled = true;
+  });
+})();
 document.querySelectorAll("[data-copy]").forEach(function (b) {
   b.addEventListener("click", function () {
     var t = document.getElementById(b.dataset.copy).value, old = b.textContent;

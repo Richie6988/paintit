@@ -4322,7 +4322,28 @@ def erp_videos(request):
         op = request.POST.get("op")
         if op == "create":
             uid = request.POST.get("canvas", "")
-            if uid not in titles:                          # liste blanche : catalogue / studio uniquement
+            f = request.FILES.get("image")
+            if f:                                          # image importee depuis l'ordinateur -> toile generee ici
+                import uuid as _uuid
+                from .pipeline import generate
+                uid = "vid-" + _uuid.uuid4().hex[:10]
+                tmp = os.path.join(settings.MEDIA_ROOT, "uploads", uid + "_in.jpg")
+                os.makedirs(os.path.dirname(tmp), exist_ok=True)
+                try:
+                    with open(tmp, "wb") as out:
+                        for chunk in f.chunks():
+                            out.write(chunk)
+                    ncol = int(request.POST.get("colors") or 24)
+                    generate(tmp, ncol if ncol in (12, 18, 24, 36) else 24, 40, 50, uid=uid, source_name=f.name)
+                except Exception as exc:
+                    logger.exception("Video upload")
+                    messages.error(request, "Image illisible : %s" % exc)
+                    return redirect(request.path)
+                finally:
+                    if os.path.exists(tmp):
+                        os.remove(tmp)
+                titles[uid] = "Image importée"
+            if uid not in titles:                          # liste blanche : imports, catalogue, studio
                 messages.error(request, "Choisissez une toile du catalogue.")
                 return redirect(request.path)
             try:
@@ -4352,11 +4373,11 @@ def erp_videos(request):
     videos = list(SocialVideo.objects.all()[:60])
     if request.GET.get("format") == "json":
         return JsonResponse({"videos": [{"id": v.id, "status": v.status, "progress": v.progress} for v in videos]})
-    caption = "%s\n\n%s" % (satisfying.CAPTIONS["fr"], satisfying.HASHTAGS)
+    caption = "%s\n\n%s" % (satisfying.CAPTIONS["en"], satisfying.HASHTAGS)
     return render(request, "admin/erp_videos.html", {
         **_admin.site.each_context(request), "videos": videos, "sources": srcs, "hooks": HOOKS,
         "music_styles": satisfying.MUSIC_STYLES,
-        "caption": caption, "caption_en": "%s\n\n%s" % (satisfying.CAPTIONS["en"], satisfying.HASHTAGS),
+        "caption": caption, "caption_en": "%s\n\n%s" % (satisfying.CAPTIONS["fr"], satisfying.HASHTAGS),
         "pending": any(v.status in ("queued", "running") for v in videos),
         "erp_section": "growth", "gtab": "videos"})
 

@@ -36,12 +36,17 @@ def _font(size):
 
 
 def sources():
-    """Toiles utilisables (catalogue + studio creatif), jamais de commande client. -> [(uid, titre)]"""
+    """Toiles utilisables (images importees ici, catalogue, studio creatif), jamais de commande client. -> [(uid, titre)]"""
     from .models import DigitalCanvas, MarketingAd
     out, seen = [], set()
     for c in DigitalCanvas.objects.filter(source="library").order_by("-created_at")[:300]:
         if c.uid not in seen and _svg_path(c.uid):
             seen.add(c.uid); out.append((c.uid, c.title or c.uid))
+    root = os.path.join(settings.MEDIA_ROOT, "orders")
+    imported = [d for d in os.listdir(root) if d.startswith("vid-")] if os.path.isdir(root) else []
+    for uid in sorted(imported, key=lambda d: -os.path.getmtime(os.path.join(root, d))):
+        if _svg_path(uid):                               # images importees depuis cette page (visuels PaintIt)
+            seen.add(uid); out.insert(0, (uid, "Image importée"))
     for uid, camp in MarketingAd.objects.order_by("-created_at").values_list("image_uid", "campaign")[:300]:
         if uid not in seen and _svg_path(uid):
             seen.add(uid); out.append((uid, "Studio créatif · " + (camp or uid)))
@@ -248,48 +253,65 @@ def _clean(text):
 
 
 def _text_layer(hook):
-    """Accroche en haut (RGBA pre-calcule)."""
+    """Accroche facon TikTok : texte noir sur bulles blanches arrondies, une par ligne (RGBA pre-calcule)."""
     hook = _clean(hook)
     top = Image.new("RGBA", (W, TOP), (0, 0, 0, 0))
     d = ImageDraw.Draw(top)
     if hook:
-        f = _font(62)
-        lines = _wrap(d, hook, f, W - 120)[:3]
-        y = 120 + (3 - len(lines)) * 36
+        f = _font(56)
+        lines = _wrap(d, hook, f, W - 200)[:3]
+        lh = 78
+        y = TOP - 24 - len(lines) * lh                          # colle au haut de la toile, sous la zone UI TikTok
         for l in lines:
-            bw = d.textbbox((0, 0), l, font=f)[2]
-            d.text(((W - bw) / 2, y), l, font=f, fill=INK)
-            y += 74
+            x0, y0, x1, y1 = d.textbbox((0, 0), l, font=f)
+            bw = x1 - x0
+            px = (W - bw) / 2
+            d.rounded_rectangle([px - 22, y, px + bw + 22, y + lh - 6], radius=18, fill=(255, 255, 255, 250))
+            d.text((px - x0, y + (lh - 6 - (y1 - y0)) / 2 - y0), l, font=f, fill=(10, 10, 10))
+            y += lh
     return np.array(top)
 
 
 BRAND = "paintit.click"
 
 
-def _brand_letters(colors):
-    """Le nom sous la toile, lettre par lettre : version « a peindre » (contour) et version coloriee (palette de la toile)."""
-    f = _font(124)
+def _brand_mask():
+    """Marque discrete sous la toile : masque alpha (0..1)."""
+    f = _font(46)
     probe = ImageDraw.Draw(Image.new("L", (1, 1)))
-    l, t, r, b = probe.textbbox((0, 0), BRAND, font=f, stroke_width=4)
-    bw, bh = r - l, b - t
-    import colorsys
-    # toutes les couleurs de la toile (sauf les trop claires, illisibles sur le fond), etalees par teinte
-    pal = sorted({tuple(int(v) for v in c) for c in colors.astype(int) if c.sum() < 3 * 215},
-                 key=lambda c: colorsys.rgb_to_hsv(*(v / 255 for v in c))[0])
-    nl = sum(1 for ch in BRAND if ch not in " .")
-    vivid = [pal[int(i * len(pal) / nl)] for i in range(nl)] if pal else [INK]
-    empty = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
-    ImageDraw.Draw(empty).text((-l, -t), BRAND, font=f, fill=(255, 255, 255), stroke_width=4, stroke_fill=(150, 158, 175))
-    letters, k = [], 0
-    for i, ch in enumerate(BRAND):
-        if ch == " ":
-            continue
-        x0 = int(probe.textlength(BRAND[:i], font=f))
-        im = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
-        c = vivid[k % len(vivid)] if ch != "." else INK
-        ImageDraw.Draw(im).text((-l + x0, -t), ch, font=f, fill=c, stroke_width=4, stroke_fill=tuple(int(v * 0.6) for v in c))
-        letters.append(np.array(im)); k += ch != "."
-    return np.array(empty), letters
+    l, t, r, b = probe.textbbox((0, 0), BRAND, font=f)
+    m = Image.new("L", (r - l + 4, b - t + 4), 0)
+    ImageDraw.Draw(m).text((2 - l, 2 - t), BRAND, font=f, fill=255)
+    return np.array(m, np.float32)[..., None] / 255.0
+
+
+def _rainbow(x, lo=160, amp=95):
+    """Degrade irise : x quelconque -> RGB 0..255 (par defaut teintes nacrees pastel)."""
+    x = np.asarray(x, np.float32)[..., None]
+    ph = np.array([0.0, 2.1, 4.2], np.float32)
+    return lo + amp * (0.5 + 0.5 * np.cos(2 * np.pi * x + ph))
+
+
+def _star(size=56):
+    """Eclat en etoile (RGBA float) pour les scintillements de fin."""
+    yy, xx = np.mgrid[-1:1:size * 1j, -1:1:size * 1j]
+    a = np.clip(1 - np.abs(xx) * 9, 0, 1) * np.clip(1 - np.abs(yy), 0, 1) \
+        + np.clip(1 - np.abs(yy) * 9, 0, 1) * np.clip(1 - np.abs(xx), 0, 1) \
+        + np.exp(-(xx ** 2 + yy ** 2) * 30)
+    return np.clip(a, 0, 1).astype(np.float32)[..., None]
+
+
+def _counter(done, total):
+    """Compteur de zones (code « satisfying » TikTok) : petite pastille sombre."""
+    txt = "%d / %d" % (done, total)
+    f = _font(38)
+    probe = ImageDraw.Draw(Image.new("L", (1, 1)))
+    l, t, r, b = probe.textbbox((0, 0), txt, font=f)
+    im = Image.new("RGBA", (r - l + 40, b - t + 22), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle([0, 0, im.width - 1, im.height - 1], radius=im.height // 2, fill=(10, 10, 10, 150))
+    d.text((20 - l, 11 - t), txt, font=f, fill=(255, 255, 255))
+    return np.array(im)
 
 
 def _wrap(d, text, f, maxw):
@@ -330,8 +352,16 @@ def render(uid, out_path, mode="random", duration=65.0, hook="", end_title="", e
     start = schedule(n, numbers, mode, fill_seconds, seed, areas) + INTRO
     fade = 0.22
     top = _text_layer(hook_text(hook, n, len(np.unique(numbers))))
-    empty, letters = _brand_letters(colors)
-    bx, by = (W - empty.shape[1]) // 2, oy + ch + 36
+    brand = _brand_mask()
+    bx, by = (W - brand.shape[1]) // 2, oy + ch + 26
+    # fin « win » : reflet irise qui balaie la toile + scintillements + marque irisee
+    yy, xx = np.mgrid[0:ch, 0:cw].astype(np.float32)
+    diag = (xx + yy * 0.7) / (cw + ch * 0.7)                        # 0..1 en diagonale
+    iri = _rainbow(diag * 1.6)                                      # nacre fixe, revelee par le balayage
+    rng = np.random.default_rng(seed + 7)
+    star = _star()
+    sparks = [(int(rng.uniform(0, cw - 56)), int(rng.uniform(0, ch - 56)), rng.uniform(0.25, 2.6)) for _ in range(16)]
+    bm_x = np.linspace(0, 1, brand.shape[1], dtype=np.float32)[None, :]
     col = colors.astype(np.float32)
     lab = np.where(labels < 0, n, labels)                       # index n = fond (blanc)
     edge_idx = np.nonzero(edge.ravel())[0]
@@ -341,7 +371,10 @@ def render(uid, out_path, mode="random", duration=65.0, hook="", end_title="", e
     ImageDraw.Draw(sh).rounded_rectangle([ox - 4, oy + 8, ox + cw + 4, oy + ch + 18], radius=14, fill=60)
     sh = np.array(sh.filter(ImageFilter.GaussianBlur(16)), np.float32)[..., None] / 255.0
     base = (base * (1 - sh * 0.5)).astype(np.uint8)
-    _blend(base, top, 0, 0); _blend(base, empty, bx, by)
+    _blend(base, top, 0, 0)
+    roi = base[by:by + brand.shape[0], bx:bx + brand.shape[1]].astype(np.float32)
+    base[by:by + brand.shape[0], bx:bx + brand.shape[1]] = (roi * (1 - brand * 0.85) + np.array(INK) * brand * 0.85).astype(np.uint8)
+    counters = {}
     total_frames = int(duration * FPS)
     tmp_audio = out_path + ".wav"
     fill_end = float(start.max() + fade)
@@ -355,7 +388,6 @@ def render(uid, out_path, mode="random", duration=65.0, hook="", end_title="", e
     cmd += ["-c:v", "libx264", "-preset", "fast", "-crf", "20", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
             out_path]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    step = 0.11                                                 # une lettre du nom se colorie toutes les 0.11 s
     try:
         pal = np.zeros((n + 1, 3), np.float32); pal[n] = 255
         for fi in range(total_frames):
@@ -368,11 +400,36 @@ def render(uid, out_path, mode="random", duration=65.0, hook="", end_title="", e
                 canvas.reshape(-1, 3)[edge_idx] = edge_rgb            # contours des zones (sans numeros)
             frame = base.copy()
             frame[oy:oy + ch, ox:ox + cw] = canvas
-            if t > fill_end + 0.2:                                    # fin : le nom se colorie lettre par lettre
-                for i, layer in enumerate(letters):
-                    k = min(1.0, (t - fill_end - 0.2 - i * step) / 0.18)
-                    if k > 0:
-                        _blend(frame, layer, bx, by, k)
+            filled = int((t >= start + fade).sum())
+            if filled not in counters:
+                counters[filled] = _counter(filled, n)
+            cn = counters[filled]
+            _blend(frame, cn, ox + 18, oy + ch - cn.shape[0] - 18)
+            te = t - fill_end
+            if te > 0:
+                cv = frame[oy:oy + ch, ox:ox + cw].astype(np.float32)
+                # deux balayages irises (le 2e plus doux) en mode « screen »
+                k = np.zeros((ch, cw), np.float32)
+                for t0, amp in ((0.0, 0.85), (1.3, 0.45)):
+                    c = (te - t0) / 1.1 * 1.6 - 0.3
+                    if -0.4 < c < 1.4:
+                        k += amp * np.exp(-((diag - c) / 0.09) ** 2)
+                k += 0.10 * min(1.0, te / 0.6)                           # leger voile nacre qui reste
+                k = np.minimum(k, 1)[..., None]
+                cv = 255 - (255 - cv) * (1 - k * iri / 255)
+                for sx, sy, s0 in sparks:                               # scintillements
+                    v = te - s0
+                    if 0 < v < 0.7:
+                        g = math.sin(math.pi * v / 0.7)
+                        reg = cv[sy:sy + 56, sx:sx + 56]
+                        reg += (255 - reg) * star * g
+                frame[oy:oy + ch, ox:ox + cw] = np.clip(cv, 0, 255).astype(np.uint8)
+                # la marque devient irisee (teintes qui defilent)
+                kb = min(1.0, te / 0.4)
+                bcol = _rainbow(bm_x * 1.2 - te * 0.6, 20, 190)            # teintes franches : lisible sur le fond clair
+                roi = frame[by:by + brand.shape[0], bx:bx + brand.shape[1]].astype(np.float32)
+                a = brand * kb
+                frame[by:by + brand.shape[0], bx:bx + brand.shape[1]] = (roi * (1 - a) + bcol * a).astype(np.uint8)
             proc.stdin.write(frame.tobytes())
             if progress and fi % 30 == 0:
                 progress(fi / total_frames)
@@ -396,10 +453,10 @@ def thumbnail(uid, out_path):
 
 
 CAPTIONS = {
-    "fr": "Une photo devient une peinture par numéros 🎨 Satisfaisant jusqu'à la dernière zone. Crée la tienne sur paintit.click (lien en bio)",
-    "en": "A photo turned into a paint by numbers 🎨 Satisfying to the very last area. Make yours at paintit.click (link in bio)",
+    "fr": "Attends la fin 😮‍💨 Une photo devient une peinture par numéros, zone par zone. Combien de temps tu mettrais ? Dis-le en commentaire 👇 Crée la tienne : lien en bio",
+    "en": "Wait for the end 😮‍💨 A photo turned into a paint by numbers, zone by zone. How long would it take you? Tell me in the comments 👇 Make yours: link in bio",
 }
-HASHTAGS = "#paintbynumbers #peintureparnumeros #satisfying #oddlysatisfying #asmr #artsatisfying #diyart #paintit"
+HASHTAGS = "#satisfying #oddlysatisfying #paintbynumbers #asmr #artsatisfying #fyp #foryou #paintit"
 
 
 # ---------------- File de rendu (un rendu a la fois : c'est gourmand en CPU) ----------------

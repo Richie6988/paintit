@@ -827,6 +827,12 @@ class SatisfyingVideoTests(TestCase):
         User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
         self.client.login(username="boss", password="pw-Secret-123")
 
+    def tearDown(self):
+        root = os.path.join(MEDIA, "orders")
+        for d in os.listdir(root):
+            if d.startswith("vid-"):
+                shutil.rmtree(os.path.join(root, d), ignore_errors=True)
+
     def test_zones_cover_canvas_and_only_catalogue_sources(self):
         from studio import satisfying
         labels, colors, numbers, areas, edge = satisfying.load_zones(self.UID, 100, 100)
@@ -858,3 +864,21 @@ class SatisfyingVideoTests(TestCase):
         v = SocialVideo.objects.first()
         self.assertEqual(self.client.get("/admin-hub/videos/?format=json").json()["videos"][0]["status"], "queued")
         self.assertEqual(self.client.get("/admin-hub/videos/%d.mp4" % v.pk).status_code, 404)
+
+    def test_upload_image_creates_canvas(self):
+        import shutil as _sh
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from studio.models import SocialVideo
+
+        def fake_generate(path, colors, w, h, uid=None, source_name=None):
+            src, dst = os.path.join(MEDIA, "orders", self.UID), os.path.join(MEDIA, "orders", uid)
+            os.makedirs(dst)
+            for ext in ("_digipaint.svg", "_colors.json"):
+                _sh.copy(os.path.join(src, self.UID + ext), os.path.join(dst, uid + ext))
+        with mock.patch("studio.pipeline.generate", side_effect=fake_generate), mock.patch("studio.satisfying.enqueue"):
+            self.client.post("/admin-hub/videos/", {"op": "create", "image": SimpleUploadedFile("me.jpg", b"x"),
+                                                    "colors": "18", "music_style": "electro"})
+        v = SocialVideo.objects.get()
+        self.assertTrue(v.canvas_uid.startswith("vid-"))
+        from studio import satisfying
+        self.assertEqual(satisfying.sources()[0][0], v.canvas_uid)
