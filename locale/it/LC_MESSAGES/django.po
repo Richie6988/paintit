@@ -1686,3 +1686,6 @@ msgid ""
 msgstr ""
 "Realizzato su ordinazione dai nostri laboratori partner, verificati secondo "
 "i nostri standard di qualità"
+
+msgid "Trop de générations en peu de temps. Réessayez dans quelques minutes."
+msgstr "Troppe generazioni in poco tempo. Riprova tra qualche minuto."

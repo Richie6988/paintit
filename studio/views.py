@@ -125,7 +125,9 @@ def upload(request):
     last_photo = request.session.get("last_photo")
     if request.method == "POST":
         form = UploadForm(request.POST, request.FILES)
-        if form.is_valid():
+        if form.is_valid() and security.rate_limited("gen:" + security.client_ip(request), 40, 3600):
+            form.add_error(None, _("Trop de générations en peu de temps. Réessayez dans quelques minutes."))
+        elif form.is_valid():
             f = form.cleaned_data.get("photo")
             if f:
                 src = _save_upload(f)
@@ -892,6 +894,8 @@ def digipaint_regen(request, uid):
     max_zones = int(_fopt("max_zones", 2, 9999)) if _fopt("max_zones", 2, 9999) else None
     min_zone_mm = _fopt("min_zone_mm", 0.5, 20)
     density = _fopt("density", 0.02, 5)
+    if security.rate_limited("gen:" + security.client_ip(request), 40, 3600):
+        return JsonResponse({"ok": False, "error": "rate_limited"}, status=429)
     gameuid = uid + "-G"
     jobs.start(gameuid)
     try:

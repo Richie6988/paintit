@@ -1673,3 +1673,7 @@ msgid ""
 msgstr ""
 "Fabricado bajo pedido por nuestros talleres asociados, auditados según "
 "nuestras exigencias de calidad"
+
+msgid "Trop de générations en peu de temps. Réessayez dans quelques minutes."
+msgstr ""
+"Demasiadas generaciones en poco tiempo. Inténtalo de nuevo en unos minutos."

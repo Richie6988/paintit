@@ -1699,3 +1699,8 @@ msgid ""
 msgstr ""
 "Auf Bestellung gefertigt von unseren Partnerwerkstätten, geprüft nach "
 "unseren Qualitätsanforderungen"
+
+msgid "Trop de générations en peu de temps. Réessayez dans quelques minutes."
+msgstr ""
+"Zu viele Generierungen in kurzer Zeit. Bitte versuchen Sie es in ein paar "
+"Minuten erneut."

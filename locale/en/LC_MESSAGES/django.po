@@ -1661,3 +1661,7 @@ msgid ""
 msgstr ""
 "Made to order by our partner workshops, audited against our quality "
 "standards"
+
+msgid "Trop de générations en peu de temps. Réessayez dans quelques minutes."
+msgstr ""
+"Too many generations in a short time. Please try again in a few minutes."
