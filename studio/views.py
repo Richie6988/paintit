@@ -1604,6 +1604,8 @@ def sitemap_xml(request):
     # pages publiques uniquement (les toiles /play/<uid>/ ne sont pas indexees)
     paths = ["/", "/create/", "/play/", "/faq/", "/contact/", "/cgv/", "/mentions-legales/", "/privacy/"]
     langs = [c for c, _ in settings.LANGUAGES]
+    # ordre impose par le schema sitemaps.org : loc, lastmod, changefreq, puis les extensions (xhtml:link)
+    today = timezone.localdate().isoformat()
     x = ['<?xml version="1.0" encoding="UTF-8"?>',
          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
          'xmlns:xhtml="http://www.w3.org/1999/xhtml">']
@@ -1618,14 +1620,14 @@ def sitemap_xml(request):
             '<xhtml:link rel="alternate" hreflang="%s" href="%s"/>' % (c, variants[c]) for c in langs)
         alts += '<xhtml:link rel="alternate" hreflang="x-default" href="%s"/>' % (site + p)
         for c in langs:
-            x.append("<url><loc>%s</loc>%s<changefreq>weekly</changefreq></url>" % (variants[c], alts))
+            x.append("<url><loc>%s</loc><lastmod>%s</lastmod><changefreq>weekly</changefreq>%s</url>" % (variants[c], today, alts))
     from . import landings
     for topic in landings.TOPICS:
         alt = {l: site + landings.url(l, topic) for l in landings.PAGES if topic in landings.PAGES[l]}
         links = "".join('<xhtml:link rel="alternate" hreflang="%s" href="%s"/>' % (l, u) for l, u in alt.items())
         links += '<xhtml:link rel="alternate" hreflang="x-default" href="%s"/>' % alt.get(settings.LANGUAGE_CODE, "")
         for u in alt.values():
-            x.append("<url><loc>%s</loc>%s<changefreq>monthly</changefreq></url>" % (u, links))
+            x.append("<url><loc>%s</loc><lastmod>%s</lastmod><changefreq>monthly</changefreq>%s</url>" % (u, today, links))
     x.append("</urlset>")
     resp = HttpResponse("\n".join(x), content_type="application/xml; charset=utf-8")
     resp["Cache-Control"] = "public, max-age=3600"

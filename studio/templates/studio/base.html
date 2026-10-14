@@ -63,7 +63,6 @@
   </header>
   <main>{% block content %}{% endblock %}</main>
   <footer class="foot">
-    <nav class="foot-pbn" aria-label="{{ PBN_LINKS.label }}"><b>{{ PBN_LINKS.label }}</b>{% for l, u in PBN_LINKS.links %}<a href="{{ u }}">{{ l }}</a>{% endfor %}</nav>
     <div class="foot-in">
       <a href="{% url 'studio:home' %}" class="foot-logo"><img src="{% static 'studio/img/icon.svg' %}" alt=""><span>PaintIt</span></a>
       <p class="foot-motto">{% trans "Votre souvenir. Votre chef-d’œuvre." %}</p>
@@ -74,6 +73,7 @@
         <a href="{% url 'studio:cgv' %}">{% trans "CGV" %}</a>
         <a href="{% url 'studio:legal' %}">{% trans "Mentions légales" %}</a>
       </nav>
+      <nav class="foot-pbn" aria-label="{{ PBN_LINKS.label }}"><span>{{ PBN_LINKS.label }}</span>{% for l, u in PBN_LINKS.links %}<a href="{{ u }}">{{ l }}</a>{% endfor %}</nav>
       <div class="foot-bottom">&copy; {% now "Y" %} PaintIt · {% trans "Tous droits réservés." %}</div>
     </div>
   </footer>
