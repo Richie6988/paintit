@@ -1,6 +1,7 @@
 {% extends "studio/base.html" %}
 {% load i18n l10n %}
-{% block title %}{% trans "Personnaliser" %} · PaintIt{% endblock %}
+{% block title %}PaintIt · {% trans "Créez votre peinture par numéros" %}{% endblock %}
+{% block meta_description %}{% trans "Envoyez votre photo et obtenez en moins d'une minute votre toile numérotée, son aperçu et son prix. Gratuit jusqu'à la commande." %}{% endblock %}
 {% block jsonld %}<script type="application/ld+json">{{ ld_product }}</script>{% endblock %}
 {% block content %}
 <section class="panel">

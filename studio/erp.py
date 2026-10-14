@@ -218,6 +218,13 @@ def actions():
                     "url": "/admin-hub/compta/", "label": "Ventes vers l'UE : seuil OSS de 10 000 €",
                     "hint": "TVA du pays du client au-delà du seuil"})
     kit = Supplier.for_checkout("kit")
+    from .models import CompanyInfo
+    origin = (CompanyInfo.get().production_origin or "").lower()
+    addr = " ".join(Supplier.objects.filter(active=True).values_list("address", flat=True)).lower()
+    if "europe" in origin and any(w in addr for w in ("china", "chine", "中国", "guangzhou", "shenzhen", "yiwu")):
+        out.append({"key": "origin", "count": "!", "level": "err", "url": "/admin-hub/legal/",
+                    "label": "Lieu de fabrication déclaré « Europe » mais fournisseur hors UE",
+                    "hint": "RGPD : la politique de confidentialité doit mentionner le transfert hors UE"})
     if kit and not kit.grid():
         out.append({"key": "grid", "count": "!", "level": "warn", "url": "/admin-hub/suppliers/%d/#tarifs" % kit.pk,
                     "label": "Grille tarifaire du fournisseur vide", "hint": "Coûts et marges non calculés"})

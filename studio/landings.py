@@ -141,7 +141,7 @@ PAGES = {
     "en": {
         "custom": {
             "slug": "custom-paint-by-numbers",
-            "title": "Custom paint by numbers from your photo",
+            "title": "Custom paint by numbers kit: your photo, our algorithm",
             "desc": "Turn any photo into a custom paint-by-numbers kit. Free preview and online game, complete kit with free shipping from €{price}.",
             "h1": "Custom paint by numbers from your photo",
             "lead": "A family picture, a holiday view, your pet: PaintIt turns it into a numbered canvas to paint at home, with the paints already matched.",

@@ -218,7 +218,7 @@ class CompanyInfo(models.Model):
     production_origin = models.CharField(
         "Lieu de fabrication des kits", max_length=60, blank=True, default="Europe",
         help_text="Zone de fabrication réelle (ex. Europe) : sert à la politique de confidentialité. "
-                  "Le site affiche « Fabriqué dans nos ateliers ».")
+                  "Le site affiche « Fabriqué à la demande par nos ateliers partenaires ».")
 
     class Meta:
         verbose_name = "Infos légales"

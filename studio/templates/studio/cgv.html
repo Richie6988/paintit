@@ -1,9 +1,11 @@
 {% extends "studio/base.html" %}
 {% load i18n %}
 {% block title %}{% trans "Conditions générales de vente" %} · PaintIt{% endblock %}
+{% block meta_description %}{% trans "Conditions générales de vente PaintIt : commande, prix, livraison offerte, droit de rétractation, garanties et réclamations." %}{% endblock %}
 {% block content %}
 <section class="panel prose">
   <h1>{% trans "Conditions générales de vente" %}</h1>
+  {% get_current_language as L %}{% if L != "fr" %}<p class="sub"><em>{% trans "Ces conditions sont rédigées en français ; la version française fait foi." %}</em></p>{% endif %}
   {% get_current_language as L %}{% if L != "fr" %}<p class="sub">{% trans "Seule la version française de ces conditions fait foi." %}</p>{% endif %}
 
   <h2>1. Objet et vendeur</h2>

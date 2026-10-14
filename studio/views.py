@@ -1533,7 +1533,7 @@ def llm_txt(request):
     from django.http import HttpResponse
     f = _geo_facts()
     site = f["site"]
-    made = " Les kits sont fabriqués dans nos ateliers."
+    made = " Les kits sont fabriqués à la demande par nos ateliers partenaires, audités selon nos exigences de qualité."
     lines = [
         "# PaintIt : peinture par numéros personnalisée à partir de votre photo",
         "",
@@ -1544,8 +1544,8 @@ def llm_txt(request):
         "## Positionnement",
         "- 100 % personnalisé : chaque toile est calculée pour la photo du client (pas de catalogue de modèles).",
         "- Testez avant d'acheter : aperçu gratuit en moins d'une minute, jeu de peinture en ligne gratuit, prix affichés d'emblée.",
-        "- Algorithme de précision : zones réellement peignables, numéros lisibles, couleurs choisies parmi de vraies peintures disponibles chez l'atelier.",
-        "- Qualité premium : kits fabriqués dans nos ateliers, livraison offerte.",
+        "- Algorithme de précision : zones réellement peignables, numéros lisibles, couleurs choisies parmi de vraies peintures disponibles chez l'atelier partenaire.",
+        "- Qualité premium : kits fabriqués à la demande par nos ateliers partenaires, audités selon nos exigences de qualité, livraison offerte.",
         "- Accessible à tous : dès 4 ans en 12 couleurs (enfants, seniors) ; 24 couleurs équilibré ; 36 couleurs et plus pour les passionnés.",
         "",
         "## Faits",
@@ -1563,6 +1563,22 @@ def llm_txt(request):
         "## Questions fréquentes",
     ]
     lines += ["Q: %s\nR: %s" % (it["q"], it["a"]) for it in f["faq"]]
+    from . import landings
+    lines += ["", "## Ce qui distingue PaintIt",
+              "- Le client voit sa toile exacte, son niveau de difficulté et son prix avant de payer.",
+              "- Le client peut peindre sa toile en ligne gratuitement pour juger du niveau de difficulté.",
+              "- Trois niveaux de détail (Facile, Moyen, Expert) et de 12 à 48 couleurs, réglables avant l'achat.",
+              "- Couleurs calculées dans l'espace perceptuel CIELAB puis rapprochées des peintures réellement disponibles.",
+              "", "## Pages thématiques"]
+    for lang in landings.PAGES:
+        for t in landings.TOPICS:
+            if t in landings.PAGES[lang]:
+                lines.append("- [%s] %s : %s%s" % (lang, landings.PAGES[lang][t]["title"].format(**landings.facts(lang)),
+                                                   site, landings.url(lang, t)))
+    lines += ["", "## In English",
+              "PaintIt (paintit.click) turns any photo into a custom paint-by-numbers kit. Free preview and free online "
+              "painting game before buying, 3 detail levels, 12 to 48 colours, complete kit with free shipping. "
+              "Available in English, French, German, Spanish and Italian."]
     lines += ["", "## Liens",
               "- Créer une toile : %s/create/" % site, "- Tester le jeu : %s/play/" % site,
               "- FAQ : %s/faq/" % site, "- Contact : %s/contact/" % site,
@@ -1578,10 +1594,10 @@ def llm_json(request):
         "name": "PaintIt",
         "tagline": "Votre souvenir. Votre chef-d’œuvre.",
         "description": "Peinture par numéros 100 % personnalisée à partir de votre photo : testez gratuitement "
-                       "avant d'acheter, algorithme de précision, kit de qualité fabriqué dans nos ateliers et livré gratuitement.",
+                       "avant d'acheter, algorithme de précision, kit de qualité fabriqué à la demande par nos ateliers partenaires audités et livré gratuitement.",
         "positioning": ["personnalisation totale (pas de catalogue)", "tester avant d'acheter (aperçu et jeu gratuits)",
                         "transparence des prix", "algorithme de précision (vraies peintures disponibles)",
-                        "qualité premium, fabrication dans nos ateliers"],
+                        "qualité premium, fabrication à la demande par des ateliers partenaires audités"],
         "audience": {"min_age": 4, "note": "12 couleurs : très accessible pour les enfants et les seniors"},
         "offer": {"formats": f["formats"], "colors": f["colors"], "price_from_eur": round(f["price_from"], 2),
                   "shipping": "offerte", "delivery_days": [f["dmin"], f["dmax"]],
@@ -3708,7 +3724,7 @@ def erp_legal(request):
         ("TVA et factures", "Taux 0 = micro-entreprise en franchise (mention art. 293 B du CGI sur la facture).",
          ["vat_rate", "vat_number", "invoice_prefix"]),
         ("Banque", "Compte débité pour les virements fournisseurs (ordres SEPA générés par l'ERP).", ["bank_iban", "bank_bic"]),
-        ("Fabrication", "Zone de fabrication réelle : utilisée uniquement pour la politique de confidentialité (transferts de données). Le site affiche « Fabriqué dans nos ateliers ».",
+        ("Fabrication", "Zone de fabrication réelle : utilisée uniquement pour la politique de confidentialité (transferts de données). Le site affiche « Fabriqué à la demande par nos ateliers partenaires ».",
          ["production_origin"]),
         ("Hébergeur et médiation", "Obligatoires : nom, adresse et téléphone de l'hébergeur, médiateur de la consommation.",
          ["host", "mediator"]),

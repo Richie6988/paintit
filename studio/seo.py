@@ -23,7 +23,7 @@ def product(request=None, with_reviews=False):
         "description": ("Kit de peinture par numéros 100 % personnalisé, calculé à partir de votre photo par un "
                         "algorithme de précision : toile numérotée, peintures numérotées et poster de référence. "
                         "Aperçu et jeu en ligne gratuits avant d'acheter. Dès 4 ans en 12 couleurs."
-                        + " Fabriqué dans nos ateliers."),
+                        + " Fabriqué à la demande par nos ateliers partenaires, audités selon nos exigences de qualité."),
         "audience": {"@type": "PeopleAudience", "suggestedMinAge": 4},
         "additionalProperty": [{"@type": "PropertyValue", "name": "Nombre de couleurs",
                                 "value": ", ".join(str(n) for n in p.available_colors())}],

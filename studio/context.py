@@ -63,4 +63,4 @@ def _made_in():
 
 def _made_in_label():
     from django.utils.translation import gettext as _
-    return _("Fabriqué dans nos ateliers")
+    return _("Fabriqué à la demande par nos ateliers partenaires, audités selon nos exigences de qualité")
