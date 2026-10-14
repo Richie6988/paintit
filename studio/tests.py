@@ -866,12 +866,33 @@ class SatisfyingVideoTests(TestCase):
         self.assertEqual(self.client.get("/admin-hub/videos/?format=json").json()["videos"][0]["status"], "queued")
         self.assertEqual(self.client.get("/admin-hub/videos/%d.mp4" % v.pk).status_code, 404)
 
+    def test_density_regenerates_from_source_photo(self):
+        import shutil as _sh
+        from studio.models import SocialVideo
+        open(os.path.join(MEDIA, "orders", self.UID, self.UID + "_source_x.jpg"), "wb").write(b"x")
+        seen = {}
+
+        def fake_generate(path, colors, w, h, uid=None, source_name=None, density=None, detail=1.0):
+            seen.update(path=path, colors=colors, density=density, detail=detail)
+            src, dst = os.path.join(MEDIA, "orders", self.UID), os.path.join(MEDIA, "orders", uid)
+            os.makedirs(dst)
+            for ext in ("_digipaint.svg", "_colors.json"):
+                _sh.copy(os.path.join(src, self.UID + ext), os.path.join(dst, uid + ext))
+        with mock.patch("studio.pipeline.generate", side_effect=fake_generate), mock.patch("studio.satisfying.enqueue"):
+            self.client.post("/admin-hub/videos/", {"op": "create", "canvas": self.UID, "density": "expert"})
+        v = SocialVideo.objects.get()
+        self.assertTrue(v.canvas_uid.startswith("vid-") and v.title == "Rose · Expert (zones fines)")
+        self.assertEqual((seen["colors"], seen["density"], seen["detail"]), (2, 1.0, 0.6))     # 2 = couleurs de la toile
+        self.assertTrue(seen["path"].endswith("_source_x.jpg"))
+        from studio import satisfying
+        self.assertEqual(dict(satisfying.sources())[v.canvas_uid], "Rose · Expert (zones fines)")
+
     def test_upload_image_creates_canvas(self):
         import shutil as _sh
         from django.core.files.uploadedfile import SimpleUploadedFile
         from studio.models import SocialVideo
 
-        def fake_generate(path, colors, w, h, uid=None, source_name=None):
+        def fake_generate(path, colors, w, h, uid=None, source_name=None, density=None, detail=1.0):
             src, dst = os.path.join(MEDIA, "orders", self.UID), os.path.join(MEDIA, "orders", uid)
             os.makedirs(dst)
             for ext in ("_digipaint.svg", "_colors.json"):

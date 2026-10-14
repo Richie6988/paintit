@@ -4,6 +4,35 @@
 {% block content_title %}{% endblock %}
 {% block content %}
 {% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .spc{position:relative;background:#fff;border:1px solid #e2e8f2;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;
+      box-shadow:0 1px 3px rgba(18,34,79,.06);transition:transform .15s ease,box-shadow .15s ease,border-color .15s}
+ .spc:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(18,34,79,.12);border-color:color-mix(in srgb,var(--c) 45%,#e2e8f2)}
+ .spc.off{filter:grayscale(.85);opacity:.7}
+ .spc-link{position:absolute;inset:0;z-index:1;border-radius:18px}
+ .spc-link:focus-visible{outline:3px solid #2f6bf2;outline-offset:-3px}
+ .spc-band{height:64px;background:linear-gradient(120deg,var(--c),color-mix(in srgb,var(--c) 55%,#12224f));position:relative}
+ .spc-band::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 85% -20%,rgba(255,255,255,.35),transparent 55%)}
+ .spc-head{display:flex;justify-content:space-between;align-items:flex-end;padding:0 18px;margin-top:-30px;position:relative}
+ .spc-av{width:60px;height:60px;border-radius:16px;background:var(--c);color:#fff;font-weight:900;font-size:1.25rem;display:grid;place-items:center;
+         border:4px solid #fff;box-shadow:0 4px 12px rgba(18,34,79,.18)}
+ .spc-badges{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;padding-bottom:4px}
+ .spc-id{padding:10px 18px 14px}
+ .spc-name{font-weight:900;font-size:1.15rem;color:#12224f;letter-spacing:-.01em}
+ .spc-sub{color:#6d7175;font-size:.8rem;margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+ .spc-chip{background:color-mix(in srgb,var(--c) 14%,#fff);color:color-mix(in srgb,var(--c) 75%,#12224f);font-weight:800;font-size:.72rem;padding:2px 8px;border-radius:999px}
+ .spc-contact{color:#8a93a6;font-size:.76rem;margin-top:4px}
+ .spc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 18px 16px}
+ .spc-stats div{background:#f6f8fc;border-radius:12px;padding:10px 8px;text-align:center}
+ .spc-stats b{display:block;font-size:1.2rem;color:#12224f;font-variant-numeric:tabular-nums;line-height:1.2}
+ .spc-stats span{font-size:.66rem;color:#6d7175;font-weight:600}
+ .spc-stats .bad{background:#fdecea}.spc-stats .bad b{color:#b42318}
+ .spc-foot{margin-top:auto;display:flex;align-items:center;gap:8px;padding:10px 18px;border-top:1px solid #eef1f6;background:#fbfcfe}
+ .spc-foot .meta{flex:1;min-width:0;font-size:.74rem;color:#6d7175;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+ .spc-act{position:relative;z-index:2;margin:0}
+ .spc-go{font-size:.78rem;font-weight:800;color:#2f6bf2;white-space:nowrap}
+ .spc:hover .spc-go{text-decoration:underline}
+</style>
 <div class="erp">
   <div class="erp-head">
     <div><h1>Fournisseurs</h1><div class="muted">Production &amp; expédition en dropshipping : routage des commandes, performance et santé des intégrations</div></div>
@@ -35,31 +64,35 @@
 
   <div class="sp-grid">
     {% for s in sups %}
-    <div class="sp-card {% if not s.active %}off{% endif %}">
-      <div class="sp-top">
-        <div class="av" style="background:{{ s.color }}">{{ s.initials }}</div>
-        <div style="flex:1;min-width:0">
-          <div class="sp-name">{{ s.name }}</div>
-          <div class="sp-sub">{{ s.get_checkout_display }} · priorité {{ s.priority }} · délai {{ s.lead_time_days }} j</div>
+    <div class="spc {% if not s.active %}off{% endif %}" style="--c:{{ s.color }}">
+      <a class="spc-link" href="/admin-hub/suppliers/{{ s.pk }}/" aria-label="Ouvrir la fiche {{ s.name }}"></a>
+      <div class="spc-band"></div>
+      <div class="spc-head">
+        <div class="spc-av">{{ s.initials }}</div>
+        <div class="spc-badges">
+          {% if s.routed %}<span class="bdg2 info" title="Reçoit les commandes de ce checkout">★ Routage actif</span>{% endif %}
+          {% if not s.active %}<span class="bdg2 off"><span class="dot2"></span>Inactif</span>
+          {% elif s.health == "err" %}<span class="bdg2 err"><span class="dot2"></span>Erreur</span>
+          {% elif s.health == "ok" %}<span class="bdg2 ok"><span class="dot2"></span>Connecté</span>
+          {% else %}<span class="bdg2 idle"><span class="dot2"></span>En attente</span>{% endif %}
         </div>
-        {% if not s.active %}<span class="bdg2 off"><span class="dot2"></span>Inactif</span>
-        {% elif s.health == "err" %}<span class="bdg2 err"><span class="dot2"></span>Erreur</span>
-        {% elif s.health == "ok" %}<span class="bdg2 ok"><span class="dot2"></span>Connecté</span>
-        {% else %}<span class="bdg2 idle"><span class="dot2"></span>En attente</span>{% endif %}
       </div>
-      <div class="sp-stats">
-        <div><b>{{ s.stats.orders_30 }}</b><span>cmd 30 j</span></div>
+      <div class="spc-id">
+        <div class="spc-name">{{ s.name }}</div>
+        <div class="spc-sub"><span class="spc-chip">{{ s.get_checkout_display }}</span> priorité {{ s.priority }} · délai annoncé {{ s.lead_time_days }} j</div>
+        {% if s.contact_name or s.contact_email %}<div class="spc-contact">{{ s.contact_name }}{% if s.contact_name and s.contact_email %} · {% endif %}{{ s.contact_email }}</div>{% endif %}
+      </div>
+      <div class="spc-stats">
+        <div><b>{{ s.stats.orders_30 }}</b><span>commandes 30 j</span></div>
         <div><b>{{ s.stats.in_production }}</b><span>en production</span></div>
-        <div><b class="{% if s.stats.late %}bad{% endif %}">{{ s.stats.late }}</b><span>en retard</span></div>
+        <div class="{% if s.stats.late %}bad{% endif %}"><b>{{ s.stats.late }}</b><span>en retard</span></div>
         <div><b>{% if s.stats.avg_days is not None %}{{ s.stats.avg_days }} j{% else %}—{% endif %}</b><span>délai réel</span></div>
       </div>
-      <div class="sp-foot">
+      <div class="spc-foot">
         <span class="meta">{% if s.channel %}<span class="bdg2 info">{{ s.channel }}</span>{% else %}<span class="bdg2 err">Aucun canal</span>{% endif %}
-          {% if s.last_sync_at %} · transmis {{ s.last_sync_at|timesince }}{% endif %}</span>
-        <span style="display:flex;gap:6px">
-          <form method="post">{% csrf_token %}<input type="hidden" name="sup" value="{{ s.pk }}"><button class="pbtn sm" name="op" value="toggle">{% if s.active %}Mettre en pause{% else %}Activer{% endif %}</button></form>
-          <a class="pbtn sm pri" href="/admin-hub/suppliers/{{ s.pk }}/">Ouvrir</a>
-        </span>
+          {% if s.last_sync_at %}<span>transmis il y a {{ s.last_sync_at|timesince }}</span>{% endif %}</span>
+        <form method="post" class="spc-act">{% csrf_token %}<input type="hidden" name="sup" value="{{ s.pk }}"><button class="pbtn sm" name="op" value="toggle">{% if s.active %}Mettre en pause{% else %}Activer{% endif %}</button></form>
+        <span class="spc-go" aria-hidden="true">Ouvrir la fiche →</span>
       </div>
     </div>
     {% empty %}

@@ -2387,6 +2387,8 @@ def erp_suppliers(request):
         return redirect("studio:erp_suppliers")
     sups = [_sup_card(s) for s in Supplier.objects.all()]
     routing = {c: Supplier.for_checkout(c) for c in ("kit", "print")}
+    for s in sups:
+        s.routed = any(r and r.pk == s.pk for r in routing.values())
     tot = {"active": sum(1 for s in sups if s.active),
            "orders_30": sum(s.stats["orders_30"] for s in sups),
            "spend_30": round(sum(s.stats["spend_30"] for s in sups), 2),
@@ -4378,26 +4380,44 @@ def erp_videos(request):
         if op == "create":
             uid = request.POST.get("canvas", "")
             f = request.FILES.get("image")
-            if f:                                          # image importee depuis l'ordinateur -> toile generee ici
+            level = request.POST.get("density", "orig")
+            if f or (level != "orig" and uid in titles):
+                # import depuis l'ordinateur, ou nouvelle densite de zones : toile (re)generee depuis la photo d'origine
                 import uuid as _uuid
-                from .pipeline import generate
-                uid = "vid-" + _uuid.uuid4().hex[:10]
-                tmp = os.path.join(settings.MEDIA_ROOT, "uploads", uid + "_in.jpg")
-                os.makedirs(os.path.dirname(tmp), exist_ok=True)
+                from .forms import DENSITY_LEVELS
+                from .pipeline import generate, source_file
+                new = "vid-" + _uuid.uuid4().hex[:10]
+                tmp = os.path.join(settings.MEDIA_ROOT, "uploads", new + "_in.jpg")
+                dens, det = DENSITY_LEVELS.get(level, DENSITY_LEVELS["auto"])
                 try:
-                    with open(tmp, "wb") as out:
-                        for chunk in f.chunks():
-                            out.write(chunk)
-                    ncol = int(request.POST.get("colors") or 24)
-                    generate(tmp, ncol if ncol in (12, 18, 24, 36) else 24, 40, 50, uid=uid, source_name=f.name)
+                    if f:
+                        os.makedirs(os.path.dirname(tmp), exist_ok=True)
+                        with open(tmp, "wb") as out:
+                            for chunk in f.chunks():
+                                out.write(chunk)
+                        src, name, label = tmp, f.name, "Image importée"
+                    else:
+                        src = source_file(os.path.join(settings.MEDIA_ROOT, "orders", uid), uid)
+                        if not src:
+                            raise ValueError("photo d'origine introuvable pour cette toile")
+                        name, label = os.path.basename(src), titles[uid]
+                    try:
+                        ncol = int(request.POST.get("colors") or 0)
+                    except ValueError:
+                        ncol = 0
+                    if ncol not in (12, 18, 24, 36):
+                        ncol = 24 if f else len(satisfying._palette(uid))
+                    generate(src, ncol, 40, 50, uid=new, source_name=name, density=dens, detail=det)
                 except Exception as exc:
-                    logger.exception("Video upload")
-                    messages.error(request, "Image illisible : %s" % exc)
+                    logger.exception("Video canvas")
+                    messages.error(request, "Toile impossible à créer : %s" % exc)
                     return redirect(request.path)
                 finally:
                     if os.path.exists(tmp):
                         os.remove(tmp)
-                titles[uid] = "Image importée"
+                uid = new
+                titles[uid] = label if level == "orig" else "%s · %s" % (label, dict(satisfying.DENSITIES)[level])
+                satisfying.save_label(uid, titles[uid])
             if uid not in titles:                          # liste blanche : imports, catalogue, studio
                 messages.error(request, "Choisissez une toile du catalogue.")
                 return redirect(request.path)
@@ -4431,7 +4451,7 @@ def erp_videos(request):
     caption = "%s\n\n%s" % (satisfying.CAPTIONS["en"], satisfying.HASHTAGS)
     return render(request, "admin/erp_videos.html", {
         **_admin.site.each_context(request), "videos": videos, "sources": srcs, "hooks": HOOKS,
-        "music_styles": satisfying.MUSIC_STYLES,
+        "music_styles": satisfying.MUSIC_STYLES, "densities": satisfying.DENSITIES,
         "titles": satisfying.TITLES["en"] + satisfying.TITLES["fr"], "hashtags": satisfying.HASHTAGS,
         "caption": caption, "caption_en": "%s\n\n%s" % (satisfying.CAPTIONS["fr"], satisfying.HASHTAGS),
         "pending": any(v.status in ("queued", "running") for v in videos),

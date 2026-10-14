@@ -46,12 +46,25 @@ def sources():
     root = os.path.join(settings.MEDIA_ROOT, "orders")
     imported = [d for d in os.listdir(root) if d.startswith("vid-")] if os.path.isdir(root) else []
     for uid in sorted(imported, key=lambda d: -os.path.getmtime(os.path.join(root, d))):
-        if _svg_path(uid):                               # images importees depuis cette page (visuels PaintIt)
-            seen.add(uid); out.insert(0, (uid, "Image importée"))
+        if _svg_path(uid):                               # images importees / densites regenerees depuis cette page
+            seen.add(uid); out.insert(0, (uid, _label(uid)))
     for uid, camp in MarketingAd.objects.order_by("-created_at").values_list("image_uid", "campaign")[:300]:
         if uid not in seen and _svg_path(uid):
             seen.add(uid); out.append((uid, "Studio créatif · " + (camp or uid)))
     return out
+
+
+def _label(uid):
+    try:
+        with open(os.path.join(settings.MEDIA_ROOT, "orders", uid, "label.txt"), encoding="utf-8") as fh:
+            return fh.read().strip()[:120] or "Image importée"
+    except OSError:
+        return "Image importée"
+
+
+def save_label(uid, label):
+    with open(os.path.join(settings.MEDIA_ROOT, "orders", uid, "label.txt"), "w", encoding="utf-8") as fh:
+        fh.write(label)
 
 
 def _svg_path(uid):
@@ -136,6 +149,8 @@ def schedule(n_zones, numbers, mode, fill_seconds, seed=0, areas=None):
 
 
 # ---------------- Musique generee (libre de droits) ----------------
+DENSITIES = [("orig", "Celle de la toile"), ("easy", "Facile (grandes zones)"), ("medium", "Moyen"),
+             ("expert", "Expert (zones fines)")]
 MUSIC_STYLES = [("ambient", "Douce"), ("electro", "Électro"), ("space", "Space"), ("none", "Aucune")]
 _hz = lambda m: 440.0 * 2 ** ((m - 69) / 12)
 
