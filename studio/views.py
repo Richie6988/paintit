@@ -2633,7 +2633,7 @@ def erp_supplier(request, pk):
         "tabs": [(k, l, q.count()) for k, l, q in tabs], "events": events,
         "iban": mask(sup.iban), "api_key": mask(sup.api_key, 3),
         "files": [lbl for flag, lbl in [("want_template_pdf", "Toile numérotée PDF vectoriel"),
-                                        ("want_source", "Photo source"), ("want_template_svg", "Toile numérotée .svg"),
+                                        ("want_template_svg", "Toile numérotée .svg"),
                                         ("want_template_tiff", "Toile numérotée .tiff"),
                                         ("want_preview_svg", "Aperçu colorié .svg"), ("want_poster", "Poster PNG"),
                                         ("want_order_json", "Fiche JSON (sans prix)")] if getattr(sup, flag, False)],
@@ -2645,7 +2645,7 @@ SUPPLIER_SECTIONS = {
     "contact": ["contact_name", "contact_email", "phone", "address", "bank_name", "iban", "bic", "notes"],
     "channel": ["email", "api_url", "api_key"],
     "dispatch": ["auto_dispatch", "want_template_tiff", "want_poster", "want_order_json", "want_template_pdf",
-                 "want_template_svg", "want_preview_svg", "want_source"],
+                 "want_template_svg", "want_preview_svg"],
     "excel": [], "palette": [], "docs": [],
 }
 SUPPLIER_SECTION_EXTRAS = {"channel": ("shopify",), "excel": ("xlsx",), "palette": ("palette",), "docs": ("files",)}

@@ -48,10 +48,8 @@ def sign(sup, body):
 def order_files(sup, uid):
     from .security import file_url     # liens signes : media/orders/ n'est pas public
     files = {name: file_url(uid, name) for name in sup.wanted_files(uid)}
-    if getattr(sup, "want_source", False):
-        d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
-        for sp in glob.glob(os.path.join(d, "%s_source_*" % uid))[:1]:
-            files[os.path.basename(sp)] = file_url(uid, os.path.basename(sp))
+    # La photo d'origine du client n'est JAMAIS transmise a un tiers (engagement de la politique de confidentialite) :
+    # le fournisseur ne recoit que les fichiers derives necessaires a la fabrication.
     return files
 
 
