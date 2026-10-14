@@ -426,34 +426,61 @@ def build_gif(uid, out_path, brand="PaintIt", link="", title="", message="", rat
         # Logo haut-gauche
         if logo_im is not None:
             fr.alpha_composite(logo_im, (22, 22))
-        # Gros titre integre, bas
-        th = sum(dr.textbbox((0, 0), l, font=ftitle)[3] + 8 for l in title_lines)
-        cta_h = int(W / 13) + 26
-        yy = H - 40 - cta_h - th
-        for l in title_lines:
-            bb = dr.textbbox((0, 0), l, font=ftitle)
-            x = (W - (bb[2] - bb[0])) / 2
-            dr.text((x + 2, yy + 2), l, font=ftitle, fill=(0, 0, 0, 170))   # ombre
-            dr.text((x, yy), l, font=ftitle, fill=(255, 255, 255, 255))
-            yy += (bb[3] - bb[1]) + 8
-        # CTA pill (message ou url)
+        # Mise en page du bas vers le haut : URL discrete, bouton CTA, puis gros titre (aucun chevauchement)
+        bottom = H - 14
+        if caption:
+            fu = _font(int(W / 34))
+            cb = dr.textbbox((0, 0), caption, font=fu)
+            cap_y = bottom - (cb[3] - cb[1])
+            bottom = cap_y - 12
         cta_txt = (message or "").strip()
         if cta_txt:
             fc = _font(int(W / 20))
             bb = dr.textbbox((0, 0), cta_txt, font=fc)
-            pw, ph = (bb[2] - bb[0]) + 44, (bb[3] - bb[1]) + 24
-            px, py = (W - pw) / 2, H - 34 - ph
+            tw, tht = bb[2] - bb[0], bb[3] - bb[1]
+            pw, ph = tw + 48, tht + 28
+            px, py = int((W - pw) / 2), int(bottom - ph)
             pill = Image.new("RGBA", (int(pw), int(ph)), (0, 0, 0, 0))
-            pd = ImageDraw.Draw(pill)
-            pd.rounded_rectangle([0, 0, pw - 1, ph - 1], radius=int(ph / 2), fill=_rgb(st["cta"]))
-            fr.alpha_composite(pill, (int(px), int(py)))
-            dr.text((px + 22, py + 10), cta_txt, font=fc, fill=(255, 255, 255, 255))
-        # URL discrete en bas
+            ImageDraw.Draw(pill).rounded_rectangle([0, 0, pw - 1, ph - 1], radius=int(ph / 2), fill=_rgb(st["cta"]))
+            fr.alpha_composite(pill, (px, py))
+            # centrage exact : on compense les marges internes de la police (bb[0], bb[1])
+            dr.text((px + (pw - tw) / 2 - bb[0], py + (ph - tht) / 2 - bb[1]), cta_txt, font=fc, fill=(255, 255, 255, 255))
+            bottom = py - 16
+        # Gros titre integre, au-dessus du bouton
+        boxes = [dr.textbbox((0, 0), l, font=ftitle) for l in title_lines]
+        yy = bottom - sum((b[3] - b[1]) + 8 for b in boxes) + 8
+        for l, bb in zip(title_lines, boxes):
+            x = (W - (bb[2] - bb[0])) / 2 - bb[0]
+            y = yy - bb[1]
+            dr.text((x + 2, y + 2), l, font=ftitle, fill=(0, 0, 0, 170))   # ombre
+            dr.text((x, y), l, font=ftitle, fill=(255, 255, 255, 255))
+            yy += (bb[3] - bb[1]) + 8
         if caption:
-            fu = _font(int(W / 34))
-            bb = dr.textbbox((0, 0), caption, font=fu)
-            dr.text(((W - (bb[2] - bb[0])) / 2, H - 26), caption, font=fu, fill=(210, 220, 240, 255))
+            dr.text(((W - (cb[2] - cb[0])) / 2 - cb[0], cap_y - cb[1]), caption, font=fu, fill=(210, 220, 240, 255))
         branded.append(fr.convert("P", palette=Image.ADAPTIVE))
     branded[0].save(out_path, save_all=True, append_images=branded[1:], duration=90, loop=0, optimize=True)
     return out_path
 
+
+
+GIF_RATIOS = {"gif_square": (1, 1), "gif_portrait": (4, 5), "gif_story": (9, 16)}
+
+
+def refresh_gifs():
+    """Re-rend sur place les GIF deja produits (memes textes, meme lien traque) apres une evolution de la mise en page.
+    -> nombre de fichiers regeneres."""
+    from .models import MarketingAd
+    n = 0
+    for ad in MarketingAd.objects.filter(fmt="gif"):
+        path = os.path.join(settings.MEDIA_ROOT, "marketing", ad.image_uid, ad.file_name)
+        if ad.kind not in GIF_RATIOS or not os.path.exists(path):
+            continue
+        t = ad.texts or {}
+        try:
+            if build_gif(ad.image_uid, path, title=t.get("gif_title", ""), message=t.get("gif_cta", ""),
+                         caption=t.get("gif_footer"), ratio=GIF_RATIOS[ad.kind], style=norm_style(t.get("_style"))):
+                n += 1
+        except Exception:
+            import logging
+            logging.getLogger("studio.marketing").exception("GIF %s", ad.pk)
+    return n
