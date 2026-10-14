@@ -97,3 +97,34 @@ def item_list(models, url_for):
     return {"@context": "https://schema.org", "@type": "ItemList",
             "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": m.title or "Modèle PaintIt",
                                  "url": site + url_for(m)} for i, m in enumerate(models[:50])]}
+
+
+def indexnow_key():
+    """Cle IndexNow (Bing, Yandex, Seznam, Naver...) : INDEXNOW_KEY ou derivee de SECRET_KEY (stable)."""
+    import hashlib
+    from django.conf import settings
+    return getattr(settings, "INDEXNOW_KEY", "") or hashlib.sha256(("indexnow" + settings.SECRET_KEY).encode()).hexdigest()[:32]
+
+
+def sitemap_urls():
+    import re
+    from django.test import RequestFactory
+    from .views import sitemap_xml
+    return re.findall(r"<loc>([^<]+)</loc>", sitemap_xml(RequestFactory().get("/sitemap.xml")).content.decode())
+
+
+def indexnow_submit(urls=None):
+    """Soumet les URL publiques a IndexNow (un seul envoi partage entre les moteurs participants). -> code HTTP"""
+    import json
+    import urllib.request
+    from urllib.parse import urlparse
+    from django.conf import settings
+    urls = urls or sitemap_urls()
+    host = urlparse(settings.SITE_URL).netloc
+    key = indexnow_key()
+    body = json.dumps({"host": host, "key": key, "keyLocation": "%s/%s.txt" % (settings.SITE_URL, key),
+                       "urlList": urls[:10000]}).encode()
+    req = urllib.request.Request("https://api.indexnow.org/indexnow", data=body,
+                                 headers={"Content-Type": "application/json; charset=utf-8"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return r.status

@@ -102,4 +102,6 @@ urlpatterns = [
     path("pbn/api/upload/", views.pbn_lab_upload, name="pbn_lab_upload"),
     path("pbn/api/step/<str:key>/", views.pbn_lab_step, name="pbn_lab_step"),
     path("robots.txt", views.robots, name="robots"),
+    # Pages thematiques SEO (vocabulaire officiel par langue) : en dernier, ne masque aucune route
+    path("<slug:slug>/", views.landing, name="landing"),
 ]

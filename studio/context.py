@@ -17,10 +17,16 @@ def assets(request):
     except Exception:
         alts = []
         lang_urls = {}
+    override = getattr(request, "hreflang_override", None)     # pages aux slugs traduits (landings)
+    if override:
+        alts = [{"lang": l, "href": h} for l, h in override]
+        lang_urls = {l: h.replace(site, "", 1) for l, h in override if l != "x-default"}
     native = {"fr": "Français", "en": "English", "de": "Deutsch", "es": "Español", "it": "Italiano"}
     lang_menu = [{"code": c, "label": native.get(c, c), "url": lang_urls.get(c, "/")}
                  for c, _l in settings.LANGUAGES]
-    return {"SITE_URL": site, "HREFLANGS": alts, "LANG_URLS": lang_urls, "LANG_MENU": lang_menu,
+    from django.utils.translation import get_language
+    from . import landings
+    return {"SITE_URL": site, "HREFLANGS": alts, "PBN_LINKS": landings.footer_links((get_language() or "fr")[:2]), "LANG_URLS": lang_urls, "LANG_MENU": lang_menu,
             # Mesure d'audience sans cookie (Plausible / compatible) : pas de bandeau cookies requis
             "MADE_IN": _made_in(), "MADE_IN_LABEL": _made_in_label(),
             "ANALYTICS_SRC": getattr(settings, "ANALYTICS_SRC", ""),

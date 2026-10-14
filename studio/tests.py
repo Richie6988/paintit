@@ -768,5 +768,22 @@ def timezone_now_month():
     return timezone.localdate().strftime("%Y-%m")
 
 
+class SeoLandingTests(TestCase):
+    """Pages thematiques : vocabulaire par langue, hreflang croises, redirection de langue, sitemap, IndexNow."""
+    def test_landings(self):
+        r = self.client.get("/peinture-par-numeros-adulte/")
+        self.assertContains(r, "<h1>Peinture par numéros pour adulte</h1>", html=False)
+        self.assertContains(r, 'hreflang="de" href="https://paintit.click/de/malen-nach-zahlen-erwachsene/"')
+        self.assertContains(r, '"@type": "FAQPage"')
+        self.assertRedirects(self.client.get("/en/peinture-par-numeros-adulte/"), "/en/paint-by-numbers-for-adults/",
+                             status_code=301, fetch_redirect_response=False)
+        self.assertEqual(self.client.get("/pas-une-page/").status_code, 404)
+        self.assertContains(self.client.get("/sitemap.xml"), "/it/come-dipingere-con-i-numeri/")
+        self.assertContains(self.client.get("/"), "/peinture-par-numeros-enfant/")     # maillage (pied de page)
+        from studio.seo import indexnow_key
+        k = indexnow_key()
+        self.assertEqual(self.client.get("/%s.txt" % k).content.decode(), k)
+
+
 def tearDownModule():
     shutil.rmtree(MEDIA, ignore_errors=True)

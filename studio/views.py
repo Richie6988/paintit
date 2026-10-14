@@ -1619,10 +1619,40 @@ def sitemap_xml(request):
         alts += '<xhtml:link rel="alternate" hreflang="x-default" href="%s"/>' % (site + p)
         for c in langs:
             x.append("<url><loc>%s</loc>%s<changefreq>weekly</changefreq></url>" % (variants[c], alts))
+    from . import landings
+    for topic in landings.TOPICS:
+        alt = {l: site + landings.url(l, topic) for l in landings.PAGES if topic in landings.PAGES[l]}
+        links = "".join('<xhtml:link rel="alternate" hreflang="%s" href="%s"/>' % (l, u) for l, u in alt.items())
+        links += '<xhtml:link rel="alternate" hreflang="x-default" href="%s"/>' % alt.get(settings.LANGUAGE_CODE, "")
+        for u in alt.values():
+            x.append("<url><loc>%s</loc>%s<changefreq>monthly</changefreq></url>" % (u, links))
     x.append("</urlset>")
     resp = HttpResponse("\n".join(x), content_type="application/xml; charset=utf-8")
     resp["Cache-Control"] = "public, max-age=3600"
     return resp
+
+
+def landing(request, slug):
+    """Page thematique (peinture par numeros adulte / enfant / animal / cadeau / guide...) dans la langue courante."""
+    from . import landings, seo
+    lang = (get_language() or settings.LANGUAGE_CODE)[:2]
+    found_lang, topic = landings.find(slug)
+    if not topic:
+        raise Http404
+    if found_lang != lang:          # slug d'une autre langue : page equivalente de la langue courante
+        target = landings.url(lang, topic) or landings.url(found_lang, topic)
+        return HttpResponsePermanentRedirect(target)
+    page = landings.render_page(lang, topic)
+    site = settings.SITE_URL
+    request.hreflang_override = [(l, site + u) for l, u in page["alternates"]] + \
+        [("x-default", site + landings.url(settings.LANGUAGE_CODE, topic))]
+    home = {"fr": "Accueil", "en": "Home", "de": "Startseite", "es": "Inicio", "it": "Home"}.get(lang, "Accueil")
+    ctx = {"page": page,
+           "ld_faq": seo.dump(seo.faq([{"q": q, "a": a} for q, a in page["faq"]])),
+           "ld_crumb": seo.dump(seo.breadcrumb((home, landings.lang_prefix(lang) + "/"),
+                                               (page["h1"], landings.url(lang, topic)))),
+           "ld_product": seo.dump(seo.product(request)) if topic in ("custom", "pet", "gift") else ""}
+    return render(request, "studio/landing.html", ctx)
 
 
 def shop_pricing(request):
