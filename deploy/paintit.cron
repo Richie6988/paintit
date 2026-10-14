@@ -1,18 +1,20 @@
 # Taches planifiees PaintIt. Installation :
 #   sudo cp deploy/paintit.cron /etc/cron.d/paintit && sudo chmod 644 /etc/cron.d/paintit
 # (format /etc/cron.d : minute heure jour mois jour-semaine UTILISATEUR commande)
+# UTILISATEUR = celui du service (grep User /etc/systemd/system/paintit.service) : les fichiers crees
+# par les taches (medias, sauvegardes) restent modifiables par le site. Logs dans /home/paintit/logs (mkdir).
 SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/bin:/bin
 APP=/home/paintit/Django
 PY=/home/paintit/Django/.venv/bin/python
 
 # Transmissions fournisseurs, relances, suivi colis (toutes les 15 min)
-*/15 * * * * root cd $APP && $PY manage.py supplier_sync >> /var/log/paintit-cron.log 2>&1
+*/15 * * * * paintit cd $APP && $PY manage.py supplier_sync >> /home/paintit/logs/cron.log 2>&1
 # Sauvegarde base + medias, rotation 14 jours (3h30)
-30 3 * * * root cd $APP && $PY manage.py backup_data >> /var/log/paintit-backup.log 2>&1
+30 3 * * * paintit cd $APP && $PY manage.py backup_data >> /home/paintit/logs/backup.log 2>&1
 # Rapprochement comptable Stripe (3h15)
-15 3 * * * root cd $APP && $PY manage.py ledger_sync >> /var/log/paintit-cron.log 2>&1
+15 3 * * * paintit cd $APP && $PY manage.py ledger_sync >> /home/paintit/logs/cron.log 2>&1
 # Purge des apercus jamais commandes (4h)
-0 4 * * * root cd $APP && $PY manage.py purge_old_data >> /var/log/paintit-cron.log 2>&1
+0 4 * * * paintit cd $APP && $PY manage.py purge_old_data >> /home/paintit/logs/cron.log 2>&1
 # Recapitulatif quotidien au fournisseur (7h)
-0 7 * * * root cd $APP && $PY manage.py supplier_digest >> /var/log/paintit-cron.log 2>&1
+0 7 * * * paintit cd $APP && $PY manage.py supplier_digest >> /home/paintit/logs/cron.log 2>&1
