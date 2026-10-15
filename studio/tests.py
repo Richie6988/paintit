@@ -382,6 +382,21 @@ class SupplierPaletteTests(TestCase):
             self.assertIn(part, txt)
         self.assertNotIn("price", txt.lower())
 
+    @override_settings(MEDIA_ROOT=MEDIA)
+    def test_supplier_colors_sorted_smallest_area_first(self):
+        from studio.fulfillment import add_areas, supplier_text
+        d = os.path.join(MEDIA, "orders", "AREA-1"); os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "AREA-1_digipaint.svg"), "w").write(
+            '<svg><path data-n="1" data-a="600" d=""/><path data-n="2" data-a="100" d=""/>'
+            '<path data-n="3" data-a="250" d=""/><path data-n="2" data-a="50" d=""/></svg>')
+        specs = add_areas("AREA-1", [{"number": 1, "supplier_code": "A"}, {"number": 2, "supplier_code": "B"},
+                                     {"number": 3, "supplier_code": "C"}], 40, 50)
+        self.assertEqual([c["number"] for c in specs], [2, 3, 1])
+        self.assertEqual((specs[0]["area_pct"], specs[0]["area_cm2"]), (15.0, 300.0))
+        txt = supplier_text({"order_information": {}, "consignee_information": {}, "color_specifications": specs})
+        self.assertLess(txt.index(" B "), txt.index(" C "))
+        self.assertIn("300.0 cm2", txt)
+
 
 class InboxTests(TestCase):
     def setUp(self):

@@ -489,8 +489,9 @@ def order_file(request, uid, name):
                 sj = {"consignee_information": full.get("consignee_information") or {},
                       "order_information": {k: oi.get(k) for k in ("uid", "created_at", "format", "orientation", "width_cm",
                                                                    "height_cm", "colors_count", "brushes")},
-                      "color_specifications": __import__("studio.fulfillment", fromlist=["x"]).supplier_colors(
-                          full.get("color_specifications") or [])}
+                      "color_specifications": fulfillment.add_areas(
+                          uid, fulfillment.supplier_colors(full.get("color_specifications") or []),
+                          oi.get("width_cm"), oi.get("height_cm"), full.get("color_specifications") or [])}
                 sj["order_information"]["files"] = {"template_tiff": names[1], "poster_png": names[0]}
                 z.writestr(names[2], _json.dumps(sj, ensure_ascii=False, indent=2))
                 found.append(names[2])

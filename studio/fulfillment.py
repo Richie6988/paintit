@@ -192,16 +192,68 @@ def supplier_text(sj):
     L += ["Postal code / 邮编:     %s" % ci.get("postal_code", ""),
           "City / 城市:            %s" % ci.get("city", ""),
           "Country / 国家:         %s" % ci.get("country", ""),
-          "", "COLORS / 颜色  (No. / 编号  ->  Supplier ref / 色号)", "-" * 44]
+          ""]
+    specs = sj.get("color_specifications", [])
+    has_area = any("area_pct" in c for c in specs)
+    if has_area:
+        L += ["COLORS / 颜色  (smallest to largest area / 按面积从小到大)",
+              "No./编号   Supplier ref / 色号      Area / 面积", "-" * 52]
+    else:
+        L += ["COLORS / 颜色  (No. / 编号  ->  Supplier ref / 色号)", "-" * 44]
     approx = False
-    for c in sj.get("color_specifications", []):
+    for c in specs:
         ref = c.get("supplier_code")
         if ref and c.get("supplier_code_approx"):
             ref += " *"; approx = True
-        L.append("%4s  ->  %s" % (c.get("number", ""), ref or "%s (no ref / 无色号)" % (c.get("hex") or "")))
+        ref = ref or "%s (no ref / 无色号)" % (c.get("hex") or "")
+        if has_area:
+            area = ("%s cm2" % c["area_cm2"]) if "area_cm2" in c else ""
+            L.append("%6s     %-22s %10s  %5.1f %%" % (c.get("number", ""), ref, area, c.get("area_pct", 0)))
+        else:
+            L.append("%4s  ->  %s" % (c.get("number", ""), ref))
     if approx:
         L += ["", "* closest ref in your color chart / 色卡中最接近的色号"]
     return "\n".join(L) + "\n"
+
+
+def color_shares(uid, colors=None):
+    """Part de surface a peindre de chaque couleur -> {numero: fraction 0..1}.
+    Source : data-a (surface) des zones du SVG du jeu ; a defaut, pixels de l'apercu colorie."""
+    import re
+    from collections import defaultdict
+    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    tot = defaultdict(float)
+    svg = os.path.join(d, "%s_digipaint.svg" % uid)
+    if os.path.exists(svg):
+        with open(svg, encoding="utf-8") as f:
+            for n, a in re.findall(r'data-n="(\d+)" data-a="(\d+)"', f.read()):
+                tot[int(n)] += float(a)
+    elif colors and os.path.exists(os.path.join(d, "%s_preview.png" % uid)):
+        img = cv2.imread(os.path.join(d, "%s_preview.png" % uid))
+        if img is not None:
+            img = cv2.resize(img, (200, int(200 * img.shape[0] / img.shape[1])), interpolation=cv2.INTER_NEAREST)
+            px = img.reshape(-1, 3)[:, ::-1].astype(np.int32)          # BGR -> RGB
+            pal = np.array([c.get("rgb") or [0, 0, 0] for c in colors], np.int32)
+            near = np.argmin(((px[:, None, :] - pal[None, :, :]) ** 2).sum(-1), axis=1)
+            for i, k in zip(*np.unique(near, return_counts=True)):
+                tot[int(colors[i].get("number"))] += float(k)
+    s = sum(tot.values())
+    return {n: v / s for n, v in tot.items()} if s else {}
+
+
+def add_areas(uid, specs, width_cm, height_cm, colors=None):
+    """Ajoute surface (cm2, %) a chaque couleur et trie de la plus petite a la plus grande surface :
+    le fournisseur dose les quantites de peinture dans cet ordre."""
+    shares = color_shares(uid, colors)
+    if not shares:
+        return specs
+    canvas = float(width_cm or 0) * float(height_cm or 0)
+    for c in specs:
+        f = shares.get(int(c.get("number") or 0), 0.0)
+        c["area_pct"] = round(f * 100, 2)
+        if canvas:
+            c["area_cm2"] = round(f * canvas, 1)
+    return sorted(specs, key=lambda c: (c.get("area_pct", 0), c.get("number") or 0))
 
 
 def write_supplier_text(uid, sj=None):
@@ -213,6 +265,10 @@ def write_supplier_text(uid, sj=None):
                 sj = json.load(f)
         except (OSError, ValueError):
             return None
+    specs = sj.get("color_specifications") or []
+    if specs and "area_pct" not in specs[0]:
+        oi = sj.get("order_information", {})
+        sj["color_specifications"] = add_areas(uid, specs, oi.get("width_cm"), oi.get("height_cm"), specs)
     p = os.path.join(d, "%s_supplier.txt" % uid)
     with open(p, "w", encoding="utf-8") as f:
         f.write(supplier_text(sj))
@@ -272,7 +328,7 @@ def load_colors(uid):
             cols = [dict(c, code=c["supplier_code"]) if c.get("supplier_code") and not c.get("code") else c
                     for c in cols]
             if cols and all(c.get("hex") for c in cols):
-                return cols
+                return sorted(cols, key=lambda c: c.get("number") or 0)   # fiche fournisseur : triee par surface
     # dernier recours : numero -> couleur relu sur la toile elle-meme : chaque numero imprime
     # sur la toile numerotee est au milieu d'une zone de SA couleur dans l'apercu (PNG sans perte).
     return colors_from_canvas(uid)
@@ -372,7 +428,7 @@ def build(order, shipping):
             "colors_count": oi["colors_count"], "brushes": oi["brushes"],
             "files": {"template_tiff": "%s_template.tiff" % uid, "poster_png": "%s_poster.png" % uid},
         },
-        "color_specifications": supplier_colors(colors),
+        "color_specifications": add_areas(uid, supplier_colors(colors), oi["width_cm"], oi["height_cm"], colors),
     }
     with open(os.path.join(d, "%s_supplier.json" % uid), "w", encoding="utf-8") as f:
         json.dump(supplier_json, f, ensure_ascii=False, indent=2)
