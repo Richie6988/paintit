@@ -92,6 +92,11 @@ class Command(BaseCommand):
                 OrderEvent.objects.create(order=o, kind="action", user="purge",
                                           text=PURGED_TEXT % opts["production_days"])
 
+        # 5. Mesure d'audience : 13 mois
+        if not dry:
+            from studio import analytics
+            analytics.purge(13)
+
         mode = "simulation" if dry else "supprime"
         self.stdout.write(self.style.SUCCESS(
             f"[purge_old_data] commandes non payees: {n_orders}, apercus orphelins: {n_dirs}, "

@@ -128,6 +128,8 @@ def upload(request):
         if form.is_valid() and security.rate_limited("gen:" + security.client_ip(request), 40, 3600):
             form.add_error(None, _("Trop de générations en peu de temps. Réessayez dans quelques minutes."))
         elif form.is_valid():
+            from . import analytics
+            analytics.log_event(request, "generation", "Aperçu (upload)", "/create/")
             f = form.cleaned_data.get("photo")
             if f:
                 src = _save_upload(f)
@@ -914,6 +916,8 @@ def digipaint_regen(request, uid):
     if security.rate_limited("gen:" + security.client_ip(request), 40, 3600):
         return JsonResponse({"ok": False, "error": "rate_limited"}, status=429)
     gameuid = uid + "-G"
+    from . import analytics
+    analytics.log_event(request, "generation", "Jeu DigiPaint")
     jobs.start(gameuid)
     try:
         genqueue.submit(_run_game_generation, gameuid, src, colors, w_cm, h_cm, detail,
@@ -4627,3 +4631,30 @@ def erp_banners(request):
     return render(request, "admin/erp_banners.html", {
         **_admin.site.each_context(request), "banners": banners, "live": live, "form": form, "edit": edit,
         "erp_section": "growth", "gtab": "banner"})
+
+
+# ---------------- Mesure d'audience interne (sans cookie) ----------------
+@csrf_exempt
+def analytics_collect(request):
+    from . import analytics
+    if request.method != "POST" or len(request.body) > 4000:
+        return HttpResponse(status=204)
+    if security.rate_limited("a:" + security.client_ip(request), 600, 3600):
+        return HttpResponse(status=204)
+    try:
+        out = analytics.collect(request)
+    except Exception:
+        logger.exception("Mesure d'audience")
+        out = {}
+    return JsonResponse(out) if out else HttpResponse(status=204)
+
+
+@staff_member_required
+def erp_activity(request):
+    """Activite du site : visiteurs, pays, pages d'entree, temps passe, pages vues, clics CTA, generations."""
+    from django.contrib import admin as _admin
+    from . import analytics
+    days = request.GET.get("p", "30")
+    days = int(days) if days in dict(analytics.PERIODS) else 30
+    return render(request, "admin/erp_activity.html", {
+        **_admin.site.each_context(request), "a": analytics.dashboard(days), "erp_section": "activity"})

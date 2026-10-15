@@ -1177,3 +1177,41 @@ class SiteBanner(models.Model):
         r = super().delete(*a, **kw)
         cache.delete("site_banner")
         return r
+
+
+class Visit(models.Model):
+    """Mesure d'audience interne, sans cookie : une visite = un visiteur anonyme sur une journee.
+    `visitor` = empreinte non reversible (IP + navigateur + sel du jour), qui change chaque jour."""
+    day = models.DateField(db_index=True)
+    visitor = models.CharField(max_length=16, db_index=True)
+    first_at = models.DateTimeField()
+    last_at = models.DateTimeField()
+    entry_path = models.CharField("Page d'entrée", max_length=200)
+    referrer = models.CharField("Source", max_length=120, blank=True, default="")
+    utm_source = models.CharField(max_length=60, blank=True, default="")
+    country = models.CharField(max_length=2, blank=True, default="")
+    lang = models.CharField(max_length=5, blank=True, default="")
+    device = models.CharField(max_length=8, blank=True, default="")      # mobile | tablet | desktop
+    pages = models.PositiveIntegerField(default=0)
+    duration_s = models.PositiveIntegerField("Temps passé (s)", default=0)
+
+    class Meta:
+        unique_together = [("day", "visitor")]
+        verbose_name = "Visite"
+
+
+class PageHit(models.Model):
+    visit = models.ForeignKey(Visit, related_name="hits", on_delete=models.CASCADE)
+    at = models.DateTimeField(db_index=True)
+    path = models.CharField(max_length=200, db_index=True)
+    duration_s = models.PositiveIntegerField(default=0)
+
+
+class SiteEvent(models.Model):
+    """Clic sur un appel a l'action, generation de toile, etc."""
+    at = models.DateTimeField(db_index=True)
+    day = models.DateField(db_index=True)
+    visitor = models.CharField(max_length=16, blank=True, default="", db_index=True)
+    kind = models.CharField(max_length=12, db_index=True)       # cta | generation
+    name = models.CharField(max_length=80)
+    path = models.CharField(max_length=200, blank=True, default="")

@@ -11,6 +11,7 @@
 {% block header %}{{ block.super }}
 {% if user.is_active and user.is_staff and not is_popup %}
 <nav class="erp-nav" aria-label="ERP">
+  <a href="/admin-hub/activity/" class="{% if '/admin-hub/activity' in erp_path %}on{% endif %}">Activité</a>
   <a href="/admin-hub/" class="{% if erp_path == '/admin-hub/' %}on{% endif %}">Pilotage</a>
   <a href="/admin-hub/orders/" class="{% if '/admin/studio/order' in erp_path or '/admin-hub/orders' in erp_path %}on{% endif %}">Commandes{% if erp_badges.actions %}<b class="bdg err" title="Actions a traiter">{{ erp_badges.actions }}</b>{% endif %}</a>
   <a href="/admin-hub/customers/" class="{% if '/admin-hub/customers' in erp_path %}on{% endif %}">Clients</a>

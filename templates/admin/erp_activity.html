@@ -1,0 +1,98 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Activité du site · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}
+<style>
+ .act-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:16px}
+ .chart{display:flex;align-items:flex-end;gap:3px;height:170px;padding:10px 4px 0;border-bottom:1px solid #e3e7ef}
+ .chart .c{flex:1;min-width:3px;position:relative;height:100%;display:flex;align-items:flex-end}
+ .chart .c i{display:block;width:100%;background:#2f6bf2;border-radius:4px 4px 0 0;min-height:1px}
+ .chart .c b{position:absolute;left:20%;right:20%;bottom:0;background:#f08a3c;border-radius:3px 3px 0 0;opacity:.9}
+ .chart .c:hover i{background:#12224f}
+ .chart .c .tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#12224f;color:#fff;
+   font-size:.7rem;padding:4px 7px;border-radius:6px;white-space:nowrap;z-index:2;margin-bottom:4px}
+ .chart .c:hover .tip{display:block}
+ .axis{display:flex;justify-content:space-between;font-size:.7rem;color:#8a93a6;margin-top:4px}
+ .legend{display:flex;gap:14px;font-size:.75rem;color:#5b647a}.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+ .bars{display:grid;gap:7px}
+ .bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;font-size:.82rem;color:#12224f}
+ .bar .lb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .bar .vl{font-variant-numeric:tabular-nums;color:#5b647a}
+ .bar .tr{grid-column:1/-1;height:6px;border-radius:6px;background:#eef1f6;overflow:hidden}
+ .bar .tr i{display:block;height:100%;background:linear-gradient(90deg,#2f6bf2,#8fb0ff);border-radius:6px}
+ table.at{width:100%;border-collapse:collapse;font-size:.82rem}
+ table.at th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:#8a93a6;padding:6px 8px;border-bottom:1px solid #e3e7ef}
+ table.at td{padding:7px 8px;border-bottom:1px solid #f0f2f7;color:#12224f}
+ table.at td.n,table.at th.n{text-align:right;font-variant-numeric:tabular-nums}
+ table.at code{font-size:.78rem;background:#f4f6fa;padding:1px 6px;border-radius:5px}
+ .live{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:700;color:#1e5b35;background:#e7f6ec;border-radius:999px;padding:4px 10px}
+ .live::before{content:"";width:8px;height:8px;border-radius:50%;background:#1f9d55;box-shadow:0 0 0 3px rgba(31,157,85,.25)}
+ .empty{color:#8a93a6;font-size:.82rem;padding:10px 0}
+</style>
+<div class="erp">
+  <div class="erp-head">
+    <div><h1>Activité du site</h1>
+      <div class="muted">Du {{ a.start|date:"d/m/Y" }} au {{ a.end|date:"d/m/Y" }} · comparé à la période précédente · mesure interne sans cookie, robots et équipe exclus</div></div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span class="live" title="Visiteurs actifs ces 30 dernières minutes">{{ a.live }} en ligne</span>
+      <div class="seg">{% for key, label in a.periods %}<a href="?p={{ key }}" class="{% if key == a.days %}on{% endif %}">{{ label }}</a>{% endfor %}</div>
+    </div>
+  </div>
+
+  <div class="kpis">
+    {% for c in a.cards %}
+    <div class="kpi" title="{{ c.hint }}">
+      <div class="l">{{ c.label }}</div>
+      <div class="v">{% if c.value is None %}—{% elif c.unit == "pct" %}{{ c.value|floatformat:1 }} %{% elif c.unit == "s" %}{% if c.value >= 60 %}{% widthratio c.value 60 1 %} min{% else %}{{ c.value }} s{% endif %}{% elif c.unit == "x" %}{{ c.value|floatformat:2 }}{% else %}{{ c.value }}{% endif %}</div>
+      <div class="d">
+        {% if c.delta is None %}<span class="dl flat">—</span>
+        {% else %}<span class="dl {% if c.delta > 0 %}{% if c.good_up %}up{% else %}down{% endif %}{% elif c.delta < 0 %}{% if c.good_up %}down{% else %}up{% endif %}{% else %}flat{% endif %}">{% if c.delta > 0 %}▲ +{% elif c.delta < 0 %}▼ {% endif %}{{ c.delta|floatformat:1 }} %</span>{% endif %}
+        <span class="muted">vs {% if c.prev is None %}—{% elif c.unit == "pct" %}{{ c.prev|floatformat:1 }} %{% elif c.unit == "x" %}{{ c.prev|floatformat:2 }}{% elif c.unit == "s" %}{{ c.prev }} s{% else %}{{ c.prev }}{% endif %}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>Visiteurs et générations par jour</h2>
+      <div class="legend"><span style="--c:#2f6bf2">Visiteurs</span><span style="--c:#f08a3c">Générations</span></div></div>
+    <div class="chart">{% for s in a.series %}<div class="c"><i style="height:{{ s.h|stringformat:'s' }}%"></i>{% if s.gens %}<b style="height:{{ s.hg|stringformat:'s' }}%"></b>{% endif %}<span class="tip">{{ s.day|date:"D d/m" }} · {{ s.visits }} visiteur{{ s.visits|pluralize }} · {{ s.gens }} génération{{ s.gens|pluralize }}</span></div>{% endfor %}</div>
+    <div class="axis"><span>{{ a.start|date:"d/m" }}</span><span>{{ a.end|date:"d/m" }}</span></div>
+  </div>
+
+  <div class="act-grid">
+    <div class="card"><div class="card-h"><h2>Pays</h2><span class="muted">en-tête du serveur ou langue du navigateur</span></div>
+      <div class="bars">{% for r in a.countries %}<div class="bar"><span class="lb">{{ r.label }}</span><span class="vl">{{ r.n }} · {{ r.pct|floatformat:0 }} %</span><span class="tr"><i style="width:{{ r.pct|stringformat:'d' }}%"></i></span></div>{% empty %}<div class="empty">Pas encore de visite.</div>{% endfor %}</div></div>
+
+    <div class="card"><div class="card-h"><h2>Sources</h2><span class="muted">site d'origine ou campagne utm</span></div>
+      <div class="bars">{% for r in a.sources %}<div class="bar"><span class="lb">{{ r.label }}</span><span class="vl">{{ r.n }} · {{ r.pct|floatformat:0 }} %</span><span class="tr"><i style="width:{{ r.pct|stringformat:'d' }}%"></i></span></div>{% empty %}<div class="empty">—</div>{% endfor %}</div></div>
+
+    <div class="card"><div class="card-h"><h2>Pages d'entrée</h2><span class="muted">première page vue</span></div>
+      <div class="bars">{% for r in a.entries %}<div class="bar"><span class="lb"><code>{{ r.k }}</code></span><span class="vl">{{ r.n }} · {{ r.pct|floatformat:0 }} %</span><span class="tr"><i style="width:{{ r.pct|stringformat:'d' }}%"></i></span></div>{% empty %}<div class="empty">—</div>{% endfor %}</div></div>
+
+    <div class="card"><div class="card-h"><h2>Appareils et langues</h2></div>
+      <div class="bars">{% for r in a.devices %}<div class="bar"><span class="lb">{% if r.k == "mobile" %}📱 Mobile{% elif r.k == "tablet" %}Tablette{% else %}🖥 Ordinateur{% endif %}</span><span class="vl">{{ r.n }} · {{ r.pct|floatformat:0 }} %</span><span class="tr"><i style="width:{{ r.pct|stringformat:'d' }}%"></i></span></div>{% endfor %}
+        {% for r in a.langs %}<div class="bar"><span class="lb">Langue {{ r.k|upper|default:"?" }}</span><span class="vl">{{ r.n }} · {{ r.pct|floatformat:0 }} %</span><span class="tr"><i style="width:{{ r.pct|stringformat:'d' }}%"></i></span></div>{% empty %}<div class="empty">—</div>{% endfor %}</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>Pages vues</h2><span class="muted">temps moyen = durée d'affichage réelle de la page</span></div>
+    <table class="at"><tr><th>Page</th><th class="n">Vues</th><th class="n">Visiteurs</th><th class="n">Temps moyen</th></tr>
+      {% for r in a.pages %}<tr><td><code>{{ r.k }}</code></td><td class="n">{{ r.n }}</td><td class="n">{{ r.visitors }}</td><td class="n">{% if r.avg %}{% if r.avg >= 60 %}{% widthratio r.avg 60 1 %} min{% else %}{{ r.avg }} s{% endif %}{% else %}—{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="4" class="empty">—</td></tr>{% endfor %}</table>
+  </div>
+
+  <div class="act-grid">
+    <div class="card"><div class="card-h"><h2>Clics sur les appels à l'action</h2><span class="muted">taux = visiteurs ayant cliqué / visiteurs de la page</span></div>
+      <table class="at"><tr><th>Bouton</th><th class="n">Clics</th><th class="n">Visiteurs</th><th class="n">Taux</th></tr>
+        {% for r in a.ctas %}<tr><td>{{ r.name }}<div class="muted" style="font-size:.7rem">{{ r.path }}</div></td><td class="n">{{ r.n }}</td><td class="n">{{ r.u }}</td><td class="n">{% if r.rate is not None %}{{ r.rate|floatformat:1 }} %{% else %}—{% endif %}</td></tr>
+        {% empty %}<tr><td colspan="4" class="empty">Aucun clic enregistré sur la période.</td></tr>{% endfor %}</table></div>
+
+    <div class="card"><div class="card-h"><h2>Générations</h2><span class="muted">{{ a.cur.generations }} sur la période · {{ a.cur.orders }} commande{{ a.cur.orders|pluralize }} payée{{ a.cur.orders|pluralize }}</span></div>
+      <div class="bars">{% for r in a.gens %}<div class="bar"><span class="lb">{{ r.k }}</span><span class="vl">{{ r.n }}</span></div>{% empty %}<div class="empty">Aucune génération sur la période.</div>{% endfor %}</div>
+      <p class="muted" style="font-size:.76rem;margin:12px 0 0">Entonnoir : {{ a.cur.visits }} visiteurs → {{ a.cur.generations }} générations ({{ a.cur.gen_rate|default:"—" }} %) → {{ a.cur.orders }} commandes ({{ a.cur.conv|default:"—" }} %).</p></div>
+  </div>
+</div>
+{% endblock %}

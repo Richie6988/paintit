@@ -1072,3 +1072,32 @@ class CatalogueVisibilityAndPurchaseTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("Rose", mail.outbox[0].subject)
         self.assertIn("4,90 €", mail.outbox[0].body)
+
+
+class ActivityTests(TestCase):
+    UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile"
+
+    def _post(self, data, ua=None, **extra):
+        import json
+        return self.client.post("/a/", json.dumps(data), content_type="application/json",
+                                HTTP_USER_AGENT=ua or self.UA, HTTP_ACCEPT_LANGUAGE="fr-BE,fr;q=0.9", **extra)
+
+    def test_collect_pageviews_duration_cta_and_dashboard(self):
+        from django.contrib.auth.models import User
+        from studio.models import PageHit, SiteEvent, Visit
+        h = self._post({"t": "pv", "p": "/", "r": "https://www.tiktok.com/@paintit", "w": 390}).json()["h"]
+        self._post({"t": "end", "h": h, "p": "/", "d": 42})
+        self._post({"t": "pv", "p": "/create/", "r": "https://paintit.click/"})
+        self._post({"t": "c", "p": "/", "n": "Accueil · Créer ma peinture (haut)"})
+        self._post({"t": "pv", "p": "/"}, ua="Googlebot/2.1")                       # robot ignore
+        v = Visit.objects.get()
+        self.assertEqual((v.pages, v.duration_s, v.entry_path, v.referrer, v.country, v.device),
+                         (2, 42, "/", "tiktok.com", "BE", "mobile"))
+        self.assertEqual(PageHit.objects.count(), 2)
+        self.assertEqual(SiteEvent.objects.filter(kind="cta").count(), 1)
+        User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
+        self.client.login(username="boss", password="pw-Secret-123")
+        r = self.client.get("/admin-hub/activity/?p=7")
+        for s in ("Activité du site", "Belgique", "tiktok.com", "Accueil · Créer ma peinture (haut)", "/create/"):
+            self.assertContains(r, s)
+        self.assertEqual(self._post({"t": "pv", "p": "/"}).status_code, 204)          # equipe connectee : exclue

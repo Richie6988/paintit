@@ -204,7 +204,7 @@
    .minimap{width:96px !important;right:10px;bottom:10px;border-width:2px;border-radius:8px}
    .mini-pos{width:10px;height:10px}
  }
-</style>{% if ANALYTICS_SRC %}<script defer data-domain="{{ ANALYTICS_DOMAIN }}" src="{{ ANALYTICS_SRC }}"></script>{% endif %}</head>
+</style>{% if ANALYTICS_SRC %}<script defer data-domain="{{ ANALYTICS_DOMAIN }}" src="{{ ANALYTICS_SRC }}"></script>{% endif %}{% if not user.is_staff %}<script defer src="{% static 'studio/js/a.js' %}"></script>{% endif %}</head>
 <body>
 {% if request.GET.bought %}
 <div id="buyok" role="status" style="position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;background:#12224f;color:#fff;

@@ -3,7 +3,9 @@ from . import views
 
 app_name = "studio"
 urlpatterns = [
+    path("a/", views.analytics_collect, name="analytics_collect"),
     path("admin-hub/", views.admin_hub, name="admin_hub"),
+    path("admin-hub/activity/", views.erp_activity, name="erp_activity"),
     path("admin-hub/2fa/", views.two_factor, name="two_factor"),
     path("admin-hub/2fa/setup/", views.two_factor_setup, name="two_factor_setup"),
     path("admin-hub/orders.csv", views.orders_csv, name="orders_csv"),
