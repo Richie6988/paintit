@@ -1167,6 +1167,7 @@ SUPPLIER_FILES = [("template_pdf", "{uid}_template.pdf", "Toile numérotée PDF 
                   ("poster", "{uid}_poster.png", "Poster (notice + palette + QR)"),
                   ("supplier_json", "{uid}_supplier.json", "Fiche fournisseur JSON (sans prix)"),
                   ("supplier_txt", "{uid}_supplier.txt", "Fiche fournisseur texte (EN/中文, sans prix)"),
+                  ("supplier_jpg", "{uid}_supplier_colors.jpg", "Tableau des couleurs (JPG)"),
                   ("order_json", "{uid}_order.json", "Bon de commande interne (order.json)")]
 
 
@@ -1195,9 +1196,9 @@ def ensure_supplier_files(o, shipping, force=False, user="auto"):
     uid = o.get("uid")
     st = {f["key"]: f["ok"] for f in supplier_files_status(uid)}
     errors = []
-    if st["supplier_json"] and not st["supplier_txt"] and not force:
-        fulfillment.write_supplier_text(uid)          # commandes anterieures : fiche texte deduite du JSON
-        st["supplier_txt"] = True
+    if st["supplier_json"] and not (st["supplier_txt"] and st["supplier_jpg"]) and not force:
+        fulfillment.write_supplier_text(uid)          # commandes anterieures : fiche texte + tableau JPG deduits du JSON
+        st["supplier_txt"] = st["supplier_jpg"] = True
     if force or not (st["poster"] and st["order_json"] and st["supplier_json"]):
         try:
             fulfillment.build(o, shipping)
@@ -2644,7 +2645,8 @@ def erp_supplier(request, pk):
                                         ("want_template_tiff", "Toile numérotée .tiff"),
                                         ("want_preview_svg", "Aperçu colorié .svg"), ("want_poster", "Poster PNG"),
                                         ("want_order_json", "Fiche JSON (sans prix)"),
-                                        ("want_order_txt", "Fiche texte lisible")] if getattr(sup, flag, False)],
+                                        ("want_order_txt", "Fiche texte lisible"),
+                                        ("want_colors_jpg", "Tableau couleurs JPG")] if getattr(sup, flag, False)],
         "unassigned": erp.unassigned_orders().count(), "erp_section": "suppliers"})
 
 
@@ -2652,7 +2654,7 @@ SUPPLIER_SECTIONS = {
     "profile": ["name", "checkout", "priority", "lead_time_days", "incoterms", "production_notes", "terms"],
     "contact": ["contact_name", "contact_email", "phone", "address", "bank_name", "iban", "bic", "notes"],
     "channel": ["email", "api_url", "api_key"],
-    "dispatch": ["auto_dispatch", "want_template_tiff", "want_poster", "want_order_json", "want_order_txt", "want_template_pdf",
+    "dispatch": ["auto_dispatch", "want_template_tiff", "want_poster", "want_order_json", "want_order_txt", "want_colors_jpg", "want_template_pdf",
                  "want_template_svg", "want_preview_svg"],
     "excel": [], "palette": [], "docs": [],
 }
@@ -2666,7 +2668,8 @@ SUPPLIER_LABELS = {
     "auto_dispatch": "Transmettre automatiquement chaque commande payée",
     "want_template_tiff": "Toile numérotée (TIFF)", "want_poster": "Poster couleur (PNG)",
     "want_order_json": "Fiche couleurs (JSON)",
-    "want_order_txt": "Fiche texte lisible (commande, destinataire, n° -> réf. couleur, EN/中文)", "want_template_pdf": "Toile numérotée (PDF)",
+    "want_order_txt": "Fiche texte lisible (commande, destinataire, couleurs, EN/中文)",
+    "want_colors_jpg": "Tableau des couleurs en image (code usine, n° sur la toile, pastille)", "want_template_pdf": "Toile numérotée (PDF)",
     "want_template_svg": "Toile numérotée (SVG)", "want_preview_svg": "Aperçu colorié (SVG)", "want_source": "Photo d'origine",
 }
 
@@ -3147,7 +3150,7 @@ def _order_files(o):
                 g = "other"
             label = {"_source_": "Photo originale", "_preview.": "Toile coloriée", "_template.": "Toile numérotée",
                      "_poster": "Poster (notice + palette)", "_palette": "Palette", "_order.json": "Bon de commande interne (order.json)",
-                     "_colors.json": "Couleurs (JSON)", "_supplier.json": "Fiche fournisseur (sans prix)", "_supplier.txt": "Fiche fournisseur texte (EN/中文)",
+                     "_colors.json": "Couleurs (JSON)", "_supplier.json": "Fiche fournisseur (sans prix)", "_supplier.txt": "Fiche fournisseur texte (EN/中文)", "_supplier_colors.jpg": "Tableau des couleurs (JPG)",
                      "_template.pdf": "Toile numérotée PDF vectoriel", "_template.tiff": "Toile numérotée TIFF 600 dpi", "_digipaint": "Toile jouable", "_preview_": "Aperçu"}
             hits = [k for k in label if k in low]
             nice = label[max(hits, key=len)] if hits else name   # cle la plus specifique

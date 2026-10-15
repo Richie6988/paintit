@@ -193,26 +193,19 @@ def supplier_text(sj):
           "City / 城市:            %s" % ci.get("city", ""),
           "Country / 国家:         %s" % ci.get("country", ""),
           ""]
-    specs = sj.get("color_specifications", [])
-    has_area = any("area_pct" in c for c in specs)
-    if has_area:
-        L += ["COLORS / 颜色  (smallest to largest area / 按面积从小到大)",
-              "No./编号   Supplier ref / 色号      Area / 面积", "-" * 52]
-    else:
-        L += ["COLORS / 颜色  (No. / 编号  ->  Supplier ref / 色号)", "-" * 44]
+    specs = sort_by_code(sj.get("color_specifications", []))
+    L += ["COLORS / 颜色: %s colors, %sx%s cm" % (len(specs), oi.get("width_cm", ""), oi.get("height_cm", "")),
+          "Sorted by factory color code (small -> large) / 按工厂色号从小到大", "",
+          "%-22s %-18s %s" % ("Factory color code", "Number on canvas", "Color"),
+          "%-22s %-18s %s" % ("工厂色号", "画布编号", "颜色"), "-" * 52]
     approx = False
     for c in specs:
-        ref = c.get("supplier_code")
-        if ref and c.get("supplier_code_approx"):
-            ref += " *"; approx = True
-        ref = ref or "%s (no ref / 无色号)" % (c.get("hex") or "")
-        if has_area:
-            area = ("%s cm2" % c["area_cm2"]) if "area_cm2" in c else ""
-            L.append("%6s     %-22s %10s  %5.1f %%" % (c.get("number", ""), ref, area, c.get("area_pct", 0)))
-        else:
-            L.append("%4s  ->  %s" % (c.get("number", ""), ref))
+        code = _fmt_code(c.get("supplier_code")) or "----"
+        if c.get("supplier_code") and c.get("supplier_code_approx"):
+            code += " *"; approx = True
+        L.append("%-22s %-18s %s" % (code, c.get("number", ""), (c.get("hex") or "").upper()))
     if approx:
-        L += ["", "* closest ref in your color chart / 色卡中最接近的色号"]
+        L += ["", "* closest code in your color chart / 色卡中最接近的色号"]
     return "\n".join(L) + "\n"
 
 
@@ -242,18 +235,76 @@ def color_shares(uid, colors=None):
 
 
 def add_areas(uid, specs, width_cm, height_cm, colors=None):
-    """Ajoute surface (cm2, %) a chaque couleur et trie de la plus petite a la plus grande surface :
-    le fournisseur dose les quantites de peinture dans cet ordre."""
+    """Ajoute surface (cm2, %) a chaque couleur ; liste triee par code couleur usine (format de l'atelier)."""
     shares = color_shares(uid, colors)
     if not shares:
-        return specs
+        return sort_by_code(specs)
     canvas = float(width_cm or 0) * float(height_cm or 0)
     for c in specs:
         f = shares.get(int(c.get("number") or 0), 0.0)
         c["area_pct"] = round(f * 100, 2)
         if canvas:
             c["area_cm2"] = round(f * canvas, 1)
-    return sorted(specs, key=lambda c: (c.get("area_pct", 0), c.get("number") or 0))
+    return sort_by_code(specs)
+
+
+def sort_by_code(specs):
+    """Ordre de travail de l'atelier : code couleur usine croissant (sans code : a la fin, par numero)."""
+    def key(c):
+        code = str(c.get("supplier_code") or "")
+        return (0, int(code), code) if code.isdigit() else (1 if code else 2, 0, code or "%06d" % (c.get("number") or 0))
+    return sorted(specs, key=key)
+
+
+def _fmt_code(code):
+    code = str(code or "")
+    return code.zfill(4) if code.isdigit() else code
+
+
+def _font(size, bold=False):
+    from PIL import ImageFont
+    cands = (["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"] if bold else
+             ["/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]) + \
+        [os.path.join(settings.BASE_DIR, "studio", "static", "studio", "fonts", "Poppins-Bold.ttf")]
+    for f in cands:
+        if os.path.exists(f):
+            return ImageFont.truetype(f, size)
+    return ImageFont.load_default(size)
+
+
+def supplier_colors_image(sj, path, title=""):
+    """Tableau des couleurs (format de l'atelier) en JPG : code usine | numero sur la toile | pastille."""
+    from PIL import Image, ImageDraw
+    oi = sj.get("order_information", {})
+    specs = sort_by_code(sj.get("color_specifications", []))
+    W, row, top = 900, 56, 190
+    H = top + row * len(specs) + 70
+    im = Image.new("RGB", (W, H), "white")
+    d = ImageDraw.Draw(im)
+    f_t, f_s, f_h, f_c, f_n = _font(34, True), _font(22), _font(24, True), _font(26), _font(26, True)
+    d.text((36, 30), title or "Order %s (%s colors, %sx%scm)" % (oi.get("uid", ""), len(specs), oi.get("width_cm", ""),
+                                                                 oi.get("height_cm", "")), font=f_t, fill="black")
+    d.text((36, 82), "Sorted by factory color code (small -> large)", font=f_s, fill=(110, 110, 110))
+    X = (36, 330, 650)
+    for x, h in zip(X, ("Factory color code", "Number on canvas", "Color")):
+        d.text((x, 136), h, font=f_h, fill="black")
+    d.line([(24, top - 6), (W - 24, top - 6)], fill="black", width=2)
+    approx = False
+    for i, c in enumerate(specs):
+        y = top + i * row
+        if i % 2:
+            d.rectangle([24, y, W - 24, y + row - 1], fill=(244, 244, 244))
+        code = _fmt_code(c.get("supplier_code")) or "----"
+        if c.get("supplier_code") and c.get("supplier_code_approx"):
+            code += " *"; approx = True
+        d.text((X[0], y + 14), code, font=f_c, fill="black")
+        d.text((X[1] + 40, y + 14), str(c.get("number", "")), font=f_n, fill="black")
+        rgb = tuple(c.get("rgb") or ()) or tuple(int((c.get("hex") or "#cccccc")[k:k + 2], 16) for k in (1, 3, 5))
+        d.rectangle([X[2], y + 9, X[2] + 120, y + row - 9], fill=rgb, outline=(120, 120, 120))
+    if approx:
+        d.text((36, H - 50), "* closest code in your color chart", font=f_s, fill=(110, 110, 110))
+    im.save(path, "JPEG", quality=92)
+    return path
 
 
 def write_supplier_text(uid, sj=None):
@@ -272,6 +323,10 @@ def write_supplier_text(uid, sj=None):
     p = os.path.join(d, "%s_supplier.txt" % uid)
     with open(p, "w", encoding="utf-8") as f:
         f.write(supplier_text(sj))
+    try:
+        supplier_colors_image(sj, os.path.join(d, "%s_supplier_colors.jpg" % uid))   # meme tableau en image
+    except Exception:
+        pass
     return p
 
 
@@ -441,4 +496,5 @@ def build(order, shipping):
         if os.path.exists(pth):
             os.remove(pth)
 
-    return {"dir": d, "files": [f"{uid}_template.svg", f"{uid}_poster.png", f"{uid}_supplier.json", f"{uid}_supplier.txt"]}
+    return {"dir": d, "files": [f"{uid}_template.svg", f"{uid}_poster.png", f"{uid}_supplier.json", f"{uid}_supplier.txt",
+                                f"{uid}_supplier_colors.jpg"]}

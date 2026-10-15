@@ -136,6 +136,9 @@ def _send(sup, payload):
                        "application/json")
             if txt:
                 msg.attach("order_%s.txt" % o["uid"], txt, "text/plain; charset=utf-8")
+                jpg = os.path.join(settings.MEDIA_ROOT, "orders", o["uid"], "%s_supplier_colors.jpg" % o["uid"])
+                if os.path.exists(jpg):
+                    msg.attach_file(jpg)
             xl = (sup.offer or {}).get("xlsx") or {}
             if o.get("uid") and xl.get("attach"):
                 # Fichier pret a importer dans l'ERP du fournisseur (MangoERP : Excel导入手工订单)

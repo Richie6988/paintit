@@ -378,24 +378,31 @@ class SupplierPaletteTests(TestCase):
                                      {"number": 2, "supplier_code": "B-07", "supplier_code_approx": True},
                                      {"number": 3, "hex": "#123456"}]})
         for part in ("PAINTIT ORDER / 订单  AB12-CD34", "Marie Curie", "+33 612345678", "40 x 50 cm", "YES / 是",
-                     "   1  ->  A-01", "   2  ->  B-07 *", "#123456 (no ref", "closest ref"):
+                     "A-01", "B-07 *", "#123456", "closest code"):
             self.assertIn(part, txt)
         self.assertNotIn("price", txt.lower())
 
     @override_settings(MEDIA_ROOT=MEDIA)
-    def test_supplier_colors_sorted_smallest_area_first(self):
-        from studio.fulfillment import add_areas, supplier_text
+    def test_supplier_colors_sorted_by_factory_code(self):
+        from studio.fulfillment import add_areas, supplier_text, supplier_colors_image
         d = os.path.join(MEDIA, "orders", "AREA-1"); os.makedirs(d, exist_ok=True)
         open(os.path.join(d, "AREA-1_digipaint.svg"), "w").write(
             '<svg><path data-n="1" data-a="600" d=""/><path data-n="2" data-a="100" d=""/>'
             '<path data-n="3" data-a="250" d=""/><path data-n="2" data-a="50" d=""/></svg>')
-        specs = add_areas("AREA-1", [{"number": 1, "supplier_code": "A"}, {"number": 2, "supplier_code": "B"},
-                                     {"number": 3, "supplier_code": "C"}], 40, 50)
-        self.assertEqual([c["number"] for c in specs], [2, 3, 1])
+        specs = add_areas("AREA-1", [{"number": 1, "supplier_code": "1205", "hex": "#454545"},
+                                     {"number": 2, "supplier_code": "27", "hex": "#2b4a2a"},
+                                     {"number": 3, "supplier_code": "115", "hex": "#2d3f2a"}], 40, 50)
+        self.assertEqual([c["number"] for c in specs], [2, 3, 1])               # 0027 < 0115 < 1205
         self.assertEqual((specs[0]["area_pct"], specs[0]["area_cm2"]), (15.0, 300.0))
-        txt = supplier_text({"order_information": {}, "consignee_information": {}, "color_specifications": specs})
-        self.assertLess(txt.index(" B "), txt.index(" C "))
-        self.assertIn("300.0 cm2", txt)
+        sj = {"order_information": {"uid": "AREA-1", "width_cm": 40, "height_cm": 50}, "consignee_information": {},
+              "color_specifications": list(reversed(specs))}
+        txt = supplier_text(sj)
+        self.assertIn("Sorted by factory color code (small -> large)", txt)
+        self.assertLess(txt.index("0027"), txt.index("0115"))
+        self.assertLess(txt.index("0115"), txt.index("1205"))
+        jpg = supplier_colors_image(sj, os.path.join(d, "t.jpg"))
+        from PIL import Image
+        self.assertEqual(Image.open(jpg).format, "JPEG")
 
 
 class InboxTests(TestCase):

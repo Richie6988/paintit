@@ -652,7 +652,7 @@ class SupplierAdmin(admin.ModelAdmin):
         ("Integration (plug & play)", {"fields": ("integration", "email", ("api_url", "api_key")),
             "description": "E-mail : commande + liens fichiers par mail. API : POST JSON (Bearer cle)."}),
         ("Fichiers a transmettre", {"fields": (
-            ("want_source", "want_order_json", "want_order_txt"),
+            ("want_source", "want_order_json", "want_order_txt", "want_colors_jpg"),
             ("want_template_svg", "want_template_tiff"),
             ("want_preview_svg", "want_poster")),
             "description": "Toile numerotee, apercu colorie, poster, et order JSON "
