@@ -63,9 +63,9 @@
       <label>Densité des zones
         <select name="density">{% for k, l in densities %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select></label>
       <label>Couleurs
-        <select name="colors"><option value="">Celles de la toile (24 si import)</option><option value="12">12</option><option value="18">18</option><option value="24">24</option><option value="36">36</option></select></label>
+        <input type="number" name="colors" min="6" max="64" step="1" placeholder="Celles de la toile (24 si import)" title="De 6 à 64 : une autre valeur recrée la toile depuis la photo d'origine"></label>
       <label>Remplissage
-        <select name="mode"><option value="random">Aléatoire (accélère)</option><option value="colors">Couleur par couleur</option></select></label>
+        <select name="mode"><option value="flow">Vague (se propage)</option><option value="random">Aléatoire (accélère)</option><option value="colors">Couleur par couleur</option></select></label>
       <label>Durée (61 à 70 s)
         <input type="number" name="duration" min="61" max="70" step="0.5" placeholder="Aléatoire"></label>
       <label style="grid-column:span 2">Accroche (en haut) · {zones} et {colors} = chiffres réels de la toile
@@ -76,6 +76,7 @@
       <label>Variantes
         <select name="count"><option value="1">1 vidéo</option><option value="2">2 vidéos</option><option value="3">3 vidéos</option></select></label>
       <div class="go" style="grid-column:span 2;justify-content:flex-start;gap:16px"><label class="chk"><input type="checkbox" name="before_after" value="1" checked> Avant / après (photo 1 s)</label>
+        <label class="chk" title="Une note douce par zone peinte : l'accélération finale devient une cascade"><input type="checkbox" name="fill_sounds" value="1" checked> Sons de remplissage</label>
         <button class="pbtn pri">Générer</button></div>
     </form>
   </div>

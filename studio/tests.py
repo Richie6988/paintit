@@ -903,8 +903,9 @@ class SatisfyingVideoTests(TestCase):
     def test_render_short_video(self):
         from studio import satisfying
         out = os.path.join(MEDIA, "t.mp4")
-        for style in ("ambient", "electro", "space", "none"):
-            satisfying.render(self.UID, out, duration=1.0, hook="{zones} zones, {colors} colors 🎨", music_style=style)
+        for style, mode in (("ambient", "flow"), ("electro", "random"), ("space", "colors"), ("none", "flow")):
+            satisfying.render(self.UID, out, duration=1.0, hook="{zones} zones, {colors} colors 🎨", music_style=style,
+                              mode=mode)
             self.assertGreater(os.path.getsize(out), 1000)
         self.assertEqual(satisfying.hook_text("{zones} zones / {colors}", 869, 32), "869 zones / 32")
 

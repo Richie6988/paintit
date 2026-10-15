@@ -125,9 +125,10 @@ def _area(pts):
     return 0.5 * sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]))
 
 
-def schedule(n_zones, numbers, mode, fill_seconds, seed=0, areas=None):
+def schedule(n_zones, numbers, mode, fill_seconds, seed=0, areas=None, centers=None):
     """Instant de debut de remplissage de chaque zone (secondes, a partir de la fin de l'intro).
-    Rythme : c(u) = N (0.3 u + 0.7 u^3) -> ca demarre tout de suite (part lineaire) et explose a la fin (part cubique)."""
+    Rythme : c(u) = N (0.3 u + 0.7 u^3) -> ca demarre tout de suite (part lineaire) et explose a la fin (part cubique).
+    Modes : flow (vague qui se propage depuis un point : continuite, l'oeil suit), random, colors."""
     rng = np.random.default_rng(seed)
     u = np.linspace(0, 1, 2001)
     frac = 0.3 * u + 0.7 * u ** 3
@@ -139,6 +140,17 @@ def schedule(n_zones, numbers, mode, fill_seconds, seed=0, areas=None):
         for c in order_cols:
             for z in rng.permutation(np.where(numbers == c)[0]):
                 start[z] = when(rank); rank += 1
+        return start
+    if mode == "flow" and centers is not None and len(centers):
+        c = np.asarray(centers, float)
+        lo, hi = c.min(0), c.max(0)
+        seeds = [(0.5, 1.0), (0.5, 0.5), (0.0, 1.0), (1.0, 1.0), (0.5, 0.0)]     # bas, centre, coins bas, haut
+        sx, sy = seeds[int(rng.integers(len(seeds)))]
+        p = lo + (hi - lo) * np.array([sx, sy])
+        d = np.hypot(*(c - p).T)
+        d = d / max(1e-6, d.max()) + rng.normal(0, 0.06, n_zones)            # front de vague legerement organique
+        for rank, z in enumerate(np.argsort(d)):
+            start[z] = when(rank)
         return start
     # aleatoire, mais les grandes zones sortent plutot en premier : la toile prend vie des la 1re seconde
     w = np.ones(n_zones) if areas is None else np.maximum(np.asarray(areas, float), 1e-6) ** 0.35
@@ -243,16 +255,38 @@ def _space(out, sr, duration, fill_end, rng):
         out[d:] += 0.42 * out[:-d]
 
 
-def music(path, duration, fill_end, seed=0, sr=44100, style="ambient"):
-    """Musique generee par le code (donc libre de droits), synchronisee sur le remplissage + « ding » final."""
+PENTA = [60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84]          # gamme pentatonique (do) : jamais de fausse note
+
+
+def _plucks(out, sr, plucks):
+    """Sonification : une note douce par zone qui se remplit (aigu = couleur claire). Les remplissages qui
+    s'accelerent deviennent une cascade musicale ; notes trop rapprochees fusionnees (pas de bouillie)."""
+    last = -1.0
+    for t, idx, amp in sorted(plucks):
+        if t - last < 0.045:
+            continue
+        last = t
+        f = _hz(PENTA[max(0, min(len(PENTA) - 1, idx))])
+        sig = _tone(sr, 0.45, f, 0.075 * amp, 8.5, (1, 0.32, 0.08))
+        sig[:int(0.004 * sr)] *= np.linspace(0, 1, int(0.004 * sr))                 # attaque douce : pas de clic
+        _add(out, sr, t, sig)
+
+
+def music(path, duration, fill_end, seed=0, sr=44100, style="ambient", plucks=None):
+    """Musique generee par le code (donc libre de droits), synchronisee sur le remplissage + « ding » final.
+    style « none » + plucks : uniquement les sons de remplissage."""
     rng = np.random.default_rng(seed)
     out = np.zeros(int(duration * sr))
     if style == "electro":
         _electro(out, sr, duration, fill_end, rng)
     elif style == "space":
         _space(out, sr, duration, fill_end, rng)
-    else:
+    elif style != "none":
         _ambient(out, sr, duration, fill_end)
+    if plucks:
+        if style != "none":
+            out *= 0.6 / max(1e-6, np.abs(out).max())          # la musique passe derriere les sons de peinture
+        _plucks(out, sr, plucks)
     _ding(out, sr, fill_end)
     out *= 0.9 / max(1e-6, np.abs(out).max())
     fade = min(len(out), int(1.2 * sr))
@@ -368,9 +402,23 @@ def hook_text(hook, n_zones, n_colors):
     return (hook or "").replace("{zones}", str(n_zones)).replace("{colors}", str(n_colors))
 
 
-def render(uid, out_path, mode="random", duration=65.0, hook="", end_title="", end_sub="", with_music=True,
-           seed=0, progress=None, music_style="ambient", before_after=False):
-    """Genere la video MP4. -> chemin. `progress(f)` recoit 0..1."""
+SUSPENSE = 0.9          # derniere zone : elle clignote un instant avant d'etre peinte (attente -> recompense)
+LOOP = 0.5              # fondu final vers la 1re image : la video boucle sans couture (revisionnage)
+ZOOM = 0.07             # lent zoom avant pendant le remplissage, recul a la revelation
+
+
+def _smooth(x):
+    x = min(1.0, max(0.0, x))
+    return x * x * (3 - 2 * x)
+
+
+def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end_sub="", with_music=True,
+           seed=0, progress=None, music_style="ambient", before_after=False, fill_sounds=True):
+    """Genere la video MP4. -> chemin. `progress(f)` recoit 0..1.
+    Leviers « satisfying » : peinture qui s'etale depuis le centre de chaque zone (reflet humide + « pop » a la fin),
+    barre de progression (envie de voir 100 %), sons de remplissage, derniere zone gardee pour la fin,
+    zoom lent, fin irisee puis fondu vers la premiere image (boucle)."""
+    import cv2
     import imageio_ffmpeg
     from PIL import ImageFilter
     labels, colors, numbers, areas, edge = load_zones(uid, W - 2 * SIDE, CANVAS_H)
@@ -379,97 +427,168 @@ def render(uid, out_path, mode="random", duration=65.0, hook="", end_title="", e
     ox, oy = (W - cw) // 2, TOP + (CANVAS_H - ch) // 2
     photo = _photo(uid, cw, ch) if before_after else None        # avant / apres : la photo d'origine d'abord
     intro = INTRO + (PHOTO_HOLD + PHOTO_FADE if photo is not None else 0)
-    fill_seconds = max(10.0, duration - intro - OUTRO)
-    start = schedule(n, numbers, mode, fill_seconds, seed, areas) + intro
-    photo_tag = _counter("Photo")
-    fade = 0.22
+
+    # --- geometrie des zones : surface reelle, centre, distance normalisee de chaque pixel au centre
+    lab = np.where(labels < 0, n, labels).astype(np.int32)
+    flat = lab.ravel()
+    px = np.bincount(flat, minlength=n + 1)[:n].astype(np.float64)
+    yy, xx = np.mgrid[0:ch, 0:cw]
+    cx = np.bincount(flat, xx.ravel(), n + 1)[:n] / np.maximum(px, 1)
+    cy = np.bincount(flat, yy.ravel(), n + 1)[:n] / np.maximum(px, 1)
+    dist = np.hypot(xx.ravel() - np.append(cx, 0)[flat], yy.ravel() - np.append(cy, 0)[flat]).astype(np.float32)
+    dmax = np.zeros(n + 1, np.float32)
+    np.maximum.at(dmax, flat, dist)
+    dnorm = dist / np.maximum(dmax[flat], 1)
+    order_px = np.argsort(flat, kind="stable")
+    bounds = np.searchsorted(flat[order_px], np.arange(n + 2))
+    zone_px = [order_px[bounds[z]:bounds[z + 1]] for z in range(n)]
+    zone_d = [dnorm[i][:, None] for i in zone_px]
+
+    # --- calendrier : chaque zone s'etale en 0.16-0.65 s selon sa taille ; la derniere est gardee pour la fin
+    fill_seconds = max(10.0, duration - intro - OUTRO - SUSPENSE)
+    start = schedule(n, numbers, mode, fill_seconds, seed, px, np.c_[cx, cy]) + intro
+    dur = np.clip(0.16 + 0.0011 * np.sqrt(px), 0.16, 0.65)
+    # derniere zone : bien visible mais pas immense (1 a 3 % de la toile), proche du centre, parmi les dernieres
+    late = np.argsort(start)[-max(3, n // 6):]
+    share = px[late] / max(px.sum(), 1)
+    centr = np.hypot(cx[late] / cw - 0.5, cy[late] / ch - 0.5)
+    last = int(late[np.argmin(np.abs(share - 0.02) * 30 + centr)])
+    others_end = float(np.max(np.delete(start + dur, last))) if n > 1 else float(start[last])
+    start[last] = others_end + SUSPENSE
+    fill_end = float(start[last] + dur[last])
+
     top = _text_layer(hook_text(hook, n, len(np.unique(numbers))))
     brand = _brand_mask()
-    bx, by = (W - brand.shape[1]) // 2, oy + ch + 26
+    bar_y = oy + ch + 12
+    bx, by = (W - brand.shape[1]) // 2, oy + ch + 36
     # fin « win » : reflet irise qui balaie la toile + scintillements + marque irisee
-    yy, xx = np.mgrid[0:ch, 0:cw].astype(np.float32)
-    diag = (xx + yy * 0.7) / (cw + ch * 0.7)                        # 0..1 en diagonale
-    iri = _rainbow(diag * 1.6)                                      # nacre fixe, revelee par le balayage
+    diag = (xx + yy * 0.7).astype(np.float32) / (cw + ch * 0.7)
+    iri = _rainbow(diag * 1.6)
     rng = np.random.default_rng(seed + 7)
     star = _star()
     sparks = [(int(rng.uniform(0, cw - 56)), int(rng.uniform(0, ch - 56)), rng.uniform(0.25, 2.6)) for _ in range(16)]
     bm_x = np.linspace(0, 1, brand.shape[1], dtype=np.float32)[None, :]
     col = colors.astype(np.float32)
-    lab = np.where(labels < 0, n, labels)                       # index n = fond (blanc)
     edge_idx = np.nonzero(edge.ravel())[0]
+    edge_lab = flat[edge_idx]
     edge_rgb = np.array([190, 196, 210], np.uint8)
+    last_edges = edge_idx[edge_lab == last]
     base = np.zeros((H, W, 3), np.uint8); base[:] = BG
     sh = Image.new("L", (W, H), 0)
     ImageDraw.Draw(sh).rounded_rectangle([ox - 4, oy + 8, ox + cw + 4, oy + ch + 18], radius=14, fill=60)
     sh = np.array(sh.filter(ImageFilter.GaussianBlur(16)), np.float32)[..., None] / 255.0
     base = (base * (1 - sh * 0.5)).astype(np.uint8)
     _blend(base, top, 0, 0)
+    base[bar_y:bar_y + 8, ox:ox + cw] = (226, 230, 239)                     # rail de la barre de progression
     roi = base[by:by + brand.shape[0], bx:bx + brand.shape[1]].astype(np.float32)
     base[by:by + brand.shape[0], bx:bx + brand.shape[1]] = (roi * (1 - brand * 0.85) + np.array(INK) * brand * 0.85).astype(np.uint8)
-    counters = {}
+    pills, photo_tag = {}, _counter("Photo")
     total_frames = int(duration * FPS)
+
+    # --- son : musique choisie + une note par zone (aigu = couleur claire), accord final a la derniere zone
     tmp_audio = out_path + ".wav"
-    fill_end = float(start.max() + fade)
-    with_music = with_music and music_style != "none"
-    if with_music:
-        music(tmp_audio, duration, fill_end, seed, style=music_style)
+    style = music_style if with_music else "none"
+    plucks = None
+    if fill_sounds:
+        lum = col @ np.array([0.3, 0.59, 0.11], np.float32)
+        idx = np.round(lum / 255 * (len(PENTA) - 1)).astype(int)
+        amp = 0.45 + 0.55 * np.sqrt(px / max(px.max(), 1))
+        plucks = [(float(start[z]), int(idx[z]), float(amp[z])) for z in range(n) if z != last]
+    has_audio = style != "none" or bool(plucks)
+    if has_audio:
+        music(tmp_audio, duration, fill_end, seed, style=style, plucks=plucks)
     cmd = [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
            "-s", "%dx%d" % (W, H), "-r", str(FPS), "-i", "-"]
-    if with_music:
+    if has_audio:
         cmd += ["-i", tmp_audio, "-c:a", "aac", "-b:a", "160k", "-shortest"]
     cmd += ["-c:v", "libx264", "-preset", "fast", "-crf", "20", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
             out_path]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    accent = np.array([47, 107, 242], np.float32)
+    first = None
     try:
-        pal = np.zeros((n + 1, 3), np.float32); pal[n] = 255
+        pal = np.full((n + 1, 3), 255, np.float32)
         for fi in range(total_frames):
             t = fi / FPS
-            a = np.clip((t - start) / fade, 0, 1).astype(np.float32)[:, None]
-            pal[:n] = 255 * (1 - a) + col * a
-            canvas = pal.astype(np.uint8)[lab]                        # gather uint8 : rapide
-            done = t > fill_end
-            if not done:
-                canvas.reshape(-1, 3)[edge_idx] = edge_rgb            # contours des zones (sans numeros)
-            frame = base.copy()
+            a = np.clip((t - start) / dur, 0, 1)
+            ae = a * a * (3 - 2 * a)
+            since = t - (start + dur)
+            flash = np.where(since > 0, np.exp(-np.maximum(since, 0) / 0.2), 0.0) * 0.45     # « pop » a la fin de la zone
+            done_z = ae >= 1
+            pal[:n] = np.where(done_z[:, None], col + (255 - col) * flash[:, None], 255)
+            canvas = pal.astype(np.uint8)[lab]
+            cflat = canvas.reshape(-1, 3)
+            for z in np.nonzero((ae > 0) & (ae < 1))[0]:                   # peinture qui s'etale depuis le centre
+                m = np.clip((ae[z] * 1.2 - zone_d[z]) / 0.2, 0, 1)
+                v = 255 + (col[z] - 255) * m
+                v += (255 - v) * (m * (1 - m) * 2.0)                       # reflet humide sur le front de peinture
+                cflat[zone_px[z]] = v.astype(np.uint8)
+            if t < fill_end:
+                cflat[edge_idx[np.append(ae, 1.0)[edge_lab] < 1]] = edge_rgb  # contours seulement autour du non-peint
+            if others_end < t < start[last]:                                 # suspense : la derniere zone clignote
+                k = 0.5 + 0.5 * math.sin(2 * math.pi * 2.4 * (t - others_end) - math.pi / 2)
+                cflat[zone_px[last]] = (255 - (255 - np.array([205, 220, 255], np.float32)) * k).astype(np.uint8)
+                cflat[last_edges] = accent.astype(np.uint8)
             if photo is not None and t < PHOTO_HOLD + PHOTO_FADE:
-                k = min(1.0, max(0.0, (t - PHOTO_HOLD) / PHOTO_FADE))
-                canvas = (photo * (1 - k) + canvas * k).astype(np.uint8)
+                kp = _smooth((t - PHOTO_HOLD) / PHOTO_FADE)
+                canvas = (photo * (1 - kp) + canvas * kp).astype(np.uint8)
+            # zoom lent : avant pendant le remplissage (vers la derniere zone pendant le suspense), recul a la fin
+            if t <= fill_end:
+                z = 1 + ZOOM * _smooth((t - intro) / max(1e-3, fill_end - intro))
+            else:
+                z = 1 + ZOOM * (1 - _smooth((t - fill_end) / 0.9))
+            if z > 1.002:
+                kf = _smooth((t - others_end) / SUSPENSE) if t > others_end else 0.0
+                fx = cw / 2 + (cx[last] - cw / 2) * 0.6 * kf
+                fy = ch / 2 + (cy[last] - ch / 2) * 0.6 * kf
+                w2, h2 = cw / z, ch / z
+                x0 = min(max(fx - w2 / 2, 0), cw - w2); y0 = min(max(fy - h2 / 2, 0), ch - h2)
+                M = np.float32([[z, 0, -x0 * z], [0, z, -y0 * z]])
+                canvas = cv2.warpAffine(canvas, M, (cw, ch), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            frame = base.copy()
             frame[oy:oy + ch, ox:ox + cw] = canvas
-            filled = int((t >= start + fade).sum())
-            if filled not in counters:
-                counters[filled] = _counter("%d / %d" % (filled, n))
-            cn = photo_tag if photo is not None and t < PHOTO_HOLD else counters[filled]
+            # progression : barre + pourcentage de surface peinte (on veut voir 100 %)
+            pct = float((px * ae).sum() / max(px.sum(), 1))
+            wbar = int(round(cw * pct))
+            if wbar:
+                frame[bar_y:bar_y + 8, ox:ox + wbar] = (47, 107, 242) if pct < 0.999 else (31, 157, 85)
+            p100 = int(pct * 100 + 1e-6)
+            if p100 not in pills:
+                pills[p100] = _counter("%d %%" % p100)
+            cn = photo_tag if photo is not None and t < PHOTO_HOLD else pills[p100]
             _blend(frame, cn, ox + 18, oy + ch - cn.shape[0] - 18)
             te = t - fill_end
             if te > 0:
-                cv = frame[oy:oy + ch, ox:ox + cw].astype(np.float32)
-                # deux balayages irises (le 2e plus doux) en mode « screen »
-                k = np.zeros((ch, cw), np.float32)
-                for t0, amp in ((0.0, 0.85), (1.3, 0.45)):
+                cvf = frame[oy:oy + ch, ox:ox + cw].astype(np.float32)
+                kk = np.zeros((ch, cw), np.float32)
+                for t0, amp_ in ((0.0, 0.85), (1.3, 0.45)):                   # deux balayages irises
                     c = (te - t0) / 1.1 * 1.6 - 0.3
                     if -0.4 < c < 1.4:
-                        k += amp * np.exp(-((diag - c) / 0.09) ** 2)
-                k += 0.10 * min(1.0, te / 0.6)                           # leger voile nacre qui reste
-                k = np.minimum(k, 1)[..., None]
-                cv = 255 - (255 - cv) * (1 - k * iri / 255)
-                for sx, sy, s0 in sparks:                               # scintillements
+                        kk += amp_ * np.exp(-((diag - c) / 0.09) ** 2)
+                kk += 0.10 * min(1.0, te / 0.6)
+                kk = np.minimum(kk, 1)[..., None]
+                cvf = 255 - (255 - cvf) * (1 - kk * iri / 255)
+                for sx, sy, s0 in sparks:                                     # scintillements
                     v = te - s0
                     if 0 < v < 0.7:
-                        g = math.sin(math.pi * v / 0.7)
-                        reg = cv[sy:sy + 56, sx:sx + 56]
-                        reg += (255 - reg) * star * g
-                frame[oy:oy + ch, ox:ox + cw] = np.clip(cv, 0, 255).astype(np.uint8)
-                # la marque devient irisee (teintes qui defilent)
+                        reg = cvf[sy:sy + 56, sx:sx + 56]
+                        reg += (255 - reg) * star * math.sin(math.pi * v / 0.7)
+                frame[oy:oy + ch, ox:ox + cw] = np.clip(cvf, 0, 255).astype(np.uint8)
                 kb = min(1.0, te / 0.4)
-                bcol = _rainbow(bm_x * 1.2 - te * 0.6, 20, 190)            # teintes franches : lisible sur le fond clair
+                bcol = _rainbow(bm_x * 1.2 - te * 0.6, 20, 190)
                 roi = frame[by:by + brand.shape[0], bx:bx + brand.shape[1]].astype(np.float32)
-                a = brand * kb
-                frame[by:by + brand.shape[0], bx:bx + brand.shape[1]] = (roi * (1 - a) + bcol * a).astype(np.uint8)
+                ab = brand * kb
+                frame[by:by + brand.shape[0], bx:bx + brand.shape[1]] = (roi * (1 - ab) + bcol * ab).astype(np.uint8)
+            if first is None:
+                first = frame.copy()
+            elif t > duration - LOOP:                                        # boucle : retour a la 1re image
+                kl = _smooth((t - (duration - LOOP)) / LOOP)
+                frame = (frame * (1 - kl) + first * kl).astype(np.uint8)
             proc.stdin.write(frame.tobytes())
             if progress and fi % 30 == 0:
                 progress(fi / total_frames)
         proc.stdin.close()
-        proc.wait(timeout=600)
+        proc.wait(timeout=900)
     finally:
         if os.path.exists(tmp_audio):
             os.remove(tmp_audio)
@@ -536,7 +655,8 @@ def _job(pk):
                 SocialVideo.objects.filter(pk=pk).update(progress=round(f, 3))
         tmp = v.path() + ".part.mp4"
         render(v.canvas_uid, tmp, mode=v.mode, duration=v.duration, hook=v.hook, with_music=v.music,
-               music_style=v.music_style, seed=v.seed, progress=prog, before_after=v.before_after)
+               music_style=v.music_style, seed=v.seed, progress=prog, before_after=v.before_after,
+               fill_sounds=v.fill_sounds)
         os.replace(tmp, v.path())
         thumbnail(v.canvas_uid, v.path("jpg"))
         SocialVideo.objects.filter(pk=pk).update(status="done", progress=1, error="")

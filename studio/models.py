@@ -1092,11 +1092,11 @@ class Campaign(models.Model):
 
 class SocialVideo(models.Model):
     """Video « satisfying » (TikTok / Reels / Shorts) generee a partir d'une toile du catalogue (jamais d'une photo client)."""
-    MODES = [("random", "Aléatoire (accélère à la fin)"), ("colors", "Couleur après couleur")]
+    MODES = [("flow", "Vague (se propage)"), ("random", "Aléatoire (accélère à la fin)"), ("colors", "Couleur après couleur")]
     STATUS = [("queued", "En attente"), ("running", "En cours"), ("done", "Prête"), ("error", "Erreur")]
     canvas_uid = models.CharField("Toile", max_length=40)
     title = models.CharField(max_length=120, blank=True, default="")
-    mode = models.CharField(max_length=8, choices=MODES, default="random")
+    mode = models.CharField(max_length=8, choices=MODES, default="flow")
     duration = models.FloatField("Durée (s)", default=65)
     hook = models.CharField("Accroche", max_length=120, blank=True, default="")
     end_title = models.CharField("Titre de fin", max_length=120, blank=True, default="")
@@ -1104,6 +1104,7 @@ class SocialVideo(models.Model):
     music = models.BooleanField("Musique", default=True)
     music_style = models.CharField("Style de musique", max_length=10, default="ambient")
     before_after = models.BooleanField("Avant / après (photo d'origine au début)", default=True)
+    fill_sounds = models.BooleanField("Sons de remplissage (une note par zone)", default=True)
     seed = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=8, choices=STATUS, default="queued")
     progress = models.FloatField(default=0)

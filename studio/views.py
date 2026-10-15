@@ -4495,7 +4495,12 @@ def erp_videos(request):
             uid = request.POST.get("canvas", "")
             f = request.FILES.get("image")
             level = request.POST.get("density", "orig")
-            if f or (level != "orig" and uid in titles):
+            try:
+                want = int(request.POST.get("colors") or 0)
+            except ValueError:
+                want = 0
+            recolor = uid in titles and 6 <= want <= 64 and want != len(satisfying._palette(uid))
+            if f or (uid in titles and (level != "orig" or recolor)):
                 # import depuis l'ordinateur, ou nouvelle densite de zones : toile (re)generee depuis la photo d'origine
                 import uuid as _uuid
                 from .forms import DENSITY_LEVELS
@@ -4519,7 +4524,7 @@ def erp_videos(request):
                         ncol = int(request.POST.get("colors") or 0)
                     except ValueError:
                         ncol = 0
-                    if ncol not in (12, 18, 24, 36):
+                    if not 6 <= ncol <= 64:                     # videos : n'importe quel nombre de 6 a 64
                         ncol = 24 if f else len(satisfying._palette(uid))
                     generate(src, ncol, 40, 50, uid=new, source_name=name, density=dens, detail=det)
                 except Exception as exc:
@@ -4530,7 +4535,8 @@ def erp_videos(request):
                     if os.path.exists(tmp):
                         os.remove(tmp)
                 uid = new
-                titles[uid] = label if level == "orig" else "%s · %s" % (label, dict(satisfying.DENSITIES)[level])
+                titles[uid] = " · ".join([label] + ([dict(satisfying.DENSITIES)[level]] if level != "orig" else [])
+                                         + (["%d couleurs" % ncol] if recolor or f else []))
                 satisfying.save_label(uid, titles[uid])
             if uid not in titles:                          # liste blanche : imports, catalogue, studio
                 messages.error(request, "Choisissez une toile du catalogue.")
@@ -4545,8 +4551,10 @@ def erp_videos(request):
             for i in range(n):
                 d = min(70.0, max(61.0, dur)) if dur else round(random.uniform(61, 70), 1)
                 v = SocialVideo.objects.create(
-                    canvas_uid=uid, title=titles[uid][:120], mode=request.POST.get("mode") == "colors" and "colors" or "random",
+                    canvas_uid=uid, title=titles[uid][:120],
+                    mode=request.POST.get("mode") if request.POST.get("mode") in ("flow", "random", "colors") else "flow",
                     duration=d, hook=request.POST.get("hook", "")[:120], music=style != "none", music_style=style, before_after=bool(request.POST.get("before_after")),
+                    fill_sounds=bool(request.POST.get("fill_sounds")),
                     seed=random.randint(1, 10 ** 6))
                 satisfying.enqueue(v)
             messages.success(request, "%d vidéo(s) en cours de génération (environ 2 à 3 min chacune)." % n)
