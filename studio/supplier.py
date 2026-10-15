@@ -61,7 +61,7 @@ def _email_po(order_data, d, uid):
             + json.dumps(order_data, ensure_ascii=False, indent=2))
     msg = EmailMessage(subject=f"[PaintIt] Commande {uid}", body=body,
                        from_email=settings.DEFAULT_FROM_EMAIL, to=[settings.SUPPLIER_ORDER_EMAIL])
-    for fn in (f"{uid}_supplier.json", f"{uid}_template.pdf", f"{uid}_template.svg", f"{uid}_poster.png"):
+    for fn in (f"{uid}_supplier.txt", f"{uid}_supplier.json", f"{uid}_template.pdf", f"{uid}_template.svg", f"{uid}_poster.png"):
         p = os.path.join(d, fn)
         if os.path.exists(p):
             msg.attach_file(p)

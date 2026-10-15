@@ -53,6 +53,18 @@ def order_files(sup, uid):
     return files
 
 
+def _supplier_txt(uid):
+    """Contenu de <uid>_supplier.txt (cree depuis le JSON si absent), ou ""."""
+    import os
+    from django.conf import settings
+    from . import fulfillment
+    p = os.path.join(settings.MEDIA_ROOT, "orders", uid, "%s_supplier.txt" % uid)
+    if not os.path.exists(p) and not fulfillment.write_supplier_text(uid):
+        return ""
+    with open(p, encoding="utf-8") as f:
+        return f.read()
+
+
 def build_payload(sup, o, shipping, event="order.created"):
     return {
         "event": event, "version": 1, "sent_at": timezone.now().isoformat(timespec="seconds"),
@@ -113,12 +125,17 @@ def _send(sup, payload):
                      ["", "Livraison :", s["full_name"], s["address1"], s["address2"],
                       "%s %s (%s)" % (s["postal_code"], s["city"], s["country"]),
                       "Tel : %s %s" % (s["phone_code"], s["phone"])]
+        txt = _supplier_txt(o.get("uid")) if o.get("uid") else ""
+        if txt:                       # fiche lisible (EN/中文) en tete du mail : pas besoin d'ouvrir le JSON
+            lines = [txt, "", "Files / 文件:"] + ["- %s" % u for u in payload["files"].values()]
         lines += ["", "Statuts / suivi a renvoyer (JSON POST) : %s" % payload["callback_url"]]
         try:
             msg = EmailMessage("PaintIt , %s %s" % (payload["event"], o.get("uid") or ""), "\n".join(lines),
                                settings.DEFAULT_FROM_EMAIL, [sup.email])
             msg.attach("order_%s.json" % (o.get("uid") or "test"), json.dumps(payload, ensure_ascii=False, indent=2),
                        "application/json")
+            if txt:
+                msg.attach("order_%s.txt" % o["uid"], txt, "text/plain; charset=utf-8")
             xl = (sup.offer or {}).get("xlsx") or {}
             if o.get("uid") and xl.get("attach"):
                 # Fichier pret a importer dans l'ERP du fournisseur (MangoERP : Excel导入手工订单)

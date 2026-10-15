@@ -365,6 +365,23 @@ class SupplierPaletteTests(TestCase):
         self.assertEqual(out[0], {"number": 1, "supplier_code": "1", "hex": "#FFFFFF", "rgb": [255, 255, 255]})
         self.assertIn("hex", out[1])                                           # code + hex : les deux
 
+    def test_supplier_text_is_readable(self):
+        from studio.fulfillment import supplier_text
+        txt = supplier_text({
+            "consignee_information": {"full_name": "Marie Curie", "phone_code": "+33", "phone": "612345678",
+                                      "email": "m@x.fr", "address1": "1 rue A", "address2": "Bât B",
+                                      "postal_code": "75005", "city": "Paris", "country": "FR"},
+            "order_information": {"uid": "AB12-CD34", "created_at": "2026-10-15T10:20:00", "orientation": "portrait",
+                                  "width_cm": 40, "height_cm": 50, "colors_count": 3, "brushes": True,
+                                  "files": {"template_tiff": "AB12-CD34_template.tiff"}},
+            "color_specifications": [{"number": 1, "supplier_code": "A-01"},
+                                     {"number": 2, "supplier_code": "B-07", "supplier_code_approx": True},
+                                     {"number": 3, "hex": "#123456"}]})
+        for part in ("PAINTIT ORDER / 订单  AB12-CD34", "Marie Curie", "+33 612345678", "40 x 50 cm", "YES / 是",
+                     "   1  ->  A-01", "   2  ->  B-07 *", "#123456 (no ref", "closest ref"):
+            self.assertIn(part, txt)
+        self.assertNotIn("price", txt.lower())
+
 
 class InboxTests(TestCase):
     def setUp(self):

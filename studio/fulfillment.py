@@ -169,6 +169,56 @@ def _compose_poster(uid, d, colors, lang):
     cv2.imwrite(out, img)
 
 
+def supplier_text(sj):
+    """Fiche fournisseur en texte simple (EN + 中文), meme contenu que <uid>_supplier.json, lisible sans outil :
+    commande, destinataire, puis couleurs « numero -> reference fournisseur »."""
+    oi, ci = sj.get("order_information", {}), sj.get("consignee_information", {})
+    yn = lambda b: "YES / 是" if b else "NO / 否"
+    phone = " ".join(x for x in (ci.get("phone_code", ""), ci.get("phone", "")) if x)
+    L = ["PAINTIT ORDER / 订单  %s" % oi.get("uid", ""), "=" * 44,
+         "Date / 日期:            %s" % (oi.get("created_at") or "")[:16].replace("T", " "),
+         "Product / 产品:         Paint by numbers kit / 数字油画套装",
+         "Size / 尺寸:            %s x %s cm (%s)" % (oi.get("width_cm"), oi.get("height_cm"), oi.get("orientation", "")),
+         "Colors / 颜色数量:      %s" % oi.get("colors_count", ""),
+         "Brushes / 画笔:         %s" % yn(oi.get("brushes")),
+         "Files / 文件:           %s" % ", ".join((oi.get("files") or {}).values()),
+         "", "CONSIGNEE / 收货人", "-" * 44,
+         "Name / 姓名:            %s" % ci.get("full_name", ""),
+         "Phone / 电话:           %s" % phone,
+         "Email / 邮箱:           %s" % ci.get("email", ""),
+         "Address / 地址:         %s" % ci.get("address1", "")]
+    if ci.get("address2"):
+        L.append("                        %s" % ci["address2"])
+    L += ["Postal code / 邮编:     %s" % ci.get("postal_code", ""),
+          "City / 城市:            %s" % ci.get("city", ""),
+          "Country / 国家:         %s" % ci.get("country", ""),
+          "", "COLORS / 颜色  (No. / 编号  ->  Supplier ref / 色号)", "-" * 44]
+    approx = False
+    for c in sj.get("color_specifications", []):
+        ref = c.get("supplier_code")
+        if ref and c.get("supplier_code_approx"):
+            ref += " *"; approx = True
+        L.append("%4s  ->  %s" % (c.get("number", ""), ref or "%s (no ref / 无色号)" % (c.get("hex") or "")))
+    if approx:
+        L += ["", "* closest ref in your color chart / 色卡中最接近的色号"]
+    return "\n".join(L) + "\n"
+
+
+def write_supplier_text(uid, sj=None):
+    """Ecrit <uid>_supplier.txt (depuis le JSON fournisseur s'il n'est pas fourni). -> chemin ou None."""
+    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    if sj is None:
+        try:
+            with open(os.path.join(d, "%s_supplier.json" % uid), encoding="utf-8") as f:
+                sj = json.load(f)
+        except (OSError, ValueError):
+            return None
+    p = os.path.join(d, "%s_supplier.txt" % uid)
+    with open(p, "w", encoding="utf-8") as f:
+        f.write(supplier_text(sj))
+    return p
+
+
 def supplier_colors(colors):
     """Couleurs pour le FOURNISSEUR : numero de la toile -> code interne de SON nuancier + hex/RGB.
     Toile generee avant l'import du nuancier : code de la teinte la plus proche (CIEDE2000), marque « approx »."""
@@ -326,6 +376,7 @@ def build(order, shipping):
     }
     with open(os.path.join(d, "%s_supplier.json" % uid), "w", encoding="utf-8") as f:
         json.dump(supplier_json, f, ensure_ascii=False, indent=2)
+    write_supplier_text(uid, supplier_json)
 
     # Nettoyage : un seul JSON, pas de doublons, pas d'intermediaires.
     for junk in (f"{uid}_palette.png", "order.json",
@@ -334,4 +385,4 @@ def build(order, shipping):
         if os.path.exists(pth):
             os.remove(pth)
 
-    return {"dir": d, "files": [f"{uid}_template.svg", f"{uid}_poster.png", f"{uid}_supplier.json"]}
+    return {"dir": d, "files": [f"{uid}_template.svg", f"{uid}_poster.png", f"{uid}_supplier.json", f"{uid}_supplier.txt"]}

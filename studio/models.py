@@ -515,6 +515,7 @@ class Supplier(models.Model):
     want_preview_svg = models.BooleanField("Apercu colorie .svg", default=True)
     want_poster = models.BooleanField("Poster (PNG)", default=True)
     want_order_json = models.BooleanField("Fiche commande JSON (livraison/format/couleurs, sans prix)", default=True)
+    want_order_txt = models.BooleanField("Fiche commande texte (lisible : commande, destinataire, n° -> réf. couleur)", default=True)
     want_template_pdf = models.BooleanField("Toile numerotee PDF vectoriel", default=True)
     # Process
     lead_time_days = models.PositiveIntegerField("Delai production (jours)", default=5)
@@ -703,7 +704,7 @@ class Supplier(models.Model):
              ("want_template_svg", "%s_template.svg"), ("want_template_tiff", "%s_template.tiff"),
              ("want_preview_svg", "%s_preview.svg"),
              ("want_poster", "%s_poster.png"),
-             ("want_order_json", "%s_supplier.json")]
+             ("want_order_json", "%s_supplier.json"), ("want_order_txt", "%s_supplier.txt")]
         return [(pat % uid) for flag, pat in m if getattr(self, flag, False)]
 
     class Meta:
