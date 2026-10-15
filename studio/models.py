@@ -110,13 +110,30 @@ class Discount(models.Model):
         return f"{self.code} ({self.kind}, {self.percent}%)"
 
 
+import contextvars
+SHOW_TEST = contextvars.ContextVar("show_test", default=False)   # vue « inclure les donnees de test » (pilotage/compta)
+
+
+def stripe_test_mode():
+    """Paiements de test : cle Stripe de test, ou aucune cle (mode demo)."""
+    key = getattr(settings, "STRIPE_SECRET_KEY", "") or ""
+    return not key or key.startswith(("sk_test", "rk_test"))
+
+
+class RealManager(models.Manager):
+    """Donnees reelles uniquement (hors commandes / ecritures de test), sauf vue « inclure les tests »."""
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs if SHOW_TEST.get() else qs.filter(is_test=False)
+
+
 class Order(models.Model):
     PENDING, PAID, FULFILLED, PRODUCTION, SHIPPED, DELIVERED, FAILED = \
         "pending", "paid", "fulfilled", "production", "shipped", "delivered", "failed"
     STATUS_CHOICES = [
-        (PENDING, "En attente de paiement"), (PAID, "Payee"),
-        (FULFILLED, "Envoyee au fournisseur"), (PRODUCTION, "En production"), (SHIPPED, "Expediee"),
-        (DELIVERED, "Livree"), (FAILED, "Echouee"),
+        (PENDING, "En attente de paiement"), (PAID, "Payée"),
+        (FULFILLED, "Envoyée au fournisseur"), (PRODUCTION, "En production"), (SHIPPED, "Expédiée"),
+        (DELIVERED, "Livrée"), (FAILED, "Échouée"),
     ]
     uid = models.CharField(max_length=32, unique=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
@@ -179,7 +196,11 @@ class Order(models.Model):
     notes = models.TextField("Notes internes", blank=True, default="")
     status_changed_at = models.DateTimeField("Statut depuis", null=True, blank=True)
     ad_ref = models.CharField("Pub d'origine (A/B)", max_length=24, blank=True, default="", db_index=True)
+    is_test = models.BooleanField("Commande de test", default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = models.Manager()
+    real = RealManager()
 
     class Meta:
         verbose_name = "Commande"
@@ -278,6 +299,8 @@ def _order_pre_save(sender, instance, **kw):
     old = None
     if instance.pk:
         old = sender.objects.filter(pk=instance.pk).values_list("status", flat=True).first()
+    if not instance.pk and stripe_test_mode():
+        instance.is_test = True                      # paiement Stripe de test / demo : hors chiffres reels
     instance._erp_status_changed = old != instance.status
     if instance._erp_status_changed or not instance.status_changed_at:
         instance.status_changed_at = timezone.now()
@@ -832,7 +855,11 @@ class LedgerEntry(models.Model):
     vat = models.FloatField("dont TVA (EUR)", default=0.0)
     fee = models.FloatField("Frais Stripe (EUR)", default=0.0)
     stripe_id = models.CharField(max_length=80, blank=True, default="", db_index=True)   # pi_/re_/po_ : dedoublonnage
+    is_test = models.BooleanField("Écriture de test", default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = models.Manager()
+    real = RealManager()
 
     class Meta:
         ordering = ["-date"]

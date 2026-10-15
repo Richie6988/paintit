@@ -995,3 +995,32 @@ class ProductionStatusTests(TestCase):
         integrations.handle_event(sup, {"uid": "PROD-1", "status": "accepted"})      # evenement en retard : ignore
         o.refresh_from_db(); self.assertEqual(o.status, Order.SHIPPED)
         self.assertIn(Order.PRODUCTION, Order.PAID_STATUSES)
+
+
+class TestDataResetTests(TestCase):
+    def _order(self, uid, live):
+        from studio.models import Order
+        with override_settings(STRIPE_SECRET_KEY="sk_live_x" if live else "sk_test_x"):
+            return Order.objects.create(uid=uid, status=Order.PAID, format_label="40x50", orientation="portrait",
+                                        width_cm=40, height_cm=50, colors=24, price=40, total=40, customer_name="A",
+                                        customer_email="a@x.fr")
+
+    def test_test_orders_excluded_then_reset_and_purge(self):
+        from django.contrib.auth.models import User
+        from studio import erp
+        from studio.models import Order
+        t, r = self._order("T-1", live=False), self._order("R-1", live=True)
+        self.assertTrue(t.is_test); self.assertFalse(r.is_test)
+        self.assertEqual(list(erp._paid().values_list("uid", flat=True)) if hasattr(erp, "_paid") else
+                         list(Order.real.values_list("uid", flat=True)), ["R-1"])
+        User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
+        self.client.login(username="boss", password="pw-Secret-123")
+        self.assertContains(self.client.get("/admin-hub/"), "1 commande de test exclue")
+        self.client.post("/admin-hub/test-data/", {"op": "mark_all", "next": "/admin-hub/"})
+        self.assertEqual(Order.real.count(), 0)
+        self.client.post("/admin-hub/test-data/", {"op": "toggle", "id": r.pk, "next": "/admin-hub/"})
+        self.assertEqual(list(Order.real.values_list("uid", flat=True)), ["R-1"])
+        self.client.post("/admin-hub/test-data/", {"op": "purge", "confirm": "non"})
+        self.assertEqual(Order.objects.count(), 2)                                   # confirmation exigee
+        self.client.post("/admin-hub/test-data/", {"op": "purge", "confirm": "SUPPRIMER"})
+        self.assertEqual(list(Order.objects.values_list("uid", flat=True)), ["R-1"])

@@ -17,6 +17,7 @@
   </div>
 
   {% for msg in messages %}<div class="sf-alert {% if msg.tags == 'error' %}bad{% else %}ok{% endif %}"><span>{{ msg }}</span></div>{% endfor %}
+  {% include "admin/_test_data.html" %}
   {% if s.unrecorded %}<div class="sf-alert bad"><span>{{ s.unrecorded }} commande(s) payée(s) absente(s) du grand livre.</span></div>{% endif %}
   {% if s.missing_fee %}<div class="sf-alert warn"><span>Frais Stripe non rapprochés sur {{ s.missing_fee }} paiement(s).</span>{% if stripe_on %}<form method="post">{% csrf_token %}<button class="gx-btn sm" name="op" value="sync">Rapprocher</button></form>{% endif %}</div>{% endif %}
   {% for p in drafts %}<div class="sf-alert warn"><span>Virement à effectuer : {{ p.supplier.name }}, {{ p.amount_eur|floatformat:2 }} €{% if p.currency != "EUR" %} ({{ p.amount_native|floatformat:2 }} {{ p.currency }}){% endif %}.</span><a href="/admin-hub/payments/{{ p.pk }}/">Ouvrir</a></div>{% endfor %}

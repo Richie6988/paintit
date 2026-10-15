@@ -49,12 +49,14 @@
   <a href="/admin/studio/order/" class="muted" style="font-weight:700">← Commandes</a>
   <div class="erp-head" style="margin-top:6px">
     <div>
-      <h1 style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">Commande {{ o.uid }} <span class="pill st-{{ o.status }}">{{ o.get_status_display }}</span></h1>
+      <h1 style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">Commande {{ o.uid }} <span class="pill st-{{ o.status }}">{{ o.get_status_display }}</span>{% if o.is_test %}<span class="pill" style="background:#fff1d6;color:#8a4b00">Test</span>{% endif %}</h1>
       <div class="muted">Passée le {{ o.created_at|date:"d/m/Y à H:i" }} · statut depuis {{ age }} j · {{ o.format_label }} · {{ o.colors }} couleurs{% if o.brushes %} · pinceaux{% endif %} · langue {{ o.lang }}</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <a class="pbtn" href="/paint/{{ o.uid }}/" target="_blank">Voir le jeu</a>
       <a class="pbtn" href="/admin-hub/orders/{{ o.pk }}/receipt.pdf" target="_blank">Reçu PDF</a>
+      <form method="post" action="/admin-hub/test-data/" style="margin:0">{% csrf_token %}<input type="hidden" name="op" value="toggle"><input type="hidden" name="id" value="{{ o.pk }}"><input type="hidden" name="next" value="{{ request.path }}">
+        <button class="pbtn" title="Les commandes de test sont exclues du pilotage et de la comptabilité">{% if o.is_test %}Marquer comme réelle{% else %}Marquer comme test{% endif %}</button></form>
       <a class="pbtn pri" href="/admin-hub/orders/{{ o.pk }}/files.zip">⬇ Tout télécharger (.zip)</a>
       <form method="post" style="margin:0" data-confirm="Supprimer la commande {{ o.uid }} ?" data-confirm-text="{% if o.status in paid_statuses %}Commande PAYÉE : c'est une pièce comptable. {% endif %}Suppression définitive de la commande, de son journal et de ses fichiers de production." data-ok="Supprimer" data-danger>{% csrf_token %}
         <input type="hidden" name="op" value="delete"><button class="pbtn" style="color:#b42318;border-color:#fecdca">Supprimer</button></form>

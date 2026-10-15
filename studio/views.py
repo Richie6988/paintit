@@ -2172,7 +2172,64 @@ def orders_csv(request):
                           "pays", "fournisseur_ref", "transporteur", "suivi"], rows)
 
 
+def _test_scope(view):
+    """Pilotage / compta : chiffres sur les donnees reelles ; ?test=1 inclut les commandes de test."""
+    import functools
+
+    @functools.wraps(view)
+    def wrap(request, *a, **kw):
+        from .models import SHOW_TEST
+        tok = SHOW_TEST.set(request.GET.get("test") == "1")
+        try:
+            return view(request, *a, **kw)
+        finally:
+            SHOW_TEST.reset(tok)
+    return wrap
+
+
+def _test_info(request):
+    from .models import LedgerEntry, stripe_test_mode
+    return {"show": request.GET.get("test") == "1", "live": not stripe_test_mode(),
+            "orders": Order.objects.filter(is_test=True).count(),
+            "entries": LedgerEntry.objects.filter(is_test=True).count(),
+            "real_orders": Order.objects.filter(is_test=False).count()}
+
+
 @staff_member_required
+def erp_test_data(request):
+    """Donnees de test : tout marquer comme test (repartir des seules vraies commandes), purger, ou annuler."""
+    from django.contrib import messages
+    from .models import LedgerEntry
+    back = request.POST.get("next") or "/admin-hub/"
+    if not back.startswith("/admin-hub/"):
+        back = "/admin-hub/"
+    if request.method == "POST":
+        op = request.POST.get("op")
+        if op == "mark_all":
+            n = Order.objects.filter(is_test=False).update(is_test=True)
+            e = LedgerEntry.objects.filter(is_test=False).update(is_test=True)
+            messages.success(request, "Remise à zéro : %d commande(s) et %d écriture(s) passées en test. "
+                                      "Pilotage et comptabilité repartent des prochaines vraies commandes." % (n, e))
+        elif op == "purge":
+            if (request.POST.get("confirm") or "").strip().upper() != "SUPPRIMER":
+                messages.error(request, "Tapez SUPPRIMER pour confirmer la suppression définitive.")
+            else:
+                e = LedgerEntry.objects.filter(is_test=True).delete()[0]
+                n = _delete_orders(Order.objects.filter(is_test=True))
+                messages.success(request, "%d commande(s) de test et %d écriture(s) supprimées définitivement." % (n, e))
+        elif op == "toggle":
+            o = Order.objects.filter(pk=request.POST.get("id")).first()
+            if o:
+                o.is_test = not o.is_test
+                o.save(update_fields=["is_test"])
+                LedgerEntry.objects.filter(order=o).update(is_test=o.is_test)
+                OrderEvent.objects.create(order=o, kind="action", user=request.user.get_username(),
+                                          text="Marquée comme %s" % ("commande de test" if o.is_test else "vraie commande"))
+    return redirect(back)
+
+
+@staff_member_required
+@_test_scope
 def admin_hub(request):
     from . import erp
     from .models import Order, ContactMessage
@@ -2182,7 +2239,7 @@ def admin_hub(request):
            "pipeline": erp.pipeline(), "actions": erp.actions(), "cust": erp.customer_stats(),
            "recent_orders": list(Order.objects.order_by("-created_at")[:8]),
            "recent_msgs": list(ContactMessage.objects.order_by("answered", "-created_at")[:6]),
-           "gallery_all": erp.gallery_sales(), "erp_section": "hub"}
+           "gallery_all": erp.gallery_sales(), "erp_section": "hub", "testdata": _test_info(request)}
     from django.contrib import admin as _admin
     ctx.update(_admin.site.each_context(request))
     return render(request, "admin/hub.html", ctx)
@@ -4231,6 +4288,7 @@ def growth_campaign(request, pk):
 
 # ---------------------------------------------------------------- Comptabilite
 @staff_member_required
+@_test_scope
 def erp_compta(request):
     """Comptabilite mensuelle : ventes, TVA, remboursements, frais, achats, marge ; rapprochement ; exports."""
     from django.contrib import admin as _admin
@@ -4263,7 +4321,7 @@ def erp_compta(request):
         d = (d - datetime.timedelta(days=1)).replace(day=1)
     rows = list(ledger.entries(a, b).order_by("-date")[:400])
     return render(request, "admin/erp_compta.html", {
-        **_admin.site.each_context(request), "erp_section": "compta", "m": start.strftime("%Y-%m"), "month": start,
+        **_admin.site.each_context(request), "erp_section": "compta", "m": start.strftime("%Y-%m"), "month": start, "testdata": _test_info(request),
         "prev": prev, "next": nxt.strftime("%Y-%m") if nxt <= timezone.localdate() else "", "months": months,
         "s": ledger.summary(a, b), "rows": rows, "oss": ledger.oss_status(start.year),
         "vat_rate": ledger.vat_rate(), "company": CompanyInfo.get(), "stripe_on": bool(settings.STRIPE_SECRET_KEY),

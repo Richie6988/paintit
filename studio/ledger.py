@@ -49,7 +49,9 @@ def _country(order):
 
 
 def _create(**kw):
-    from .models import LedgerEntry
+    from .models import LedgerEntry, stripe_test_mode
+    order = kw.get("order")
+    kw.setdefault("is_test", bool(order.is_test) if order else stripe_test_mode())
     try:
         return LedgerEntry.objects.create(**kw)
     except IntegrityError:          # deja enregistre (webhook + retour navigateur + rapprochement)
@@ -195,7 +197,7 @@ def month_bounds(ym):
 
 def entries(start, end):
     from .models import LedgerEntry
-    return LedgerEntry.objects.filter(date__gte=start, date__lt=end).select_related("order", "supplier_payment")
+    return LedgerEntry.real.filter(date__gte=start, date__lt=end).select_related("order", "supplier_payment")
 
 
 def summary(start, end):
@@ -208,12 +210,12 @@ def summary(start, end):
     refunds = agg(qs.filter(kind="refund"))
     vat = round(agg(sales, "vat") + agg(qs.filter(kind="refund"), "vat"), 2)
     fees = round(agg(qs, "fee"), 2)
-    purchases = round(Order.objects.filter(status__in=Order.PAID_STATUSES, created_at__gte=start, created_at__lt=end)
+    purchases = round(Order.real.filter(status__in=Order.PAID_STATUSES, created_at__gte=start, created_at__lt=end)
                       .aggregate(s=Sum("cost"))["s"] or 0.0, 2)
     paid_sup = -agg(qs.filter(kind="supplier"))
     ht = round(ttc + refunds - vat, 2)
     missing_fee = sales.filter(fee=0, stripe_id__startswith="pi_").count()
-    unrecorded = Order.objects.filter(status__in=Order.PAID_STATUSES, created_at__gte=start, created_at__lt=end) \
+    unrecorded = Order.real.filter(status__in=Order.PAID_STATUSES, created_at__gte=start, created_at__lt=end) \
         .exclude(ledger__kind="sale").count()
     return {"ttc": ttc, "by_src": by_src, "refunds": refunds, "vat": vat, "ht": ht, "fees": fees,
             "purchases": purchases, "paid_suppliers": paid_sup, "margin": round(ht - purchases - fees, 2),
@@ -227,7 +229,7 @@ def oss_status(year=None):
     """Ventes a distance B2C vers d'autres pays de l'UE depuis le 1er janvier (seuil OSS 10 000 EUR)."""
     from .models import LedgerEntry
     year = year or timezone.localdate().year
-    qs = LedgerEntry.objects.filter(date__year=year, kind__in=("sale", "refund"), country__in=EU)
+    qs = LedgerEntry.real.filter(date__year=year, kind__in=("sale", "refund"), country__in=EU)
     total = round(qs.aggregate(s=Sum("amount"))["s"] or 0.0, 2)
     return {"year": year, "total": total, "threshold": OSS_THRESHOLD, "pct": min(100, round(total / OSS_THRESHOLD * 100)),
             "over": total >= OSS_THRESHOLD, "near": total >= OSS_THRESHOLD * 0.8}
@@ -257,7 +259,7 @@ def purchases_csv(start, end):
     w = csv.writer(buf, delimiter=";")
     w.writerow(["Date commande", "Commande", "Facture client", "Fournisseur", "Produit", "Coût (EUR)", "Réglé le",
                 "Réf. règlement"])
-    for o in Order.objects.filter(status__in=Order.PAID_STATUSES, created_at__gte=start, created_at__lt=end) \
+    for o in Order.real.filter(status__in=Order.PAID_STATUSES, created_at__gte=start, created_at__lt=end) \
             .select_related("supplier").order_by("created_at"):
         w.writerow([timezone.localtime(o.created_at).strftime("%d/%m/%Y"), o.uid, o.invoice_number,
                     o.supplier.name if o.supplier else "", "%s · %d couleurs" % (o.format_label, o.colors),
@@ -316,7 +318,7 @@ def invoices_zip(start, end):
     from . import receipts
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        for o in Order.objects.filter(status__in=Order.PAID_STATUSES, created_at__gte=start, created_at__lt=end) \
+        for o in Order.real.filter(status__in=Order.PAID_STATUSES, created_at__gte=start, created_at__lt=end) \
                 .order_by("invoice_number", "created_at"):
             try:
                 z.writestr("%s_%s.pdf" % (o.invoice_number or "sans-numero", o.uid), receipts.build_receipt(o))

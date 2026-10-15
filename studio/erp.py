@@ -33,7 +33,7 @@ def period_bounds(key):
 
 
 def _paid():
-    return Order.objects.filter(status__in=Order.PAID_STATUSES)
+    return Order.real.filter(status__in=Order.PAID_STATUSES)
 
 
 def _sales(start, end):
@@ -43,7 +43,7 @@ def _sales(start, end):
     ca = a["ca"] or 0.0
     cost = a["cost"] or 0.0
     n = a["n"] or 0
-    created = Order.objects.filter(created_at__gte=start, created_at__lt=end).count()
+    created = Order.real.filter(created_at__gte=start, created_at__lt=end).count()
     # clients nouveaux = premiere commande payee dans la periode
     firsts = (_paid().values("customer_email").annotate(first=Min("created_at"))
               .filter(first__gte=start, first__lt=end).count())
@@ -143,7 +143,7 @@ def mix(period="30d"):
 
 def pipeline():
     labels = dict(Order.STATUS_CHOICES)
-    counts = dict(Order.objects.values_list("status").annotate(c=Count("id")))
+    counts = dict(Order.real.values_list("status").annotate(c=Count("id")))
     order = [Order.PENDING, Order.PAID, Order.FULFILLED, Order.PRODUCTION, Order.SHIPPED, Order.DELIVERED, Order.FAILED]
     return [{"status": s, "label": labels[s], "count": counts.get(s, 0),
              "url": "/admin-hub/orders/?tab=" + s} for s in order]
@@ -207,7 +207,7 @@ def actions():
     if drafts.exists():
         out.append({"key": "payments", "count": drafts.count(), "level": "warn", "url": "/admin-hub/compta/",
                     "label": "Virements fournisseurs à effectuer", "hint": "Virer puis confirmer dans l'ERP"})
-    due = Order.objects.filter(status__in=(Order.SHIPPED, Order.DELIVERED), supplier_paid_at__isnull=True,
+    due = Order.real.filter(status__in=(Order.SHIPPED, Order.DELIVERED), supplier_paid_at__isnull=True,
                                supplier_payment__isnull=True, status_changed_at__lt=now - datetime.timedelta(days=15))
     if due.exists():
         out.append({"key": "supplier_due", "count": due.count(), "level": "info", "url": "/admin-hub/suppliers/",
@@ -251,7 +251,7 @@ def action_count():
 # Clients (agreges depuis les commandes, cle = e-mail)
 # --------------------------------------------------------------------------- #
 def customers(q="", sort="-revenue", segment=""):
-    qs = Order.objects.exclude(customer_email="")
+    qs = Order.real.exclude(customer_email="")
     if q:
         qs = qs.filter(Q(customer_email__icontains=q) | Q(customer_name__icontains=q) | Q(city__icontains=q))
     rows = (qs.values("customer_email")
@@ -323,7 +323,7 @@ def supplier_stats(sup, days=30):
     p = Pricing.get()
     lead = int(sup.lead_time_days or 5)
     ship_max = int(p.delivery_days_max or 9)
-    qs = Order.objects.filter(supplier=sup)
+    qs = Order.real.filter(supplier=sup)
     recent = qs.filter(created_at__gte=since, status__in=Order.PAID_STATUSES)
     a = recent.aggregate(n=Count("id"), cost=Sum("cost"), ca=Sum("total"))
     late_prod = qs.filter(status__in=Order.AT_SUPPLIER, status_changed_at__lt=now - datetime.timedelta(days=lead))

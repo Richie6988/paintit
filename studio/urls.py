@@ -93,6 +93,7 @@ urlpatterns = [
     path("admin-hub/communities/library/", views.erp_community_library, name="erp_community_library"),
     path("admin-hub/videos/", views.erp_videos, name="erp_videos"),
     path("admin-hub/banner/", views.erp_banners, name="erp_banners"),
+    path("admin-hub/test-data/", views.erp_test_data, name="erp_test_data"),
     path("admin-hub/videos/<int:pk>.<str:ext>", views.erp_video_file, name="erp_video_file"),
     path("go/<str:code>/", views.go_link, name="go_link"),
     path("admin-hub/reviews/", views.erp_reviews, name="erp_reviews"),

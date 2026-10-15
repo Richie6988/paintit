@@ -1,0 +1,50 @@
+{# Donnees de test : bandeau + remise a zero (pilotage, comptabilite). Contexte : testdata #}
+<div class="tdata {% if testdata.show %}on{% endif %}">
+  <div class="tdata-row">
+    <span class="tdata-dot {% if testdata.live %}live{% endif %}"></span>
+    <span>
+      {% if testdata.live %}<b>Paiements réels (Stripe live).</b>{% else %}<b>Stripe en mode test :</b> les nouvelles commandes sont marquées « test ».{% endif %}
+      {% if testdata.show %}Chiffres <b>avec</b> les données de test.{% else %}Chiffres sur les vraies commandes uniquement{% if testdata.orders %} ({{ testdata.orders }} commande{{ testdata.orders|pluralize }} de test exclue{{ testdata.orders|pluralize }}){% endif %}.{% endif %}
+    </span>
+    <span class="tdata-acts">
+      {% if testdata.orders or testdata.show %}<a class="pbtn sm" href="?{% if not testdata.show %}test=1{% endif %}">{% if testdata.show %}Masquer les tests{% else %}Inclure les tests{% endif %}</a>{% endif %}
+      <details class="tdata-reset"><summary class="pbtn sm">Remise à zéro…</summary>
+        <div class="tdata-menu">
+          <form method="post" action="/admin-hub/test-data/" data-confirm="Repartir de zéro ?" data-confirm-text="Les {{ testdata.real_orders }} commande(s) actuelles et leurs écritures sont marquées « test » : elles restent consultables mais sortent du pilotage et de la comptabilité." data-ok="Remettre à zéro">{% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}"><input type="hidden" name="op" value="mark_all">
+            <b>Repartir des vraies commandes</b>
+            <p>Marque toutes les commandes et écritures existantes comme « test ». Rien n'est supprimé, chaque commande peut être rebasculée en « réelle » depuis sa fiche.</p>
+            <button class="pbtn sm pri">Tout marquer comme test ({{ testdata.real_orders }})</button>
+          </form>
+          {% if testdata.orders %}
+          <form method="post" action="/admin-hub/test-data/">{% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}"><input type="hidden" name="op" value="purge">
+            <b>Supprimer les données de test</b>
+            <p>Supprime définitivement {{ testdata.orders }} commande(s) de test, {{ testdata.entries }} écriture(s) et leurs fichiers. Faites une sauvegarde avant.</p>
+            <div style="display:flex;gap:6px"><input name="confirm" placeholder="Tapez SUPPRIMER" autocomplete="off" style="flex:1">
+              <button class="pbtn sm" style="color:#b42318;border-color:#fecdca">Supprimer</button></div>
+          </form>
+          {% endif %}
+        </div>
+      </details>
+    </span>
+  </div>
+</div>
+<style>
+ .tdata{background:#fff;border:1px solid #e2e8f2;border-radius:12px;padding:8px 12px;margin:0 0 14px;font-size:.82rem;color:#33415c}
+ .tdata.on{background:#fff8e6;border-color:#f3d9a4}
+ .tdata-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+ .tdata-row>span:nth-child(2){flex:1;min-width:240px}
+ .tdata-dot{width:9px;height:9px;border-radius:50%;background:#e6a700;box-shadow:0 0 0 3px rgba(230,167,0,.2)}
+ .tdata-dot.live{background:#1f9d55;box-shadow:0 0 0 3px rgba(31,157,85,.2)}
+ .tdata-acts{display:flex;gap:6px;align-items:center}
+ .tdata .pbtn{display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:5px 10px;font-weight:700;font-size:.78rem;
+   border:1px solid #d4d4d4;background:#fff;color:#1a1a1a !important;cursor:pointer;text-decoration:none;font-family:inherit}
+ .tdata .pbtn:hover{background:#f7f7f7}.tdata .pbtn.pri{background:#12224f;border-color:#12224f;color:#fff !important}
+ .tdata-reset{position:relative}.tdata-reset summary{list-style:none;cursor:pointer}.tdata-reset summary::-webkit-details-marker{display:none}
+ .tdata-menu{position:absolute;right:0;top:115%;z-index:20;width:360px;background:#fff;border:1px solid #e3e3e3;border-radius:12px;
+   box-shadow:0 14px 30px rgba(0,0,0,.12);padding:12px;display:grid;gap:12px}
+ .tdata-menu form{display:grid;gap:6px}.tdata-menu form+form{border-top:1px solid #eee;padding-top:12px}
+ .tdata-menu p{margin:0;font-size:.76rem;color:#6d7175;line-height:1.45}
+ .tdata-menu input{height:32px;border:1px solid #d4d4d4;border-radius:8px;padding:0 8px}
+</style>

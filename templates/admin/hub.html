@@ -7,8 +7,10 @@
 <div class="erp">
   <div class="erp-head">
     <div><h1>Pilotage</h1><div class="muted">Depuis le {{ k.start|date:"d/m/Y" }} · comparé à la période précédente de même durée</div></div>
-    <div class="seg">{% for key, label in k.periods %}<a href="?p={{ key }}" class="{% if key == k.period %}on{% endif %}">{{ label }}</a>{% endfor %}</div>
+    <div class="seg">{% for key, label in k.periods %}<a href="?p={{ key }}{% if testdata.show %}&test=1{% endif %}" class="{% if key == k.period %}on{% endif %}">{{ label }}</a>{% endfor %}</div>
   </div>
+  {% for msg in messages %}<div class="banner {% if msg.tags == 'error' %}err{% else %}warn{% endif %}"><span>{{ msg }}</span></div>{% endfor %}
+  {% include "admin/_test_data.html" %}
 
   <div class="kpis">
     {% for c in k.cards %}
