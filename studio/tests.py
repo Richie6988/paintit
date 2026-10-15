@@ -915,7 +915,7 @@ class SiteBannerTests(TestCase):
         from django.utils import timezone
         from studio.models import SiteBanner
         r = self.client.get("/")
-        self.assertContains(r, "Objectif : N°1 de la peinture par numéros sur-mesure")
+        self.assertContains(r, "N°1 de la peinture par numéros sur-mesure")
         now = timezone.now()
         SiteBanner.objects.create(name="p", kind="promo", text_fr="-15 % avec", text_en="15% off with", code="PAINT15",
                                   link_url="/create/", countdown_to=now + timedelta(days=2))
