@@ -66,7 +66,7 @@
     <div class="kpi"><div class="l">Joueurs</div><div class="v">{{ stats.players }}</div><div class="muted">toiles de la galerie en cours</div></div>
     <div class="kpi"><div class="l">Ventes galerie</div><div class="v">{{ stats.sales }}</div><div class="muted">{{ stats.revenue|floatformat:"2g" }} € (prix actuels)</div></div>
     <div class="kpi"><div class="l">Slider de l'accueil</div><div class="v">{{ stats.slider }}</div><div class="muted"><a href="?slider=1">voir les modèles affichés</a></div></div>
-    <div class="kpi"><div class="l">Toiles clients</div><div class="v">{{ stats.customer }}</div><div class="muted">créées à partir de photos</div></div>
+    <div class="kpi" title="Fichiers de fabrication des commandes supprimés 60 jours après l'expédition, sauf toiles conservées dans Mes toiles (purge quotidienne à 4 h)"><div class="l">Toiles clients</div><div class="v">{{ stats.customer }}</div><div class="muted">dans « Mes toiles » · purge à J+60 après expédition{% if stats.purge_due %} : {{ stats.purge_due }} à la prochaine{% endif %}</div></div>
   </div>
 
   <div class="card">

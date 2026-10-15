@@ -1,7 +1,9 @@
 """Purge RGPD des donnees INUTILES : apercus jamais commandes, commandes jamais payees, uploads bruts.
 
-Ne touche JAMAIS : les commandes payees (pieces comptables, 10 ans), les modeles de galerie
+Ne touche JAMAIS : les commandes payees elles-memes (pieces comptables, 10 ans), les modeles de galerie
 (gal-/lib-/mkt-), ni les toiles de "Mes toiles" (DigitalCanvas).
+Fichiers de fabrication d'une commande payee (photo, toile, poster) : supprimes N jours apres l'expedition
+(--production-days, 60 par defaut), sauf si la toile est toujours dans "Mes toiles".
 
 A planifier en cron quotidien, par ex. :
     python manage.py purge_old_data            # > 30 jours
@@ -16,9 +18,21 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from studio.models import DigitalCanvas, Order
+from studio.models import DigitalCanvas, Order, OrderEvent
 
 PROTECTED_PREFIXES = ("gal-", "lib-", "mkt-")
+PURGED_TEXT = "Fichiers de fabrication supprimés (conservation %d j après expédition)"
+
+
+def production_expired(days=60):
+    """Commandes expediees / livrees depuis plus de `days` jours dont le dossier existe encore
+    et dont la toile n'est plus dans « Mes toiles »."""
+    cutoff = timezone.now() - timedelta(days=days)
+    mine = set(DigitalCanvas.objects.values_list("uid", flat=True))
+    root = os.path.join(settings.MEDIA_ROOT, "orders")
+    for o in Order.objects.filter(status__in=(Order.SHIPPED, Order.DELIVERED), status_changed_at__lt=cutoff):
+        if o.uid not in mine and (os.path.isdir(os.path.join(root, o.uid)) or os.path.isdir(os.path.join(root, o.uid + "-G"))):
+            yield o
 
 
 class Command(BaseCommand):
@@ -26,6 +40,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--days", type=int, default=30)
+        parser.add_argument("--production-days", type=int, default=60)
         parser.add_argument("--dry-run", action="store_true")
 
     def handle(self, *args, **opts):
@@ -67,7 +82,18 @@ class Command(BaseCommand):
                     if not dry:
                         os.remove(p)
 
+        # 4. Fichiers de fabrication des commandes expediees depuis plus de N jours (hors « Mes toiles »)
+        n_prod = 0
+        for o in production_expired(opts["production_days"]):
+            n_prod += 1
+            if not dry:
+                for u in (o.uid, o.uid + "-G"):
+                    shutil.rmtree(os.path.join(orders_dir, u), ignore_errors=True)
+                OrderEvent.objects.create(order=o, kind="action", user="purge",
+                                          text=PURGED_TEXT % opts["production_days"])
+
         mode = "simulation" if dry else "supprime"
         self.stdout.write(self.style.SUCCESS(
             f"[purge_old_data] commandes non payees: {n_orders}, apercus orphelins: {n_dirs}, "
-            f"uploads: {n_up} , {mode} (seuil {days} j)."))
+            f"uploads: {n_up}, fichiers de fabrication: {n_prod} , {mode} (seuil {days} j / "
+            f"{opts['production_days']} j apres expedition)."))

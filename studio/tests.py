@@ -180,6 +180,24 @@ class PurgeTests(TestCase):
         self.assertTrue({"PAID0001-AAAA", "gal-cat", "MINE0001-AAAA"} <= left)
         self.assertFalse({"PEND0001-AAAA", "ORPH0001-AAAA"} & left)
 
+    def test_production_files_removed_60_days_after_shipping_unless_mes_toiles(self):
+        from datetime import timedelta
+        from django.core.management import call_command
+        from django.utils import timezone
+        make_order("SHIP0001-AAAA", Order.DELIVERED)
+        make_order("SHIP0002-AAAA", Order.DELIVERED)
+        make_order("SHIP0003-AAAA", Order.SHIPPED)
+        Order.objects.filter(uid__in=("SHIP0001-AAAA", "SHIP0002-AAAA")).update(status_changed_at=timezone.now() - timedelta(days=61))
+        DigitalCanvas.objects.create(email="x@y.z", uid="SHIP0002-AAAA", colors=24)      # encore dans Mes toiles
+        for u in ("SHIP0001-AAAA", "SHIP0002-AAAA", "SHIP0003-AAAA"):
+            os.makedirs(os.path.join(MEDIA, "orders", u), exist_ok=True)
+        call_command("purge_old_data", stdout=open(os.devnull, "w"))
+        left = set(os.listdir(os.path.join(MEDIA, "orders")))
+        self.assertNotIn("SHIP0001-AAAA", left)
+        self.assertTrue({"SHIP0002-AAAA", "SHIP0003-AAAA"} <= left)
+        self.assertTrue(Order.objects.filter(uid="SHIP0001-AAAA").exists())               # piece comptable conservee
+        self.assertTrue(Order.objects.get(uid="SHIP0001-AAAA").events.filter(user="purge").exists())
+
 
 class LegalInvoiceTests(TestCase):
     def test_legal_pages_render(self):

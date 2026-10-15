@@ -3079,6 +3079,8 @@ def erp_catalogue(request):
              "sales": sum(owners.get(u, 0) for u in lib.filter(price__gt=0).values_list("uid", flat=True)),
              "customer": DigitalCanvas.objects.exclude(email=LIB_EMAIL).exclude(source="library").count(),
              "slider": lib.filter(in_slider=True).count()}
+    from .management.commands.purge_old_data import production_expired
+    stats["purge_due"] = sum(1 for _ in production_expired(60))
     stats["revenue"] = round(sum(float(p) * owners.get(u, 0) for u, p in lib.filter(price__gt=0)
                                  .values_list("uid", "price")), 2)
     if tab == "customer":
