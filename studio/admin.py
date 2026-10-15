@@ -198,9 +198,9 @@ class OrderAdmin(admin.ModelAdmin):
 
     @admin.display(description="Statut", ordering="status")
     def status_badge(self, obj):
-        colors = {"fulfilled": "#1f56cf", "paid": "#1f56cf", "shipped": "#5a3fb8",
+        colors = {"production": "#8a4b00", "fulfilled": "#1f56cf", "paid": "#1f56cf", "shipped": "#5a3fb8",
                   "delivered": "#237a3e", "pending": "#a86a00", "failed": "#b23"}
-        bg = {"fulfilled": "#e9f0ff", "paid": "#e9f0ff", "shipped": "#efeaff",
+        bg = {"production": "#fff1d6", "fulfilled": "#e9f0ff", "paid": "#e9f0ff", "shipped": "#efeaff",
               "delivered": "#e7f6ec", "pending": "#fff4e0", "failed": "#fde8e8"}
         return format_html('<span style="padding:2px 8px;border-radius:999px;font-weight:600;'
                            'font-size:.8em;color:{};background:{}">{}</span>',
@@ -213,7 +213,7 @@ class OrderAdmin(admin.ModelAdmin):
             return "\u2014"
         d = (timezone.now() - obj.status_changed_at)
         txt = "%d j" % d.days if d.days else "%d h" % (d.seconds // 3600)
-        late = obj.status in (Order.PAID, Order.FULFILLED, Order.SHIPPED) and d.days >= 7
+        late = obj.status in (Order.PAID, Order.FULFILLED, Order.PRODUCTION, Order.SHIPPED) and d.days >= 7
         return format_html('<span style="color:{};font-weight:{}">{}</span>',
                            "#c0392b" if late else "#5b647a", 700 if late else 400, txt)
 
@@ -263,7 +263,7 @@ class OrderAdmin(admin.ModelAdmin):
 
     @admin.action(description="Marquer en production (envoyee au fournisseur)")
     def mark_fulfilled(self, request, queryset):
-        self._bulk_status(request, queryset, Order.FULFILLED, "en production")
+        self._bulk_status(request, queryset, Order.FULFILLED, "envoyee au fournisseur")
 
     @admin.action(description="Marquer comme expediee")
     def mark_shipped(self, request, queryset):

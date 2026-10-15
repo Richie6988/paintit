@@ -31,7 +31,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-STATUS_OUT = {"paid": "processing", "fulfilled": "processing", "shipped": "completed",
+STATUS_OUT = {"paid": "processing", "fulfilled": "processing", "production": "processing", "shipped": "completed",
               "delivered": "completed", "failed": "cancelled"}
 WOO_STATUSES = {"pending": "Pending payment", "processing": "Processing", "on-hold": "On hold",
                 "completed": "Completed", "cancelled": "Cancelled", "refunded": "Refunded", "failed": "Failed"}
@@ -322,7 +322,7 @@ def _apply(sup, order, status, trk, note):
         if note:
             OrderEvent.objects.create(order=order, kind="action", user="ERP %s" % sup.name, text=("Note ERP : " + note)[:300])
         return
-    new = "shipped" if order.status in ("paid", "fulfilled") else ""
+    new = "shipped" if order.status in ("paid", "fulfilled", "production") else ""
     if not new and all(getattr(order, k, "") == v for k, v in trk.items()):
         return      # rien de neuf (l'ERP renvoie souvent la meme mise a jour)
     handle_event(sup, {"uid": order.uid, "status": new, "message": ("ERP : " + note) if note else "ERP (WooCommerce)", **trk})

@@ -111,11 +111,11 @@ class Discount(models.Model):
 
 
 class Order(models.Model):
-    PENDING, PAID, FULFILLED, SHIPPED, DELIVERED, FAILED = \
-        "pending", "paid", "fulfilled", "shipped", "delivered", "failed"
+    PENDING, PAID, FULFILLED, PRODUCTION, SHIPPED, DELIVERED, FAILED = \
+        "pending", "paid", "fulfilled", "production", "shipped", "delivered", "failed"
     STATUS_CHOICES = [
         (PENDING, "En attente de paiement"), (PAID, "Payee"),
-        (FULFILLED, "Envoyee au fournisseur"), (SHIPPED, "Expediee"),
+        (FULFILLED, "Envoyee au fournisseur"), (PRODUCTION, "En production"), (SHIPPED, "Expediee"),
         (DELIVERED, "Livree"), (FAILED, "Echouee"),
     ]
     uid = models.CharField(max_length=32, unique=True)
@@ -186,7 +186,9 @@ class Order(models.Model):
         verbose_name_plural = "Commandes"
 
     # Statuts qui comptent comme chiffre d'affaires encaisse
-    PAID_STATUSES = (PAID, FULFILLED, SHIPPED, DELIVERED)
+    PAID_STATUSES = (PAID, FULFILLED, PRODUCTION, SHIPPED, DELIVERED)
+    AT_SUPPLIER = (FULFILLED, PRODUCTION)          # transmise, pas encore expediee
+    FLOW = (PENDING, PAID, FULFILLED, PRODUCTION, SHIPPED, DELIVERED)
 
     @property
     def benefit(self):

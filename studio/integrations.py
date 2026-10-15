@@ -8,7 +8,7 @@ SORTANT  (PaintIt -> fournisseur), a chaque commande payee (ou a la demande) :
   Le payload contient `callback_url` : l'adresse ou le fournisseur renvoie ses statuts.
 
 ENTRANT  (fournisseur -> PaintIt) : POST JSON sur /api/suppliers/<webhook_secret>/events/
-  {"uid": "...", "status": "in_production|shipped|delivered|failed",
+  {"uid": "...", "status": "received|in_production|shipped|delivered|failed",
    "carrier": "...", "tracking_number": "...", "tracking_url": "...",
    "supplier_ref": "...", "message": "..."}
   -> met a jour la commande (statut, suivi), journalise, demande d'avis a la livraison.
@@ -33,7 +33,8 @@ OK_PREFIX = "Transmise a"
 SKIP_PREFIX = "Transmission annulee"   # decision staff : ne pas (re)transmettre (commande de test...)
 WOO_CHANNEL = "WooCommerce : mise a disposition de l'ERP"
 
-STATUS_MAP = {"in_production": "fulfilled", "accepted": "fulfilled", "shipped": "shipped",
+STATUS_MAP = {"received": "fulfilled", "in_production": "production", "production": "production",
+              "accepted": "production", "shipped": "shipped",
               "delivered": "delivered", "failed": "failed", "cancelled": "failed"}
 
 
@@ -205,7 +206,10 @@ def handle_event(sup, data):
     if ref and order.supplier_ref != ref:
         order.supplier_ref = ref[:64]; changed.append("supplier_ref")
     new = STATUS_MAP.get((data.get("status") or "").strip().lower())
-    if new and new != order.status:
+    flow = list(Order.FLOW)
+    forward = new == Order.FAILED or new not in flow or order.status not in flow or \
+        flow.index(new) > flow.index(order.status)            # jamais de retour en arriere (evenements desordonnes)
+    if new and new != order.status and forward:
         order.status = new; changed.append("status")
     if not order.supplier_id:
         order.supplier = sup; changed.append("supplier")
@@ -232,7 +236,7 @@ def pending_retries():
     """Commandes dont la DERNIERE transmission a echoue (moins de MAX_ATTEMPTS essais)."""
     from .models import Order, OrderEvent
     out = []
-    for o in Order.objects.filter(status__in=(Order.PAID, Order.FULFILLED)):
+    for o in Order.objects.filter(status__in=(Order.PAID, Order.FULFILLED)):   # (en production = deja recue)
         evs = list(OrderEvent.objects.filter(order=o, kind="action", text__regex=r"^(%s|%s|%s)" % (FAIL_PREFIX, OK_PREFIX, SKIP_PREFIX))
                    .order_by("-at").values_list("text", flat=True)[:MAX_ATTEMPTS + 1])
         if evs and evs[0].startswith(FAIL_PREFIX):

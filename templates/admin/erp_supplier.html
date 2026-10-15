@@ -145,7 +145,7 @@
           </div>
           <div class="sf-actions"><button class="gx-btn" name="op" value="test" formnovalidate>Envoyer un test</button><button class="gx-btn pri">Enregistrer</button></div></form>
         <details class="sf-more"><summary>Documentation technique</summary>
-          <p class="gx-muted">Statuts et suivi : POST JSON sur l'URL de retour ci-dessous (<code>status</code> : in_production, shipped, delivered, failed).</p>
+          <p class="gx-muted">Statuts et suivi : POST JSON sur l'URL de retour ci-dessous (<code>status</code> : received, in_production, shipped, delivered, failed).</p>
           <div class="sf-code"><span>{{ automation.callback }}</span><button type="button" data-copy="{{ automation.callback }}">Copier</button></div>
           <p class="gx-muted" style="margin-top:12px">Exemple de commande envoyée :</p><pre>{{ automation.out }}</pre>
           <p class="gx-muted">Exemple de retour :</p><pre>curl -X POST {{ automation.callback }} -H "Content-Type: application/json" -d '{{ automation.in|escape }}'</pre>

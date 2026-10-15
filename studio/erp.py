@@ -144,7 +144,7 @@ def mix(period="30d"):
 def pipeline():
     labels = dict(Order.STATUS_CHOICES)
     counts = dict(Order.objects.values_list("status").annotate(c=Count("id")))
-    order = [Order.PENDING, Order.PAID, Order.FULFILLED, Order.SHIPPED, Order.DELIVERED, Order.FAILED]
+    order = [Order.PENDING, Order.PAID, Order.FULFILLED, Order.PRODUCTION, Order.SHIPPED, Order.DELIVERED, Order.FAILED]
     return [{"status": s, "label": labels[s], "count": counts.get(s, 0),
              "url": "/admin-hub/orders/?tab=" + s} for s in order]
 
@@ -169,9 +169,9 @@ def action_querysets():
         ("to_supplier", (Order.objects.filter(status=Order.PAID, status_changed_at__lt=now - datetime.timedelta(hours=12)),
                          "Payées non transmises au fournisseur (> 12 h)", "err",
                          "Générer les fichiers et transmettre la commande")),
-        ("no_tracking", (Order.objects.filter(status=Order.FULFILLED, tracking_number="",
+        ("no_tracking", (Order.objects.filter(status__in=Order.AT_SUPPLIER, tracking_number="",
                                               status_changed_at__lt=now - datetime.timedelta(days=lead)),
-                         "En production sans n° de suivi (> %d j)" % lead, "warn",
+                         "Chez le fournisseur sans n° de suivi (> %d j)" % lead, "warn",
                          "Relancer le fournisseur et saisir le suivi colis")),
         ("late_delivery", (Order.objects.filter(status=Order.SHIPPED,
                                                 status_changed_at__lt=now - datetime.timedelta(days=ship_max + 3)),
@@ -306,7 +306,7 @@ def _production_days(order_ids):
     from .models import OrderEvent
     first = {}
     for e in (OrderEvent.objects.filter(order_id__in=order_ids, kind="status",
-                                        status__in=[Order.FULFILLED, Order.SHIPPED])
+                                        status__in=[Order.FULFILLED, Order.PRODUCTION, Order.SHIPPED])
               .order_by("at").values("order_id", "status", "at")):
         first.setdefault((e["order_id"], e["status"]), e["at"])
     out = {}
@@ -326,14 +326,14 @@ def supplier_stats(sup, days=30):
     qs = Order.objects.filter(supplier=sup)
     recent = qs.filter(created_at__gte=since, status__in=Order.PAID_STATUSES)
     a = recent.aggregate(n=Count("id"), cost=Sum("cost"), ca=Sum("total"))
-    late_prod = qs.filter(status=Order.FULFILLED, status_changed_at__lt=now - datetime.timedelta(days=lead))
+    late_prod = qs.filter(status__in=Order.AT_SUPPLIER, status_changed_at__lt=now - datetime.timedelta(days=lead))
     late_ship = qs.filter(status=Order.SHIPPED, status_changed_at__lt=now - datetime.timedelta(days=ship_max + 3))
     shipped_ids = list(qs.filter(status__in=(Order.SHIPPED, Order.DELIVERED)).values_list("id", flat=True)[:500])
     prod = _production_days(shipped_ids)
     avg = round(sum(prod.values()) / len(prod), 1) if prod else None
     on_time = round(sum(1 for d in prod.values() if d <= lead) / len(prod) * 100) if prod else None
     return {"orders_30": a["n"] or 0, "spend_30": round(a["cost"] or 0, 2), "revenue_30": round(a["ca"] or 0, 2),
-            "orders_total": qs.count(), "in_production": qs.filter(status=Order.FULFILLED).count(),
+            "orders_total": qs.count(), "in_production": qs.filter(status__in=Order.AT_SUPPLIER).count(),
             "shipped": qs.filter(status=Order.SHIPPED).count(),
             "late": late_prod.count() + late_ship.count(), "late_prod": late_prod.count(),
             "late_ship": late_ship.count(), "avg_days": avg, "lead": lead, "on_time": on_time,
@@ -342,4 +342,4 @@ def supplier_stats(sup, days=30):
 
 def unassigned_orders():
     """Commandes payees sans fournisseur rattache (avant ce suivi, ou transmission impossible)."""
-    return Order.objects.filter(supplier__isnull=True, status__in=(Order.PAID, Order.FULFILLED))
+    return Order.objects.filter(supplier__isnull=True, status__in=(Order.PAID,) + Order.AT_SUPPLIER)

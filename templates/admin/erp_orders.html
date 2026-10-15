@@ -47,7 +47,8 @@
     <form method="post" id="bulkform">{% csrf_token %}
       <div class="bulk" id="bulk"><b id="nsel">0</b>&nbsp;sélectionnée(s)
         <button class="pbtn sm" name="op" value="dispatch">Transmettre au fournisseur</button>
-        <button class="pbtn sm" name="op" value="fulfilled">En production</button>
+        <button class="pbtn sm" name="op" value="fulfilled">Envoyée</button>
+        <button class="pbtn sm" name="op" value="production">En production</button>
         <button class="pbtn sm" name="op" value="shipped">Expédiée</button>
         <button class="pbtn sm" name="op" value="delivered" data-confirm="Marquer comme livrées ?" data-confirm-text="Une demande d'avis sera envoyée à chaque client." data-ok="Marquer livrées">Livrée + avis</button>
         <button class="pbtn sm" name="op" value="failed" data-confirm="Marquer en échec ?" data-ok="Marquer en échec" data-danger>Échec</button>

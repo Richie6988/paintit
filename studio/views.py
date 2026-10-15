@@ -2584,7 +2584,7 @@ def erp_supplier(request, pk):
     _sup_card(sup)
     tab = request.GET.get("o", "open")
     qs = Order.objects.filter(supplier=sup).order_by("-created_at")
-    tabs = [("open", "À traiter", qs.filter(status__in=(Order.PAID, Order.FULFILLED))),
+    tabs = [("open", "À traiter", qs.filter(status__in=(Order.PAID,) + Order.AT_SUPPLIER)),
             ("shipped", "Expédiées", qs.filter(status=Order.SHIPPED)),
             ("delivered", "Livrées", qs.filter(status=Order.DELIVERED)),
             ("failed", "Échecs", qs.filter(status=Order.FAILED)),
@@ -2595,7 +2595,7 @@ def erp_supplier(request, pk):
     rows = []
     for o in current[:100]:
         age = (now - (o.status_changed_at or o.created_at)).days
-        late = (o.status == Order.FULFILLED and age >= sup.stats["lead"]) or \
+        late = (o.status in Order.AT_SUPPLIER and age >= sup.stats["lead"]) or \
                (o.status == Order.SHIPPED and age >= int(p.delivery_days_max or 9) + 3)
         rows.append({"o": o, "age": age, "late": late})
     events = (OrderEvent.objects.filter(order__supplier=sup, kind="action").select_related("order")[:12])
@@ -2618,7 +2618,7 @@ def erp_supplier(request, pk):
     automation = {"callback": integrations.callback_url(sup), "retries": len(retries), "retry_rows": retries,
                   "out": _json.dumps(sample_out, ensure_ascii=False, indent=2),
                   "in": _json.dumps(sample_in, ensure_ascii=False, indent=2)}
-    due = list(Order.objects.filter(supplier=sup, status__in=(Order.FULFILLED, Order.SHIPPED, Order.DELIVERED),
+    due = list(Order.objects.filter(supplier=sup, status__in=(Order.FULFILLED, Order.PRODUCTION, Order.SHIPPED, Order.DELIVERED),
                                     supplier_paid_at__isnull=True, supplier_payment__isnull=True).order_by("created_at"))
     paid = list(sup.payments.all()[:10])
     return render(request, "admin/erp_supplier.html", {
@@ -2851,7 +2851,7 @@ def erp_supplier_export(request, pk, kind):
             ws.append(["Règlement", pay.reference, "", "", "Montant", "%.2f %s" % (pay.amount_native, pay.currency)])
             ws.append([])
         ws.append(["Commande", "Date", "Produit", "Statut", "Suivi", "Montant dû (EUR)"])
-        rows = (pay.orders.all() if pay else qs.filter(status__in=(Order.FULFILLED, Order.SHIPPED, Order.DELIVERED),
+        rows = (pay.orders.all() if pay else qs.filter(status__in=(Order.FULFILLED, Order.PRODUCTION, Order.SHIPPED, Order.DELIVERED),
                                                          supplier_paid_at__isnull=True)).order_by("created_at")
         tot = 0.0
         for o in rows:
@@ -3276,7 +3276,7 @@ def erp_order(request, pk):
                 for f in ("carrier", "tracking_number", "tracking_url"):
                     setattr(o, f, (request.POST.get(f) or "").strip()[:300])
                 fields = ["carrier", "tracking_number", "tracking_url"]
-                if request.POST.get("ship") and o.status in (Order.PAID, Order.FULFILLED):
+                if request.POST.get("ship") and o.status in (Order.PAID,) + Order.AT_SUPPLIER:
                     o.status = Order.SHIPPED; o._erp_user = user; fields += ["status", "status_changed_at"]
                 o.save(update_fields=fields)
                 log("action", "Suivi : %s %s" % (o.carrier, o.tracking_number))
@@ -3335,7 +3335,16 @@ def erp_order(request, pk):
     fee = sum(e.fee for e in o.ledger.all())
     fin = {"sale": sale, "fee": fee,
            "margin": round(float(o.total or 0) - float(o.refunded_amount or 0) - fee - float(o.cost or 0), 2)}
-    return render(request, "admin/erp_order.html", {"paid_statuses": Order.PAID_STATUSES, "fin": fin,
+    # Frise : Payee -> Envoyee -> En production -> Expediee -> Livree (date du 1er passage par chaque etape)
+    first = {}
+    for ev in o.events.filter(kind="status").order_by("at"):
+        first.setdefault(ev.status, ev.at)
+    flow = list(Order.FLOW[1:])
+    cur = flow.index(o.status) if o.status in flow else -1
+    labels = dict(Order.STATUS_CHOICES)
+    track = [{"label": labels[s], "at": first.get(s) or (o.created_at if s == Order.PAID and cur >= 0 else None),
+              "done": i <= cur, "current": i == cur} for i, s in enumerate(flow)]
+    return render(request, "admin/erp_order.html", {"paid_statuses": Order.PAID_STATUSES, "fin": fin, "track": track,
         **_admin.site.each_context(request), "o": o, "files": files, "visuals": visuals, "have": have, "sfiles": supplier_files_status(o.uid),
         "sfiles_ok": all(f["ok"] for f in supplier_files_status(o.uid)),
         "has_tiff": any(f["ext"] in ("TIFF", "TIF") for _k, _l, fs in files for f in fs),
@@ -3347,7 +3356,8 @@ def erp_order(request, pk):
 
 
 # ---------------- Liste des commandes (ERP) ----------------
-ORDER_TABS = [("todo", "À traiter"), ("pending", "En attente"), ("paid", "Payées"), ("fulfilled", "En production"),
+ORDER_TABS = [("todo", "À traiter"), ("pending", "En attente"), ("paid", "Payées"), ("fulfilled", "Envoyées"),
+              ("production", "En production"),
               ("shipped", "Expédiées"), ("delivered", "Livrées"), ("failed", "Échecs"), ("all", "Toutes")]
 
 
@@ -3421,7 +3431,7 @@ def erp_orders(request):
                 else:
                     ko += 1
             (messages.warning if ko else messages.success)(request, "%d transmise(s), %d échec(s)." % (ok, ko))
-        elif op in ("shipped", "delivered", "failed", "fulfilled"):
+        elif op in ("shipped", "delivered", "failed", "fulfilled", "production"):
             n = 0
             for o in sel.exclude(status=op):
                 o.status = op; o._erp_user = user; o.save(update_fields=["status", "status_changed_at"]); n += 1
@@ -3457,7 +3467,7 @@ def erp_orders(request):
         age = now - (o.status_changed_at or o.created_at)
         lead = (o.supplier.lead_time_days if o.supplier else 5)
         late = (o.status == Order.PAID and age.total_seconds() > 12 * 3600) or \
-               (o.status == Order.FULFILLED and age.days >= lead) or \
+               (o.status in Order.AT_SUPPLIER and age.days >= lead) or \
                (o.status == Order.SHIPPED and age.days >= int(p.delivery_days_max or 9) + 3)
         rows.append({"o": o, "age": ("%d j" % age.days) if age.days else ("%d h" % (age.seconds // 3600)), "late": late})
     counts = dict(Order.objects.values_list("status").annotate(n=Count("id")))
@@ -3996,7 +4006,7 @@ def review_page(request, uid):
     tok = request.GET.get("t") or request.POST.get("t") or ""
     if not o or not _hmac.compare_digest(tok, security.review_token(uid)):
         raise Http404
-    if o.status not in (Order.SHIPPED, Order.DELIVERED, Order.FULFILLED):
+    if o.status not in (Order.SHIPPED, Order.DELIVERED) + Order.AT_SUPPLIER:
         raise Http404
     try:
         r = o.review

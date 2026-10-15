@@ -979,3 +979,19 @@ class SiteBannerTests(TestCase):
         b = SiteBanner.objects.get()
         self.assertTrue(b.is_live())
         self.assertContains(self.client.get("/"), "Flash -20 %")
+
+
+class ProductionStatusTests(TestCase):
+    def test_supplier_events_move_forward_only(self):
+        from studio import integrations
+        from studio.models import Order, Supplier
+        sup = Supplier.objects.create(name="S", integration="api", api_url="https://x.test")
+        o = Order.objects.create(uid="PROD-1", status=Order.FULFILLED, format_label="40x50", orientation="portrait",
+                                 width_cm=40, height_cm=50, colors=24, price=40, total=40, customer_name="A",
+                                 customer_email="a@x.fr", supplier=sup)
+        self.assertEqual(integrations.handle_event(sup, {"uid": "PROD-1", "status": "in_production"})[0], 200)
+        o.refresh_from_db(); self.assertEqual(o.status, Order.PRODUCTION)
+        integrations.handle_event(sup, {"uid": "PROD-1", "status": "shipped", "tracking_number": "1Z"})
+        integrations.handle_event(sup, {"uid": "PROD-1", "status": "accepted"})      # evenement en retard : ignore
+        o.refresh_from_db(); self.assertEqual(o.status, Order.SHIPPED)
+        self.assertIn(Order.PRODUCTION, Order.PAID_STATUSES)

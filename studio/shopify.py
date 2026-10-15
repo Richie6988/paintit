@@ -399,7 +399,7 @@ def poll_tracking(sup, days=45):
     """Filet de securite (cron) : relit les expeditions Shopify des commandes PaintIt encore ouvertes."""
     from .models import Order
     open_orders = {o.shopify_order_id: o for o in Order.objects.filter(
-        supplier=sup, status__in=(Order.PAID, Order.FULFILLED, Order.SHIPPED)).exclude(shopify_order_id="")}
+        supplier=sup, status__in=(Order.PAID, Order.FULFILLED, Order.PRODUCTION, Order.SHIPPED)).exclude(shopify_order_id="")}
     if not open_orders:
         return 0
     n = 0
@@ -421,7 +421,7 @@ def poll_tracking(sup, days=45):
                 if f.get("status") in ("SUCCESS", "OPEN") and (ti.get("number") or f.get("displayStatus")):
                     delivered = (f.get("displayStatus") or "") == "DELIVERED"
                     if (order.tracking_number != (ti.get("number") or order.tracking_number)) or \
-                            (delivered and order.status != Order.DELIVERED) or order.status in (Order.PAID, Order.FULFILLED):
+                            (delivered and order.status != Order.DELIVERED) or order.status in (Order.PAID, Order.FULFILLED, Order.PRODUCTION):
                         _apply_tracking(sup, order, ti.get("company"), ti.get("number"), ti.get("url"),
                                         "delivered" if delivered else "shipped", "Shopify : synchro")
                         n += 1

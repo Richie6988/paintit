@@ -49,7 +49,7 @@
     <div class="kpi"><div class="l">Fournisseurs actifs</div><div class="v">{{ tot.active }}</div></div>
     <div class="kpi"><div class="l">Commandes (30 j)</div><div class="v">{{ tot.orders_30 }}</div></div>
     <div class="kpi"><div class="l">Achats (30 j)</div><div class="v">{{ tot.spend_30|floatformat:"2g" }} €</div><div class="muted">coût fournisseur estimé</div></div>
-    <div class="kpi"><div class="l">En production</div><div class="v">{{ tot.in_production }}</div></div>
+    <div class="kpi"><div class="l">Chez le fournisseur</div><div class="v">{{ tot.in_production }}</div></div>
     <div class="kpi"><div class="l">En retard</div><div class="v" {% if tot.late %}style="color:#b42318"{% endif %}>{{ tot.late }}</div></div>
     <div class="kpi"><div class="l">Intégrations en erreur</div><div class="v" {% if tot.errors %}style="color:#b42318"{% endif %}>{{ tot.errors }}</div></div>
   </div>

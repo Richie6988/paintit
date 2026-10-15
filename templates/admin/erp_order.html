@@ -35,6 +35,14 @@
  .sf-row .nm{flex:1;min-width:0}.sf-row .nm b{display:block;font-size:.85rem}.sf-row .nm span{font-size:.72rem;color:#6d7175}
  .regen{position:relative}.regen summary{list-style:none;cursor:pointer}.regen summary::-webkit-details-marker{display:none}
  .regen-menu{position:absolute;right:0;top:110%;background:#fff;border:1px solid #e3e3e3;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;z-index:5;box-shadow:0 10px 24px rgba(0,0,0,.1);white-space:nowrap}
+ .trk{display:grid;grid-template-columns:repeat(5,1fr);list-style:none;margin:0 0 16px;padding:14px 10px;background:#fff;border:1px solid #e2e8f2;border-radius:14px;counter-reset:t}
+ .trk li{position:relative;text-align:center;font-size:.78rem;color:#8a93a6;display:grid;gap:3px;justify-items:center}
+ .trk li i{width:26px;height:26px;border-radius:50%;background:#eef1f6;border:2px solid #d5dbe6;position:relative;z-index:1}
+ .trk li+li::before{content:"";position:absolute;top:13px;right:50%;width:100%;height:3px;background:#e3e7ef}
+ .trk li.done i{background:#2f6bf2;border-color:#2f6bf2;box-shadow:inset 0 0 0 5px #fff}
+ .trk li.done+li.done::before,.trk li.done+li.cur::before{background:#2f6bf2}
+ .trk li.cur i{background:#2f6bf2;border-color:#2f6bf2;box-shadow:0 0 0 5px rgba(47,107,242,.18)}
+ .trk li.done b{color:#12224f}.trk li span{font-size:.7rem}
  .money{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:.86rem}.money .tot{font-weight:800;border-top:1px solid #ebebeb;padding-top:6px}
 </style>
 <div class="erp">
@@ -54,6 +62,9 @@
   </div>
 
   {% if messages %}{% for m in messages %}<div class="banner {% if m.tags == 'error' %}err{% else %}warn{% endif %}" {% if m.tags != 'error' %}style="background:#e7f6ec;border-color:#b7e4c7;color:#1e5b35"{% endif %}><span>{{ m }}</span></div>{% endfor %}{% endif %}
+  {% if o.status != "pending" and o.status != "failed" %}
+  <ol class="trk">{% for t in track %}<li class="{% if t.done %}done{% endif %}{% if t.current %} cur{% endif %}"><i></i><b>{{ t.label }}</b><span>{% if t.at %}{{ t.at|date:"d/m H:i" }}{% else %}—{% endif %}</span></li>{% endfor %}</ol>
+  {% endif %}
   {% for f in flags %}<div class="banner warn"><span><b>À traiter :</b> {{ f }}</span></div>{% endfor %}
 
   <div class="sp-layout">
@@ -147,7 +158,7 @@
           <label>Transporteur</label><input type="text" name="carrier" value="{{ o.carrier }}" placeholder="Colissimo, DHL…">
           <label>N° de suivi</label><input type="text" name="tracking_number" value="{{ o.tracking_number }}">
           <label>Lien de suivi</label><input type="url" name="tracking_url" value="{{ o.tracking_url }}" placeholder="https://…">
-          {% if o.status == "paid" or o.status == "fulfilled" %}<label class="sw" style="margin-top:10px"><input type="checkbox" name="ship" checked style="width:auto"> Marquer comme expédiée</label>{% endif %}
+          {% if o.status == "paid" or o.status == "fulfilled" or o.status == "production" %}<label class="sw" style="margin-top:10px"><input type="checkbox" name="ship" checked style="width:auto"> Marquer comme expédiée</label>{% endif %}
           <button class="pbtn" style="width:100%;margin-top:10px">Enregistrer le suivi</button>
           {% if o.tracking_url %}<a class="pbtn sm" style="margin-top:6px" href="{{ o.tracking_url }}" target="_blank" rel="noopener">Suivre le colis ↗</a>{% endif %}
         </form>
