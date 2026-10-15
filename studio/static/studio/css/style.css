@@ -931,3 +931,20 @@ body.pv-busy .options .cta{opacity:.6;pointer-events:none}
   .topbar.tb-promo .tb-msg,.topbar.tb-maintenance .tb-msg,.topbar.tb-info .tb-msg{white-space:normal;text-align:center;line-height:1.7}
   .topbar .tb-code,.topbar .tb-cd{margin-left:4px;white-space:nowrap}
 }
+
+/* « Pourquoi PaintIt ? » : panneau unique, colonnes numerotees, sans pictos */
+.why-grid{counter-reset:why;gap:0;background:#fff;border:1px solid var(--ring,#e2e8f2);border-radius:24px;overflow:hidden;
+  box-shadow:0 20px 50px -24px rgba(18,34,79,.25)}
+.why-c{counter-increment:why;position:relative;background:none;border:0;border-radius:0;box-shadow:none;padding:30px 26px 32px;
+  transition:background .2s ease}
+.why-c+.why-c{border-left:1px solid var(--ring,#e2e8f2)}
+.why-c::before{content:counter(why,decimal-leading-zero);display:block;margin-bottom:18px;font-size:.78rem;font-weight:800;
+  letter-spacing:.12em;color:var(--blue,#2f6bf2)}
+.why-c::after{content:"";position:absolute;left:26px;right:26px;top:0;height:3px;border-radius:0 0 3px 3px;
+  background:linear-gradient(90deg,var(--blue,#2f6bf2),#8fb0ff);transform:scaleX(0);transform-origin:left;transition:transform .35s ease}
+.why-c:hover{background:#f8faff}
+.why-c:hover::after{transform:scaleX(1)}
+.why-c h3{font-size:1.18rem;line-height:1.25;margin:0 0 10px;letter-spacing:-.01em}
+.why-c p{font-size:.93rem;line-height:1.6}
+@media(max-width:900px){.why-c:nth-child(3){border-left:0}.why-c:nth-child(n+3){border-top:1px solid var(--ring,#e2e8f2)}}
+@media(max-width:520px){.why-c+.why-c{border-left:0;border-top:1px solid var(--ring,#e2e8f2)}.why-c{padding:24px 22px}}
