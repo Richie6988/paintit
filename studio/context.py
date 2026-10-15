@@ -29,6 +29,7 @@ def assets(request):
     return {"SITE_URL": site, "HREFLANGS": alts, "PBN_LINKS": landings.footer_links((get_language() or "fr")[:2]), "LANG_URLS": lang_urls, "LANG_MENU": lang_menu,
             # Mesure d'audience sans cookie (Plausible / compatible) : pas de bandeau cookies requis
             "MADE_IN": _made_in(), "MADE_IN_LABEL": _made_in_label(),
+            "SITE_BANNER": _banner(request),
             "ANALYTICS_SRC": getattr(settings, "ANALYTICS_SRC", ""),
             "ANALYTICS_DOMAIN": getattr(settings, "ANALYTICS_DOMAIN", "")}
 
@@ -64,3 +65,21 @@ def _made_in():
 def _made_in_label():
     from django.utils.translation import gettext as _
     return _("Fabriqué à la demande par nos ateliers partenaires, audités selon nos exigences de qualité")
+
+
+def _banner(request):
+    """Bandeau actif du site (None = message standard). Jamais dans l'admin."""
+    if request.path.startswith(("/admin", "/admin-hub")):
+        return None
+    try:
+        from django.utils.translation import get_language
+        from .models import SiteBanner
+        b = SiteBanner.current()
+        if b:
+            lang = (get_language() or "fr")[:2]
+            b.txt = b.text(lang)
+            u = b.link_url or ""
+            b.href = "/%s%s" % (lang, u) if u.startswith("/") and lang != "fr" and not u.startswith("/%s/" % lang) else u
+        return b
+    except Exception:          # base pas encore migree, etc. : le site reste affichable
+        return None

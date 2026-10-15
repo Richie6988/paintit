@@ -1,0 +1,135 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Bandeau du site · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .bn{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;color:#fff;font-weight:600;font-size:.85rem;
+     padding:8px 12px;border-radius:10px;background:#12224f;text-align:center}
+ .bn.promo{background:linear-gradient(90deg,#e8455f,#f08a3c)}.bn.maintenance{background:#b45309}.bn.info{background:#2f6bf2}
+ .bn .code{font-weight:800;letter-spacing:.04em;background:rgba(255,255,255,.18);border:1px dashed rgba(255,255,255,.7);border-radius:6px;padding:1px 8px}
+ .bn .cd{font-weight:800;font-variant-numeric:tabular-nums;background:rgba(0,0,0,.18);border-radius:6px;padding:1px 7px}
+ .bl{display:grid;gap:10px}
+ .bi{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 14px;align-items:center;background:#fff;border:1px solid #e3e7ef;border-radius:14px;padding:12px 14px}
+ .bi .meta{font-size:.76rem;color:#6d7175;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+ .bi .acts{display:flex;gap:6px;grid-row:span 2}
+ .bi.off{opacity:.55}
+ .bf{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+ .bf label{display:grid;gap:4px;font-size:.78rem;font-weight:700;color:#33415c}
+ .bf input,.bf select{width:100%;box-sizing:border-box;height:38px;padding:0 10px;border:1px solid #d4d4d4;border-radius:9px;font-size:.86rem;background:#fff}
+ .bf input[type=checkbox]{width:auto;height:auto}
+ .bf .wide{grid-column:span 2}
+ .bf .chk{display:flex;align-items:center;gap:6px}
+ .presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+ .errorlist{color:#b42318;font-size:.75rem;margin:0;padding-left:14px}
+</style>
+<div class="erp gx">
+  <div class="erp-head">
+    <div><h1>Bandeau du site</h1>
+      <div class="muted">Le liseré au-dessus du menu, sur toutes les pages. Sans bandeau actif, le message standard s'affiche, traduit dans les 5 langues. Si plusieurs bandeaux sont en ligne en même temps, la maintenance passe avant la promo, qui passe avant l'info.</div></div>
+  </div>
+  {% include "admin/_growth_ui.html" %}{% include "admin/_growth_tabs.html" %}
+
+  <div class="card">
+    <div class="card-h"><h2>En ligne maintenant</h2><span class="muted">mis à jour sur le site en moins d'une minute</span></div>
+    {% if live %}
+      <div class="bn {{ live.kind }}"><span>{{ live.text_fr }}</span>{% if live.code %}<span class="code">{{ live.code }}</span>{% endif %}{% if live.countdown_to %}<span class="cd" data-end="{{ live.countdown_to|date:'c' }}"></span>{% endif %}</div>
+    {% else %}
+      <div class="bn"><span>Objectif : N°1 de la peinture par numéros sur-mesure · Essayez-la en ligne · Livraison offerte</span></div>
+      <p class="muted" style="margin:8px 0 0">Bandeau standard (aucun bandeau programmé en ligne).</p>
+    {% endif %}
+  </div>
+
+  {% if banners %}
+  <div class="card">
+    <div class="card-h"><h2>Bandeaux</h2></div>
+    <div class="bl">
+      {% for b in banners %}
+      <div class="bi {% if not b.active %}off{% endif %}">
+        <div class="bn {{ b.kind }}"><span>{{ b.text_fr }}</span>{% if b.code %}<span class="code">{{ b.code }}</span>{% endif %}{% if b.countdown_to %}<span class="cd" data-end="{{ b.countdown_to|date:'c' }}"></span>{% endif %}</div>
+        <div class="acts">
+          <a class="pbtn sm" href="?edit={{ b.pk }}#form">Modifier</a>
+          <form method="post">{% csrf_token %}<input type="hidden" name="id" value="{{ b.pk }}"><button class="pbtn sm" name="op" value="toggle">{% if b.active %}Désactiver{% else %}Activer{% endif %}</button></form>
+          <form method="post" onsubmit="return confirm('Supprimer ce bandeau ?')">{% csrf_token %}<input type="hidden" name="id" value="{{ b.pk }}"><button class="pbtn sm" name="op" value="delete">Supprimer</button></form>
+        </div>
+        <div class="meta"><b style="color:#12224f">{{ b.name }}</b> · {{ b.get_kind_display }}
+          {% if b.state == "live" %}<span class="bdg2 ok"><span class="dot2"></span>En ligne</span>
+          {% elif b.state == "planned" %}<span class="bdg2 info">Programmé</span>
+          {% elif b.state == "ended" %}<span class="bdg2 idle">Terminé</span>
+          {% elif b.state == "off" %}<span class="bdg2 off">Désactivé</span>
+          {% else %}<span class="bdg2 idle" title="Un bandeau prioritaire est en ligne">Masqué par un autre</span>{% endif %}
+          {% if b.starts_at %}· du {{ b.starts_at|date:"d/m H:i" }}{% endif %}{% if b.ends_at %} au {{ b.ends_at|date:"d/m H:i" }}{% endif %}
+          {% if b.link_url %}· lien {{ b.link_url }}{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card" id="form">
+    <div class="card-h"><h2>{% if edit %}Modifier « {{ edit.name }} »{% else %}Nouveau bandeau{% endif %}</h2>{% if edit %}<a class="pbtn sm" href="?">Annuler</a>{% endif %}</div>
+    {% if not edit %}
+    <div class="presets"><span class="muted" style="align-self:center;font-size:.8rem">Modèles :</span>
+      <button type="button" class="pbtn sm" data-p="promo">Promo avec code</button>
+      <button type="button" class="pbtn sm" data-p="flash">Vente flash 48 h</button>
+      <button type="button" class="pbtn sm" data-p="noel">Noël : commandez avant…</button>
+      <button type="button" class="pbtn sm" data-p="maint">Maintenance programmée</button>
+      <button type="button" class="pbtn sm" data-p="info">Information</button>
+    </div>
+    {% endif %}
+    <form method="post" class="bf">{% csrf_token %}<input type="hidden" name="op" value="save">{% if edit %}<input type="hidden" name="id" value="{{ edit.pk }}">{% endif %}
+      {{ form.non_field_errors }}
+      <label>Nom interne {{ form.name }}{{ form.name.errors }}</label>
+      <label>Type {{ form.kind }}</label>
+      <label class="wide">Texte (FR) {{ form.text_fr }}{{ form.text_fr.errors }}</label>
+      <label class="wide">Texte (EN, utilisé aussi en DE / ES / IT) {{ form.text_en }}</label>
+      <label>Code promo affiché (cliquable pour copier) {{ form.code }}</label>
+      <label>Lien au clic (ex. /create/) {{ form.link_url }}</label>
+      <label>Début (vide = tout de suite) {{ form.starts_at }}{{ form.starts_at.errors }}</label>
+      <label>Fin, retour au standard (vide = sans fin) {{ form.ends_at }}{{ form.ends_at.errors }}</label>
+      <label>Compte à rebours jusqu'à (vide = aucun) {{ form.countdown_to }}{{ form.countdown_to.errors }}</label>
+      <label class="chk">{{ form.active }} Activé</label>
+      <div style="grid-column:1/-1;display:flex;gap:10px;align-items:center">
+        <button class="pbtn pri">Enregistrer</button>
+        <span class="muted" style="font-size:.78rem">Un code promo doit aussi exister dans Remises pour être accepté au paiement.</span>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+(function () {
+  var p = function (n) { return (n < 10 ? "0" : "") + n; };
+  var cds = document.querySelectorAll(".cd[data-end]");
+  (function tick() {
+    cds.forEach(function (cd) {
+      var s = Math.floor((new Date(cd.dataset.end).getTime() - Date.now()) / 1000);
+      if (s <= 0) { cd.textContent = "terminé"; return; }
+      var d = Math.floor(s / 86400); s %= 86400;
+      cd.textContent = (d ? d + "j " : "") + p(Math.floor(s / 3600)) + ":" + p(Math.floor(s % 3600 / 60)) + ":" + p(s % 60);
+    });
+    if (cds.length) setTimeout(tick, 1000);
+  })();
+  var f = document.querySelector("form.bf");
+  var local = function (h) { var d = new Date(Date.now() + h * 3600e3); d.setSeconds(0, 0);
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + "T" + p(d.getHours()) + ":" + p(d.getMinutes()); };
+  var P = {
+    promo: {name: "Promo", kind: "promo", text_fr: "-15 % sur votre toile avec le code", text_en: "15% off your canvas with code", code: "PAINT15", link_url: "/create/", ends: 24 * 7, cd: true},
+    flash: {name: "Vente flash", kind: "promo", text_fr: "Vente flash : -20 % avec le code", text_en: "Flash sale: 20% off with code", code: "FLASH20", link_url: "/create/", ends: 48, cd: true},
+    noel: {name: "Noël", kind: "info", text_fr: "Noël : commandez avant la date limite pour être livré à temps", text_en: "Christmas: order before the cut-off to receive it in time", code: "", link_url: "/create/", ends: 24 * 14, cd: true},
+    maint: {name: "Maintenance", kind: "maintenance", text_fr: "Maintenance prévue : le site sera indisponible quelques minutes dans", text_en: "Scheduled maintenance: the site will be briefly unavailable in", code: "", link_url: "", ends: 24, cd: true},
+    info: {name: "Information", kind: "info", text_fr: "", text_en: "", code: "", link_url: "", ends: 0, cd: false}
+  };
+  document.querySelectorAll("[data-p]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var v = P[b.dataset.p];
+      ["name", "kind", "text_fr", "text_en", "code", "link_url"].forEach(function (k) { f.elements[k].value = v[k]; });
+      f.elements.starts_at.value = "";
+      f.elements.ends_at.value = v.ends ? local(v.ends) : "";
+      f.elements.countdown_to.value = v.cd ? local(v.ends) : "";
+      f.elements.text_fr.focus();
+    });
+  });
+})();
+</script>
+{% endblock %}

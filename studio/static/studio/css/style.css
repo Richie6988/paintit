@@ -915,3 +915,19 @@ body.pv-busy .options .cta{opacity:.6;pointer-events:none}
 .rr{margin:0;background:#fff;border:1px solid var(--ring);border-radius:16px;padding:16px}
 .rr blockquote{margin:8px 0;color:var(--ink);font-size:.92rem;line-height:1.5}
 .rr figcaption{color:var(--muted);font-size:.8rem;font-weight:600}
+
+/* Bandeaux du site (admin > Croissance > Bandeau) */
+.topbar.tb-promo{background:linear-gradient(90deg,#e8455f,#f08a3c)}
+.topbar.tb-maintenance{background:#b45309}
+.topbar.tb-info{background:#2f6bf2}
+.topbar .tb-msg{pointer-events:auto}
+.topbar .tb-link{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.topbar .tb-code{margin-left:8px;font:inherit;font-weight:800;letter-spacing:.04em;color:inherit;background:rgba(255,255,255,.18);
+  border:1px dashed rgba(255,255,255,.7);border-radius:6px;padding:1px 8px;cursor:pointer}
+.topbar .tb-code:hover{background:rgba(255,255,255,.3)}
+.topbar .tb-cd{margin-left:8px;font-variant-numeric:tabular-nums;font-weight:800;background:rgba(0,0,0,.18);border-radius:6px;padding:1px 7px}
+.topbar .tb-cd:empty{display:none}
+@media (max-width: 900px){
+  .topbar.tb-promo .tb-msg,.topbar.tb-maintenance .tb-msg,.topbar.tb-info .tb-msg{white-space:normal;text-align:center;line-height:1.7}
+  .topbar .tb-code,.topbar .tb-cd{margin-left:4px;white-space:nowrap}
+}

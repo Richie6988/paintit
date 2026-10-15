@@ -1686,3 +1686,15 @@ msgstr ""
 "Tu foto original nunca se comparte con terceros. Nuestros talleres asociados"
 " solo reciben los archivos necesarios para la fabricación (lienzo numerado, "
 "póster y ficha de colores), nunca la foto en sí."
+
+msgid "Peinture par numéros sur-mesure"
+msgstr "Pintar por números a medida"
+
+msgid "Copier le code"
+msgstr "Copiar el código"
+
+msgid "j"
+msgstr "d"
+
+msgid "Objectif : N°1 de la peinture par numéros sur-mesure"
+msgstr "Objetivo: n.º 1 en pintar por números a medida"

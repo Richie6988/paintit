@@ -1698,3 +1698,15 @@ msgstr ""
 "La tua foto originale non viene mai condivisa con terzi. I nostri laboratori"
 " partner ricevono solo i file necessari alla produzione (tela numerata, "
 "poster e scheda colori), mai la foto stessa."
+
+msgid "Peinture par numéros sur-mesure"
+msgstr "Dipingere con i numeri su misura"
+
+msgid "Copier le code"
+msgstr "Copia il codice"
+
+msgid "j"
+msgstr "g"
+
+msgid "Objectif : N°1 de la peinture par numéros sur-mesure"
+msgstr "Obiettivo: n. 1 del dipingere con i numeri su misura"

@@ -40,9 +40,7 @@
   document.addEventListener('dragstart',function(e){if(e.target&&e.target.tagName==='IMG')e.preventDefault();});})();</script>
 </head>
 <body>
-  <div class="topbar">
-    <span class="tb-msg"><span>{% trans "N°1 de la peinture par numéros sur-mesure" %}</span><span class="tb-x"> &middot; {% trans "Essayez-la en ligne" %}</span><span class="tb-x2"> &middot; {% trans "Livraison offerte" %}</span></span>
-  </div>
+  {% include "studio/_topbar.html" %}
   <header class="nav">
     <a class="brand-logo" href="{% url 'studio:home' %}">
       <img src="{% static 'studio/img/icon.svg' %}" alt="PaintIt">

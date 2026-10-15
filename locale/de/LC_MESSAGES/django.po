@@ -1713,3 +1713,15 @@ msgstr ""
 "Ihr Originalfoto wird niemals an Dritte weitergegeben. Unsere "
 "Partnerwerkstätten erhalten nur die für die Herstellung nötigen Dateien "
 "(nummerierte Leinwand, Poster und Farbliste), niemals das Foto selbst."
+
+msgid "Peinture par numéros sur-mesure"
+msgstr "Malen nach Zahlen nach Maß"
+
+msgid "Copier le code"
+msgstr "Code kopieren"
+
+msgid "j"
+msgstr "T"
+
+msgid "Objectif : N°1 de la peinture par numéros sur-mesure"
+msgstr "Ziel: Nr. 1 für Malen nach Zahlen nach Maß"

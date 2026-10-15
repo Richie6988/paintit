@@ -4468,3 +4468,52 @@ def erp_video_file(request, pk, ext):
     if request.GET.get("dl"):
         resp["Content-Disposition"] = 'attachment; filename="%s"' % v.file_name
     return resp
+
+
+# ---------------- Croissance : bandeau du site (promo, maintenance, info + compte a rebours) ----------------
+def _banner_form():
+    from django import forms
+    from .models import SiteBanner
+    dt = forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M")
+
+    class BannerForm(forms.ModelForm):
+        class Meta:
+            model = SiteBanner
+            fields = ["name", "kind", "text_fr", "text_en", "code", "link_url", "starts_at", "ends_at",
+                      "countdown_to", "active"]
+            widgets = {"starts_at": dt, "ends_at": dt, "countdown_to": dt}
+    return BannerForm
+
+
+@staff_member_required
+def erp_banners(request):
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from .models import SiteBanner
+    Form = _banner_form()
+    edit = SiteBanner.objects.filter(pk=request.GET.get("edit") or request.POST.get("id") or 0).first()
+    form = Form(instance=edit)
+    if request.method == "POST":
+        op = request.POST.get("op")
+        if op == "save":
+            form = Form(request.POST, instance=edit)
+            if form.is_valid():
+                b = form.save()
+                messages.success(request, "Bandeau « %s » enregistré%s." % (b.name, " et en ligne" if b.is_live() else ""))
+                return redirect(request.path)
+        elif edit and op == "toggle":
+            edit.active = not edit.active; edit.save()
+            return redirect(request.path)
+        elif edit and op == "delete":
+            edit.delete()
+            return redirect(request.path)
+    now = timezone.now()
+    live = SiteBanner.current()
+    banners = list(SiteBanner.objects.all())
+    for b in banners:
+        b.state = ("live" if live and b.pk == live.pk else "off" if not b.active else
+                   "ended" if b.ends_at and b.ends_at <= now else
+                   "planned" if b.starts_at and b.starts_at > now else "masked")
+    return render(request, "admin/erp_banners.html", {
+        **_admin.site.each_context(request), "banners": banners, "live": live, "form": form, "edit": edit,
+        "erp_section": "growth", "gtab": "banner"})

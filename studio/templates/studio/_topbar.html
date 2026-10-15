@@ -1,0 +1,26 @@
+{% load i18n %}
+{% if SITE_BANNER %}{% with b=SITE_BANNER %}
+  <div class="topbar tb-{{ b.kind }}">
+    <span class="tb-msg">
+      {% if b.href %}<a class="tb-link" href="{{ b.href }}">{% endif %}<span>{{ b.txt }}</span>{% if b.href %}</a>{% endif %}
+      {% if b.code %}<button type="button" class="tb-code" data-code="{{ b.code }}" title="{% trans 'Copier le code' %}">{{ b.code }}</button>{% endif %}
+      {% if b.countdown_to %}<span class="tb-cd" data-end="{{ b.countdown_to|date:'c' }}" data-d="{% trans 'j' %}" aria-live="off"></span>{% endif %}
+    </span>
+  </div>
+  <script>(function(){
+    var cd=document.querySelector('.topbar .tb-cd');
+    if(cd){var end=new Date(cd.dataset.end).getTime(),p=function(n){return(n<10?'0':'')+n;};
+      var tick=function(){var s=Math.floor((end-Date.now())/1000);
+        if(s<=0){cd.textContent='';return;}
+        var d=Math.floor(s/86400);s%=86400;
+        cd.textContent=(d?d+cd.dataset.d+' ':'')+p(Math.floor(s/3600))+':'+p(Math.floor(s%3600/60))+':'+p(s%60);
+        setTimeout(tick,1000);};tick();}
+    var c=document.querySelector('.topbar .tb-code');
+    if(c)c.addEventListener('click',function(){var t=c.dataset.code;
+      (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){c.textContent='✓ '+t;setTimeout(function(){c.textContent=t;},1500);}).catch(function(){});});
+  })();</script>
+{% endwith %}{% else %}
+  <div class="topbar">
+    <span class="tb-msg"><span>{% trans "Objectif : N°1 de la peinture par numéros sur-mesure" %}</span><span class="tb-x"> &middot; {% trans "Essayez-la en ligne" %}</span><span class="tb-x2"> &middot; {% trans "Livraison offerte" %}</span></span>
+  </div>
+{% endif %}

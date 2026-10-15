@@ -1674,3 +1674,15 @@ msgstr ""
 "Your original photo is never shared with any third party. Our partner "
 "workshops only receive the files needed for production (numbered canvas, "
 "poster and colour sheet), never the photo itself."
+
+msgid "Peinture par numéros sur-mesure"
+msgstr "Custom paint by numbers"
+
+msgid "Copier le code"
+msgstr "Copy the code"
+
+msgid "j"
+msgstr "d"
+
+msgid "Objectif : N°1 de la peinture par numéros sur-mesure"
+msgstr "Goal: No. 1 in custom paint by numbers"

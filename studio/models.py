@@ -1089,3 +1089,58 @@ class SocialVideo(models.Model):
     @property
     def file_name(self):
         return "paintit-%s-%d.mp4" % (self.mode, self.pk)
+
+
+class SiteBanner(models.Model):
+    """Bandeau en haut du site (au-dessus du menu). Sans bandeau actif : message standard traduit.
+    Priorite si plusieurs sont en ligne : maintenance > promo > info."""
+    KINDS = [("promo", "Promo"), ("maintenance", "Maintenance"), ("info", "Information")]
+    PRIORITY = {"maintenance": 0, "promo": 1, "info": 2}
+    name = models.CharField("Nom interne", max_length=80)
+    kind = models.CharField("Type", max_length=12, choices=KINDS, default="promo")
+    active = models.BooleanField("Activé", default=True)
+    starts_at = models.DateTimeField("Début", null=True, blank=True)
+    ends_at = models.DateTimeField("Fin (retour au bandeau standard)", null=True, blank=True)
+    countdown_to = models.DateTimeField("Compte à rebours jusqu'à", null=True, blank=True)
+    text_fr = models.CharField("Texte (FR)", max_length=160)
+    text_en = models.CharField("Texte (EN, sert aussi DE/ES/IT)", max_length=160, blank=True, default="")
+    code = models.CharField("Code promo affiché", max_length=40, blank=True, default="")
+    link_url = models.CharField("Lien", max_length=200, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Bandeau du site"
+        verbose_name_plural = "Bandeaux du site"
+
+    def is_live(self, now=None):
+        from django.utils import timezone
+        now = now or timezone.now()
+        return self.active and (not self.starts_at or self.starts_at <= now) and (not self.ends_at or now < self.ends_at)
+
+    def text(self, lang):
+        return self.text_fr if (lang or "fr")[:2] == "fr" or not self.text_en else self.text_en
+
+    @classmethod
+    def current(cls):
+        """Bandeau en ligne (cache 60 s, vide a chaque enregistrement)."""
+        from django.core.cache import cache
+        pk = cache.get("site_banner")
+        if pk is None:
+            live = [b for b in cls.objects.filter(active=True) if b.is_live()]
+            live.sort(key=lambda b: (cls.PRIORITY.get(b.kind, 9), -b.pk))
+            pk = live[0].pk if live else 0
+            ttl = 60
+            cache.set("site_banner", pk, ttl)
+        return cls.objects.filter(pk=pk).first() if pk else None
+
+    def save(self, *a, **kw):
+        from django.core.cache import cache
+        super().save(*a, **kw)
+        cache.delete("site_banner")
+
+    def delete(self, *a, **kw):
+        from django.core.cache import cache
+        r = super().delete(*a, **kw)
+        cache.delete("site_banner")
+        return r

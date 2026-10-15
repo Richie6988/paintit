@@ -904,3 +904,39 @@ class SatisfyingVideoTests(TestCase):
         self.assertTrue(v.canvas_uid.startswith("vid-"))
         from studio import satisfying
         self.assertEqual(satisfying.sources()[0][0], v.canvas_uid)
+
+
+class SiteBannerTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def test_standard_then_priority_and_schedule(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from studio.models import SiteBanner
+        r = self.client.get("/")
+        self.assertContains(r, "Objectif : N°1 de la peinture par numéros sur-mesure")
+        now = timezone.now()
+        SiteBanner.objects.create(name="p", kind="promo", text_fr="-15 % avec", text_en="15% off with", code="PAINT15",
+                                  link_url="/create/", countdown_to=now + timedelta(days=2))
+        SiteBanner.objects.create(name="futur", kind="maintenance", text_fr="Maintenance", starts_at=now + timedelta(days=1))
+        SiteBanner.objects.create(name="fini", kind="info", text_fr="Vieux", ends_at=now - timedelta(hours=1))
+        r = self.client.get("/")
+        self.assertContains(r, "tb-promo"); self.assertContains(r, "PAINT15"); self.assertContains(r, "tb-cd")
+        self.assertNotContains(r, "Maintenance"); self.assertNotContains(r, "Vieux")
+        r = self.client.get("/en/")
+        self.assertContains(r, "15% off with"); self.assertContains(r, 'href="/en/create/"')
+        SiteBanner.objects.create(name="m", kind="maintenance", text_fr="Maintenance en cours")
+        self.assertContains(self.client.get("/"), "Maintenance en cours")          # maintenance prioritaire
+
+    def test_admin_page_saves(self):
+        from django.contrib.auth.models import User
+        from studio.models import SiteBanner
+        User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
+        self.client.login(username="boss", password="pw-Secret-123")
+        self.assertContains(self.client.get("/admin-hub/banner/"), "Bandeau du site")
+        self.client.post("/admin-hub/banner/", {"op": "save", "name": "Flash", "kind": "promo", "text_fr": "Flash -20 %",
+                                                 "code": "FLASH20", "ends_at": "2099-01-01T10:00", "active": "on"})
+        b = SiteBanner.objects.get()
+        self.assertTrue(b.is_live())
+        self.assertContains(self.client.get("/"), "Flash -20 %")
