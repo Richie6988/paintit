@@ -52,6 +52,8 @@
  .overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);display:none;align-items:center;justify-content:center;z-index:2000;flex-direction:column;gap:12px;font-weight:700}
  .overlay.on{display:flex}.spin{width:42px;height:42px;border:4px solid #e3e3e3;border-top-color:#1a1a1a;border-radius:50%;animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
  .ctab td{vertical-align:middle}.ctab img{width:54px;height:66px;object-fit:cover;border-radius:8px;border:1px solid #e3e3e3}
+ .pc.hid .img img{filter:grayscale(1);opacity:.55}
+ .hidb{position:absolute;left:8px;top:8px;z-index:3;background:#12224f;color:#fff;font-size:.7rem;font-weight:800;padding:3px 8px;border-radius:999px}
 </style>
 <div class="erp">
   <div class="erp-head">
@@ -62,7 +64,7 @@
   {% if messages %}{% for m in messages %}<div class="banner {% if m.tags == 'error' %}err{% else %}warn{% endif %}" style="{% if m.tags != 'error' %}background:#e7f6ec;border-color:#b7e4c7;color:#1e5b35{% endif %}"><span>{{ m }}</span></div>{% endfor %}{% endif %}
 
   <div class="kpis">
-    <div class="kpi"><div class="l">Modèles publiés</div><div class="v">{{ stats.models }}</div><div class="muted">{{ stats.free }} gratuits · {{ stats.paid }} payants</div></div>
+    <div class="kpi"><div class="l">Modèles publiés</div><div class="v">{{ stats.models }}</div><div class="muted">{{ stats.free }} gratuits · {{ stats.paid }} payants{% if stats.hidden %} · {{ stats.hidden }} hors ligne{% endif %}</div></div>
     <div class="kpi"><div class="l">Joueurs</div><div class="v">{{ stats.players }}</div><div class="muted">toiles de la galerie en cours</div></div>
     <div class="kpi"><div class="l">Ventes galerie</div><div class="v">{{ stats.sales }}</div><div class="muted">{{ stats.revenue|floatformat:"2g" }} € (prix actuels)</div></div>
     <div class="kpi"><div class="l">Slider de l'accueil</div><div class="v">{{ stats.slider }}</div><div class="muted"><a href="?slider=1">voir les modèles affichés</a></div></div>
@@ -105,8 +107,8 @@
     {% else %}
       <div class="pgrid">
         {% for m in items %}
-        <div class="pc">
-          <div class="img">
+        <div class="pc{% if m.hidden %} hid{% endif %}">
+          <div class="img">{% if m.hidden %}<span class="hidb">Hors ligne</span>{% endif %}
             <span class="noimg">Aperçu indisponible<br><small>{{ m.uid }}</small></span>
             <img class="v-source" src="/preview/img/{{ m.uid }}/source/" alt="Original" loading="lazy" onerror="this.remove()">
             <img class="v-preview on" src="/preview/img/{{ m.uid }}/preview/" alt="Toile" loading="lazy" onerror="this.remove()">
@@ -126,7 +128,8 @@
             <form method="post" title="{% if m.has_showcase %}Afficher / masquer dans le slider interactif de l'accueil{% else %}Images du slider absentes : relancer seed_library{% endif %}">{% csrf_token %}<input type="hidden" name="id" value="{{ m.pk }}">
               <label class="sw" style="font-size:.76rem;font-weight:700;gap:6px;{% if not m.has_showcase %}opacity:.45{% endif %}"><input type="checkbox" {% if m.in_slider %}checked{% endif %} {% if not m.has_showcase %}disabled{% endif %} onchange="this.form.submit()" style="width:auto"> Slider</label>
               <input type="hidden" name="op" value="slider"></form>
-            <form method="post" data-confirm="Retirer ce modèle de la galerie ?" data-confirm-text="Les joueurs le conservent ; l'image source est archivée." data-ok="Retirer" data-danger>{% csrf_token %}<input type="hidden" name="id" value="{{ m.pk }}"><button class="pbtn sm" name="op" value="unpublish">Retirer</button></form>
+            <form method="post" title="{% if m.hidden %}Remettre le modèle dans la galerie publique{% else %}Masquer de la galerie sans rien supprimer (design, prix et joueurs conservés){% endif %}">{% csrf_token %}<input type="hidden" name="id" value="{{ m.pk }}"><button class="pbtn sm" name="op" value="hide">{% if m.hidden %}Remettre en ligne{% else %}Mettre hors ligne{% endif %}</button></form>
+            <form method="post" data-confirm="Retirer définitivement ce modèle de la galerie ?" data-confirm-text="Les joueurs le conservent ; l'image source est archivée. Pour une simple pause, utilisez « Mettre hors ligne »." data-ok="Retirer" data-danger>{% csrf_token %}<input type="hidden" name="id" value="{{ m.pk }}"><button class="pbtn sm" name="op" value="unpublish">Retirer</button></form>
           </div>
         </div>
         {% empty %}<p class="muted">Aucun modèle{% if q or cat or pf %} pour ces filtres{% endif %}. <a href="#" onclick="openAdd();return false">Ajouter un modèle →</a></p>{% endfor %}

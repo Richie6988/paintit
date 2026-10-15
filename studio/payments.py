@@ -6,6 +6,7 @@ Sans STRIPE_SECRET_KEY -> mode demo (pas de paiement, fulfilment immediat cote v
 """
 from django.conf import settings
 from django.urls import reverse
+from django.utils.translation import get_language
 
 try:
     import stripe
@@ -72,14 +73,14 @@ def create_digital_session(uid, request, amount_eur=0.99, email=None):
         mode="payment",
         client_reference_id=uid,
         customer_email=email or None,
-        metadata={"uid": uid, "kind": "digital", "email": email or ""},
+        metadata={"uid": uid, "kind": "digital", "email": email or "", "lang": (get_language() or "fr")[:2]},
         payment_intent_data={"metadata": {"uid": uid, "kind": "digital"}},
         line_items=[{
             "quantity": 1,
             "price_data": {
                 "currency": "eur",
                 "unit_amount": int(round(float(amount_eur) * 100)),
-                "product_data": {"name": "Toile numerique DigiPaint (%s)" % uid},
+                "product_data": {"name": "Toile numérique PaintIt (%s)" % uid},
             },
         }],
         success_url=request.build_absolute_uri(
@@ -89,16 +90,18 @@ def create_digital_session(uid, request, amount_eur=0.99, email=None):
     return session.url
 
 
-def create_gallery_session(uid, request, amount_eur, email=None):
+def create_gallery_session(uid, request, amount_eur, email=None, title=""):
     """Checkout Stripe pour acheter un modele de la galerie."""
     stripe.api_key = settings.STRIPE_SECRET_KEY
     session = stripe.checkout.Session.create(
         mode="payment", client_reference_id=uid, customer_email=email or None,
-        metadata={"uid": uid, "kind": "gallery", "email": email or ""},
+        metadata={"uid": uid, "kind": "gallery", "email": email or "", "lang": (get_language() or "fr")[:2]},
         payment_intent_data={"metadata": {"uid": uid, "kind": "gallery"}},
         line_items=[{"quantity": 1, "price_data": {"currency": "eur",
             "unit_amount": int(round(float(amount_eur) * 100)),
-            "product_data": {"name": "Modele PaintIt (%s)" % uid}}}],
+            "product_data": {"name": ("Toile numérique PaintIt « %s »" % title) if title else
+                             "Toile numérique PaintIt (%s)" % uid,
+                             "description": "Modèle à peindre en ligne, ajouté à « Mes toiles » (%s)" % uid}}}],
         success_url=request.build_absolute_uri(reverse("studio:gallery_buy_success"))
                     + "?uid=" + uid + "&sid={CHECKOUT_SESSION_ID}",
         cancel_url=request.build_absolute_uri(reverse("studio:gallery")))

@@ -43,11 +43,11 @@ def _rate():
 def home(request):
     import json as _json
     # carrousel du home : modeles GRATUITS tires au hasard dans toute la galerie
-    lib = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-", price=0)
+    lib = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-", price=0, hidden=False)
                .order_by("?")[:12])
     from django.templatetags.static import static as _static
-    lib_slugs = dict(DigitalCanvas.objects.filter(email="__library__").exclude(showcase_slug="")
-                     .values_list("showcase_slug", "in_slider"))
+    lib_slugs = {s: sl and not h for s, sl, h in DigitalCanvas.objects.filter(email="__library__").exclude(showcase_slug="")
+                 .values_list("showcase_slug", "in_slider", "hidden")}
     slides = []
     # assets du home : livres avec le code (static) + ajoutes depuis l'admin (media, sans collectstatic)
     for folder, url_for in ((os.path.join(settings.BASE_DIR, "studio", "static", "studio", "showcase"),
@@ -316,6 +316,8 @@ def digipaint(request, uid):
     if lib:
         verified = request.session.get("verified_email")
         owns = bool(verified) and DigitalCanvas.objects.filter(email=verified, uid=uid).exists()
+        if lib.hidden and not owns and not request.user.is_staff:
+            return redirect("studio:gallery")          # retire temporairement : seuls ses joueurs y ont acces
         if float(lib.price or 0) > 0 and not owns:
             return redirect("studio:gallery_buy", uid=uid)
         if verified and not owns:
@@ -543,7 +545,7 @@ def legacy_play(request, uid=None, rest=None):
 
 def gallery(request):
     """Onglet Gallery : toutes les toiles PaintIt en vrac, filtrables par recherche."""
-    models = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-").order_by("category", "title"))
+    models = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-", hidden=False).order_by("category", "title"))
     for m in models:   # nb de zones calcule une fois depuis le SVG du jeu, puis memorise
         if not m.zones:
             m.zones = _count_zones(m.uid)
@@ -653,10 +655,11 @@ def paint_unlock(request, uid):
     return redirect("studio:digipaint", uid=uid)
 
 
-def _credit_digital(request, uid):
+def _credit_digital(request, uid, sess=None):
     """Enregistre/deverrouille la toile numerique dans la galerie de l'utilisateur."""
     verified = request.session.get("verified_email", "")
-    _record_digital(uid, verified, request.session.get("order") or {})
+    if _record_digital(uid, verified, request.session.get("order") or {}) and sess:
+        _digital_receipt(verified, uid, "", sess)
     request.session["free_used"] = True
     if verified:
         uids = request.session.get("my_uids", [])
@@ -674,11 +677,22 @@ def _record_digital(uid, verified, o):
         try: colors = len(_json.load(open(cj, encoding="utf-8"))) or colors
         except Exception: pass
     try:
-        DigitalCanvas.objects.update_or_create(
+        return DigitalCanvas.objects.update_or_create(
             email=verified, uid=uid,
-            defaults=dict(colors=colors, orientation=ori, width_cm=w, height_cm=h, source="digital"))
+            defaults=dict(colors=colors, orientation=ori, width_cm=w, height_cm=h, source="digital"))[1]
     except Exception:
         logger.exception("Toile numerique %s", uid)
+    return False
+
+
+def _digital_receipt(email, uid, title, sess, lang=None):
+    """E-mail de confirmation d'achat (une seule fois : appele par celui qui cree la toile, webhook ou retour)."""
+    try:
+        amount = (sess.get("amount_total") or 0) / 100.0 if sess else 0.0
+        emails.send_digital_receipt(email, uid, title, amount,
+                                    lang or ((sess or {}).get("locale") or "") or get_language() or "fr")
+    except Exception:
+        logger.exception("Confirmation achat numerique %s", uid)
 
 
 def paint_confirm(request, uid):
@@ -704,8 +718,10 @@ def paint_unlock_success(request):
     """Retour Stripe apres paiement de la toile numerique : credite puis ouvre le jeu."""
     uid = request.GET.get("uid", "")
     sid = request.GET.get("sid", "")
-    if uid and payments.paid_session(sid, uid=uid, kind="digital"):
-        _credit_digital(request, uid)
+    sess = payments.paid_session(sid, uid=uid, kind="digital") if uid else None
+    if sess:
+        _credit_digital(request, uid, sess)
+        return redirect(reverse("studio:digipaint", args=[uid]) + "?bought=1")
     return redirect("studio:digipaint", uid=uid)
 
 
@@ -1384,14 +1400,12 @@ def stripe_webhook(request):
         from . import ledger
         ledger.record_from_session(obj)
         if uid and kind == "digital":
-            _record_digital(uid, meta.get("email", ""), {})
+            if _record_digital(uid, meta.get("email", ""), {}) and meta.get("email"):
+                _digital_receipt(meta["email"], uid, "", obj, meta.get("lang"))
         elif uid and kind == "gallery":
             m = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
-            if m and meta.get("email"):
-                DigitalCanvas.objects.get_or_create(
-                    email=meta["email"], uid=uid,
-                    defaults=dict(title=m.title, category=m.category, colors=m.colors, orientation=m.orientation,
-                                  width_cm=m.width_cm, height_cm=m.height_cm, source="library", price=0))
+            if m and meta.get("email") and _grant_gallery_to(m, meta["email"]):
+                _digital_receipt(meta["email"], uid, m.title, obj, meta.get("lang"))
         elif uid:
             r = Order.objects.filter(uid=uid).first()
             paid = (obj.get("amount_total") or 0) / 100.0
@@ -2275,21 +2289,29 @@ def erp_customers(request):
 
 
 def _grant_gallery(request, m, email):
-    """Ajoute le modele achete aux digipaints de l'utilisateur."""
-    DigitalCanvas.objects.get_or_create(
+    """Ajoute le modele achete aux digipaints de l'utilisateur. -> True si nouvellement attribue."""
+    created = _grant_gallery_to(m, email)
+    if request is not None:
+        uids = request.session.get("my_uids", [])
+        if m.uid not in uids:
+            uids.append(m.uid); request.session["my_uids"] = uids[-60:]
+    return created
+
+
+def _grant_gallery_to(m, email):
+    return DigitalCanvas.objects.get_or_create(
         email=email, uid=m.uid,
         defaults=dict(title=m.title, category=m.category, colors=m.colors,
                       orientation=m.orientation, width_cm=m.width_cm, height_cm=m.height_cm,
-                      source="library", price=0))
-    uids = request.session.get("my_uids", [])
-    if m.uid not in uids:
-        uids.append(m.uid); request.session["my_uids"] = uids[-60:]
+                      source="library", price=0))[1]
 
 
 def gallery_buy(request, uid):
     m = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
     if not m:
         raise Http404
+    if m.hidden:
+        return redirect("studio:gallery")
     price = float(m.price or 0)
     if price <= 0:
         return redirect("studio:digipaint", uid=uid)
@@ -2301,7 +2323,7 @@ def gallery_buy(request, uid):
         return redirect("studio:digipaint", uid=uid)   # deja possede
     if payments.stripe_live():
         try:
-            return redirect(payments.create_gallery_session(uid, request, price, verified))
+            return redirect(payments.create_gallery_session(uid, request, price, verified, title=m.title))
         except Exception:
             logger.exception("Stripe galerie %s", uid)
             return JsonResponse({"error": "paiement indisponible"}, status=502)
@@ -2314,10 +2336,13 @@ def gallery_buy(request, uid):
 def gallery_buy_success(request):
     uid = request.GET.get("uid", ""); sid = request.GET.get("sid", "")
     verified = request.session.get("verified_email")
-    if uid and verified and payments.paid_session(sid, uid=uid, kind="gallery"):
+    sess = payments.paid_session(sid, uid=uid, kind="gallery") if uid and verified else None
+    if sess:
         m = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
         if m:
-            _grant_gallery(request, m, verified)
+            if _grant_gallery(request, m, verified):
+                _digital_receipt(verified, uid, m.title, sess)
+            return redirect(reverse("studio:digipaint", args=[uid]) + "?bought=1")
     return redirect("studio:digipaint", uid=uid)
 
 
@@ -3000,6 +3025,11 @@ def erp_catalogue(request):
             m.price = price(request.POST.get("price"))
             m.save(update_fields=["title", "category", "price"])
             messages.success(request, "« %s » mis à jour." % (m.title or m.uid))
+        elif op == "hide" and m:
+            m.hidden = not m.hidden
+            m.save(update_fields=["hidden"])
+            messages.success(request, "« %s » %s." % (m.title or m.uid, "retiré temporairement de la galerie (design conservé)"
+                                                    if m.hidden else "remis en ligne dans la galerie"))
         elif op == "slider" and m:
             m.in_slider = not m.in_slider
             m.save(update_fields=["in_slider"])
@@ -3078,7 +3108,7 @@ def erp_catalogue(request):
              "players": sum(owners.get(u, 0) for u in lib.values_list("uid", flat=True)),
              "sales": sum(owners.get(u, 0) for u in lib.filter(price__gt=0).values_list("uid", flat=True)),
              "customer": DigitalCanvas.objects.exclude(email=LIB_EMAIL).exclude(source="library").count(),
-             "slider": lib.filter(in_slider=True).count()}
+             "slider": lib.filter(in_slider=True).count(), "hidden": lib.filter(hidden=True).count()}
     from .management.commands.purge_old_data import production_expired
     stats["purge_due"] = sum(1 for _ in production_expired(60))
     stats["revenue"] = round(sum(float(p) * owners.get(u, 0) for u, p in lib.filter(price__gt=0)

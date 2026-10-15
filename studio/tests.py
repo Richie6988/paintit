@@ -1042,3 +1042,33 @@ class TestDataResetTests(TestCase):
         self.assertEqual(Order.objects.count(), 2)                                   # confirmation exigee
         self.client.post("/admin-hub/test-data/", {"op": "purge", "confirm": "SUPPRIMER"})
         self.assertEqual(list(Order.objects.values_list("uid", flat=True)), ["R-1"])
+
+
+@override_settings(MEDIA_ROOT=MEDIA, EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class CatalogueVisibilityAndPurchaseTests(TestCase):
+    def setUp(self):
+        self.m = DigitalCanvas.objects.create(email="__library__", uid="gal-test-rose", title="Rose", price=4.9,
+                                              source="library", colors=24)
+
+    def test_hidden_model_leaves_gallery_but_owners_keep_it(self):
+        from django.contrib.auth.models import User
+        self.assertContains(self.client.get("/play/"), "gal-test-rose")
+        User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
+        self.client.login(username="boss", password="pw-Secret-123")
+        self.client.post("/admin-hub/catalogue/", {"op": "hide", "id": self.m.pk})
+        self.m.refresh_from_db(); self.assertTrue(self.m.hidden)
+        self.client.logout()
+        self.assertNotContains(self.client.get("/play/"), "gal-test-rose")
+        self.assertRedirects(self.client.get("/play/buy/gal-test-rose/"), "/play/", fetch_redirect_response=False)
+        self.assertTrue(DigitalCanvas.objects.filter(uid="gal-test-rose").exists())          # design conserve
+
+    def test_paid_gallery_purchase_sends_one_confirmation(self):
+        from django.core import mail
+        from studio import views
+        sess = {"amount_total": 490, "metadata": {"uid": "gal-test-rose", "kind": "gallery", "lang": "fr"}}
+        self.assertTrue(views._grant_gallery_to(self.m, "buyer@x.fr"))
+        views._digital_receipt("buyer@x.fr", self.m.uid, self.m.title, sess, "fr")
+        self.assertFalse(views._grant_gallery_to(self.m, "buyer@x.fr"))                   # 2e passage : deja attribuee
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Rose", mail.outbox[0].subject)
+        self.assertIn("4,90 €", mail.outbox[0].body)

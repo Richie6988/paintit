@@ -375,6 +375,7 @@ class DigitalCanvas(models.Model):
     price = models.DecimalField(max_digits=6, decimal_places=2, default=0)  # 0 = gratuit (galerie)
     origin_uid = models.CharField("Toile d'origine", max_length=40, blank=True, default="")   # modele publie depuis une toile client
     in_slider = models.BooleanField("Dans le slider de l'accueil", default=True)
+    hidden = models.BooleanField("Retiré temporairement (masqué de la galerie, design conservé)", default=False)
     showcase_slug = models.CharField("Assets du slider", max_length=80, blank=True, default="")   # <slug>_pbn.png / _template.png
     zones = models.IntegerField("Zones à peindre", default=0)   # calcule depuis le SVG du jeu (0 = inconnu)
     created_at = models.DateTimeField(auto_now_add=True)

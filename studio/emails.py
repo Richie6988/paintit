@@ -421,3 +421,69 @@ def send_code(email, code, lang="fr"):
     from django.core.mail import EmailMessage
     from django.conf import settings as st
     _safe_send(EmailMessage(subj, body, st.DEFAULT_FROM_EMAIL, [email]))
+
+
+DIGITAL_STR = {
+    "fr": {"subject": "Votre toile numérique « %s » est à vous", "hi": "Bonjour",
+           "intro": "Merci pour votre achat ! Votre toile numérique est débloquée et rangée dans « Mes toiles ».",
+           "paid": "Montant payé", "ref": "Référence", "play": "Peindre maintenant",
+           "note": "Retrouvez-la à tout moment dans « Mes toiles » avec cette adresse e-mail. Ceci est votre confirmation d'achat ; le reçu de paiement Stripe vous est envoyé séparément.",
+           "team": "L'équipe PaintIt"},
+    "en": {"subject": "Your digital canvas “%s” is yours", "hi": "Hello",
+           "intro": "Thank you for your purchase! Your digital canvas is unlocked and saved in “My canvases”.",
+           "paid": "Amount paid", "ref": "Reference", "play": "Paint now",
+           "note": "Find it anytime in “My canvases” with this e-mail address. This is your purchase confirmation; the Stripe payment receipt is sent separately.",
+           "team": "The PaintIt team"},
+    "de": {"subject": "Ihre digitale Leinwand „%s“ gehört Ihnen", "hi": "Hallo",
+           "intro": "Danke für Ihren Kauf! Ihre digitale Leinwand ist freigeschaltet und in „Meine Leinwände“ gespeichert.",
+           "paid": "Bezahlter Betrag", "ref": "Referenz", "play": "Jetzt malen",
+           "note": "Sie finden sie jederzeit unter „Meine Leinwände“ mit dieser E-Mail-Adresse. Dies ist Ihre Kaufbestätigung; die Stripe-Zahlungsquittung erhalten Sie separat.",
+           "team": "Ihr PaintIt-Team"},
+    "es": {"subject": "Tu lienzo digital «%s» ya es tuyo", "hi": "Hola",
+           "intro": "¡Gracias por tu compra! Tu lienzo digital está desbloqueado y guardado en «Mis lienzos».",
+           "paid": "Importe pagado", "ref": "Referencia", "play": "Pintar ahora",
+           "note": "Encuéntralo cuando quieras en «Mis lienzos» con esta dirección de correo. Esta es tu confirmación de compra; el recibo de pago de Stripe se envía por separado.",
+           "team": "El equipo PaintIt"},
+    "it": {"subject": "La tua tela digitale «%s» è tua", "hi": "Ciao",
+           "intro": "Grazie per l'acquisto! La tua tela digitale è sbloccata e salvata in «Le mie tele».",
+           "paid": "Importo pagato", "ref": "Riferimento", "play": "Dipingi ora",
+           "note": "Ritrovala quando vuoi in «Le mie tele» con questo indirizzo e-mail. Questa è la conferma d'acquisto; la ricevuta di pagamento Stripe viene inviata a parte.",
+           "team": "Il team PaintIt"},
+}
+
+
+def send_digital_receipt(email, uid, title, amount, lang="fr"):
+    """Confirmation d'achat d'une toile numerique (galerie ou deblocage DigiPaint)."""
+    from django.conf import settings as st
+    if not email:
+        return
+    T = DIGITAL_STR.get((lang or "fr")[:2], DIGITAL_STR["en"])
+    site = st.SITE_URL
+    logo = site + st.STATIC_URL + "studio/img/logo.png"
+    name = title or uid
+    play = "%s/paint/%s/" % (site, uid)
+    thumb = "%s/preview/img/%s/preview/" % (site, uid)
+    price = ("%.2f €" % float(amount)).replace(".", "," if (lang or "fr")[:2] != "en" else ".")
+    text = "%s,\n\n%s\n\n%s\n%s : %s\n%s : %s\n%s : %s\n\n%s\n\n%s" % (
+        T["hi"], T["intro"], name, T["paid"], price, T["ref"], uid, T["play"], play, T["note"], T["team"])
+    html = (
+        '<div style="background:#eef2f9;padding:24px 0;font-family:Arial,Helvetica,sans-serif">'
+        '<table align="center" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;'
+        'background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 24px rgba(18,34,79,.08)">'
+        '<tr><td style="background:#12224f;padding:18px 24px"><img src="%s" alt="PaintIt" height="26" '
+        'style="height:26px;background:#fff;border-radius:8px;padding:5px 8px"></td></tr>'
+        '<tr><td style="padding:22px 28px 6px;color:#12224f"><p style="margin:0 0 4px"><b>%s,</b></p>'
+        '<p style="margin:0;color:#5b647a">%s</p></td></tr>'
+        '<tr><td style="padding:12px 28px"><table width="100%%" cellpadding="0" cellspacing="0"><tr>'
+        '<td style="width:96px"><img src="%s" width="88" style="width:88px;border-radius:10px;border:1px solid #e2e8f2"></td>'
+        '<td style="padding-left:14px;color:#12224f;font-size:14px"><b style="font-size:16px">%s</b><br>'
+        '<span style="color:#5b647a">%s : </span><b>%s</b><br><span style="color:#5b647a">%s : </span><code>%s</code></td>'
+        '</tr></table></td></tr>'
+        '<tr><td style="padding:8px 28px 4px"><a href="%s" style="display:inline-block;background:#2f6bf2;color:#fff;'
+        'font-weight:700;text-decoration:none;padding:12px 22px;border-radius:999px">%s &rarr;</a></td></tr>'
+        '<tr><td style="padding:14px 28px 22px;color:#5b647a;font-size:13px">%s<br><br>'
+        '<b style="color:#2f6bf2">%s</b></td></tr></table></div>'
+    ) % (logo, T["hi"], T["intro"], thumb, name, T["paid"], price, T["ref"], uid, play, T["play"], T["note"], T["team"])
+    msg = EmailMultiAlternatives(T["subject"] % name, text, st.DEFAULT_FROM_EMAIL, [email])
+    msg.attach_alternative(_brand(html), "text/html")
+    _safe_send(msg)
