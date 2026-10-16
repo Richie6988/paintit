@@ -31,6 +31,7 @@
  .ib-c details summary{cursor:pointer;font-weight:800;color:#2f6bf2;list-style:none}
  .ib-c details form{display:grid;gap:6px;margin-top:6px}
  .ib-c details input,.ib-c details select{height:30px;padding:0 7px;border:1px solid #d4d4d4;border-radius:7px;font-size:.76rem;width:100%;box-sizing:border-box}
+ .ib-c .fl{display:grid;gap:3px;font-size:.7rem;font-weight:800;color:#33415c}
  .warn{font-size:.66rem;color:#b45309;font-weight:700}
  .hv{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px 12px;font-size:.8rem;margin:8px 0}
  .hv label{display:flex;gap:6px;align-items:center}
@@ -112,11 +113,12 @@
         </div>
         <details><summary>+ Ajouter au catalogue</summary>
           <form method="post">{% csrf_token %}<input type="hidden" name="op" value="catalogue"><input type="hidden" name="id" value="{{ i.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <input name="title" value="{{ i.title|truncatechars:60 }}" maxlength="80" required aria-label="Titre">
-            <input name="category" value="{{ i.category }}" maxlength="40" aria-label="Catégorie">
-            <div style="display:flex;gap:6px"><select name="colors" aria-label="Couleurs"><option>12</option><option selected>24</option><option>36</option><option>48</option></select>
-              <input name="price" placeholder="Prix (0 = gratuit)" aria-label="Prix"></div>
-            <select name="density" aria-label="Densité de zones"><option value="">Densité auto</option><option value="0.25|1.35">Zones larges · facile</option><option value="0.45|1.0">Moyenne</option><option value="0.7|0.75">Élevée</option><option value="1.0|0.6">Expert</option></select>
+            <label class="fl">Titre<input name="title" value="{{ i.title|truncatechars:60 }}" maxlength="80" required></label>
+            <label class="fl">Catégorie<input name="category" value="{{ i.category }}" maxlength="40"></label>
+            <div style="display:flex;gap:6px"><label class="fl" style="flex:1">Couleurs<select name="colors"><option>12</option><option selected>24</option><option>36</option><option>48</option></select></label>
+              <label class="fl" style="flex:1">Prix (€)<input name="price" type="number" min="0" step="0.01" value="0"></label></div>
+            <label class="fl">Densité de zones <small style="font-weight:500;color:#7a869e">(zones / cm²)</small>
+              <select name="density"><option value="">Auto (selon les couleurs)</option><option value="0.25|1.35">Faible · zones larges, facile</option><option value="0.45|1.0">Moyenne</option><option value="0.7|0.75">Élevée · plus de détails</option><option value="1.0|0.6">Très élevée · expert</option></select></label>
             <label style="display:flex;gap:6px;align-items:center;font-weight:600"><input type="checkbox" name="in_slider" value="1" style="width:auto;height:auto"> Slider de l'accueil</label>
             <button class="pbtn pri" data-busy>Publier dans la galerie</button></form></details>
       </div>
