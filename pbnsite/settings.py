@@ -171,6 +171,8 @@ STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 # Banque d'images libres : cles API gratuites (facultatives ; Openverse et Wikimedia fonctionnent sans cle)
 PIXABAY_KEY = os.environ.get("PIXABAY_KEY", "")
 PEXELS_KEY = os.environ.get("PEXELS_KEY", "")
+OPENVERSE_CLIENT_ID = os.environ.get("OPENVERSE_CLIENT_ID", "")
+OPENVERSE_CLIENT_SECRET = os.environ.get("OPENVERSE_CLIENT_SECRET", "")
 
 # --- Fournisseur d'impression (OEM dropshipping) ---
 SUPPLIER_API_URL = os.environ.get("SUPPLIER_API_URL", "")

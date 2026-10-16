@@ -1238,8 +1238,8 @@ class SiteEvent(models.Model):
 class StockImage(models.Model):
     """Banque d'images libres de droits (domaine public / CC0 / licences Pixabay-Pexels), source du catalogue,
     des videos et du studio. Seules la vignette et les metadonnees sont stockees ; la HD est telechargee a l'usage."""
-    PROVIDERS = [("openverse", "Openverse"), ("wikimedia", "Wikimedia Commons"), ("pixabay", "Pixabay"),
-                 ("pexels", "Pexels")]
+    PROVIDERS = [("openverse", "Openverse"), ("wikimedia", "Wikimedia Commons"), ("artic", "Art Institute of Chicago"),
+                 ("met", "Metropolitan Museum"), ("pixabay", "Pixabay"), ("pexels", "Pexels")]
     STATUS = [("new", "À trier"), ("kept", "Retenue"), ("rejected", "Écartée")]
     provider = models.CharField(max_length=12, choices=PROVIDERS)
     ext_id = models.CharField(max_length=120)

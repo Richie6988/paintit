@@ -1253,3 +1253,35 @@ class ImageBankTests(TestCase):
         self.assertTrue(r["Location"].startswith("/marketing/?img=mkt-"))
         self.assertTrue(gen.called and not os.path.exists(hd))
         self.assertIn("studio mkt-", StockImage.objects.get(pk=p.pk).used_in)
+
+    def test_rate_limit_skips_source_and_artic(self):
+        from studio import imagebank
+        from studio.models import StockImage
+        base = self._fake_session()
+
+        class R429:
+            status_code, headers = 429, {"Retry-After": "3600"}
+
+        aic = {"data": [{"id": 7, "title": "Starry", "artist_title": "V.", "image_id": "abc", "is_public_domain": True,
+                         "thumbnail": {"width": 3000, "height": 2400}}]}
+
+        class S:
+            calls = 0
+
+            def get(self, url, **kw):
+                if "openverse" in url:
+                    S.calls += 1
+                    return R429()
+                if "artic.edu/api" in url:
+                    r = base.get("https://x/t-vivid"); r._d = aic
+                    return r
+                return base.get(url, **kw)
+        logs = []
+        with mock.patch("studio.imagebank._session", side_effect=S):
+            added, _ = imagebank.harvest(categories=["Oiseaux"], providers=["openverse", "artic"], per_query=5,
+                                         pause=0, log=logs.append)
+        self.assertEqual(S.calls, 1)                                       # source mise de cote apres le 1er 429
+        self.assertEqual(len([l for l in logs if "openverse" in l]), 1)
+        a = StockImage.objects.get(provider="artic")
+        self.assertEqual((a.width, a.height, a.license), (1686, 1348, "CC0"))
+        self.assertIn("/iiif/2/abc/full/1686,", a.full_url)
