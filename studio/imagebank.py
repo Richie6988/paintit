@@ -67,11 +67,19 @@ def available():
 
 # ---------------- Recherche par source -> dicts normalises ----------------
 def _openverse(s, q, n):
-    r = s.get("https://api.openverse.org/v1/images/", timeout=20, params={
-        "q": q, "license": "cc0,pdm", "page_size": min(n, 50), "mature": "false", "size": "large",
-        "category": "photograph,digitized_artwork"})
-    r.raise_for_status()
-    for it in r.json().get("results", []):
+    """Sans compte, Openverse refuse (401) plus de 20 resultats par page : on enchaine les pages de 20."""
+    results = []
+    for page in range(1, (n + 19) // 20 + 1):
+        r = s.get("https://api.openverse.org/v1/images/", timeout=20, params={
+            "q": q, "license": "cc0,pdm", "page_size": min(20, n - len(results)), "page": page, "mature": "false",
+            "size": "large", "category": "photograph,digitized_artwork"})
+        r.raise_for_status()
+        batch = r.json().get("results", [])
+        results += batch
+        if len(batch) < 20 or len(results) >= n:
+            break
+        time.sleep(1.0)
+    for it in results:
         yield {"ext_id": it["id"], "title": it.get("title") or q, "author": it.get("creator") or "",
                "page_url": it.get("foreign_landing_url") or "", "full_url": it.get("url") or "",
                "thumb_url": it.get("thumbnail") or it.get("url"), "width": it.get("width") or 0,
