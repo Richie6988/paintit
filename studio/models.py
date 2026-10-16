@@ -1106,7 +1106,11 @@ class SocialVideo(models.Model):
     """Video « satisfying » (TikTok / Reels / Shorts) generee a partir d'une toile du catalogue (jamais d'une photo client)."""
     MODES = [("flow", "Vague (se propage)"), ("random", "Aléatoire (accélère à la fin)"), ("colors", "Couleur après couleur")]
     STATUS = [("queued", "En attente"), ("running", "En cours"), ("done", "Prête"), ("error", "Erreur")]
+    FORMATS = [("fill", "Remplissage"), ("guess", "Devine l'image"), ("versus", "Versus couleurs"), ("tips", "3 astuces")]
     canvas_uid = models.CharField("Toile", max_length=40)
+    canvas_uid2 = models.CharField("2e toile (versus)", max_length=40, blank=True, default="")
+    fmt = models.CharField("Format", max_length=8, choices=FORMATS, default="fill")
+    series = models.CharField("Série (ex. #3)", max_length=20, blank=True, default="")
     title = models.CharField(max_length=120, blank=True, default="")
     mode = models.CharField(max_length=8, choices=MODES, default="flow")
     duration = models.FloatField("Durée (s)", default=65)
@@ -1135,7 +1139,7 @@ class SocialVideo(models.Model):
 
     @property
     def file_name(self):
-        return "paintit-%s-%d.mp4" % (self.mode, self.pk)
+        return "paintit-%s-%d.mp4" % (self.mode if self.fmt == "fill" else self.fmt, self.pk)
 
 
 class SiteBanner(models.Model):

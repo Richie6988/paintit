@@ -60,23 +60,30 @@
           <span>{{ t }}</span></label>
         {% endfor %}
       </div>
-      <label>Densité des zones
+      <label style="grid-column:span 2">Format
+        <select name="fmt" id="vfmt">{% for k, l in formats %}<option value="{{ k }}"{% if k == "guess" %} selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+        <small class="muted" style="font-weight:500" id="vfmt-hint"></small></label>
+      <label data-for="guess">Réponse affichée à la fin
+        <input name="answer" maxlength="120" placeholder="ex. It's a parrot!"></label>
+      <label data-for="guess tips">Série (raison de s'abonner)
+        <input name="series" maxlength="20" placeholder="ex. #3 → « Follow for #4 »"></label>
+      <label data-for="fill guess tips">Densité des zones
         <select name="density">{% for k, l in densities %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select></label>
       <label>Couleurs
         <input type="text" name="colors" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" placeholder="Auto" id="vcolors" title="Auto = celles de la toile (24 pour une image importée). De 6 à 64 : recrée la toile depuis la photo d'origine.">
         <small class="muted" style="font-weight:500" id="vcolors-hint">Auto, ou un nombre de 6 à 64</small></label>
-      <label>Remplissage
+      <label data-for="fill">Remplissage
         <select name="mode"><option value="flow">Vague (se propage)</option><option value="random">Aléatoire (accélère)</option><option value="colors">Couleur par couleur</option></select></label>
-      <label>Durée (61 à 70 s)
-        <input type="number" name="duration" min="61" max="70" step="0.5" placeholder="Aléatoire"></label>
+      <label>Durée (s)
+        <input type="number" name="duration" min="10" max="70" step="0.5" placeholder="Auto (court)" id="vdur"></label>
       <label style="grid-column:span 2">Accroche (en haut) · {zones} et {colors} = chiffres réels de la toile
         <div class="hk"><select id="hook-pick">{% for g, lines in hooks %}<optgroup label="{{ g }}">{% for h in lines %}<option>{{ h }}</option>{% endfor %}</optgroup>{% endfor %}<option value="">Texte libre…</option></select></div>
-        <input name="hook" id="hook" maxlength="120" value="{{ hooks.0.1.0 }}" placeholder="Votre accroche (ou vide = sans texte)"></label>
+        <input name="hook" id="hook" maxlength="120" value="" placeholder="Vide = accroche par défaut du format (aucune en Remplissage)"></label>
       <label>Musique générée
         <select name="music_style">{% for k, l in music_styles %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select></label>
       <label>Variantes
         <select name="count"><option value="1">1 vidéo</option><option value="2">2 vidéos</option><option value="3">3 vidéos</option></select></label>
-      <div class="go" style="grid-column:span 2;justify-content:flex-start;gap:16px"><label class="chk"><input type="checkbox" name="before_after" value="1" checked> Ouverture photo → kit</label>
+      <div class="go" style="grid-column:span 2;justify-content:flex-start;gap:16px"><label class="chk" data-for="fill"><input type="checkbox" name="before_after" value="1" checked> Ouverture photo → kit</label>
         <label class="chk" title="Une note douce par zone peinte : l'accélération finale devient une cascade"><input type="checkbox" name="fill_sounds" value="1" checked> Sons de remplissage</label>
         <label class="chk" title="Les numéros du kit apparaissent sur la toile vierge et s'effacent sous la peinture"><input type="checkbox" name="show_numbers" value="1" checked> Numéros</label>
         <button class="pbtn pri">Générer</button></div>
@@ -112,9 +119,9 @@
           <div class="bar"><i style="width:{% widthratio v.progress 1 100 %}%"></i></div></div></div>
       {% endif %}
       <h3>{{ v.title }}</h3>
-      <div class="meta">{{ v.get_mode_display }} · {{ v.duration|floatformat:0 }} s{% if v.before_after %} · ouverture photo → kit{% endif %}{% if v.music %} · musique {{ v.music_style }}{% else %} · sans musique{% endif %} · {{ v.created_at|date:"d/m H:i" }}</div>
+      <div class="meta">{% if v.fmt != "fill" %}<b>{{ v.get_fmt_display }}</b>{% if v.series %} {{ v.series }}{% endif %}{% else %}{{ v.get_mode_display }}{% endif %} · {{ v.duration|floatformat:0 }} s{% if v.before_after %} · ouverture photo → kit{% endif %}{% if v.music %} · musique {{ v.music_style }}{% else %} · sans musique{% endif %} · {{ v.created_at|date:"d/m H:i" }}</div>
       {% if v.status == "done" %}
-      <div class="ttl" data-i="{{ v.id }}"><input readonly aria-label="Titre TikTok">
+      <div class="ttl" data-i="{{ v.id }}" data-f="{{ v.fmt }}"><input readonly aria-label="Titre TikTok">
         <button type="button" class="pbtn" data-next title="Autre titre">↻</button><button type="button" class="pbtn" data-cp>Copier</button></div>
       {% endif %}      <div class="acts">
         {% if v.status == "done" %}<a class="pbtn pri" href="/admin-hub/videos/{{ v.id }}.mp4?dl=1">Télécharger</a>{% endif %}
@@ -130,6 +137,20 @@
 {{ titles|json_script:"vtitles" }}
 <script>
 (function () {
+  var sel = document.getElementById("vfmt"), hint = document.getElementById("vfmt-hint");
+  var H = {fill: "La toile se remplit (22 à 32 s par défaut). Classique, très « satisfying ».",
+           guess: "Petites zones d'abord, compte à rebours 3-2-1, réponse. Pousse les commentaires ; avec un n° de série, la fin dit « Follow for #4 ».",
+           versus: "La même photo en 12 couleurs (facile) et en 48 (ou le nombre saisi), peintes côte à côte. « Left or right ? » en fin : commentaires.",
+           tips: "3 conseils utiles tirés au hasard pendant que la toile se peint. Pousse les enregistrements et les abonnements."};
+  var show = function () {
+    hint.textContent = H[sel.value];
+    document.querySelectorAll("[data-for]").forEach(function (el) {
+      el.hidden = el.dataset.for.split(" ").indexOf(sel.value) < 0;
+    });
+  };
+  sel.addEventListener("change", show); show();
+})();
+(function () {
   var c = document.getElementById("vcolors"), h = document.getElementById("vcolors-hint");
   if (!c) return;
   c.addEventListener("input", function () {
@@ -143,8 +164,9 @@
 </script>
 <script>
 (function () {
-  var T = JSON.parse(document.getElementById("vtitles").textContent), tags = "{{ hashtags|escapejs }}";
+  var TT = JSON.parse(document.getElementById("vtitles").textContent), tags = "{{ hashtags|escapejs }}";
   document.querySelectorAll(".ttl").forEach(function (box) {
+    var T = TT[box.dataset.f] || TT.fill;
     var i = (+box.dataset.i) % T.length, inp = box.querySelector("input");
     var show = function () { inp.value = T[i] + " " + tags; };
     show();

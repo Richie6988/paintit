@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 import time
 import logging
 logger = logging.getLogger("studio.views")
@@ -4547,30 +4548,39 @@ def erp_videos(request):
     import random
     from django.contrib import admin as _admin
     from django.contrib import messages
-    from . import satisfying
+    from . import satisfying, shorts
     from .models import SocialVideo
     srcs = satisfying.sources()
     titles = dict(srcs)
     if request.method == "POST":
         op = request.POST.get("op")
         if op == "create":
+            import uuid as _uuid
+            from .forms import DENSITY_LEVELS
+            from .pipeline import generate, source_file
             uid = request.POST.get("canvas", "")
             f = request.FILES.get("image")
+            fmt = request.POST.get("fmt") if request.POST.get("fmt") in ("fill", "guess", "versus", "tips") else "fill"
             level = request.POST.get("density", "orig")
             try:
                 want = int(request.POST.get("colors") or 0)
             except ValueError:
                 want = 0
             recolor = uid in titles and 6 <= want <= 64 and want != len(satisfying._palette(uid))
-            if f or (uid in titles and (level != "orig" or recolor)):
-                # import depuis l'ordinateur, ou nouvelle densite de zones : toile (re)generee depuis la photo d'origine
-                import uuid as _uuid
-                from .forms import DENSITY_LEVELS
-                from .pipeline import generate, source_file
+            tmp = os.path.join(settings.MEDIA_ROOT, "uploads", "vid-%s_in.jpg" % _uuid.uuid4().hex[:10])
+
+            def make(src, name, ncol, lvl, label):
+                """Toile (re)generee depuis la photo -> uid vid-*."""
                 new = "vid-" + _uuid.uuid4().hex[:10]
-                tmp = os.path.join(settings.MEDIA_ROOT, "uploads", new + "_in.jpg")
-                dens, det = DENSITY_LEVELS.get(level, DENSITY_LEVELS["auto"])
-                try:
+                dens, det = DENSITY_LEVELS.get(lvl, DENSITY_LEVELS["auto"])
+                generate(src, ncol, 40, 50, uid=new, source_name=name, density=dens, detail=det)
+                titles[new] = label
+                satisfying.save_label(new, label)
+                return new
+            uid2 = ""
+            try:
+                if f or (uid in titles and (level != "orig" or recolor or fmt == "versus")):
+                    # import depuis l'ordinateur, nouvelle densite ou versus : toile(s) regeneree(s) depuis la photo
                     if f:
                         os.makedirs(os.path.dirname(tmp), exist_ok=True)
                         with open(tmp, "wb") as out:
@@ -4582,24 +4592,22 @@ def erp_videos(request):
                         if not src:
                             raise ValueError("photo d'origine introuvable pour cette toile")
                         name, label = os.path.basename(src), titles[uid]
-                    try:
-                        ncol = int(request.POST.get("colors") or 0)
-                    except ValueError:
-                        ncol = 0
-                    if not 6 <= ncol <= 64:                     # videos : n'importe quel nombre de 6 a 64
-                        ncol = 24 if f else len(satisfying._palette(uid))
-                    generate(src, ncol, 40, 50, uid=new, source_name=name, density=dens, detail=det)
-                except Exception as exc:
-                    logger.exception("Video canvas")
-                    messages.error(request, "Toile impossible à créer : %s" % exc)
-                    return redirect(request.path)
-                finally:
-                    if os.path.exists(tmp):
-                        os.remove(tmp)
-                uid = new
-                titles[uid] = " · ".join([label] + ([dict(satisfying.DENSITIES)[level]] if level != "orig" else [])
-                                         + (["%d couleurs" % ncol] if recolor or f else []))
-                satisfying.save_label(uid, titles[uid])
+                    if fmt == "versus":                   # meme photo : facile 12 couleurs contre detaillee
+                        hi = want if 13 <= want <= 64 else 48
+                        uid = make(src, name, 12, "easy", label + " · 12 couleurs")
+                        uid2 = make(src, name, hi, "expert", label + " · %d couleurs" % hi)
+                    else:
+                        ncol = want if 6 <= want <= 64 else (24 if f else len(satisfying._palette(uid)))
+                        uid = make(src, name, ncol, level, " · ".join(
+                            [label] + ([dict(satisfying.DENSITIES)[level]] if level != "orig" else [])
+                            + (["%d couleurs" % ncol] if recolor or f else [])))
+            except Exception as exc:
+                logger.exception("Video canvas")
+                messages.error(request, "Toile impossible à créer : %s" % exc)
+                return redirect(request.path)
+            finally:
+                if os.path.exists(tmp):
+                    os.remove(tmp)
             if uid not in titles:                          # liste blanche : imports, catalogue, studio
                 messages.error(request, "Choisissez une toile du catalogue.")
                 return redirect(request.path)
@@ -4610,10 +4618,16 @@ def erp_videos(request):
             n = max(1, min(3, int(request.POST.get("count") or 1)))
             style = request.POST.get("music_style", "ambient")
             style = style if style in dict(satisfying.MUSIC_STYLES) else "ambient"
+            series = request.POST.get("series", "").strip()[:20]
             for i in range(n):
-                d = min(70.0, max(61.0, dur)) if dur else round(random.uniform(61, 70), 1)
+                if fmt == "fill":                          # court par defaut : le decrochage tue la portee
+                    d = min(70.0, max(15.0, dur)) if dur else round(random.uniform(22, 32), 1)
+                else:
+                    d = min(30.0, max(10.0, dur)) if dur else shorts.DEFAULT_DURATION[fmt]
                 v = SocialVideo.objects.create(
-                    canvas_uid=uid, title=titles[uid][:120],
+                    canvas_uid=uid, canvas_uid2=uid2, fmt=fmt, title=titles[uid][:120],
+                    series=series,
+                    end_title=request.POST.get("answer", "").strip()[:120],
                     mode=request.POST.get("mode") if request.POST.get("mode") in ("flow", "random", "colors") else "flow",
                     duration=d, hook=request.POST.get("hook", "")[:120], music=style != "none", music_style=style, before_after=bool(request.POST.get("before_after")),
                     fill_sounds=bool(request.POST.get("fill_sounds")),
@@ -4637,7 +4651,8 @@ def erp_videos(request):
     return render(request, "admin/erp_videos.html", {
         **_admin.site.each_context(request), "videos": videos, "sources": srcs, "hooks": HOOKS,
         "music_styles": satisfying.MUSIC_STYLES, "densities": satisfying.DENSITIES,
-        "titles": satisfying.TITLES["en"] + satisfying.TITLES["fr"], "hashtags": satisfying.HASHTAGS,
+        "titles": {"fill": satisfying.TITLES["en"] + satisfying.TITLES["fr"], **shorts.TITLES},
+        "formats": shorts.FORMATS, "hashtags": satisfying.HASHTAGS,
         "caption": caption, "caption_en": "%s\n\n%s" % (satisfying.CAPTIONS["fr"], satisfying.HASHTAGS),
         "pending": any(v.status in ("queued", "running") for v in videos),
         "erp_section": "growth", "gtab": "videos"})

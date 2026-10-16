@@ -769,9 +769,16 @@ def _job(pk):
                 last[0] = f
                 SocialVideo.objects.filter(pk=pk).update(progress=round(f, 3))
         tmp = v.path() + ".part.mp4"
-        render(v.canvas_uid, tmp, mode=v.mode, duration=v.duration, hook=v.hook, with_music=v.music,
-               music_style=v.music_style, seed=v.seed, progress=prog, before_after=v.before_after,
-               fill_sounds=v.fill_sounds, show_numbers=v.show_numbers)
+        if v.fmt in ("guess", "versus", "tips"):
+            from . import shorts
+            shorts.render(v.fmt, v.canvas_uid, tmp, duration=v.duration, hook=v.hook, answer=v.end_title,
+                          series=v.series, uid2=v.canvas_uid2, seed=v.seed,
+                          music_style=v.music_style if v.music else "none", fill_sounds=v.fill_sounds,
+                          show_numbers=v.show_numbers, progress=prog)
+        else:
+            render(v.canvas_uid, tmp, mode=v.mode, duration=v.duration, hook=v.hook, with_music=v.music,
+                   music_style=v.music_style, seed=v.seed, progress=prog, before_after=v.before_after,
+                   fill_sounds=v.fill_sounds, show_numbers=v.show_numbers)
         os.replace(tmp, v.path())
         thumbnail(v.canvas_uid, v.path("jpg"))
         SocialVideo.objects.filter(pk=pk).update(status="done", progress=1, error="")

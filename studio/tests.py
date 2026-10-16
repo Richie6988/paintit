@@ -919,10 +919,37 @@ class SatisfyingVideoTests(TestCase):
             self.client.post("/admin-hub/videos/", {"op": "create", "canvas": self.UID, "count": "2", "music_style": "space", "before_after": "1"})
         self.assertEqual(SocialVideo.objects.count(), 2)
         self.assertEqual(enq.call_count, 2)
-        self.assertTrue(all(61 <= v.duration <= 70 and v.music_style == "space" and v.before_after for v in SocialVideo.objects.all()))
+        self.assertTrue(all(15 <= v.duration <= 40 and v.fmt == "fill" and v.music_style == "space" and v.before_after
+                            for v in SocialVideo.objects.all()))
         v = SocialVideo.objects.first()
         self.assertEqual(self.client.get("/admin-hub/videos/?format=json").json()["videos"][0]["status"], "queued")
         self.assertEqual(self.client.get("/admin-hub/videos/%d.mp4" % v.pk).status_code, 404)
+
+    def test_render_short_formats(self):
+        from studio import shorts
+        out = os.path.join(MEDIA, "s.mp4")
+        for fmt in ("guess", "versus", "tips"):
+            shorts.render(fmt, self.UID, out, duration=2.0, answer="It's a rose!", series="#3", uid2=self.UID)
+            self.assertGreater(os.path.getsize(out), 1000)
+        self.assertEqual(shorts._next_series("#3"), "#4")
+
+    def test_versus_generates_two_canvases(self):
+        import shutil as _sh
+        from studio.models import SocialVideo
+        open(os.path.join(MEDIA, "orders", self.UID, self.UID + "_source_x.jpg"), "wb").write(b"x")
+        seen = []
+
+        def fake_generate(path, colors, w, h, uid=None, source_name=None, density=None, detail=1.0):
+            seen.append(colors)
+            src, dst = os.path.join(MEDIA, "orders", self.UID), os.path.join(MEDIA, "orders", uid)
+            os.makedirs(dst)
+            for ext in ("_digipaint.svg", "_colors.json"):
+                _sh.copy(os.path.join(src, self.UID + ext), os.path.join(dst, uid + ext))
+        with mock.patch("studio.pipeline.generate", side_effect=fake_generate), mock.patch("studio.satisfying.enqueue"):
+            self.client.post("/admin-hub/videos/", {"op": "create", "canvas": self.UID, "fmt": "versus"})
+        v = SocialVideo.objects.get()
+        self.assertEqual((seen, v.fmt, v.duration), ([12, 48], "versus", 16.0))
+        self.assertTrue(v.canvas_uid.startswith("vid-") and v.canvas_uid2.startswith("vid-"))
 
     def test_density_regenerates_from_source_photo(self):
         import shutil as _sh
