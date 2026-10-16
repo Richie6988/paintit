@@ -177,6 +177,21 @@ def _disc(txt, d=190):
     return np.array(im)
 
 
+def _timer(sec, frac, d=180):
+    """Minuteur rond : chiffre des secondes restantes + anneau proportionnel au temps restant (rouge a 3 s)."""
+    im = Image.new("RGBA", (d, d), (0, 0, 0, 0))
+    dr = ImageDraw.Draw(im)
+    col = (232, 69, 95) if sec <= 3 else ACCENT
+    dr.ellipse([6, 6, d - 7, d - 7], fill=(255, 255, 255, 245), outline=(226, 230, 239), width=12)
+    if frac > 0:
+        dr.arc([6, 6, d - 7, d - 7], -90, -90 + 360 * frac, fill=col, width=12)
+    f = S._font(int(d * 0.5))
+    txt = str(sec)
+    l, t, r, b = dr.textbbox((0, 0), txt, font=f)
+    dr.text(((d - (r - l)) / 2 - l, (d - (b - t)) / 2 - t), txt, font=f, fill=col if sec <= 3 else (10, 10, 10))
+    return np.array(im)
+
+
 def _put(frame, layer, cx, y, k=1.0, scale=1.0, anchor="top"):
     """Colle un calque RGBA centre horizontalement sur cx (y = haut, ou bas si anchor='bottom')."""
     import cv2
@@ -288,8 +303,9 @@ def render(fmt, uid, out_path, duration=0, hook="", answer="", series="", uid2="
             st = S.schedule(p.n, p.nums, "flow", span, seed, p.px, np.c_[p.cx, p.cy]) + t0
         starts.append(st)
     fill_end = max(float(np.max(st + p.dur)) for p, st in zip(ps, starts))
-    if fmt == "guess":
-        ticks = [fill_end - 2.4, fill_end - 1.6, fill_end - 0.8]
+    if fmt == "guess":                     # vrai compte a rebours des la 1re image : un tic par seconde jusqu'a 0
+        secs = int(math.ceil(fill_end))
+        ticks = [(fill_end - k, 1.0 if k <= 3 else 0.45) for k in range(secs - 1, 0, -1)]
     if fmt == "tips":
         picks = [TIPS[i] for i in rng.choice(len(TIPS), 3, replace=False)]
         title_t = 2.2
@@ -306,11 +322,9 @@ def render(fmt, uid, out_path, duration=0, hook="", answer="", series="", uid2="
         end_l = _bubbles([("Left or right? Tell me", 60, (10, 10, 10)), (follow, 46, ACCENT)])
     else:
         end_l = _bubbles([("Save this for your first canvas", 56, (10, 10, 10)), (follow, 46, ACCENT)])
-    series_l = S._counter(("Guess " if fmt == "guess" else "") + series) if series else None
-    discs = {s: _disc(s) for s in ("3", "2", "1")}
     vs_l = _disc("VS", 120)
-    rule_l = _bubbles([("Can you guess", 76, (10, 10, 10)), ("what it is", 76, (10, 10, 10)),
-                       ("before 3 - 2 - 1 ?", 64, ACCENT)])
+    rule_l = _bubbles([("Can you guess", 76, (10, 10, 10)), ("what it is?", 76, (10, 10, 10))])
+    timers = {}
     if fmt == "versus":
         labels = [_bubbles([("%d colors" % p.n_colors, 44, (10, 10, 10)), ("%d zones" % p.n, 34, (90, 98, 116))],
                            maxw=pw - 20) for p in ps]
@@ -320,7 +334,7 @@ def render(fmt, uid, out_path, duration=0, hook="", answer="", series="", uid2="
     # --- son : musique + une note par zone (toile de gauche seulement en versus), bips du compte a rebours
     tmp_audio = out_path + ".wav"
     plucks = _plucks(ps[0], starts[0]) if fill_sounds else []
-    plucks += [(t, len(S.PENTA) - 1, 1.0) for t in ticks]
+    plucks += [(t, len(S.PENTA) - 1, a) for t, a in ticks]
     audio = None
     if music_style != "none" or plucks:
         S.music(tmp_audio, duration, fill_end, seed, style=music_style, plucks=plucks or None)
@@ -360,17 +374,18 @@ def render(fmt, uid, out_path, duration=0, hook="", answer="", series="", uid2="
             else:
                 k, sc = _pop(te - 0.3)
                 _put(frame, end_l, W / 2, TOP - 24, k, sc, anchor="bottom")
-            if series_l is not None and fmt == "guess" and te < 0:
-                S._blend(frame, series_l, x + 14, y + 14)
             if fmt == "guess" and t < GUESS_INTRO + 0.3:      # annonce du defi, au centre, des la 1re image
                 k, sc = _pop(t, 0.18)
                 k *= min(1.0, (GUESS_INTRO + 0.3 - t) / 0.3)
                 _put(frame, rule_l, W / 2, y + p.ch / 2 - rule_l.shape[0] / 2, k, sc)
-                _put(frame, discs["3"], W / 2, y + p.ch / 2 + rule_l.shape[0] / 2 + 20, k, sc)
-            for j, tk in enumerate(ticks):                   # compte a rebours 3-2-1
-                if tk <= t < tk + 0.8 and te < 0:
-                    k, sc = _pop(t - tk, 0.15)
-                    _put(frame, discs[str(3 - j)], x + p.cw - 120, y + 24, k * min(1, (tk + 0.8 - t) / 0.15), sc)
+            if fmt == "guess" and te < 0.25:                 # minuteur : secondes restantes + anneau qui se vide
+                left = max(0.0, fill_end - t)
+                key = (int(math.ceil(left)), int(left / fill_end * 60))
+                if key not in timers:
+                    timers[key] = _timer(key[0], key[1] / 60)
+                beat = left - math.floor(left)                # petit battement a chaque seconde (rouge a 3 s)
+                sc = 1 + (0.12 if key[0] <= 3 else 0.05) * max(0.0, beat - 0.8) / 0.2
+                _put(frame, timers[key], x + p.cw - 112, y + 18, 1 - max(0.0, te) / 0.25, sc)
             _brand(frame, brand_y, te)
             if first is None:
                 first = frame.copy()
