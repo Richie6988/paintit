@@ -1163,3 +1163,93 @@ class GeoMerchantTests(TestCase):
             self.assertTrue(it.find(g + "price").text.endswith(" EUR"))
             self.assertEqual(self.client.get(it.find("link").text.replace("http://testserver", "")
                                              .split("paintit.click")[-1]).status_code, 200)
+
+
+class ImageBankTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
+        self.client.login(username="boss", password="pw-Secret-123")
+
+    def _fake_session(self):
+        import io as _io
+        from PIL import Image as _Im
+
+        def jpg(color):
+            b = _io.BytesIO()
+            im = _Im.new("RGB", (64, 64), color)
+            if color != (128, 128, 128):
+                for x in range(32):
+                    for y in range(64):
+                        im.putpixel((x, y), (20, 60, 230))
+            im.save(b, "JPEG")
+            return b.getvalue()
+
+        class R:
+            def __init__(self, data=None, content=b""):
+                self._d, self.content = data, content
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return self._d
+
+        ov = {"results": [
+            {"id": "a1", "title": "Parrot", "url": "https://x/a1.jpg", "thumbnail": "https://x/t-vivid", "width": 3000,
+             "height": 2000, "license": "cc0", "creator": "Bob", "foreign_landing_url": "https://x/a1", "tags": []},
+            {"id": "a2", "title": "Grey", "url": "https://x/a2.jpg", "thumbnail": "https://x/t-grey", "width": 3000,
+             "height": 2000, "license": "pdm", "tags": []},
+            {"id": "a3", "title": "Tiny", "url": "https://x/a3.jpg", "thumbnail": "https://x/t-vivid", "width": 600,
+             "height": 400, "license": "cc0", "tags": []},
+            {"id": "a4", "title": "Woman with flowers", "url": "https://x/a4.jpg", "thumbnail": "https://x/t-vivid",
+             "width": 2400, "height": 3000, "license": "cc0", "tags": [{"name": "woman"}]}]}
+        wm = {"query": {"pages": {
+            "1": {"pageid": 11, "title": "File:Sunset_sea.jpg", "imageinfo": [{
+                "url": "https://w/s.jpg", "thumburl": "https://x/t-vivid", "width": 4000, "height": 3000,
+                "mime": "image/jpeg", "descriptionurl": "https://w/p",
+                "extmetadata": {"LicenseShortName": {"value": "Public domain"}}}]},
+            "2": {"pageid": 12, "title": "File:BySA.jpg", "imageinfo": [{
+                "url": "https://w/b.jpg", "thumburl": "https://x/t-vivid", "width": 4000, "height": 3000,
+                "mime": "image/jpeg", "extmetadata": {"LicenseShortName": {"value": "CC BY-SA 4.0"}}}]}}}}
+
+        class S:
+            def get(self, url, **kw):
+                if "openverse" in url:
+                    return R(ov)
+                if "wikimedia" in url:
+                    return R(wm)
+                return R(content=jpg((128, 128, 128) if "grey" in url else (240, 40, 40)))
+        return S()
+
+    def test_harvest_filters_and_admin_flow(self):
+        from studio import imagebank
+        from studio.models import StockImage
+        with mock.patch("studio.imagebank._session", side_effect=self._fake_session):
+            added, skipped = imagebank.harvest(categories=["Oiseaux"], providers=["openverse", "wikimedia"],
+                                               per_query=5, pause=0)
+            again, _ = imagebank.harvest(categories=["Oiseaux"], providers=["openverse"], per_query=5, pause=0)
+        self.assertEqual(again, 0)                                          # doublons ignores
+        titles = set(StockImage.objects.values_list("title", flat=True))
+        self.assertEqual(titles, {"Parrot", "Woman with flowers", "Sunset sea"})   # pas de terne, petite, CC BY-SA
+        self.assertTrue(StockImage.objects.get(title="Woman with flowers").people)
+        p = StockImage.objects.get(title="Parrot")
+        self.assertGreater(p.vibrancy, 35)
+        self.assertEqual(p.orientation, "paysage")
+        r = self.client.get("/admin-hub/images/")
+        self.assertContains(r, "Banque d'images"); self.assertContains(r, "Parrot")
+        self.assertNotContains(r, "Woman with flowers")                    # personnes masquees par defaut
+        self.assertEqual(self.client.get("/admin-hub/images/%d.jpg" % p.pk).status_code, 200)
+        self.client.post("/admin-hub/images/", {"op": "kept", "ids": [p.pk]})
+        self.assertEqual(StockImage.objects.get(pk=p.pk).status, "kept")
+        hd = os.path.join(MEDIA, "uploads", "stock-test.jpg")
+        os.makedirs(os.path.dirname(hd), exist_ok=True)
+
+        def fake_hd(img, max_side=3000):
+            open(hd, "wb").write(b"x")
+            return hd
+        with mock.patch("studio.imagebank.fetch_hd", side_effect=fake_hd), mock.patch("studio.pipeline.generate") as gen:
+            r = self.client.post("/admin-hub/images/", {"op": "studio", "id": p.pk})
+        self.assertTrue(r["Location"].startswith("/marketing/?img=mkt-"))
+        self.assertTrue(gen.called and not os.path.exists(hd))
+        self.assertIn("studio mkt-", StockImage.objects.get(pk=p.pk).used_in)

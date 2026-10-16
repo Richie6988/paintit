@@ -168,6 +168,9 @@ REDDIT_CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID", "")
 REDDIT_CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET", "")
 STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+# Banque d'images libres : cles API gratuites (facultatives ; Openverse et Wikimedia fonctionnent sans cle)
+PIXABAY_KEY = os.environ.get("PIXABAY_KEY", "")
+PEXELS_KEY = os.environ.get("PEXELS_KEY", "")
 
 # --- Fournisseur d'impression (OEM dropshipping) ---
 SUPPLIER_API_URL = os.environ.get("SUPPLIER_API_URL", "")

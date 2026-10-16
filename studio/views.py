@@ -2000,6 +2000,10 @@ def marketing_page(request):
     if request.method == "POST":
         texts, gif = _mkt_form_texts(request, marketing)
         style = marketing.norm_style({k: request.POST.get("s_" + k) for k in ("font", "ink", "accent", "cta", "bg")})
+    elif _re.match(r"^mkt-[0-9a-f]{10}$", request.GET.get("img", "")) and os.path.exists(
+            os.path.join(settings.MEDIA_ROOT, "orders", request.GET["img"], "%s_preview.svg" % request.GET["img"])):
+        ctx["uid"] = request.GET["img"]                # image de la banque deja convertie en toile
+        ctx["current_img"] = "/preview/img/%s/source/" % ctx["uid"]
     elif request.GET.get("from"):
         # "Nouvelle variante" depuis la galerie : textes + image d'une variante existante
         ads = list(MarketingAd.objects.filter(image_uid=request.GET["from"],
@@ -4683,6 +4687,134 @@ def _banner_form():
                       "countdown_to", "active"]
             widgets = {"starts_at": dt, "ends_at": dt, "countdown_to": dt}
     return BannerForm
+
+
+@staff_member_required
+def erp_images(request):
+    """Banque d'images libres : collecte (Openverse, Wikimedia, Pixabay, Pexels), tri, envoi vers catalogue / videos / studio."""
+    import uuid as _uuid
+    from decimal import Decimal, InvalidOperation
+    from django.contrib import admin as _admin
+    from django.contrib import messages
+    from django.core.paginator import Paginator
+    from django.db.models import Count, Q
+    from . import imagebank, satisfying
+    from .models import StockImage
+    if request.method == "POST":
+        op = request.POST.get("op")
+        img = StockImage.objects.filter(pk=request.POST.get("id")).first()
+        back = request.POST.get("next") or request.get_full_path()
+        if op == "harvest":
+            cats = [c for c in request.POST.getlist("cat") if c in imagebank.THEMES] or None
+            provs = [p for p in request.POST.getlist("prov") if p in imagebank.available()] or None
+            try:
+                per = max(5, min(80, int(request.POST.get("per_query") or 30)))
+            except ValueError:
+                per = 30
+            if imagebank.harvest_async(categories=cats, providers=provs, per_query=per):
+                messages.success(request, "Collecte lancée en arrière-plan (%d recherches). Les images arrivent au fil de l'eau."
+                                 % imagebank.total_queries(cats, provs))
+            else:
+                messages.error(request, "Une collecte est déjà en cours.")
+        elif op in ("kept", "rejected", "new"):
+            ids = request.POST.getlist("ids") or ([img.pk] if img else [])
+            n = StockImage.objects.filter(pk__in=ids).update(status=op)
+            messages.success(request, "%d image(s) : %s." % (n, dict(StockImage.STATUS)[op].lower()))
+        elif op in ("catalogue", "video", "studio") and img:
+            try:
+                hd = imagebank.fetch_hd(img)
+                try:
+                    if op == "catalogue":
+                        try:
+                            pr = max(Decimal("0"), Decimal((request.POST.get("price") or "0").replace(",", ".")))
+                        except InvalidOperation:
+                            pr = Decimal("0")
+                        m = _create_gallery_model((request.POST.get("title") or img.title).strip()[:80],
+                                                  (request.POST.get("category") or img.category).strip()[:40], pr,
+                                                  colors=int(request.POST.get("colors") or 24),
+                                                  orientation="paysage" if img.orientation == "paysage" else "portrait",
+                                                  image_path=hd, in_slider=bool(request.POST.get("in_slider")))
+                        imagebank.mark_used(img, "catalogue " + m.uid)
+                        messages.success(request, "Modèle « %s » publié dans la galerie." % m.title)
+                    else:
+                        from .forms import DENSITY_LEVELS
+                        from .pipeline import generate
+                        uid = ("vid-" if op == "video" else "mkt-") + _uuid.uuid4().hex[:10]
+                        dens, det = DENSITY_LEVELS["auto"]
+                        generate(hd, 24, 40, 50, uid=uid, source_name="stock-%d.jpg" % img.pk, density=dens, detail=det)
+                        imagebank.mark_used(img, ("vidéo " if op == "video" else "studio ") + uid)
+                        if op == "video":
+                            satisfying.save_label(uid, "Banque · %s" % img.title[:80])
+                            messages.success(request, "Toile prête : elle est sélectionnée en tête de liste.")
+                            return redirect("/admin-hub/videos/")
+                        return redirect("/marketing/?img=%s" % uid)
+                finally:
+                    if os.path.exists(hd):
+                        os.remove(hd)
+            except Exception as exc:
+                logger.exception("Banque d'images %s", img.pk)
+                messages.error(request, "Impossible d'utiliser cette image : %s" % exc)
+        return redirect(back)
+
+    qs = StockImage.objects.all()
+    status = request.GET.get("status", "new")
+    if status == "used":
+        qs = qs.exclude(used_in="")
+    elif status in dict(StockImage.STATUS):
+        qs = qs.filter(status=status)
+    cat, prov, q = request.GET.get("cat", ""), request.GET.get("prov", ""), (request.GET.get("q") or "").strip()
+    orient, sort = request.GET.get("orient", ""), request.GET.get("sort", "vibrancy")
+    try:
+        vmin = float(request.GET.get("min") or 0)
+    except ValueError:
+        vmin = 0
+    if cat:
+        qs = qs.filter(category=cat)
+    if prov:
+        qs = qs.filter(provider=prov)
+    if q:
+        qs = qs.filter(Q(title__icontains=q) | Q(tags__icontains=q) | Q(query__icontains=q))
+    if vmin:
+        qs = qs.filter(vibrancy__gte=vmin)
+    if not request.GET.get("people"):
+        qs = qs.filter(people=False)
+    if orient:
+        qs = [i for i in qs if i.orientation == orient]
+    elif sort == "size":
+        qs = qs.order_by("-width")
+    elif sort == "recent":
+        qs = qs.order_by("-created_at")
+    page = Paginator(qs, 60).get_page(request.GET.get("page"))
+    allq = StockImage.objects.all()
+    counts = {"new": allq.filter(status="new").count(), "kept": allq.filter(status="kept").count(),
+              "rejected": allq.filter(status="rejected").count(), "used": allq.exclude(used_in="").count()}
+    params = request.GET.copy()
+    params.pop("page", None)
+    for i in page.object_list:
+        i.note = imagebank.LICENSE_NOTES.get(i.provider, "")
+    by_cat = dict(allq.values_list("category").annotate(n=Count("id")))
+    return render(request, "admin/erp_images.html", {
+        "tabs": [(k, l, counts[k]) for k, l in (("new", "À trier"), ("kept", "Retenues"), ("used", "Utilisées"),
+                                                ("rejected", "Écartées"))],
+        "prov_opts": [(k, l, imagebank.LICENSE_NOTES[k], k in imagebank.available()) for k, l in StockImage.PROVIDERS],
+        "cat_opts": [(c, by_cat.get(c, 0)) for c in imagebank.THEMES], "mins": ["40", "50", "60", "70"],
+        **_admin.site.each_context(request), "page": page, "status": status, "counts": counts, "total": allq.count(),
+        "themes": imagebank.THEMES, "providers": StockImage.PROVIDERS,
+        "f": {"cat": cat, "prov": prov, "q": q, "min": request.GET.get("min", ""), "orient": orient, "sort": sort,
+              "people": request.GET.get("people", "")},
+        "qs_nopage": params.urlencode(), "state": imagebank.state(),
+        "erp_section": "growth", "gtab": "images"})
+
+
+@staff_member_required
+def erp_image_thumb(request, pk):
+    from .models import StockImage
+    img = StockImage.objects.filter(pk=pk).first()
+    if not img or not os.path.exists(img.thumb_path()):
+        raise Http404
+    resp = FileResponse(open(img.thumb_path(), "rb"), content_type="image/jpeg")
+    resp["Cache-Control"] = "private, max-age=86400"
+    return resp
 
 
 @staff_member_required

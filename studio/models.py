@@ -1233,3 +1233,49 @@ class SiteEvent(models.Model):
     kind = models.CharField(max_length=12, db_index=True)       # cta | generation
     name = models.CharField(max_length=80)
     path = models.CharField(max_length=200, blank=True, default="")
+
+
+class StockImage(models.Model):
+    """Banque d'images libres de droits (domaine public / CC0 / licences Pixabay-Pexels), source du catalogue,
+    des videos et du studio. Seules la vignette et les metadonnees sont stockees ; la HD est telechargee a l'usage."""
+    PROVIDERS = [("openverse", "Openverse"), ("wikimedia", "Wikimedia Commons"), ("pixabay", "Pixabay"),
+                 ("pexels", "Pexels")]
+    STATUS = [("new", "À trier"), ("kept", "Retenue"), ("rejected", "Écartée")]
+    provider = models.CharField(max_length=12, choices=PROVIDERS)
+    ext_id = models.CharField(max_length=120)
+    title = models.CharField(max_length=200, blank=True, default="")
+    category = models.CharField(max_length=40, blank=True, default="")
+    query = models.CharField(max_length=80, blank=True, default="")
+    tags = models.TextField(blank=True, default="")
+    author = models.CharField(max_length=200, blank=True, default="")
+    page_url = models.URLField(max_length=500, blank=True, default="")
+    full_url = models.URLField(max_length=800)
+    license = models.CharField(max_length=40, blank=True, default="")
+    license_url = models.URLField(max_length=300, blank=True, default="")
+    width = models.PositiveIntegerField(default=0)
+    height = models.PositiveIntegerField(default=0)
+    vibrancy = models.FloatField("Éclat des couleurs (0-100)", default=0)
+    people = models.BooleanField("Personnes possibles (droit à l'image)", default=False)
+    status = models.CharField(max_length=10, choices=STATUS, default="new")
+    used_in = models.CharField(max_length=300, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-vibrancy", "-created_at"]
+        unique_together = ("provider", "ext_id")
+        verbose_name = "Image libre"
+        verbose_name_plural = "Banque d'images"
+
+    def thumb_path(self):
+        return os.path.join(settings.MEDIA_ROOT, "stock", "thumbs", "%d.jpg" % self.pk)
+
+    @property
+    def orientation(self):
+        if not self.width or not self.height:
+            return "portrait"
+        r = self.width / self.height
+        return "paysage" if r > 1.08 else ("carre" if r > 0.92 else "portrait")
+
+    @property
+    def megapixels(self):
+        return round(self.width * self.height / 1e6, 1)

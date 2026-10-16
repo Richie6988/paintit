@@ -1,0 +1,145 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Banque d'images · PaintIt ERP{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+{% include "admin/_erp_style.html" %}{% include "admin/_sup_style.html" %}
+<style>
+ .ib-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+ .ib-tabs a{padding:6px 12px;border-radius:999px;background:#eef1f6;color:#33415c;font-weight:700;font-size:.8rem;text-decoration:none}
+ .ib-tabs a.on{background:#12224f;color:#fff}
+ .ib-f{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-items:end}
+ .ib-f label{display:grid;gap:4px;font-size:.74rem;font-weight:700;color:#33415c}
+ .ib-f input,.ib-f select{height:36px;padding:0 9px;border:1px solid #d4d4d4;border-radius:9px;font-size:.84rem;background:#fff;width:100%;box-sizing:border-box}
+ .ib-f .chk{display:flex;align-items:center;gap:6px}.ib-f .chk input{width:auto;height:auto}
+ .ib-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+ .ib-c{background:#fff;border:1px solid #e3e7ef;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+ .ib-c.kept{border-color:#1f9d55;box-shadow:0 0 0 2px rgba(31,157,85,.18)}
+ .ib-c.rejected{opacity:.5}
+ .ib-c .im{position:relative;aspect-ratio:1/1;flex:0 0 auto;overflow:hidden;background:#f2f4f8}
+ .ib-c .im img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+ .ib-c .sel{position:absolute;top:8px;left:8px;width:20px;height:20px;accent-color:#2f6bf2}
+ .ib-c .vb{position:absolute;top:8px;right:8px;font:800 .72rem/1 system-ui;padding:5px 8px;border-radius:999px;color:#fff;background:linear-gradient(90deg,#e8455f,#f08a3c,#2f6bf2)}
+ .ib-c .lc{position:absolute;bottom:8px;left:8px;font:700 .66rem/1 system-ui;padding:4px 7px;border-radius:6px;background:rgba(0,0,0,.6);color:#fff}
+ .ib-c .wh{position:absolute;bottom:8px;right:8px;font:700 .66rem/1 system-ui;padding:4px 7px;border-radius:6px;background:rgba(255,255,255,.9);color:#12224f}
+ .ib-c .bd{padding:9px 10px;display:grid;gap:6px}
+ .ib-c h3{margin:0;font-size:.8rem;color:#12224f;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .ib-c .meta{font-size:.68rem;color:#7a869e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .ib-c .acts{display:flex;gap:5px;flex-wrap:wrap}
+ .ib-c .acts .pbtn{padding:5px 8px;font-size:.72rem}
+ .ib-c details{font-size:.74rem}
+ .ib-c details summary{cursor:pointer;font-weight:800;color:#2f6bf2;list-style:none}
+ .ib-c details form{display:grid;gap:6px;margin-top:6px}
+ .ib-c details input,.ib-c details select{height:30px;padding:0 7px;border:1px solid #d4d4d4;border-radius:7px;font-size:.76rem;width:100%;box-sizing:border-box}
+ .warn{font-size:.66rem;color:#b45309;font-weight:700}
+ .hv{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px 12px;font-size:.8rem;margin:8px 0}
+ .hv label{display:flex;gap:6px;align-items:center}
+ .prog{height:8px;border-radius:9px;background:#e8edf5;overflow:hidden;margin-top:8px}.prog i{display:block;height:100%;background:#2f6bf2}
+ .bulk{position:sticky;bottom:12px;z-index:5;display:none;gap:8px;align-items:center;background:#12224f;color:#fff;padding:10px 14px;border-radius:12px;margin-top:14px;width:max-content}
+ .bulk.on{display:flex}
+ .pg{display:flex;gap:6px;justify-content:center;margin-top:16px}
+</style>
+<div class="erp gx">
+  <div class="erp-head">
+    <div><h1>Banque d'images</h1>
+      <div class="muted">{{ total }} image{{ total|pluralize }} libres de droits, HD et aux couleurs vives, pour le catalogue, les vidéos TikTok et le studio créatif. Seule une vignette est stockée ; la version HD est téléchargée au moment de l'utiliser.</div></div>
+  </div>
+  {% include "admin/_growth_ui.html" %}{% include "admin/_growth_tabs.html" %}
+
+  <div class="card">
+    <details {% if not total or state.running %}open{% endif %}><summary style="cursor:pointer;font-weight:800;color:#12224f">Collecter des images{% if state.running %} · en cours ({{ state.done }} / {{ state.total }}, {{ state.added }} ajoutées){% elif state.finished %} · dernière collecte le {{ state.finished }}{% endif %}</summary>
+      {% if state.running %}<div class="muted" style="margin-top:8px">{{ state.current }}</div>
+        <div class="prog"><i style="width:{% widthratio state.done state.total 100 %}%"></i></div>{% endif %}
+      <form method="post" style="margin-top:10px">{% csrf_token %}<input type="hidden" name="op" value="harvest">
+        <div class="muted" style="font-size:.76rem;font-weight:700">Thèmes (aucun coché = tous)</div>
+        <div class="hv">{% for c, qs in themes.items %}<label><input type="checkbox" name="cat" value="{{ c }}"> {{ c }} <span class="muted">· {{ qs|length }} recherches</span></label>{% endfor %}</div>
+        <div class="muted" style="font-size:.76rem;font-weight:700">Sources</div>
+        <div class="hv">{% for k, l, note, ok in prov_opts %}<label title="{{ note }}"><input type="checkbox" name="prov" value="{{ k }}" {% if ok %}checked{% else %}disabled{% endif %}> {{ l }}{% if not ok %} <span class="muted">(clé API manquante)</span>{% endif %}</label>{% endfor %}</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px">
+          <label style="font-size:.78rem;font-weight:700">Images par recherche et par source <input type="number" name="per_query" value="30" min="5" max="80" style="width:70px;height:32px"></label>
+          <button class="pbtn pri" {% if state.running %}disabled{% endif %}>Lancer la collecte</button>
+          <span class="muted" style="font-size:.74rem">Doublons, images de moins de 1 200 px et images ternes sont ignorés. Pour une grosse collecte : <code>python manage.py image_bank</code> sur le serveur.</span>
+        </div>
+      </form>
+      <ul class="tips" style="font-size:.76rem;color:#33415c;margin:10px 0 0;padding-left:18px;line-height:1.55">
+        <li><b>Openverse et Wikimedia</b> : uniquement domaine public et CC0 (usage commercial libre, sans attribution).</li>
+        <li><b>Pixabay et Pexels</b> : licences maison, usage commercial autorisé ; interdit de revendre l'image telle quelle (un kit numéroté est une œuvre transformée). Clés gratuites à mettre dans <code>.env</code> : <code>PIXABAY_KEY</code>, <code>PEXELS_KEY</code>.</li>
+        <li>Une licence libre ne couvre ni le droit à l'image des personnes, ni les marques et logos : les images susceptibles de montrer des personnes sont masquées par défaut.</li>
+      </ul>
+    </details>
+  </div>
+
+  <div class="ib-tabs">
+    {% for k, l, n in tabs %}
+    <a href="?status={{ k }}" class="{% if status == k %}on{% endif %}">{{ l }} · {{ n }}</a>{% endfor %}
+  </div>
+
+  <form method="get" class="card ib-f"><input type="hidden" name="status" value="{{ status }}">
+    <label>Recherche<input name="q" value="{{ f.q }}" placeholder="parrot, sunset…"></label>
+    <label>Thème<select name="cat"><option value="">Tous</option>{% for c, n in cat_opts %}<option value="{{ c }}" {% if f.cat == c %}selected{% endif %}>{{ c }} ({{ n }})</option>{% endfor %}</select></label>
+    <label>Source<select name="prov"><option value="">Toutes</option>{% for k, l in providers %}<option value="{{ k }}" {% if f.prov == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+    <label>Éclat minimum<select name="min"><option value="">Tous</option>{% for v in mins %}<option value="{{ v }}" {% if f.min == v %}selected{% endif %}>≥ {{ v }}</option>{% endfor %}</select></label>
+    <label>Format<select name="orient"><option value="">Tous</option><option value="portrait" {% if f.orient == "portrait" %}selected{% endif %}>Portrait</option><option value="paysage" {% if f.orient == "paysage" %}selected{% endif %}>Paysage</option><option value="carre" {% if f.orient == "carre" %}selected{% endif %}>Carré</option></select></label>
+    <label>Tri<select name="sort"><option value="vibrancy">Plus colorées</option><option value="recent" {% if f.sort == "recent" %}selected{% endif %}>Plus récentes</option><option value="size" {% if f.sort == "size" %}selected{% endif %}>Plus grandes</option></select></label>
+    <label class="chk"><input type="checkbox" name="people" value="1" {% if f.people %}checked{% endif %}> Avec personnes</label>
+    <button class="pbtn pri">Filtrer</button>
+  </form>
+
+  {% if page.object_list %}
+  <form method="post" id="bulkf">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"></form>
+  <div class="ib-g">
+    {% for i in page.object_list %}
+    <div class="ib-c {{ i.status }}">
+      <div class="im"><a href="{{ i.page_url }}" target="_blank" rel="noopener" title="Voir la source et la licence"><img loading="lazy" src="/admin-hub/images/{{ i.pk }}.jpg" alt=""></a>
+        <input type="checkbox" class="sel" form="bulkf" name="ids" value="{{ i.pk }}" aria-label="Sélectionner">
+        <span class="vb" title="Éclat des couleurs (0-100)">{{ i.vibrancy|floatformat:0 }}</span>
+        <span class="lc" title="{{ i.note }}">{{ i.license|default:i.get_provider_display }}</span>
+        <span class="wh">{{ i.width }}×{{ i.height }}</span></div>
+      <div class="bd">
+        <h3 title="{{ i.title }}">{{ i.title }}</h3>
+        <div class="meta">{{ i.category }} · {{ i.get_provider_display }}{% if i.author %} · {{ i.author|striptags|truncatechars:30 }}{% endif %}</div>
+        {% if i.people %}<div class="warn">Personnes possibles : vérifier le droit à l'image</div>{% endif %}
+        {% if i.used_in %}<div class="meta" style="color:#1e5b35">Utilisée : {{ i.used_in }}</div>{% endif %}
+        <div class="acts">
+          <form method="post">{% csrf_token %}<input type="hidden" name="id" value="{{ i.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+            {% if i.status != "kept" %}<button class="pbtn" name="op" value="kept" title="Retenir">★</button>{% endif %}
+            {% if i.status != "rejected" %}<button class="pbtn" name="op" value="rejected" title="Écarter">✕</button>{% else %}<button class="pbtn" name="op" value="new">Rétablir</button>{% endif %}
+            <button class="pbtn" name="op" value="video" title="Créer la toile et ouvrir les vidéos TikTok" data-busy>Vidéo</button>
+            <button class="pbtn" name="op" value="studio" title="Créer la toile et ouvrir le studio créatif" data-busy>Studio</button>
+          </form>
+        </div>
+        <details><summary>+ Ajouter au catalogue</summary>
+          <form method="post">{% csrf_token %}<input type="hidden" name="op" value="catalogue"><input type="hidden" name="id" value="{{ i.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <input name="title" value="{{ i.title|truncatechars:60 }}" maxlength="80" required aria-label="Titre">
+            <input name="category" value="{{ i.category }}" maxlength="40" aria-label="Catégorie">
+            <div style="display:flex;gap:6px"><select name="colors" aria-label="Couleurs"><option>12</option><option selected>24</option><option>36</option><option>48</option></select>
+              <input name="price" placeholder="Prix (0 = gratuit)" aria-label="Prix"></div>
+            <label style="display:flex;gap:6px;align-items:center;font-weight:600"><input type="checkbox" name="in_slider" value="1" style="width:auto;height:auto"> Slider de l'accueil</label>
+            <button class="pbtn pri" data-busy>Publier dans la galerie</button></form></details>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="bulk" id="bulk"><span id="bulkn"></span>
+    <button class="pbtn" form="bulkf" name="op" value="kept">★ Retenir</button>
+    <button class="pbtn" form="bulkf" name="op" value="rejected">✕ Écarter</button></div>
+  {% if page.has_other_pages %}<div class="pg">
+    {% if page.has_previous %}<a class="pbtn" href="?{{ qs_nopage }}&page={{ page.previous_page_number }}">‹ Précédent</a>{% endif %}
+    <span class="muted" style="align-self:center">Page {{ page.number }} / {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="pbtn" href="?{{ qs_nopage }}&page={{ page.next_page_number }}">Suivant ›</a>{% endif %}</div>{% endif %}
+  {% else %}
+  <div class="card"><div class="empty muted">{% if total %}Aucune image pour ces filtres.{% else %}La banque est vide : lancez une première collecte ci-dessus.{% endif %}</div></div>
+  {% endif %}
+</div>
+<script>
+(function () {
+  var b = document.getElementById("bulk"), n = document.getElementById("bulkn");
+  var up = function () { var k = document.querySelectorAll(".sel:checked").length; if (b) { b.classList.toggle("on", k > 0); n.textContent = k + " sélectionnée" + (k > 1 ? "s" : ""); } };
+  document.querySelectorAll(".sel").forEach(function (c) { c.addEventListener("change", up); });
+  document.querySelectorAll("[data-busy]").forEach(function (btn) {
+    btn.addEventListener("click", function () { var t = btn; setTimeout(function () { t.disabled = true; t.textContent = "Création de la toile…"; }, 0); });
+  });
+  {% if state.running %}setTimeout(function () { location.reload(); }, 8000);{% endif %}
+})();
+</script>
+{% endblock %}
