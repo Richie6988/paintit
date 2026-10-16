@@ -1743,3 +1743,6 @@ msgstr ""
 "Internal, anonymous, cookie-free audience measurement: pages viewed, time "
 "spent, approximate country and button clicks, with no tracking from one day "
 "to the next. Kept for 13 months."
+
+msgid "Suivez-nous"
+msgstr "Follow us"

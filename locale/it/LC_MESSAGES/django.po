@@ -1767,3 +1767,6 @@ msgstr ""
 "Misurazione del pubblico interna, anonima e senza cookie: pagine visitate, "
 "tempo trascorso, paese approssimativo e clic sui pulsanti, senza alcun "
 "tracciamento da un giorno all'altro. Conservazione: 13 mesi."
+
+msgid "Suivez-nous"
+msgstr "Seguici"

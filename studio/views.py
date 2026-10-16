@@ -18,7 +18,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 
 from . import fulfillment, supplier, discounts, address, emails, payments, receipts, jobs, genqueue, security
 from .forms import UploadForm, DeliveryForm, ContactForm, FORMATS, dimensions
-from .models import Order, OrderEvent, Pricing, DigitalCanvas, EmailCode
+from .models import Order, OrderEvent, Pricing, DigitalCanvas, EmailCode, CompanyInfo
 from .pipeline import generate, compute_price, price_cfg
 
 PHASE_LABELS = {
@@ -1610,6 +1610,7 @@ def llm_txt(request):
     lines += ["", "## Liens",
               "- Créer une toile : %s/create/" % site, "- Tester le jeu : %s/play/" % site,
               "- FAQ : %s/faq/" % site, "- Contact : %s/contact/" % site,
+              ] + ["- %s : %s" % (n, u) for n, u in CompanyInfo.get().socials()] + [
               "- Données structurées : %s/llm.json" % site, "- Plan du site : %s/sitemap.xml" % site]
     return HttpResponse("\n".join(lines) + "\n", content_type="text/plain; charset=utf-8")
 
@@ -1635,7 +1636,8 @@ def llm_json(request):
         "languages": ["fr", "en", "de", "es", "it"],
         "faq": f["faq"],
         "links": {"home": site + "/", "create": site + "/create/", "play": site + "/play/",
-                  "faq": site + "/faq/", "contact": site + "/contact/", "sitemap": site + "/sitemap.xml"},
+                  "faq": site + "/faq/", "contact": site + "/contact/", "sitemap": site + "/sitemap.xml",
+                  "social": {n.lower(): u for n, u in CompanyInfo.get().socials()}},
     }
     return JsonResponse(data, json_dumps_params={"ensure_ascii": False, "indent": 2})
 
@@ -3834,6 +3836,8 @@ def erp_legal(request):
     form = LegalForm(request.POST or None, instance=info)
     if request.method == "POST" and form.is_valid():
         form.save()
+        from django.core.cache import cache
+        cache.delete("site_socials")
         messages.success(request, "Informations légales enregistrées : pages publiques et factures à jour.")
         return redirect("studio:erp_legal")
     sections = [
@@ -3847,6 +3851,8 @@ def erp_legal(request):
          ["production_origin"]),
         ("Hébergeur et médiation", "Obligatoires : nom, adresse et téléphone de l'hébergeur, médiateur de la consommation.",
          ["host", "mediator"]),
+        ("Réseaux sociaux", "Liens affichés dans le pied de page du site et déclarés à Google (sameAs) : ils relient le site à vos comptes officiels.",
+         ["tiktok_url", "instagram_url", "facebook_url", "pinterest_url", "youtube_url"]),
     ]
     checks = [("Raison sociale", bool(info.legal_name)), ("Adresse du siège", bool(info.address)),
               ("SIRET", bool(info.siret)), ("Hébergeur", bool(info.host)),

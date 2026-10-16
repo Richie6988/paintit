@@ -243,6 +243,18 @@ class CompanyInfo(models.Model):
         "Lieu de fabrication des kits", max_length=60, blank=True, default="Europe",
         help_text="Zone de fabrication réelle (ex. Europe) : sert à la politique de confidentialité. "
                   "Le site affiche « Fabriqué à la demande par nos ateliers partenaires ».")
+    # Reseaux sociaux : lien dans le pied de page + sameAs (donnees structurees Organization)
+    tiktok_url = models.URLField("TikTok", blank=True, default="https://www.tiktok.com/@paintit.click")
+    instagram_url = models.URLField("Instagram", blank=True, default="")
+    facebook_url = models.URLField("Facebook", blank=True, default="")
+    pinterest_url = models.URLField("Pinterest", blank=True, default="")
+    youtube_url = models.URLField("YouTube", blank=True, default="")
+
+    SOCIALS = [("tiktok_url", "TikTok"), ("instagram_url", "Instagram"), ("facebook_url", "Facebook"),
+               ("pinterest_url", "Pinterest"), ("youtube_url", "YouTube")]
+
+    def socials(self):
+        return [(label, getattr(self, f)) for f, label in self.SOCIALS if getattr(self, f)]
 
     class Meta:
         verbose_name = "Infos légales"

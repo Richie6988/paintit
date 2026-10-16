@@ -1783,3 +1783,6 @@ msgstr ""
 "Interne, anonyme Reichweitenmessung ohne Cookies: besuchte Seiten, "
 "Verweildauer, ungefähres Land und Klicks auf Schaltflächen, ohne "
 "Nachverfolgung von einem Tag zum nächsten. Aufbewahrung: 13 Monate."
+
+msgid "Suivez-nous"
+msgstr "Folgen Sie uns"

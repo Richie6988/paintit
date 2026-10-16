@@ -28,7 +28,7 @@ def assets(request):
     from . import landings
     return {"SITE_URL": site, "HREFLANGS": alts, "PBN_LINKS": landings.footer_links((get_language() or "fr")[:2]), "LANG_URLS": lang_urls, "LANG_MENU": lang_menu,
             # Mesure d'audience sans cookie (Plausible / compatible) : pas de bandeau cookies requis
-            "MADE_IN": _made_in(), "MADE_IN_LABEL": _made_in_label(),
+            "MADE_IN": _made_in(), "MADE_IN_LABEL": _made_in_label(), "SOCIALS": _socials(),
             "SITE_BANNER": _banner(request),
             "ANALYTICS_SRC": getattr(settings, "ANALYTICS_SRC", ""),
             "ANALYTICS_DOMAIN": getattr(settings, "ANALYTICS_DOMAIN", "")}
@@ -83,3 +83,17 @@ def _banner(request):
         return b
     except Exception:          # base pas encore migree, etc. : le site reste affichable
         return None
+
+
+def _socials():
+    """Comptes officiels -> [(nom, url)] (pied de page + sameAs). Cache 5 min."""
+    from django.core.cache import cache
+    out = cache.get("site_socials")
+    if out is None:
+        try:
+            from .models import CompanyInfo
+            out = CompanyInfo.get().socials()
+        except Exception:
+            out = []
+        cache.set("site_socials", out, 300)
+    return out

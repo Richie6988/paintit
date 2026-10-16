@@ -1755,3 +1755,6 @@ msgstr ""
 "Medición de audiencia interna, anónima y sin cookies: páginas vistas, tiempo"
 " de visita, país aproximado y clics en botones, sin seguimiento de un día "
 "para otro. Conservación: 13 meses."
+
+msgid "Suivez-nous"
+msgstr "Síguenos"
