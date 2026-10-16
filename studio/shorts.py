@@ -22,7 +22,8 @@ ACCENT = (47, 107, 242)
 FORMATS = [("fill", "Remplissage satisfying (classique)"), ("guess", "Devine l'image (12-15 s)"),
            ("versus", "12 vs 48 couleurs (15-17 s)"), ("tips", "3 astuces utiles (20-22 s)")]
 DEFAULT_DURATION = {"guess": 14.0, "versus": 16.0, "tips": 21.0}
-DEFAULT_HOOK = {"guess": "Guess the picture before it's done",
+GUESS_INTRO = 1.6
+DEFAULT_HOOK = {"guess": "Guess it before the countdown ends",
                 "versus": "{lo} colors vs {hi} colors: which one would you paint?",
                 "tips": "3 tips for your first paint by numbers"}
 # Conseils verifiables, sans promesse : utiles meme a qui n'achete pas (enregistrements -> portee)
@@ -61,11 +62,7 @@ class Painter:
         yy, xx = np.mgrid[0:ch, 0:cw]
         self.cx = np.bincount(flat, xx.ravel(), n + 1)[:n] / np.maximum(self.px, 1)
         self.cy = np.bincount(flat, yy.ravel(), n + 1)[:n] / np.maximum(self.px, 1)
-        dist = np.hypot(xx.ravel() - np.append(self.cx, 0)[flat], yy.ravel() - np.append(self.cy, 0)[flat])
-        dist = dist.astype(np.float32)
-        dmax = np.zeros(n + 1, np.float32)
-        np.maximum.at(dmax, flat, dist)
-        dnorm = dist / np.maximum(dmax[flat], 1)
+        dnorm = S.spread_dist(self.lab, edge, n)
         order = np.argsort(flat, kind="stable")
         b = np.searchsorted(flat[order], np.arange(n + 2))
         self.zone_px = [order[b[z]:b[z + 1]] for z in range(n)]
@@ -282,14 +279,10 @@ def render(fmt, uid, out_path, duration=0, hook="", answer="", series="", uid2="
 
     # --- calendrier de remplissage
     starts, ticks, tip_rows = [], [], []
-    t0 = 0.3
+    t0 = GUESS_INTRO if fmt == "guess" else 0.3            # devine : la regle est annoncee sur la toile vierge
     for p in ps:
         span = max(4.0, fill_end_at - t0 - 0.6)
-        if fmt == "guess":                 # petites zones d'abord : l'image reste mysterieuse, les grandes revelent
-            key = np.log(np.maximum(p.px, 1)) + rng.normal(0, 0.9, p.n)
-            rank = np.empty(p.n); rank[np.argsort(key)] = np.arange(p.n)
-            st = curve_times(rank, p.n, t0, span)
-        elif fmt == "tips":
+        if fmt in ("guess", "tips"):       # couleur par couleur : l'image se construit par couches, mystere garde
             st = S.schedule(p.n, p.nums, "colors", span, seed) + t0
         else:
             st = S.schedule(p.n, p.nums, "flow", span, seed, p.px, np.c_[p.cx, p.cy]) + t0
@@ -316,6 +309,8 @@ def render(fmt, uid, out_path, duration=0, hook="", answer="", series="", uid2="
     series_l = S._counter(("Guess " if fmt == "guess" else "") + series) if series else None
     discs = {s: _disc(s) for s in ("3", "2", "1")}
     vs_l = _disc("VS", 120)
+    rule_l = _bubbles([("Can you guess", 76, (10, 10, 10)), ("what it is", 76, (10, 10, 10)),
+                       ("before 3 - 2 - 1 ?", 64, ACCENT)])
     if fmt == "versus":
         labels = [_bubbles([("%d colors" % p.n_colors, 44, (10, 10, 10)), ("%d zones" % p.n, 34, (90, 98, 116))],
                            maxw=pw - 20) for p in ps]
@@ -367,6 +362,11 @@ def render(fmt, uid, out_path, duration=0, hook="", answer="", series="", uid2="
                 _put(frame, end_l, W / 2, TOP - 24, k, sc, anchor="bottom")
             if series_l is not None and fmt == "guess" and te < 0:
                 S._blend(frame, series_l, x + 14, y + 14)
+            if fmt == "guess" and t < GUESS_INTRO + 0.3:      # annonce du defi, au centre, des la 1re image
+                k, sc = _pop(t, 0.18)
+                k *= min(1.0, (GUESS_INTRO + 0.3 - t) / 0.3)
+                _put(frame, rule_l, W / 2, y + p.ch / 2 - rule_l.shape[0] / 2, k, sc)
+                _put(frame, discs["3"], W / 2, y + p.ch / 2 + rule_l.shape[0] / 2 + 20, k, sc)
             for j, tk in enumerate(ticks):                   # compte a rebours 3-2-1
                 if tk <= t < tk + 0.8 and te < 0:
                     k, sc = _pop(t - tk, 0.15)

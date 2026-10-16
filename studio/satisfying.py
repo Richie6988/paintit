@@ -506,6 +506,17 @@ def _opening(t, photo, blank, trace_d, trace_max, trace_px):
     return (lit * (1 - kb) + blank.astype(np.float32) * kb).astype(np.uint8)
 
 
+def spread_dist(lab, edge, n):
+    """Distance normalisee 0 (coeur de la zone) -> 1 (bord), pour chaque pixel : la peinture part du point le plus
+    interieur et epouse la forme de la zone jusqu'aux contours (pas de disque qui deborde du centre de gravite)."""
+    import cv2
+    edt = cv2.distanceTransform((~edge).astype(np.uint8), cv2.DIST_L2, 3).ravel()
+    flat = lab.ravel()
+    emax = np.zeros(n + 1, np.float32)
+    np.maximum.at(emax, flat, edt)
+    return (1 - edt / np.maximum(emax[flat], 1)).astype(np.float32)
+
+
 def _smooth(x):
     x = min(1.0, max(0.0, x))
     return x * x * (3 - 2 * x)
@@ -535,10 +546,7 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
     yy, xx = np.mgrid[0:ch, 0:cw]
     cx = np.bincount(flat, xx.ravel(), n + 1)[:n] / np.maximum(px, 1)
     cy = np.bincount(flat, yy.ravel(), n + 1)[:n] / np.maximum(px, 1)
-    dist = np.hypot(xx.ravel() - np.append(cx, 0)[flat], yy.ravel() - np.append(cy, 0)[flat]).astype(np.float32)
-    dmax = np.zeros(n + 1, np.float32)
-    np.maximum.at(dmax, flat, dist)
-    dnorm = dist / np.maximum(dmax[flat], 1)
+    dnorm = spread_dist(lab, edge, n)
     order_px = np.argsort(flat, kind="stable")
     bounds = np.searchsorted(flat[order_px], np.arange(n + 2))
     zone_px = [order_px[bounds[z]:bounds[z + 1]] for z in range(n)]
