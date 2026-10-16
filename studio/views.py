@@ -3134,23 +3134,31 @@ def erp_catalogue(request):
                     logger.exception("Publication galerie %s", c.uid)
                     messages.error(request, "Publication impossible : %s" % exc)
         elif op == "add":
+            from . import imagebank
+            from .models import StockImage
             f = request.FILES.get("image")
+            stock = None if f else StockImage.objects.filter(pk=request.POST.get("stock_id") or 0).first()
             title = (request.POST.get("title") or "").strip()[:80]
-            if not f or not title:
+            if not (f or stock) or not title:
                 messages.error(request, "Image et titre obligatoires.")
             else:
                 try:
-                    tmp = os.path.join(settings.MEDIA_ROOT, "uploads", "gal_%s%s" % (uuid.uuid4().hex[:8],
-                                       os.path.splitext(f.name)[1] or ".jpg"))
-                    os.makedirs(os.path.dirname(tmp), exist_ok=True)
-                    with open(tmp, "wb") as out:
-                        for chunk in f.chunks():
-                            out.write(chunk)
-                    _create_gallery_model(title, request.POST.get("category", "").strip(), price(request.POST.get("price")),
+                    if stock:                                # image de la banque : HD telechargee a l'usage
+                        tmp = imagebank.fetch_hd(stock)
+                    else:
+                        tmp = os.path.join(settings.MEDIA_ROOT, "uploads", "gal_%s%s" % (uuid.uuid4().hex[:8],
+                                           os.path.splitext(f.name)[1] or ".jpg"))
+                        os.makedirs(os.path.dirname(tmp), exist_ok=True)
+                        with open(tmp, "wb") as out:
+                            for chunk in f.chunks():
+                                out.write(chunk)
+                    m = _create_gallery_model(title, request.POST.get("category", "").strip(), price(request.POST.get("price")),
                                           colors=int(request.POST.get("colors") or 24),
                                           orientation=request.POST.get("orientation", "portrait"),
                                           image_path=tmp, in_slider=bool(request.POST.get("in_slider")), zones=density())
                     os.remove(tmp)
+                    if stock:
+                        imagebank.mark_used(stock, "catalogue " + m.uid)
                     messages.success(request, "Modèle « %s » créé et publié%s." % (
                         title, " (galerie + slider de l'accueil)" if request.POST.get("in_slider") else " dans la galerie"))
                 except PermissionError as exc:
@@ -3217,7 +3225,24 @@ def erp_catalogue(request):
     return render(request, "admin/erp_catalogue.html", {
         **_admin.site.each_context(request), "tab": tab, "items": items, "q": q, "cat": cat, "pf": pf,
         "sort": sort, "cats": cats, "stats": stats, "slider": request.GET.get("slider", ""),
-        "erp_section": "catalogue"})
+        "bank": _bank_picks(), "erp_section": "catalogue"})
+
+
+def _zones(v):
+    """'densite|detail' (ex. '0.7|0.75') -> (densite zones/cm2, finesse) ; vide ou invalide = auto."""
+    try:
+        d, _, det = (v or "").replace(",", ".").partition("|")
+        return min(5.0, max(0.02, float(d))), (min(2.0, max(0.4, float(det))) if det else 1.0)
+    except ValueError:
+        return None, 1.0
+
+
+def _bank_picks(limit=150):
+    """Images de la banque proposees dans « Nouveau modele » : retenues d'abord, puis les plus colorees."""
+    from .models import StockImage
+    qs = StockImage.objects.exclude(status="rejected").filter(people=False)
+    kept = list(qs.filter(status="kept").order_by("-vibrancy")[:limit])
+    return kept + list(qs.filter(status="new").order_by("-vibrancy")[:max(0, limit - len(kept))])
 
 
 
@@ -4733,7 +4758,8 @@ def erp_images(request):
                                                   (request.POST.get("category") or img.category).strip()[:40], pr,
                                                   colors=int(request.POST.get("colors") or 24),
                                                   orientation="paysage" if img.orientation == "paysage" else "portrait",
-                                                  image_path=hd, in_slider=bool(request.POST.get("in_slider")))
+                                                  image_path=hd, in_slider=bool(request.POST.get("in_slider")),
+                                                  zones=_zones(request.POST.get("density")))
                         imagebank.mark_used(img, "catalogue " + m.uid)
                         messages.success(request, "Modèle « %s » publié dans la galerie." % m.title)
                     else:

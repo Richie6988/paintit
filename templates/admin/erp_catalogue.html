@@ -47,6 +47,11 @@
  .drawer input[type=text],.drawer input[type=number],.drawer select{width:100%;box-sizing:border-box}
  .drawer .prev{width:100%;border-radius:12px;border:1px solid #e3e3e3}
  .drop{border:2px dashed #d4d4d4;border-radius:12px;min-height:150px;display:flex;align-items:center;justify-content:center;text-align:center;color:#6d7175;cursor:pointer;position:relative;overflow:hidden}
+ .bk{display:grid;gap:6px}.bk input[type=search]{height:32px;padding:0 9px;border:1px solid #d4d4d4;border-radius:8px;font-size:.82rem}
+ .bkg{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px;max-height:210px;overflow:auto;padding:2px}
+ .bkg button{padding:0;border:2px solid transparent;border-radius:8px;overflow:hidden;aspect-ratio:1;background:#f2f4f8;cursor:pointer}
+ .bkg button.on{border-color:#2f6bf2;box-shadow:0 0 0 2px rgba(47,107,242,.3)}
+ .bkg img{width:100%;height:100%;object-fit:cover;display:block}
  .drop:hover{border-color:#1a1a1a}.drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
  .overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);display:none;align-items:center;justify-content:center;z-index:2000;flex-direction:column;gap:12px;font-weight:700}
@@ -155,11 +160,15 @@
   <h2>Nouveau modèle</h2><div class="muted">Comme <code>seed_library</code> : l'image est transformée en toile à peindre et publiée dans la galerie (source rangée dans <code>media/gallery/&lt;Catégorie&gt;/</code>).</div>
   <input type="hidden" name="op" value="add">
   <label class="drop" id="drop"><input type="file" name="image" id="aFile" accept="image/*" hidden required><span>Glissez une image<br>ou cliquez</span><img id="aThumb" hidden alt=""></label>
-  <div><label>Titre</label><input type="text" name="title" maxlength="80" required placeholder="Coucher de soleil"></div>
-  <div class="row2"><div><label>Catégorie</label><input type="text" name="category" list="cats" maxlength="40" placeholder="Paysages"></div>
+  <input type="hidden" name="stock_id" id="aStock">
+  {% if bank %}<div class="bk"><label>… ou choisissez dans la <a href="/admin-hub/images/" target="_blank">banque d'images</a> <small class="muted">(retenues d'abord, puis les plus colorées)</small></label>
+    <input type="search" id="bkq" placeholder="Filtrer : parrot, fleurs, sunset…">
+    <div class="bkg" id="bkg">{% for b in bank %}<button type="button" data-id="{{ b.pk }}" data-t="{{ b.title|truncatechars:60 }}" data-c="{{ b.category }}" data-o="{% if b.orientation == 'paysage' %}paysage{% else %}portrait{% endif %}" data-k="{{ b.title|lower }} {{ b.category|lower }} {{ b.query }}" title="{{ b.title }} · {{ b.category }}{% if b.status == 'kept' %} · retenue{% endif %}"><img loading="lazy" src="/admin-hub/images/{{ b.pk }}.jpg" alt=""></button>{% endfor %}</div></div>{% endif %}
+  <div><label>Titre</label><input type="text" name="title" id="aTitle" maxlength="80" required placeholder="Coucher de soleil"></div>
+  <div class="row2"><div><label>Catégorie</label><input type="text" name="category" id="aCat" list="cats" maxlength="40" placeholder="Paysages"></div>
   <div><label>Prix (€)</label><input type="number" name="price" min="0" step="0.01" value="0"></div></div>
   <div class="row2"><div><label>Couleurs</label><select name="colors"><option>12</option><option selected>24</option><option>36</option><option>48</option></select></div>
-  <div><label>Orientation</label><select name="orientation"><option value="portrait">Portrait</option><option value="paysage">Paysage</option></select></div></div>
+  <div><label>Orientation</label><select name="orientation" id="aOri"><option value="portrait">Portrait</option><option value="paysage">Paysage</option></select></div></div>
   <div><label>Densité de zones <small class="muted">(zones / cm²)</small></label><select name="density">
     <option value="">Auto (selon les couleurs)</option><option value="0.25|1.35">Faible · zones larges, facile</option>
     <option value="0.45|1.0">Moyenne</option><option value="0.7|0.75">Élevée · plus de détails</option>
@@ -205,6 +214,13 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeD();});
   function show(x){if(!x)return;th.src=URL.createObjectURL(x);th.hidden=false;}
   f.addEventListener('change',function(){show(f.files[0]);});
   d.addEventListener('dragover',function(e){e.preventDefault();});
-  d.addEventListener('drop',function(e){e.preventDefault();var x=e.dataTransfer.files[0];if(!x)return;try{var dt=new DataTransfer();dt.items.add(x);f.files=dt.files;}catch(_){}show(x);});})();
+  d.addEventListener('drop',function(e){e.preventDefault();var x=e.dataTransfer.files[0];if(!x)return;try{var dt=new DataTransfer();dt.items.add(x);f.files=dt.files;}catch(_){}show(x);});
+  f.addEventListener('change',function(){if(f.files[0]){$('aStock').value='';f.required=true;document.querySelectorAll('#bkg button').forEach(function(b){b.classList.remove('on');});}});
+  document.querySelectorAll('#bkg button').forEach(function(b){b.addEventListener('click',function(){   // image de la banque
+    document.querySelectorAll('#bkg button').forEach(function(o){o.classList.toggle('on',o===b);});
+    $('aStock').value=b.dataset.id;f.value='';f.required=false;th.src=b.querySelector('img').src;th.hidden=false;
+    if(!$('aTitle').value)$('aTitle').value=b.dataset.t;if(!$('aCat').value)$('aCat').value=b.dataset.c;$('aOri').value=b.dataset.o;});});
+  var bq=$('bkq');if(bq)bq.addEventListener('input',function(){var v=bq.value.toLowerCase().trim();
+    document.querySelectorAll('#bkg button').forEach(function(b){b.hidden=v&&b.dataset.k.indexOf(v)<0;});});})();
 </script>
 {% endblock %}

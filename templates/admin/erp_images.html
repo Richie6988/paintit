@@ -115,6 +115,7 @@
             <input name="category" value="{{ i.category }}" maxlength="40" aria-label="Catégorie">
             <div style="display:flex;gap:6px"><select name="colors" aria-label="Couleurs"><option>12</option><option selected>24</option><option>36</option><option>48</option></select>
               <input name="price" placeholder="Prix (0 = gratuit)" aria-label="Prix"></div>
+            <select name="density" aria-label="Densité de zones"><option value="">Densité auto</option><option value="0.25|1.35">Zones larges · facile</option><option value="0.45|1.0">Moyenne</option><option value="0.7|0.75">Élevée</option><option value="1.0|0.6">Expert</option></select>
             <label style="display:flex;gap:6px;align-items:center;font-weight:600"><input type="checkbox" name="in_slider" value="1" style="width:auto;height:auto"> Slider de l'accueil</label>
             <button class="pbtn pri" data-busy>Publier dans la galerie</button></form></details>
       </div>

@@ -1285,3 +1285,24 @@ class ImageBankTests(TestCase):
         a = StockImage.objects.get(provider="artic")
         self.assertEqual((a.width, a.height, a.license), (1686, 1348, "CC0"))
         self.assertIn("/iiif/2/abc/full/1686,", a.full_url)
+
+    def test_catalogue_add_from_bank(self):
+        from studio.models import StockImage
+        img = StockImage.objects.create(provider="artic", ext_id="9", title="Sunflowers", category="Fleurs",
+                                        full_url="https://x/s.jpg", width=2000, height=2500, vibrancy=70, status="kept")
+        self.assertContains(self.client.get("/admin-hub/catalogue/"), 'data-id="%d"' % img.pk)
+        hd = os.path.join(MEDIA, "uploads", "stock-cat.jpg")
+        os.makedirs(os.path.dirname(hd), exist_ok=True)
+
+        def fake_hd(i, max_side=3000):
+            open(hd, "wb").write(b"x")
+            return hd
+
+        class M:
+            uid, title = "gal-sunflowers", "Sunflowers"
+        with mock.patch("studio.imagebank.fetch_hd", side_effect=fake_hd), \
+                mock.patch("studio.views._create_gallery_model", return_value=M()) as cg:
+            self.client.post("/admin-hub/catalogue/", {"op": "add", "stock_id": img.pk, "title": "Sunflowers",
+                                                       "category": "Fleurs", "in_slider": "1", "colors": "24"})
+        self.assertTrue(cg.called and cg.call_args.kwargs["in_slider"] and cg.call_args.kwargs["image_path"] == hd)
+        self.assertIn("catalogue gal-sunflowers", StockImage.objects.get(pk=img.pk).used_in)
