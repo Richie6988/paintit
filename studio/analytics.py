@@ -205,6 +205,10 @@ def dashboard(days=30):
         series.append({"day": d, "visits": by_day.get(d, {}).get("n", 0), "gens": gen_day.get(d, 0)})
         d += datetime.timedelta(days=1)
     top = max([s["visits"] for s in series] + [1])
+    step = max(1, -(-len(series) // 7))                         # ~7 dates sous l'axe
+    for i, s in enumerate(series):
+        s["label"] = s["day"].strftime("%d/%m") if (i % step == 0 or i == len(series) - 1) else ""
+        s["show_n"] = s["visits"] > 0 and len(series) <= 31
     for s in series:
         s["h"] = round(s["visits"] / top * 100, 1)
         s["hg"] = round(min(s["gens"], top) / top * 100, 1)

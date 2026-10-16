@@ -6,14 +6,18 @@
 {% include "admin/_erp_style.html" %}
 <style>
  .act-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:16px}
- .chart{display:flex;align-items:flex-end;gap:3px;height:170px;padding:10px 4px 0;border-bottom:1px solid #e3e7ef}
+ .chart{display:flex;align-items:flex-end;gap:3px;height:190px;padding:26px 4px 0;border-bottom:1px solid #e3e7ef;position:relative}
  .chart .c{flex:1;min-width:3px;position:relative;height:100%;display:flex;align-items:flex-end}
  .chart .c i{display:block;width:100%;background:#2f6bf2;border-radius:4px 4px 0 0;min-height:1px}
  .chart .c b{position:absolute;left:20%;right:20%;bottom:0;background:#f08a3c;border-radius:3px 3px 0 0;opacity:.9}
  .chart .c:hover i{background:#12224f}
- .chart .c .tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#12224f;color:#fff;
-   font-size:.7rem;padding:4px 7px;border-radius:6px;white-space:nowrap;z-index:2;margin-bottom:4px}
+ .chart .c .tip{display:none;position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:#12224f;
+   color:#fff !important;font:600 12px/1.3 system-ui,sans-serif;padding:4px 8px;border-radius:6px;white-space:nowrap;z-index:5;pointer-events:none;width:max-content}
+ .chart .c:first-child .tip,.chart .c:nth-child(2) .tip{left:0;transform:none}
+ .chart .c:last-child .tip,.chart .c:nth-last-child(2) .tip{left:auto;right:0;transform:none}
  .chart .c:hover .tip{display:block}
+ .chart .c .vn{position:absolute;left:0;right:0;text-align:center;font:700 10px/1 system-ui,sans-serif;color:#5b647a;font-style:normal}
+ .axis2{display:flex;gap:3px;padding:4px 4px 0}.axis2 span{flex:1;min-width:3px;font-size:.68rem;color:#8a93a6;white-space:nowrap;overflow:visible}
  .axis{display:flex;justify-content:space-between;font-size:.7rem;color:#8a93a6;margin-top:4px}
  .legend{display:flex;gap:14px;font-size:.75rem;color:#5b647a}.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
  .bars{display:grid;gap:7px}
@@ -58,8 +62,8 @@
   <div class="card">
     <div class="card-h"><h2>Visiteurs et générations par jour</h2>
       <div class="legend"><span style="--c:#2f6bf2">Visiteurs</span><span style="--c:#f08a3c">Générations</span></div></div>
-    <div class="chart">{% for s in a.series %}<div class="c"><i style="height:{{ s.h|stringformat:'s' }}%"></i>{% if s.gens %}<b style="height:{{ s.hg|stringformat:'s' }}%"></b>{% endif %}<span class="tip">{{ s.day|date:"D d/m" }} · {{ s.visits }} visiteur{{ s.visits|pluralize }} · {{ s.gens }} génération{{ s.gens|pluralize }}</span></div>{% endfor %}</div>
-    <div class="axis"><span>{{ a.start|date:"d/m" }}</span><span>{{ a.end|date:"d/m" }}</span></div>
+    <div class="chart">{% for s in a.series %}<div class="c"><i style="height:{{ s.h|stringformat:'s' }}%"></i>{% if s.gens %}<b style="height:{{ s.hg|stringformat:'s' }}%"></b>{% endif %}{% if s.show_n %}<em class="vn" style="bottom:calc({{ s.h|stringformat:'s' }}% + 3px)">{{ s.visits }}</em>{% endif %}<div class="tip">{{ s.day|date:"D d/m" }} · {{ s.visits }} visiteur{{ s.visits|pluralize }} · {{ s.gens }} génération{{ s.gens|pluralize }}</div></div>{% endfor %}</div>
+    <div class="axis2">{% for s in a.series %}<span>{{ s.label }}</span>{% endfor %}</div>
   </div>
 
   <div class="act-grid">
