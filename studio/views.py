@@ -947,7 +947,7 @@ def robots(request):
     body = (
         "User-agent: *\n"
         "Disallow: /preview/\nDisallow: /media/\nDisallow: /files/\n"
-        "Disallow: /delivery/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /admin/\nDisallow: /admin-hub/\nDisallow: /go/\nDisallow: /avis/\nDisallow: /wc-api/\nDisallow: /wp-json/\n"
+        "Disallow: /delivery/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /admin/\nDisallow: /admin-hub/\nDisallow: /go/\nDisallow: /avis/\nDisallow: /wc-api/\nDisallow: /wp-json/\nDisallow: /a/\n"
         "Allow: /llm.txt\nAllow: /llm.json\nAllow: /play/\n"
         "\nSitemap: %s/sitemap.xml\n"
         "\n# Infos pour les IA / LLM :\n"
