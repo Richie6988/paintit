@@ -407,13 +407,40 @@ LOOP = 0.5              # fondu final vers la 1re image : la video boucle sans c
 ZOOM = 0.07             # lent zoom avant pendant le remplissage, recul a la revelation
 
 
+_NUM_RX = re.compile(r'<text class="zn" x="([\d.]+)" y="([\d.]+)" font-size="([\d.]+)">(\d+)</text>')
+_NUM_FONTS = ["/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+              os.path.join(settings.BASE_DIR, "studio", "static", "studio", "fonts", "Poppins-Bold.ttf")]
+
+
+def _number_layer(uid, cw, ch, min_px=9):
+    """Numeros de la toile (comme sur le kit imprime) -> (indices pixels, alpha). Numeros illisibles (< min_px) omis."""
+    with open(_svg_path(uid), encoding="utf-8") as fh:
+        svg = fh.read()
+    vx, vy, vw, vh = [float(x) for x in re.search(r'viewBox="([\d.\s-]+)"', svg).group(1).split()]
+    scale = cw / vw
+    img = Image.new("L", (cw, ch), 0)
+    d = ImageDraw.Draw(img)
+    path = next((f for f in _NUM_FONTS if os.path.exists(f)), None)
+    fonts = {}
+    for x, y, fs, num in _NUM_RX.findall(svg):
+        size = int(round(float(fs) * scale))
+        if size < min_px:
+            continue
+        if size not in fonts:
+            fonts[size] = ImageFont.truetype(path, size) if path else ImageFont.load_default()
+        d.text(((float(x) - vx) * scale, (float(y) - vy) * scale), num, font=fonts[size], fill=255, anchor="ms")
+    a = np.asarray(img, np.float32).ravel() / 255.0
+    idx = np.nonzero(a > 0.03)[0]
+    return idx, a[idx]
+
+
 def _smooth(x):
     x = min(1.0, max(0.0, x))
     return x * x * (3 - 2 * x)
 
 
 def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end_sub="", with_music=True,
-           seed=0, progress=None, music_style="ambient", before_after=False, fill_sounds=True):
+           seed=0, progress=None, music_style="ambient", before_after=False, fill_sounds=True, show_numbers=True):
     """Genere la video MP4. -> chemin. `progress(f)` recoit 0..1.
     Leviers « satisfying » : peinture qui s'etale depuis le centre de chaque zone (reflet humide + « pop » a la fin),
     barre de progression (envie de voir 100 %), sons de remplissage, derniere zone gardee pour la fin,
@@ -473,6 +500,10 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
     edge_lab = flat[edge_idx]
     edge_rgb = np.array([190, 196, 210], np.uint8)
     last_edges = edge_idx[edge_lab == last]
+    if show_numbers:                                   # numeros du kit : ils s'effacent sous la peinture
+        num_idx, num_a = _number_layer(uid, cw, ch)
+        num_lab = flat[num_idx]
+        num_ink = np.array([96, 104, 122], np.float32)
     base = np.zeros((H, W, 3), np.uint8); base[:] = BG
     sh = Image.new("L", (W, H), 0)
     ImageDraw.Draw(sh).rounded_rectangle([ox - 4, oy + 8, ox + cw + 4, oy + ch + 18], radius=14, fill=60)
@@ -519,7 +550,7 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
             canvas = pal.astype(np.uint8)[lab]
             cflat = canvas.reshape(-1, 3)
             for z in np.nonzero((ae > 0) & (ae < 1))[0]:                   # peinture qui s'etale depuis le centre
-                m = np.clip((ae[z] * 1.2 - zone_d[z]) / 0.2, 0, 1)
+                m = np.clip((ae[z] * 1.08 - zone_d[z]) / 0.06, 0, 1)       # front de peinture net
                 v = 255 + (col[z] - 255) * m
                 v += (255 - v) * (m * (1 - m) * 2.0)                       # reflet humide sur le front de peinture
                 cflat[zone_px[z]] = v.astype(np.uint8)
@@ -529,6 +560,10 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
                 k = 0.5 + 0.5 * math.sin(2 * math.pi * 2.4 * (t - others_end) - math.pi / 2)
                 cflat[zone_px[last]] = (255 - (255 - np.array([205, 220, 255], np.float32)) * k).astype(np.uint8)
                 cflat[last_edges] = accent.astype(np.uint8)
+            if show_numbers and t < fill_end:
+                kn = np.clip(1 - np.append(ae, 1.0)[num_lab] * 1.6, 0, 1)
+                wn = (num_a * kn)[:, None]
+                cflat[num_idx] = (cflat[num_idx] * (1 - wn) + num_ink * wn).astype(np.uint8)
             if photo is not None and t < PHOTO_HOLD + PHOTO_FADE:
                 kp = _smooth((t - PHOTO_HOLD) / PHOTO_FADE)
                 canvas = (photo * (1 - kp) + canvas * kp).astype(np.uint8)
@@ -656,7 +691,7 @@ def _job(pk):
         tmp = v.path() + ".part.mp4"
         render(v.canvas_uid, tmp, mode=v.mode, duration=v.duration, hook=v.hook, with_music=v.music,
                music_style=v.music_style, seed=v.seed, progress=prog, before_after=v.before_after,
-               fill_sounds=v.fill_sounds)
+               fill_sounds=v.fill_sounds, show_numbers=v.show_numbers)
         os.replace(tmp, v.path())
         thumbnail(v.canvas_uid, v.path("jpg"))
         SocialVideo.objects.filter(pk=pk).update(status="done", progress=1, error="")

@@ -4555,6 +4555,7 @@ def erp_videos(request):
                     mode=request.POST.get("mode") if request.POST.get("mode") in ("flow", "random", "colors") else "flow",
                     duration=d, hook=request.POST.get("hook", "")[:120], music=style != "none", music_style=style, before_after=bool(request.POST.get("before_after")),
                     fill_sounds=bool(request.POST.get("fill_sounds")),
+                    show_numbers=bool(request.POST.get("show_numbers")),
                     seed=random.randint(1, 10 ** 6))
                 satisfying.enqueue(v)
             messages.success(request, "%d vidéo(s) en cours de génération (environ 2 à 3 min chacune)." % n)

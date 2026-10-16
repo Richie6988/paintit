@@ -1105,6 +1105,7 @@ class SocialVideo(models.Model):
     music_style = models.CharField("Style de musique", max_length=10, default="ambient")
     before_after = models.BooleanField("Avant / après (photo d'origine au début)", default=True)
     fill_sounds = models.BooleanField("Sons de remplissage (une note par zone)", default=True)
+    show_numbers = models.BooleanField("Numéros visibles avant la peinture (comme le kit)", default=True)
     seed = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=8, choices=STATUS, default="queued")
     progress = models.FloatField(default=0)
