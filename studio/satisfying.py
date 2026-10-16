@@ -19,8 +19,8 @@ from django.conf import settings
 from PIL import Image, ImageDraw, ImageFont
 
 W, H, FPS = 1080, 1920, 30
-INTRO, OUTRO = 0.3, 3.4                       # ca demarre tout de suite ; fin = toile finie + nom qui se colorie
-PHOTO_HOLD, PHOTO_FADE = 1.2, 0.4              # avant / apres : photo affichee 1.2 s puis fondu vers la toile vierge
+INTRO, OUTRO = 0.1, 3.4                       # ca demarre tout de suite ; fin = toile finie + nom qui se colorie
+PHOTO_HOLD, PHOTO_FADE = 0.6, 0.25             # avant / apres : photo breve puis fondu vers la toile vierge
 TOP, SIDE, CANVAS_H = 330, 24, 1250            # zone accroche en haut, marges laterales, hauteur max de la toile
 BG = (247, 244, 238)
 INK = (18, 34, 79)
@@ -127,12 +127,13 @@ def _area(pts):
 
 def schedule(n_zones, numbers, mode, fill_seconds, seed=0, areas=None, centers=None):
     """Instant de debut de remplissage de chaque zone (secondes, a partir de la fin de l'intro).
-    Rythme : c(u) = N (0.3 u + 0.7 u^3) -> ca demarre tout de suite (part lineaire) et explose a la fin (part cubique).
+    Rythme : t(r) = T (r - 0.8 sin(2 pi r) / 2 pi), r = rang / N -> tres rapide au debut (pour retenir les spectateurs
+    presses : ~10 % des zones dans les 2-3 premiers % du temps), plus pose au milieu, tres rapide a la fin.
     Modes : flow (vague qui se propage depuis un point : continuite, l'oeil suit), random, colors."""
     rng = np.random.default_rng(seed)
-    u = np.linspace(0, 1, 2001)
-    frac = 0.3 * u + 0.7 * u ** 3
-    when = lambda rank: fill_seconds * np.interp(rank / max(1, n_zones), frac, u)
+    def when(rank):
+        r = rank / max(1, n_zones)
+        return fill_seconds * (r - 0.8 * math.sin(2 * math.pi * r) / (2 * math.pi))
     start = np.zeros(n_zones)
     if mode == "colors":
         order_cols = rng.permutation(np.unique(numbers)).tolist()
@@ -582,15 +583,14 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
                 canvas = cv2.warpAffine(canvas, M, (cw, ch), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
             frame = base.copy()
             frame[oy:oy + ch, ox:ox + cw] = canvas
-            # progression : barre + pourcentage de surface peinte (on veut voir 100 %)
-            pct = float((px * ae).sum() / max(px.sum(), 1))
-            wbar = int(round(cw * pct))
+            # progression : compteur de zones peintes (bouge a chaque zone, plus vivant qu'un %) + barre
+            nz = int(done_z.sum())
+            wbar = int(round(cw * nz / max(n, 1)))
             if wbar:
-                frame[bar_y:bar_y + 8, ox:ox + wbar] = (47, 107, 242) if pct < 0.999 else (31, 157, 85)
-            p100 = int(pct * 100 + 1e-6)
-            if p100 not in pills:
-                pills[p100] = _counter("%d %%" % p100)
-            cn = photo_tag if photo is not None and t < PHOTO_HOLD else pills[p100]
+                frame[bar_y:bar_y + 8, ox:ox + wbar] = (47, 107, 242) if nz < n else (31, 157, 85)
+            if nz not in pills:
+                pills[nz] = _counter("%d / %d zones" % (nz, n))
+            cn = photo_tag if photo is not None and t < PHOTO_HOLD else pills[nz]
             _blend(frame, cn, ox + 18, oy + ch - cn.shape[0] - 18)
             te = t - fill_end
             if te > 0:
