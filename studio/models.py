@@ -1240,7 +1240,7 @@ class StockImage(models.Model):
     des videos et du studio. Seules la vignette et les metadonnees sont stockees ; la HD est telechargee a l'usage."""
     PROVIDERS = [("openverse", "Openverse"), ("wikimedia", "Wikimedia Commons"), ("artic", "Art Institute of Chicago"),
                  ("met", "Metropolitan Museum"), ("pixabay", "Pixabay"), ("pexels", "Pexels")]
-    STATUS = [("new", "À trier"), ("kept", "Retenue"), ("rejected", "Écartée")]
+    STATUS = [("new", "À trier"), ("kept", "Retenue"), ("rejected", "Écartée"), ("deleted", "Supprimée")]
     provider = models.CharField(max_length=12, choices=PROVIDERS)
     ext_id = models.CharField(max_length=120)
     title = models.CharField(max_length=200, blank=True, default="")

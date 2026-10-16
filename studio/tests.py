@@ -1306,3 +1306,19 @@ class ImageBankTests(TestCase):
                                                        "category": "Fleurs", "in_slider": "1", "colors": "24"})
         self.assertTrue(cg.called and cg.call_args.kwargs["in_slider"] and cg.call_args.kwargs["image_path"] == hd)
         self.assertIn("catalogue gal-sunflowers", StockImage.objects.get(pk=img.pk).used_in)
+
+    def test_delete_sort_and_page_links(self):
+        from studio.models import StockImage
+        for k in range(130):
+            StockImage.objects.create(provider="artic", ext_id="p%d" % k, title="Img %d" % k, full_url="https://x",
+                                      width=2000, height=2000, vibrancy=50 + k % 7)
+        first = StockImage.objects.order_by("created_at", "pk").first()
+        r = self.client.get("/admin-hub/images/?sort=oldest")
+        self.assertEqual(r.context["page"].object_list[0].pk, first.pk)
+        self.assertEqual(r.context["page_links"], [1, 2, 3])
+        self.assertContains(r, "Aller à")
+        self.assertEqual(self.client.get("/admin-hub/images/?page=3").context["page"].number, 3)
+        self.client.post("/admin-hub/images/", {"op": "delete", "ids": [first.pk]})
+        self.assertEqual(StockImage.objects.get(pk=first.pk).status, "deleted")
+        self.assertNotIn(first.pk, [i.pk for i in self.client.get("/admin-hub/images/?sort=oldest").context["page"]])
+        self.assertEqual(self.client.get("/admin-hub/images/").context["total"], 129)

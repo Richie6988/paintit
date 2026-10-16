@@ -37,7 +37,7 @@
  .prog{height:8px;border-radius:9px;background:#e8edf5;overflow:hidden;margin-top:8px}.prog i{display:block;height:100%;background:#2f6bf2}
  .bulk{position:sticky;bottom:12px;z-index:5;display:none;gap:8px;align-items:center;background:#12224f;color:#fff;padding:10px 14px;border-radius:12px;margin-top:14px;width:max-content}
  .bulk.on{display:flex}
- .pg{display:flex;gap:6px;justify-content:center;margin-top:16px}
+ .pg{display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:16px}
 </style>
 <div class="erp gx">
   <div class="erp-head">
@@ -81,7 +81,7 @@
     <label>Source<select name="prov"><option value="">Toutes</option>{% for k, l in providers %}<option value="{{ k }}" {% if f.prov == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
     <label>Éclat minimum<select name="min"><option value="">Tous</option>{% for v in mins %}<option value="{{ v }}" {% if f.min == v %}selected{% endif %}>≥ {{ v }}</option>{% endfor %}</select></label>
     <label>Format<select name="orient"><option value="">Tous</option><option value="portrait" {% if f.orient == "portrait" %}selected{% endif %}>Portrait</option><option value="paysage" {% if f.orient == "paysage" %}selected{% endif %}>Paysage</option><option value="carre" {% if f.orient == "carre" %}selected{% endif %}>Carré</option></select></label>
-    <label>Tri<select name="sort"><option value="vibrancy">Plus colorées</option><option value="recent" {% if f.sort == "recent" %}selected{% endif %}>Plus récentes</option><option value="size" {% if f.sort == "size" %}selected{% endif %}>Plus grandes</option></select></label>
+    <label>Tri<select name="sort"><option value="vibrancy">Plus colorées</option><option value="recent" {% if f.sort == "recent" %}selected{% endif %}>Ajout : plus récentes</option><option value="oldest" {% if f.sort == "oldest" %}selected{% endif %}>Ajout : plus anciennes</option><option value="size" {% if f.sort == "size" %}selected{% endif %}>Plus grandes</option></select></label>
     <label class="chk"><input type="checkbox" name="people" value="1" {% if f.people %}checked{% endif %}> Avec personnes</label>
     <button class="pbtn pri">Filtrer</button>
   </form>
@@ -104,7 +104,8 @@
         <div class="acts">
           <form method="post">{% csrf_token %}<input type="hidden" name="id" value="{{ i.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
             {% if i.status != "kept" %}<button class="pbtn" name="op" value="kept" title="Retenir">★</button>{% endif %}
-            {% if i.status != "rejected" %}<button class="pbtn" name="op" value="rejected" title="Écarter">✕</button>{% else %}<button class="pbtn" name="op" value="new">Rétablir</button>{% endif %}
+            {% if i.status == "rejected" %}<button class="pbtn" name="op" value="new">Rétablir</button>{% endif %}
+            <button class="pbtn" name="op" value="delete" title="Supprimer définitivement" onclick="return confirm('Supprimer cette image de la banque ?')">🗑</button>
             <button class="pbtn" name="op" value="video" title="Créer la toile et ouvrir les vidéos TikTok" data-busy>Vidéo</button>
             <button class="pbtn" name="op" value="studio" title="Créer la toile et ouvrir le studio créatif" data-busy>Studio</button>
           </form>
@@ -124,11 +125,14 @@
   </div>
   <div class="bulk" id="bulk"><span id="bulkn"></span>
     <button class="pbtn" form="bulkf" name="op" value="kept">★ Retenir</button>
-    <button class="pbtn" form="bulkf" name="op" value="rejected">✕ Écarter</button></div>
+    <button class="pbtn" form="bulkf" name="op" value="delete" onclick="return confirm('Supprimer les images sélectionnées ?')">🗑 Supprimer</button></div>
   {% if page.has_other_pages %}<div class="pg">
-    {% if page.has_previous %}<a class="pbtn" href="?{{ qs_nopage }}&page={{ page.previous_page_number }}">‹ Précédent</a>{% endif %}
-    <span class="muted" style="align-self:center">Page {{ page.number }} / {{ page.paginator.num_pages }}</span>
-    {% if page.has_next %}<a class="pbtn" href="?{{ qs_nopage }}&page={{ page.next_page_number }}">Suivant ›</a>{% endif %}</div>{% endif %}
+    {% if page.has_previous %}<a class="pbtn" href="?{{ qs_nopage }}&page={{ page.previous_page_number }}" aria-label="Page précédente">‹</a>{% endif %}
+    {% for num in page_links %}{% if num %}<a class="pbtn{% if num == page.number %} pri{% endif %}" href="?{{ qs_nopage }}&page={{ num }}"{% if num == page.number %} aria-current="page"{% endif %}>{{ num }}</a>{% else %}<span class="muted" style="align-self:center">…</span>{% endif %}{% endfor %}
+    {% if page.has_next %}<a class="pbtn" href="?{{ qs_nopage }}&page={{ page.next_page_number }}" aria-label="Page suivante">›</a>{% endif %}
+    <form method="get" style="display:flex;gap:6px;align-items:center;margin-left:10px">{% for k, v in params_nopage %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+      <span class="muted" style="font-size:.8rem">Aller à</span><input type="number" name="page" min="1" max="{{ page.paginator.num_pages }}" value="{{ page.number }}" style="width:70px;height:34px;padding:0 8px;border:1px solid #d4d4d4;border-radius:9px">
+      <span class="muted" style="font-size:.8rem">/ {{ page.paginator.num_pages }}</span><button class="pbtn">OK</button></form></div>{% endif %}
   {% else %}
   <div class="card"><div class="empty muted">{% if total %}Aucune image pour ces filtres.{% else %}La banque est vide : lancez une première collecte ci-dessus.{% endif %}</div></div>
   {% endif %}

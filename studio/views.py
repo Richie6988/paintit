@@ -3240,7 +3240,7 @@ def _zones(v):
 def _bank_picks(limit=150):
     """Images de la banque proposees dans « Nouveau modele » : retenues d'abord, puis les plus colorees."""
     from .models import StockImage
-    qs = StockImage.objects.exclude(status="rejected").filter(people=False)
+    qs = StockImage.objects.filter(status__in=("new", "kept"), people=False)
     kept = list(qs.filter(status="kept").order_by("-vibrancy")[:limit])
     return kept + list(qs.filter(status="new").order_by("-vibrancy")[:max(0, limit - len(kept))])
 
@@ -4741,9 +4741,18 @@ def erp_images(request):
                                  % imagebank.total_queries(cats, provs))
             else:
                 messages.error(request, "Une collecte est déjà en cours.")
+        elif op == "delete":
+            # suppression = vignette effacee + fiche gardee en « supprimee » : une collecte future ne la reimporte pas
+            ids = request.POST.getlist("ids") or ([img.pk] if img else [])
+            gone = StockImage.objects.filter(pk__in=ids)
+            for i in gone:
+                if os.path.exists(i.thumb_path()):
+                    os.remove(i.thumb_path())
+            n = gone.update(status="deleted")
+            messages.success(request, "%d image(s) supprimée(s)." % n)
         elif op in ("kept", "rejected", "new"):
             ids = request.POST.getlist("ids") or ([img.pk] if img else [])
-            n = StockImage.objects.filter(pk__in=ids).update(status=op)
+            n = StockImage.objects.filter(pk__in=ids).exclude(status="deleted").update(status=op)
             messages.success(request, "%d image(s) : %s." % (n, dict(StockImage.STATUS)[op].lower()))
         elif op in ("catalogue", "video", "studio") and img:
             try:
@@ -4782,7 +4791,7 @@ def erp_images(request):
                 messages.error(request, "Impossible d'utiliser cette image : %s" % exc)
         return redirect(back)
 
-    qs = StockImage.objects.all()
+    qs = StockImage.objects.exclude(status="deleted")
     status = request.GET.get("status", "new")
     if status == "used":
         qs = qs.exclude(used_in="")
@@ -4804,14 +4813,18 @@ def erp_images(request):
         qs = qs.filter(vibrancy__gte=vmin)
     if not request.GET.get("people"):
         qs = qs.filter(people=False)
+    qs = qs.order_by({"size": "-width", "recent": "-created_at", "oldest": "created_at"}.get(sort, "-vibrancy"), "-pk")
     if orient:
         qs = [i for i in qs if i.orientation == orient]
-    elif sort == "size":
-        qs = qs.order_by("-width")
-    elif sort == "recent":
-        qs = qs.order_by("-created_at")
     page = Paginator(qs, 60).get_page(request.GET.get("page"))
-    allq = StockImage.objects.all()
+    n_pages, cur = page.paginator.num_pages, page.number
+    shown = sorted({1, n_pages, *range(max(1, cur - 2), min(n_pages, cur + 2) + 1)})
+    page_links = []                                   # 1 … 4 5 [6] 7 8 … 40
+    for k, num in enumerate(shown):
+        if k and num - shown[k - 1] > 1:
+            page_links.append(None)
+        page_links.append(num)
+    allq = StockImage.objects.exclude(status="deleted")
     counts = {"new": allq.filter(status="new").count(), "kept": allq.filter(status="kept").count(),
               "rejected": allq.filter(status="rejected").count(), "used": allq.exclude(used_in="").count()}
     params = request.GET.copy()
@@ -4821,14 +4834,15 @@ def erp_images(request):
     by_cat = dict(allq.values_list("category").annotate(n=Count("id")))
     return render(request, "admin/erp_images.html", {
         "tabs": [(k, l, counts[k]) for k, l in (("new", "À trier"), ("kept", "Retenues"), ("used", "Utilisées"),
-                                                ("rejected", "Écartées"))],
+                                                ("rejected", "Écartées")) if k != "rejected" or counts[k]],
         "prov_opts": [(k, l, imagebank.LICENSE_NOTES[k], k in imagebank.available()) for k, l in StockImage.PROVIDERS],
         "cat_opts": [(c, by_cat.get(c, 0)) for c in imagebank.THEMES], "mins": ["40", "50", "60", "70"],
         **_admin.site.each_context(request), "page": page, "status": status, "counts": counts, "total": allq.count(),
         "themes": imagebank.THEMES, "providers": StockImage.PROVIDERS,
         "f": {"cat": cat, "prov": prov, "q": q, "min": request.GET.get("min", ""), "orient": orient, "sort": sort,
               "people": request.GET.get("people", "")},
-        "qs_nopage": params.urlencode(), "state": imagebank.state(),
+        "qs_nopage": params.urlencode(), "state": imagebank.state(), "page_links": page_links,
+        "params_nopage": [(k, v) for k in params for v in params.getlist(k)],
         "erp_section": "growth", "gtab": "images"})
 
 
