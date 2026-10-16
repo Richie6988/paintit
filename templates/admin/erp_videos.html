@@ -75,7 +75,7 @@
         <select name="music_style">{% for k, l in music_styles %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select></label>
       <label>Variantes
         <select name="count"><option value="1">1 vidéo</option><option value="2">2 vidéos</option><option value="3">3 vidéos</option></select></label>
-      <div class="go" style="grid-column:span 2;justify-content:flex-start;gap:16px"><label class="chk"><input type="checkbox" name="before_after" value="1" checked> Avant / après (photo 1 s)</label>
+      <div class="go" style="grid-column:span 2;justify-content:flex-start;gap:16px"><label class="chk"><input type="checkbox" name="before_after" value="1" checked> Ouverture photo → kit</label>
         <label class="chk" title="Une note douce par zone peinte : l'accélération finale devient une cascade"><input type="checkbox" name="fill_sounds" value="1" checked> Sons de remplissage</label>
         <label class="chk" title="Les numéros du kit apparaissent sur la toile vierge et s'effacent sous la peinture"><input type="checkbox" name="show_numbers" value="1" checked> Numéros</label>
         <button class="pbtn pri">Générer</button></div>
@@ -111,7 +111,7 @@
           <div class="bar"><i style="width:{% widthratio v.progress 1 100 %}%"></i></div></div></div>
       {% endif %}
       <h3>{{ v.title }}</h3>
-      <div class="meta">{{ v.get_mode_display }} · {{ v.duration|floatformat:0 }} s{% if v.before_after %} · avant/après{% endif %}{% if v.music %} · musique {{ v.music_style }}{% else %} · sans musique{% endif %} · {{ v.created_at|date:"d/m H:i" }}</div>
+      <div class="meta">{{ v.get_mode_display }} · {{ v.duration|floatformat:0 }} s{% if v.before_after %} · ouverture photo → kit{% endif %}{% if v.music %} · musique {{ v.music_style }}{% else %} · sans musique{% endif %} · {{ v.created_at|date:"d/m H:i" }}</div>
       {% if v.status == "done" %}
       <div class="ttl" data-i="{{ v.id }}"><input readonly aria-label="Titre TikTok">
         <button type="button" class="pbtn" data-next title="Autre titre">↻</button><button type="button" class="pbtn" data-cp>Copier</button></div>

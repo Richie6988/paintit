@@ -21,6 +21,8 @@ from PIL import Image, ImageDraw, ImageFont
 W, H, FPS = 1080, 1920, 30
 INTRO, OUTRO = 0.1, 3.4                       # ca demarre tout de suite ; fin = toile finie + nom qui se colorie
 PHOTO_HOLD, PHOTO_FADE = 0.6, 0.25             # avant / apres : photo breve puis fondu vers la toile vierge
+# ouverture « photo -> kit » : photo, contours traces comme un arc electrique, photo effacee, numeros qui apparaissent
+OPEN_PHOTO, OPEN_TRACE, OPEN_BLANK, OPEN_NUMS = 0.5, 1.7, 0.35, 0.55
 TOP, SIDE, CANVAS_H = 330, 24, 1250            # zone accroche en haut, marges laterales, hauteur max de la toile
 BG = (247, 244, 238)
 INK = (18, 34, 79)
@@ -273,7 +275,23 @@ def _plucks(out, sr, plucks):
         _add(out, sr, t, sig)
 
 
-def music(path, duration, fill_end, seed=0, sr=44100, style="ambient", plucks=None):
+def _crackle(out, sr, t0, t1, rng):
+    """Crepitement electrique pendant le trace des contours : petits claquements + souffle, de plus en plus denses."""
+    a, b = int(t0 * sr), min(len(out), int(t1 * sr))
+    if b <= a:
+        return
+    n = b - a
+    hiss = rng.standard_normal(n)
+    hiss = np.diff(hiss, prepend=0) * 0.012 * np.sin(np.linspace(0, np.pi, n))
+    out[a:b] += hiss
+    for _ in range(int((t1 - t0) * 70)):
+        p = a + int(rng.beta(1.3, 1.0) * n)
+        L = int(sr * rng.uniform(0.002, 0.012))
+        if p + L < len(out):
+            out[p:p + L] += rng.uniform(0.05, 0.16) * rng.standard_normal(L) * np.exp(-np.arange(L) / (L / 4))
+
+
+def music(path, duration, fill_end, seed=0, sr=44100, style="ambient", plucks=None, crackle=None):
     """Musique generee par le code (donc libre de droits), synchronisee sur le remplissage + « ding » final.
     style « none » + plucks : uniquement les sons de remplissage."""
     rng = np.random.default_rng(seed)
@@ -288,6 +306,8 @@ def music(path, duration, fill_end, seed=0, sr=44100, style="ambient", plucks=No
         if style != "none":
             out *= 0.6 / max(1e-6, np.abs(out).max())          # la musique passe derriere les sons de peinture
         _plucks(out, sr, plucks)
+    if crackle:
+        _crackle(out, sr, crackle[0], crackle[1], rng)
     _ding(out, sr, fill_end)
     out *= 0.9 / max(1e-6, np.abs(out).max())
     fade = min(len(out), int(1.2 * sr))
@@ -435,6 +455,57 @@ def _number_layer(uid, cw, ch, min_px=9):
     return idx, a[idx]
 
 
+def _trace_order(edge, rng=None):
+    """Ordre d'apparition des contours, comme un arc electrique dans le bois : distance geodesique le long du reseau
+    de contours depuis un point du bas (calculee a mi-resolution). -> (dist par pixel du trait, dist max, masque trait)."""
+    import cv2
+    rng = rng or np.random.default_rng(0)
+    em = cv2.dilate(edge.astype(np.uint8), np.ones((3, 3), np.uint8))           # trait de 2-3 px, reseau connexe
+    small = cv2.resize(em, (em.shape[1] // 2, em.shape[0] // 2), interpolation=cv2.INTER_NEAREST).astype(bool)
+    h, w = small.shape
+    ys, xs = np.nonzero(small)
+    if not len(ys):
+        return np.zeros(edge.shape, np.float32), 1.0, em.astype(bool)
+    sx = w * rng.uniform(0.3, 0.7)
+    i0 = int(np.argmin((xs - sx) ** 2 + (ys - h) ** 2))                         # depart : en bas, un peu au hasard
+    dist = np.full((h, w), -1, np.int32)
+    reached = np.zeros((h, w), np.uint8); reached[ys[i0], xs[i0]] = 1
+    dist[ys[i0], xs[i0]] = 0
+    k = np.ones((3, 3), np.uint8)
+    step = 0
+    while True:
+        new = (cv2.dilate(reached, k) > 0) & small & (reached == 0)
+        if not new.any():
+            break
+        step += 1
+        dist[new] = step
+        reached[new] = 1
+    far = (dist < 0) & small                                                    # morceaux isoles : a la distance a vol d'oiseau
+    if far.any():
+        fy, fx = np.nonzero(far)
+        dist[fy, fx] = (np.hypot(fx - xs[i0], fy - ys[i0]) / np.hypot(w, h) * max(step, 1)).astype(np.int32)
+    full = cv2.resize(dist.astype(np.float32), (edge.shape[1], edge.shape[0]), interpolation=cv2.INTER_NEAREST)
+    mask = em.astype(bool) & (full >= 0)
+    return full, float(max(full.max(), 1)), mask
+
+
+def _opening(t, photo, blank, trace_d, trace_max, trace_px):
+    """Ouverture photo -> kit : photo, contours qui se propagent (front lumineux), photo qui s'efface."""
+    t0 = INTRO + OPEN_PHOTO
+    if t < t0:
+        return photo
+    lit = photo.astype(np.float32) * 0.72                                       # photo assombrie : les traits ressortent
+    front = _smooth((t - t0) / OPEN_TRACE) * trace_max * 1.04
+    on = trace_px & (trace_d <= front)
+    hot = on & (trace_d > front - trace_max * 0.06)
+    lit[on] = lit[on] * 0.25 + np.array([248, 246, 240], np.float32) * 0.75      # trait clair, comme grave
+    lit[hot] = np.array([255, 236, 150], np.float32)                            # front incandescent
+    if t < t0 + OPEN_TRACE:
+        return lit.astype(np.uint8)
+    kb = _smooth((t - t0 - OPEN_TRACE) / OPEN_BLANK)                            # la photo s'efface : toile vierge
+    return (lit * (1 - kb) + blank.astype(np.float32) * kb).astype(np.uint8)
+
+
 def _smooth(x):
     x = min(1.0, max(0.0, x))
     return x * x * (3 - 2 * x)
@@ -454,7 +525,8 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
     ch, cw = labels.shape
     ox, oy = (W - cw) // 2, TOP + (CANVAS_H - ch) // 2
     photo = _photo(uid, cw, ch) if before_after else None        # avant / apres : la photo d'origine d'abord
-    intro = INTRO + (PHOTO_HOLD + PHOTO_FADE if photo is not None else 0)
+    open_end = INTRO + OPEN_PHOTO + OPEN_TRACE + OPEN_BLANK + OPEN_NUMS
+    intro = open_end if photo is not None else INTRO
 
     # --- geometrie des zones : surface reelle, centre, distance normalisee de chaque pixel au centre
     lab = np.where(labels < 0, n, labels).astype(np.int32)
@@ -501,6 +573,12 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
     edge_lab = flat[edge_idx]
     edge_rgb = np.array([190, 196, 210], np.uint8)
     last_edges = edge_idx[edge_lab == last]
+    if photo is not None:                              # ouverture : distance de chaque contour au point de depart
+        trace_d, trace_max, trace_px = _trace_order(edge, rng=np.random.default_rng(seed + 3))
+        nums_t0 = INTRO + OPEN_PHOTO + OPEN_TRACE + OPEN_BLANK
+        num_pop = np.append(np.random.default_rng(seed + 5).uniform(0, OPEN_NUMS * 0.75, n), 0.0)
+    else:
+        nums_t0 = 0.0
     if show_numbers:                                   # numeros du kit : ils s'effacent sous la peinture
         num_idx, num_a = _number_layer(uid, cw, ch)
         num_lab = flat[num_idx]
@@ -526,9 +604,10 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
         idx = np.round(lum / 255 * (len(PENTA) - 1)).astype(int)
         amp = 0.45 + 0.55 * np.sqrt(px / max(px.max(), 1))
         plucks = [(float(start[z]), int(idx[z]), float(amp[z])) for z in range(n) if z != last]
-    has_audio = style != "none" or bool(plucks)
+    crackle = (INTRO + OPEN_PHOTO, INTRO + OPEN_PHOTO + OPEN_TRACE) if photo is not None else None
+    has_audio = style != "none" or bool(plucks) or bool(crackle)
     if has_audio:
-        music(tmp_audio, duration, fill_end, seed, style=style, plucks=plucks)
+        music(tmp_audio, duration, fill_end, seed, style=style, plucks=plucks, crackle=crackle)
     cmd = [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
            "-s", "%dx%d" % (W, H), "-r", str(FPS), "-i", "-"]
     if has_audio:
@@ -563,11 +642,12 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
                 cflat[last_edges] = accent.astype(np.uint8)
             if show_numbers and t < fill_end:
                 kn = np.clip(1 - np.append(ae, 1.0)[num_lab] * 1.6, 0, 1)
+                if photo is not None and t < intro:                   # ouverture : les numeros apparaissent un a un
+                    kn = kn * np.clip((t - nums_t0 - num_pop[num_lab]) / 0.12, 0, 1)
                 wn = (num_a * kn)[:, None]
                 cflat[num_idx] = (cflat[num_idx] * (1 - wn) + num_ink * wn).astype(np.uint8)
-            if photo is not None and t < PHOTO_HOLD + PHOTO_FADE:
-                kp = _smooth((t - PHOTO_HOLD) / PHOTO_FADE)
-                canvas = (photo * (1 - kp) + canvas * kp).astype(np.uint8)
+            if photo is not None and t < nums_t0:
+                canvas = _opening(t, photo, canvas, trace_d, trace_max, trace_px)
             # zoom lent : avant pendant le remplissage (vers la derniere zone pendant le suspense), recul a la fin
             if t <= fill_end:
                 z = 1 + ZOOM * _smooth((t - intro) / max(1e-3, fill_end - intro))
@@ -590,7 +670,7 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
                 frame[bar_y:bar_y + 8, ox:ox + wbar] = (47, 107, 242) if nz < n else (31, 157, 85)
             if nz not in pills:
                 pills[nz] = _counter("%d / %d zones" % (nz, n))
-            cn = photo_tag if photo is not None and t < PHOTO_HOLD else pills[nz]
+            cn = photo_tag if photo is not None and t < INTRO + OPEN_PHOTO + OPEN_TRACE else pills[nz]
             _blend(frame, cn, ox + 18, oy + ch - cn.shape[0] - 18)
             te = t - fill_end
             if te > 0:
