@@ -127,13 +127,13 @@ def _area(pts):
 
 def schedule(n_zones, numbers, mode, fill_seconds, seed=0, areas=None, centers=None):
     """Instant de debut de remplissage de chaque zone (secondes, a partir de la fin de l'intro).
-    Rythme : t(r) = T (r - 0.8 sin(2 pi r) / 2 pi), r = rang / N -> tres rapide au debut (pour retenir les spectateurs
-    presses : ~10 % des zones dans les 2-3 premiers % du temps), plus pose au milieu, tres rapide a la fin.
+    Rythme : c(u) = N (0.3 u + 0.7 u^3) -> ca demarre tout de suite (part lineaire) et accelere sans cesse jusqu'a
+    la fin (part cubique), en phase avec le tempo de la musique qui accelere aussi.
     Modes : flow (vague qui se propage depuis un point : continuite, l'oeil suit), random, colors."""
     rng = np.random.default_rng(seed)
-    def when(rank):
-        r = rank / max(1, n_zones)
-        return fill_seconds * (r - 0.8 * math.sin(2 * math.pi * r) / (2 * math.pi))
+    u = np.linspace(0, 1, 2001)
+    frac = 0.3 * u + 0.7 * u ** 3
+    when = lambda rank: fill_seconds * np.interp(rank / max(1, n_zones), frac, u)
     start = np.zeros(n_zones)
     if mode == "colors":
         order_cols = rng.permutation(np.unique(numbers)).tolist()
