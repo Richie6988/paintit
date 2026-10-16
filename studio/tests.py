@@ -1102,3 +1102,37 @@ class ActivityTests(TestCase):
         for s in ("Activité du site", "Belgique", "tiktok.com", "Accueil · Créer ma peinture (haut)", "/create/"):
             self.assertContains(r, s)
         self.assertEqual(self._post({"t": "pv", "p": "/"}).status_code, 204)          # equipe connectee : exclue
+
+
+class GeoMerchantTests(TestCase):
+    def test_robots_welcomes_ai_crawlers(self):
+        body = self.client.get("/robots.txt").content.decode()
+        for bot in ("GPTBot", "OAI-SearchBot", "PerplexityBot", "ClaudeBot", "Google-Extended"):
+            self.assertIn("User-agent: %s" % bot, body)
+        self.assertIn("Disallow: /checkout/", body)
+
+    def test_company_identity_exposed(self):
+        from django.core.cache import cache
+        from .models import CompanyInfo
+        c = CompanyInfo.get()
+        c.legal_name, c.siret, c.vat_number, c.address = "PaintIt SAS", "12345678900011", "FR00123456789", "1 rue d'Art\n75001 Paris"
+        c.save()
+        cache.clear()
+        html = self.client.get("/").content.decode()
+        self.assertIn('"legalName":"PaintIt SAS"', html)
+        self.assertIn('"vatID":"FR00123456789"', html)
+        self.assertIn("PaintIt SAS", self.client.get("/llm.txt").content.decode())
+        self.assertEqual(self.client.get("/llm.json").json()["company"]["siret"], "12345678900011")
+
+    def test_merchant_feed(self):
+        import xml.etree.ElementTree as ET
+        r = self.client.get("/feeds/google-merchant.xml")
+        self.assertEqual(r.status_code, 200)
+        root = ET.fromstring(r.content)
+        g = "{http://base.google.com/ns/1.0}"
+        items = root.findall("./channel/item")
+        self.assertTrue(items)
+        for it in items:
+            self.assertTrue(it.find(g + "price").text.endswith(" EUR"))
+            self.assertEqual(self.client.get(it.find("link").text.replace("http://testserver", "")
+                                             .split("paintit.click")[-1]).status_code, 200)

@@ -944,10 +944,14 @@ def digipaint_palette(request, uid):
 
 def robots(request):
     site = settings.SITE_URL
+    ai = ("GPTBot", "OAI-SearchBot", "ChatGPT-User", "PerplexityBot", "Perplexity-User", "ClaudeBot",
+          "Claude-SearchBot", "Claude-User", "Google-Extended", "Applebot-Extended", "Bingbot", "CCBot")
+    priv = ("Disallow: /preview/\nDisallow: /media/\nDisallow: /files/\n"
+            "Disallow: /delivery/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /admin/\nDisallow: /admin-hub/\nDisallow: /go/\nDisallow: /avis/\nDisallow: /wc-api/\nDisallow: /wp-json/\nDisallow: /a/\n")
     body = (
-        "User-agent: *\n"
-        "Disallow: /preview/\nDisallow: /media/\nDisallow: /files/\n"
-        "Disallow: /delivery/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /admin/\nDisallow: /admin-hub/\nDisallow: /go/\nDisallow: /avis/\nDisallow: /wc-api/\nDisallow: /wp-json/\nDisallow: /a/\n"
+        "# Assistants IA et moteurs de recherche : bienvenue (contenu public uniquement)\n"
+        + "".join("User-agent: %s\n" % a for a in ai) + "Allow: /llm.txt\nAllow: /llm.json\n" + priv + "\n"
+        "User-agent: *\n" + priv +
         "Allow: /llm.txt\nAllow: /llm.json\nAllow: /play/\n"
         "\nSitemap: %s/sitemap.xml\n"
         "\n# Infos pour les IA / LLM :\n"
@@ -1607,6 +1611,12 @@ def llm_txt(request):
               "PaintIt (paintit.click) turns any photo into a custom paint-by-numbers kit. Free preview and free online "
               "painting game before buying, 3 detail levels, 12 to 48 colours, complete kit with free shipping. "
               "Available in English, French, German, Spanish and Italian."]
+    co = CompanyInfo.get()
+    ident = [("Raison sociale", " ".join(x for x in (co.legal_name, co.legal_form) if x)), ("SIRET", co.siret),
+             ("RCS", co.rcs), ("TVA", co.vat_number), ("Siège", " ".join(co.address.split())),
+             ("Contact", co.email)]
+    lines += ["", "## Société exploitante"] + ["- %s : %s" % (k, v) for k, v in ident if v] + [
+              "- Mentions légales : %s/mentions-legales/" % site]
     lines += ["", "## Liens",
               "- Créer une toile : %s/create/" % site, "- Tester le jeu : %s/play/" % site,
               "- FAQ : %s/faq/" % site, "- Contact : %s/contact/" % site,
@@ -1637,10 +1647,55 @@ def llm_json(request):
         "faq": f["faq"],
         "links": {"home": site + "/", "create": site + "/create/", "play": site + "/play/",
                   "faq": site + "/faq/", "contact": site + "/contact/", "sitemap": site + "/sitemap.xml",
-                  "social": {n.lower(): u for n, u in CompanyInfo.get().socials()}},
+                  "social": {n.lower(): u for n, u in CompanyInfo.get().socials()},
+                  "legal": site + "/mentions-legales/"},
     }
+    co = CompanyInfo.get()
+    data["company"] = {k: v for k, v in (("legal_name", co.legal_name), ("legal_form", co.legal_form),
+                                         ("siret", co.siret), ("rcs", co.rcs), ("vat_id", co.vat_number),
+                                         ("address", " ".join(co.address.split())), ("email", co.email)) if v}
     return JsonResponse(data, json_dumps_params={"ensure_ascii": False, "indent": 2})
 
+
+def merchant_feed(request):
+    """Flux produits Google Merchant Center (RSS 2.0 + g:). Une fiche par langue au prix « dès » affiché
+    sur la page d'atterrissage (Google rejette tout écart de prix entre le flux et la page)."""
+    from xml.sax.saxutils import escape
+    from . import landings
+    site = settings.SITE_URL
+    p = Pricing.get()
+    days = (p.delivery_days_min, p.delivery_days_max)
+    countries = {"fr": ["FR", "BE", "CH", "LU"], "en": ["GB", "IE"], "de": ["DE", "AT"], "es": ["ES"], "it": ["IT"]}
+    items = []
+    for lang in [l for l, _ in settings.LANGUAGES if l in landings.PAGES]:
+        page = landings.PAGES[lang].get("custom")
+        if not page:
+            continue
+        fx = landings.facts(lang)
+        if not fx["price"]:
+            continue
+        price = fx["price"].replace(",", ".")
+        ship = "".join("<g:shipping><g:country>%s</g:country><g:price>0.00 EUR</g:price>"
+                       "<g:min_handling_time>1</g:min_handling_time><g:max_handling_time>3</g:max_handling_time>"
+                       "<g:min_transit_time>%d</g:min_transit_time><g:max_transit_time>%d</g:max_transit_time>"
+                       "</g:shipping>" % (c, days[0], days[1]) for c in countries.get(lang, []))
+        items.append(
+            "<item><g:id>PAINTIT-CUSTOM-%s</g:id><g:item_group_id>PAINTIT-CUSTOM</g:item_group_id>"
+            "<title>%s</title><description>%s</description><link>%s</link>"
+            "<g:image_link>%s</g:image_link><g:additional_image_link>%s</g:additional_image_link>"
+            "<g:additional_image_link>%s</g:additional_image_link>"
+            "<g:price>%.2f EUR</g:price><g:availability>in_stock</g:availability><g:condition>new</g:condition>"
+            "<g:brand>PaintIt</g:brand><g:identifier_exists>no</g:identifier_exists>"
+            "<g:product_type>Arts &amp; Crafts &gt; Painting Kits &gt; Custom Paint by Numbers</g:product_type>"
+            "<g:is_bundle>yes</g:is_bundle>%s</item>"
+            % (lang.upper(), escape(page["title"].format(**fx)), escape(page["desc"].format(**fx)),
+               escape(site + landings.url(lang, "custom")), site + "/static/studio/img/og.jpg",
+               site + "/static/studio/img/kit_poster.png", site + "/static/studio/img/kit_pots.jpg",
+               float(price), ship))
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">'
+           "<channel><title>PaintIt</title><link>%s/</link><description>Peinture par numéros personnalisée</description>"
+           "%s</channel></rss>\n" % (site, "".join(items)))
+    return HttpResponse(xml, content_type="application/xml; charset=utf-8")
 
 def sitemap_xml(request):
     from django.http import HttpResponse
@@ -3838,6 +3893,7 @@ def erp_legal(request):
         form.save()
         from django.core.cache import cache
         cache.delete("site_socials")
+        cache.delete("site_company")
         messages.success(request, "Informations légales enregistrées : pages publiques et factures à jour.")
         return redirect("studio:erp_legal")
     sections = [

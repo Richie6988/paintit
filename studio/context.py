@@ -28,7 +28,7 @@ def assets(request):
     from . import landings
     return {"SITE_URL": site, "HREFLANGS": alts, "PBN_LINKS": landings.footer_links((get_language() or "fr")[:2]), "LANG_URLS": lang_urls, "LANG_MENU": lang_menu,
             # Mesure d'audience sans cookie (Plausible / compatible) : pas de bandeau cookies requis
-            "MADE_IN": _made_in(), "MADE_IN_LABEL": _made_in_label(), "SOCIALS": _socials(),
+            "MADE_IN": _made_in(), "MADE_IN_LABEL": _made_in_label(), "SOCIALS": _socials(), "COMPANY": _company(),
             "SITE_BANNER": _banner(request),
             "ANALYTICS_SRC": getattr(settings, "ANALYTICS_SRC", ""),
             "ANALYTICS_DOMAIN": getattr(settings, "ANALYTICS_DOMAIN", "")}
@@ -96,4 +96,20 @@ def _socials():
         except Exception:
             out = []
         cache.set("site_socials", out, 300)
+    return out
+
+
+def _company():
+    """Identite legale (JSON-LD Organization). Cache 5 min, vide via la cle site_socials."""
+    from django.core.cache import cache
+    out = cache.get("site_company")
+    if out is None:
+        try:
+            from .models import CompanyInfo
+            c = CompanyInfo.get()
+            out = {"legal_name": c.legal_name, "vat": c.vat_number, "siret": c.siret,
+                   "address": " ".join(c.address.split()), "email": c.email, "phone": c.phone}
+        except Exception:
+            out = {}
+        cache.set("site_company", out, 300)
     return out
