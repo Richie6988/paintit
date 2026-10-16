@@ -938,8 +938,8 @@ body.pv-busy .options .cta{opacity:.6;pointer-events:none}
 .why-c{counter-increment:why;position:relative;background:none;border:0;border-radius:0;box-shadow:none;padding:30px 26px 32px;
   transition:background .2s ease}
 .why-c+.why-c{border-left:1px solid var(--ring,#e2e8f2)}
-.why-c::before{content:counter(why,decimal-leading-zero);display:block;margin-bottom:18px;font-size:.78rem;font-weight:800;
-  letter-spacing:.12em;color:var(--blue,#2f6bf2)}
+.why-c::before{content:"";display:block;width:28px;height:3px;border-radius:3px;margin-bottom:18px;
+  background:linear-gradient(90deg,var(--blue,#2f6bf2),#8fb0ff)}
 .why-c::after{content:"";position:absolute;left:26px;right:26px;top:0;height:3px;border-radius:0 0 3px 3px;
   background:linear-gradient(90deg,var(--blue,#2f6bf2),#8fb0ff);transform:scaleX(0);transform-origin:left;transition:transform .35s ease}
 .why-c:hover{background:#f8faff}

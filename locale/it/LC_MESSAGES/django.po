@@ -1770,3 +1770,6 @@ msgstr ""
 
 msgid "Suivez-nous"
 msgstr "Seguici"
+
+msgid "Essayer gratuitement avec ma photo"
+msgstr "Prova gratis con la mia foto"
