@@ -149,7 +149,15 @@
  .pw-card{background:var(--panel);border:1px solid #2a3c6b;border-radius:18px;padding:28px 32px;text-align:center;max-width:360px}
  .pw-card h2{margin:0 0 8px}.pw-card p{color:var(--muted);margin:0 0 16px}
 
- .bh-mobile{display:none}
+ .boardhelp .bh-mobile{display:none}
+ .boardhelp .bh-ok{display:block;width:100%;margin-top:12px;height:42px;border:0;border-radius:12px;background:#2f6bf2;color:#fff;font-weight:800;font-size:.92rem;cursor:pointer}
+ /* ecran tactile (telephone, tablette) : consignes au doigt au lieu des raccourcis clavier */
+ @media (max-width:560px),(hover:none) and (pointer:coarse){
+   .boardhelp .bh-desktop{display:none}
+   .boardhelp .bh-mobile{display:flex}
+   .boardhelp .bh-line{flex-wrap:nowrap;align-items:flex-start;gap:9px;margin:9px 0}
+   .boardhelp .bh-line .bh-ic,.boardhelp .bh-line .k{margin-top:1px}
+ }
  @media (max-width:560px){
    .top{gap:3px;padding:6px 6px;overflow:visible;flex-wrap:nowrap}
    .top .brand{display:none}
@@ -176,9 +184,8 @@
    .rp-pot{width:28px;height:28px}
    .zoomctl{bottom:14px}
    .zoomctl button{width:44px;height:44px}
-   .boardhelp{left:8px;right:8px;bottom:8px;width:auto;max-width:none}
-   .bh-desktop{display:none}
-   .bh-mobile{display:block}
+   .boardhelp{left:8px;right:8px;top:auto;bottom:calc(56px + env(safe-area-inset-bottom));transform:none;width:auto;max-width:none;
+     max-height:calc(100dvh - 190px);overflow-y:auto;padding:16px 16px 14px;border-radius:18px}
    .pw-card{margin:16px;padding:22px}
  }
  /* ===== Mobile : barre d'outils reguliere, palette sur 1 ligne defilante, HUD score/combo/zones en bas
@@ -254,14 +261,17 @@
     <div class="boardhelp" id="boardhelp">
       <span class="bh-title">{% trans "Comment jouer" %}</span>
       <div class="bh-line bh-desktop"><span class="k">2</span><span class="k">3</span> {% trans "Tapez un numéro pour choisir la couleur (2 puis 3 = 23)." %}</div>
-      <div class="bh-line bh-mobile">1&nbsp;&nbsp;{% trans "Choisissez une couleur dans la palette de gauche." %}</div>
+      <div class="bh-line bh-mobile"><svg class="bh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1.1.2-2.2 1.4-2.2H17a4 4 0 0 0 4-4c0-5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg> {% trans "Choisissez une couleur dans la palette en haut (faites-la défiler)." %}</div>
       <div class="bh-line"><svg class="bh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5a1.5 1.5 0 0 1 3 0V12m0-1a1.5 1.5 0 0 1 3 0v4a5 5 0 0 1-5 5h-1.5a5 5 0 0 1-4-2l-2.5-3.3a1.5 1.5 0 0 1 2.4-1.8L9 14"/></svg> {% trans "Touchez une zone de ce numéro : son numéro passe au vert." %}</div>
       <div class="bh-line bh-desktop"><span class="k">Ctrl</span><span class="k">&larr;</span><span class="k">&rarr;</span> {% trans "Couleur précédente / suivante." %}</div>
       <div class="bh-line bh-desktop"><svg class="bh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg> {% trans "Flèches pour se déplacer" %} &nbsp; <span class="k">F</span> {% trans "recentrer" %}</div>
-      <div class="bh-line bh-mobile"><svg class="bh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg> {% trans "Glissez à 2 doigts pour déplacer, pincez pour zoomer." %}</div>
-      <div class="bh-line"><svg class="bh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v3"/></svg> {% trans "Molette ou pincement pour zoomer." %}</div>
+      <div class="bh-line bh-mobile"><svg class="bh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg> {% trans "Glissez un doigt pour vous déplacer, pincez à deux doigts pour zoomer." %}</div>
+      <div class="bh-line bh-desktop"><svg class="bh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v3"/></svg> {% trans "Molette ou pincement pour zoomer." %}</div>
+      <div class="bh-line bh-mobile"><span class="k">+</span><span class="k">&minus;</span> {% trans "Boutons en bas à gauche : zoomer, dézoomer, vue d'ensemble." %}</div>
       <div class="bh-line"><span class="k">#</span> {% trans "Afficher / masquer les numéros." %}</div>
+      <div class="bh-line"><svg class="bh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg> {% trans "Entonnoir : ne montrer que les zones restant à peindre." %}</div>
       <div class="bh-line"><svg class="bh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg> {% trans "Touchez la carte (bas-droite) pour vous déplacer." %}</div>
+      <button type="button" class="bh-ok" id="bhOk">{% trans "C'est parti !" %}</button>
     </div>
     </div>
   </div>
@@ -487,6 +497,7 @@
   modalimg.addEventListener('click',function(e){e.stopPropagation();var ir=this.getBoundingClientRect();
     teleport((e.clientX-ir.left)/ir.width,(e.clientY-ir.top)/ir.height);modal.classList.remove('show');});
   modal.addEventListener('click',function(){modal.classList.remove('show');});
+  document.getElementById('bhOk').addEventListener('click',function(e){e.stopPropagation();document.getElementById('boardhelp').classList.remove('show');});
   document.getElementById('helpBtn').addEventListener('click',function(e){e.stopPropagation();document.getElementById('boardhelp').classList.toggle('show');});
   document.addEventListener('click',function(e){var h=document.getElementById('boardhelp');
     if(h&&h.classList.contains('show')&&!h.contains(e.target)&&!(e.target.closest&&e.target.closest('#helpBtn')))h.classList.remove('show');});

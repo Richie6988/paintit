@@ -1749,3 +1749,18 @@ msgstr "Follow us"
 
 msgid "Essayer gratuitement avec ma photo"
 msgstr "Try it free with my photo"
+
+msgid "Choisissez une couleur dans la palette en haut (faites-la défiler)."
+msgstr "Pick a colour in the palette at the top (swipe it to see more)."
+
+msgid "Glissez un doigt pour vous déplacer, pincez à deux doigts pour zoomer."
+msgstr "Drag with one finger to move, pinch with two fingers to zoom."
+
+msgid "Boutons en bas à gauche : zoomer, dézoomer, vue d'ensemble."
+msgstr "Buttons at the bottom left: zoom in, zoom out, full view."
+
+msgid "Entonnoir : ne montrer que les zones restant à peindre."
+msgstr "Funnel: show only the areas left to paint."
+
+msgid "C'est parti !"
+msgstr "Let's go!"

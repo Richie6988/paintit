@@ -1761,3 +1761,19 @@ msgstr "Síguenos"
 
 msgid "Essayer gratuitement avec ma photo"
 msgstr "Probar gratis con mi foto"
+
+msgid "Choisissez une couleur dans la palette en haut (faites-la défiler)."
+msgstr "Elige un color en la paleta de arriba (deslízala para ver más)."
+
+msgid "Glissez un doigt pour vous déplacer, pincez à deux doigts pour zoomer."
+msgstr ""
+"Arrastra con un dedo para moverte, pellizca con dos dedos para hacer zoom."
+
+msgid "Boutons en bas à gauche : zoomer, dézoomer, vue d'ensemble."
+msgstr "Botones abajo a la izquierda: acercar, alejar, vista completa."
+
+msgid "Entonnoir : ne montrer que les zones restant à peindre."
+msgstr "Embudo: mostrar solo las zonas que quedan por pintar."
+
+msgid "C'est parti !"
+msgstr "¡Vamos!"

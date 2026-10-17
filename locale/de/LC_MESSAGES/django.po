@@ -1789,3 +1789,18 @@ msgstr "Folgen Sie uns"
 
 msgid "Essayer gratuitement avec ma photo"
 msgstr "Kostenlos mit meinem Foto ausprobieren"
+
+msgid "Choisissez une couleur dans la palette en haut (faites-la défiler)."
+msgstr "Wähle oben in der Palette eine Farbe (zum Blättern wischen)."
+
+msgid "Glissez un doigt pour vous déplacer, pincez à deux doigts pour zoomer."
+msgstr "Mit einem Finger ziehen zum Verschieben, mit zwei Fingern zoomen."
+
+msgid "Boutons en bas à gauche : zoomer, dézoomer, vue d'ensemble."
+msgstr "Tasten unten links: vergrößern, verkleinern, Gesamtansicht."
+
+msgid "Entonnoir : ne montrer que les zones restant à peindre."
+msgstr "Trichter: nur die noch zu malenden Felder anzeigen."
+
+msgid "C'est parti !"
+msgstr "Los geht's!"
