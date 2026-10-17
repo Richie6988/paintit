@@ -1807,3 +1807,36 @@ msgstr "Play online"
 
 msgid "Essai"
 msgstr "Trial"
+
+msgid "Commander le kit à peindre"
+msgstr "Order the painting kit"
+
+msgid "Commander le kit"
+msgstr "Order the kit"
+
+msgid "La peindre en vrai : commander le kit"
+msgstr "Paint it for real: order the kit"
+
+msgid "Peignez-la en vrai"
+msgstr "Paint it for real"
+
+msgid ""
+"Cette toile imprimée et numérotée, avec ses peintures prêtes à l'emploi et "
+"le poster de référence."
+msgstr ""
+"This canvas printed and numbered, with ready-to-use paints and the reference"
+" poster."
+
+msgid ""
+"Livrée chez vous ou directement chez un proche : une idée cadeau unique."
+msgstr "Delivered to you or straight to a loved one: a one-of-a-kind gift."
+
+#, python-format
+msgid "dès %(p)s €"
+msgstr "from €%(p)s"
+
+msgid "Continuer à jouer"
+msgstr "Keep playing"
+
+msgid "Ou commander le kit à peindre"
+msgstr "Or order the painting kit"

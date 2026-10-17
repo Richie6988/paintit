@@ -341,7 +341,8 @@ def digipaint(request, uid):
         back_url, back_label = reverse("studio:paint_portal"), _("Mes toiles")
     return render(request, "studio/digipaint.html",
                   {"uid": uid, "palette": palette, "owned": owned, "back_url": back_url, "back_label": back_label,
-                   "buy": buy})
+                   "buy": buy, "kit_url": reverse("studio:digipaint_buy", args=[uid]),
+                   "kit_from": __import__("studio.landings", fromlist=["x"]).facts((get_language() or "fr")[:2])["price"]})
 
 
 def preview(request):

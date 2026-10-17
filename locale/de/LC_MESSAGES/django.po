@@ -1848,3 +1848,38 @@ msgstr "Online spielen"
 
 msgid "Essai"
 msgstr "Test"
+
+msgid "Commander le kit à peindre"
+msgstr "Malset bestellen"
+
+msgid "Commander le kit"
+msgstr "Set bestellen"
+
+msgid "La peindre en vrai : commander le kit"
+msgstr "In echt malen: Set bestellen"
+
+msgid "Peignez-la en vrai"
+msgstr "Male es in echt"
+
+msgid ""
+"Cette toile imprimée et numérotée, avec ses peintures prêtes à l'emploi et "
+"le poster de référence."
+msgstr ""
+"Diese Leinwand gedruckt und nummeriert, mit gebrauchsfertigen Farben und dem"
+" Vorlageposter."
+
+msgid ""
+"Livrée chez vous ou directement chez un proche : une idée cadeau unique."
+msgstr ""
+"Zu dir nach Hause oder direkt zu einem lieben Menschen geliefert: ein "
+"einzigartiges Geschenk."
+
+#, python-format
+msgid "dès %(p)s €"
+msgstr "ab %(p)s €"
+
+msgid "Continuer à jouer"
+msgstr "Weiterspielen"
+
+msgid "Ou commander le kit à peindre"
+msgstr "Oder das Malset bestellen"

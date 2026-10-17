@@ -1820,3 +1820,37 @@ msgstr "Jugar en línea"
 
 msgid "Essai"
 msgstr "Prueba"
+
+msgid "Commander le kit à peindre"
+msgstr "Pedir el kit para pintar"
+
+msgid "Commander le kit"
+msgstr "Pedir el kit"
+
+msgid "La peindre en vrai : commander le kit"
+msgstr "Píntalo de verdad: pide el kit"
+
+msgid "Peignez-la en vrai"
+msgstr "Píntalo de verdad"
+
+msgid ""
+"Cette toile imprimée et numérotée, avec ses peintures prêtes à l'emploi et "
+"le poster de référence."
+msgstr ""
+"Este lienzo impreso y numerado, con pinturas listas para usar y el póster de"
+" referencia."
+
+msgid ""
+"Livrée chez vous ou directement chez un proche : une idée cadeau unique."
+msgstr ""
+"Entregado en tu casa o directamente a un ser querido: un regalo único."
+
+#, python-format
+msgid "dès %(p)s €"
+msgstr "desde %(p)s €"
+
+msgid "Continuer à jouer"
+msgstr "Seguir jugando"
+
+msgid "Ou commander le kit à peindre"
+msgstr "O pide el kit para pintar"

@@ -1832,3 +1832,37 @@ msgstr "Gioca online"
 
 msgid "Essai"
 msgstr "Prova"
+
+msgid "Commander le kit à peindre"
+msgstr "Ordina il kit da dipingere"
+
+msgid "Commander le kit"
+msgstr "Ordina il kit"
+
+msgid "La peindre en vrai : commander le kit"
+msgstr "Dipingila davvero: ordina il kit"
+
+msgid "Peignez-la en vrai"
+msgstr "Dipingila davvero"
+
+msgid ""
+"Cette toile imprimée et numérotée, avec ses peintures prêtes à l'emploi et "
+"le poster de référence."
+msgstr ""
+"Questa tela stampata e numerata, con colori pronti all'uso e il poster di "
+"riferimento."
+
+msgid ""
+"Livrée chez vous ou directement chez un proche : une idée cadeau unique."
+msgstr ""
+"Consegnata a casa tua o direttamente a una persona cara: un regalo unico."
+
+#, python-format
+msgid "dès %(p)s €"
+msgstr "da %(p)s €"
+
+msgid "Continuer à jouer"
+msgstr "Continua a giocare"
+
+msgid "Ou commander le kit à peindre"
+msgstr "Oppure ordina il kit da dipingere"

@@ -1430,3 +1430,13 @@ class PlayFiltersTests(TestCase):
         r = self.client.get("/en/play/")
         self.assertContains(r, '<option value="fleurs">Flowers (1)</option>', html=False)
         self.assertContains(r, 'data-catl="flowers"')
+
+    def test_game_has_order_kit_cta(self):
+        d = os.path.join(MEDIA, "orders", "gal-kit1")
+        os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "gal-kit1_digipaint.svg"), "w").write('<svg viewBox="0 0 400 500"></svg>')
+        DigitalCanvas.objects.create(uid="gal-kit1", email="__library__", source="library", title="K", price=0)
+        r = self.client.get("/play/gal-kit1/")
+        self.assertContains(r, 'id="kitBtn"'); self.assertContains(r, 'href="/play/gal-kit1/buy/"')
+        self.assertContains(r, "chez un proche")
+        self.assertRedirects(self.client.get("/play/gal-kit1/buy/"), "/preview/", fetch_redirect_response=False)
