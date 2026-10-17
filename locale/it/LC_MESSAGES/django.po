@@ -1823,3 +1823,9 @@ msgstr "Acquista e continua"
 
 msgid "Essai 5 min"
 msgstr "Prova 5 min"
+
+msgid "Essayer avec ma photo"
+msgstr "Prova con la mia foto"
+
+msgid "Jouer en ligne"
+msgstr "Gioca online"

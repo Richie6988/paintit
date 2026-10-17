@@ -1839,3 +1839,9 @@ msgstr "Kaufen und weitermachen"
 
 msgid "Essai 5 min"
 msgstr "5 Min. testen"
+
+msgid "Essayer avec ma photo"
+msgstr "Mit meinem Foto ausprobieren"
+
+msgid "Jouer en ligne"
+msgstr "Online spielen"

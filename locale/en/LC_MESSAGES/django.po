@@ -1798,3 +1798,9 @@ msgstr "Buy and continue"
 
 msgid "Essai 5 min"
 msgstr "5-min trial"
+
+msgid "Essayer avec ma photo"
+msgstr "Try it with my photo"
+
+msgid "Jouer en ligne"
+msgstr "Play online"
