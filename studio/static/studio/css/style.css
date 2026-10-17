@@ -970,3 +970,10 @@ body.pv-busy .options .cta{opacity:.6;pointer-events:none}
 .to-top[hidden]{display:none}
 .to-top:hover{transform:translateY(-2px)}
 .to-top svg{width:22px;height:22px}
+
+/* Jouer : tableaux celebres -> titre de l'oeuvre et peintre au survol (toujours visible sur ecran tactile) */
+.gcard .g-art{position:absolute;left:0;right:0;top:0;z-index:2;padding:10px 12px 26px;color:#fff;font:600 .78rem/1.35 system-ui,sans-serif;
+  background:linear-gradient(rgba(10,14,30,.82),rgba(10,14,30,0));opacity:0;transform:translateY(-6px);transition:opacity .2s,transform .2s;
+  pointer-events:none;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.gcard:hover .g-art,.gcard:focus-visible .g-art{opacity:1;transform:none}
+@media (hover:none){.gcard .g-art{opacity:1;transform:none;font-size:.7rem;padding:8px 9px 20px}}

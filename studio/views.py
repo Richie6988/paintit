@@ -565,6 +565,16 @@ def gallery(request):
     from collections import Counter
     from . import categories
     lang = get_language() or "fr"
+    art = [m for m in models if categories.label(m.category, "en") == "Famous paintings"]
+    if art:                                  # tableaux celebres : titre de l'oeuvre + peintre (survol)
+        from .models import StockImage
+        painter = {}
+        for used, author in StockImage.objects.filter(used_in__contains="catalogue gal-").values_list("used_in", "author"):
+            for part in used.split(", "):
+                if part.startswith("catalogue "):
+                    painter[part[10:]] = " ".join((author or "").split())[:60]
+        for m in art:
+            m.art_caption = " · ".join(x for x in (m.title, painter.get(m.uid, "")) if x)
     for m in models:
         m.cat_label = categories.label(m.category, lang) if m.category else ""
     cats = Counter(m.category for m in models if m.category)

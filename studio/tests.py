@@ -1440,3 +1440,14 @@ class PlayFiltersTests(TestCase):
         self.assertContains(r, 'id="kitBtn"'); self.assertContains(r, 'href="/play/gal-kit1/buy/"')
         self.assertContains(r, "chez un proche")
         self.assertRedirects(self.client.get("/play/gal-kit1/buy/"), "/preview/", fetch_redirect_response=False)
+
+    def test_famous_painting_caption(self):
+        from studio.models import StockImage
+        DigitalCanvas.objects.create(uid="gal-art1", email="__library__", source="library", title="The Starry Night",
+                                     category="Tableaux célèbres")
+        DigitalCanvas.objects.create(uid="gal-fl1", email="__library__", source="library", title="Rose", category="Fleurs")
+        StockImage.objects.create(provider="artic", ext_id="a1", title="x", full_url="https://x",
+                                  author="Vincent van Gogh", used_in="catalogue gal-art1")
+        r = self.client.get("/play/")
+        self.assertContains(r, '<span class="g-art">The Starry Night · Vincent van Gogh</span>', html=False)
+        self.assertNotContains(r, '<span class="g-art">Rose')
