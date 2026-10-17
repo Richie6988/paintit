@@ -962,3 +962,11 @@ body.pv-busy .options .cta{opacity:.6;pointer-events:none}
 .foot-social a{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--ink,#12224f);
   background:#fff;border:1px solid var(--ring,#e2e8f2);transition:transform .15s,background .15s,color .15s}
 .foot-social a:hover{transform:translateY(-2px);background:var(--ink,#12224f);color:#fff}
+
+/* Jouer : fleche « remonter en haut » */
+.to-top{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:50;width:48px;height:48px;border-radius:50%;
+  border:0;cursor:pointer;background:#12224f;color:#fff;display:grid;place-items:center;box-shadow:0 8px 22px rgba(18,34,79,.3);
+  transition:transform .15s ease,opacity .2s ease}
+.to-top[hidden]{display:none}
+.to-top:hover{transform:translateY(-2px)}
+.to-top svg{width:22px;height:22px}

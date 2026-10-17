@@ -1854,3 +1854,6 @@ msgstr "Seguir jugando"
 
 msgid "Ou commander le kit à peindre"
 msgstr "O pide el kit para pintar"
+
+msgid "Remonter en haut"
+msgstr "Volver arriba"

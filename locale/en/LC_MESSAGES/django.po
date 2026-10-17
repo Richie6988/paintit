@@ -1840,3 +1840,6 @@ msgstr "Keep playing"
 
 msgid "Ou commander le kit à peindre"
 msgstr "Or order the painting kit"
+
+msgid "Remonter en haut"
+msgstr "Back to top"

@@ -1883,3 +1883,6 @@ msgstr "Weiterspielen"
 
 msgid "Ou commander le kit à peindre"
 msgstr "Oder das Malset bestellen"
+
+msgid "Remonter en haut"
+msgstr "Nach oben"

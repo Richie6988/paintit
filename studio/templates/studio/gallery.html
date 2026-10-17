@@ -49,6 +49,16 @@
     <p class="sub">{% trans "La bibliothèque de modèles arrive bientôt." %}</p>
   {% endif %}
 </section>
+<button type="button" class="to-top" id="toTop" aria-label="{% trans 'Remonter en haut' %}" title="{% trans 'Remonter en haut' %}" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+<script>
+(function(){                               // fleche « remonter en haut » des qu'on a defile la grille
+  var b=document.getElementById('toTop');if(!b)return;
+  var on=function(){b.hidden=window.scrollY<600;};
+  window.addEventListener('scroll',on,{passive:true});on();
+  b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});
+})();
+</script>
 <script>
 (function(){
   var q=document.getElementById('gsearch');if(!q)return;
