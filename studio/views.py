@@ -316,16 +316,19 @@ def digipaint(request, uid):
                 palette = []
     # Toile de la GALERIE : payante -> exiger l'achat ; gratuite -> l'ajouter a Mes Toiles
     lib = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
+    buy = None
+    owned = DigitalCanvas.objects.filter(uid=uid).exists()
     if lib:
         verified = request.session.get("verified_email")
         owns = bool(verified) and DigitalCanvas.objects.filter(email=verified, uid=uid).exists()
         if lib.hidden and not owns and not request.user.is_staff:
             return redirect("studio:gallery")          # retire temporairement : seuls ses joueurs y ont acces
         if float(lib.price or 0) > 0 and not owns:
-            return redirect("studio:gallery_buy", uid=uid)
-        if verified and not owns:
+            # modele payant : 5 min d'essai (comme les toiles des commandes), puis achat pour continuer
+            buy = {"url": reverse("studio:gallery_buy", args=[uid]), "price": float(lib.price)}
+            owned = request.user.is_staff
+        elif verified and not owns:
             _grant_gallery(request, lib, verified)   # gratuite -> arrive dans Mes Toiles
-    owned = DigitalCanvas.objects.filter(uid=uid).exists()
     # Essai gratuit : "Retour a la commande" ramene a l'apercu de la commande en cours.
     # Sortie du jeu (croix, fin d'essai) : retour a l'apercu de la commande en cours, sans rien perdre.
     if request.session.get("digital_trial_uid") == uid and not owned:
@@ -337,7 +340,8 @@ def digipaint(request, uid):
     else:
         back_url, back_label = reverse("studio:paint_portal"), _("Mes toiles")
     return render(request, "studio/digipaint.html",
-                  {"uid": uid, "palette": palette, "owned": owned, "back_url": back_url, "back_label": back_label})
+                  {"uid": uid, "palette": palette, "owned": owned, "back_url": back_url, "back_label": back_label,
+                   "buy": buy})
 
 
 def preview(request):
@@ -556,8 +560,12 @@ def gallery(request):
                 m.save(update_fields=["zones"])
     from . import seo
     from django.utils.translation import gettext as _t
+    models.sort(key=lambda m: bool(m.price and m.price > 0))   # gratuites d'abord : envie de tester (tri stable)
+    from collections import Counter
+    cats = Counter(m.category for m in models if m.category)
+    n_free = sum(1 for m in models if not (m.price and m.price > 0))
     return render(request, "studio/gallery.html", {
-        "models": models,
+        "models": models, "cats": sorted(cats.items()), "n_free": n_free, "n_paid": len(models) - n_free,
         "ld_list": seo.dump(seo.item_list(models, lambda m: reverse("studio:digipaint", args=[m.uid]))),
         "ld_crumb": seo.dump(seo.breadcrumb((_t("Accueil"), "/"), (_t("Testez notre jeu"), request.path)))})
 

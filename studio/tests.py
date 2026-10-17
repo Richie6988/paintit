@@ -1395,3 +1395,28 @@ class ImageBankTests(TestCase):
         self.assertTrue(enq.called and cg.call_args.kwargs["colors"] == 36)
         used = StockImage.objects.get(pk=img.pk).used_in
         self.assertIn("vidéo vid-", used); self.assertIn("catalogue gal-sun", used)
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+class PlayFiltersTests(TestCase):
+    def test_free_first_and_filters(self):
+        for k, (c, p) in enumerate([("Animaux", 3), ("Fleurs", 0), ("Animaux", 0)]):
+            DigitalCanvas.objects.create(uid="gal-t%d" % k, email="__library__", source="library", title="T%d" % k,
+                                         category=c, price=p, colors=24, zones=10)
+        r = self.client.get("/play/")
+        self.assertEqual([m.uid for m in r.context["models"]][-1], "gal-t0")          # payante en dernier
+        self.assertEqual((r.context["n_free"], r.context["n_paid"]), (2, 1))
+        self.assertEqual(r.context["cats"], [("Animaux", 2), ("Fleurs", 1)])
+        self.assertContains(r, 'id="gcat"'); self.assertContains(r, 'value="free"')
+
+    def test_paid_model_has_5_min_trial_then_buy(self):
+        d = os.path.join(MEDIA, "orders", "gal-paid1")
+        os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "gal-paid1_digipaint.svg"), "w").write('<svg viewBox="0 0 10 10"></svg>')
+        DigitalCanvas.objects.create(uid="gal-paid1", email="__library__", source="library", title="P", price=4.9)
+        r = self.client.get("/play/gal-paid1/")
+        self.assertEqual(r.status_code, 200)                                   # plus de redirection vers l'achat
+        self.assertFalse(r.context["owned"])                                   # minuteur d'essai actif
+        self.assertEqual(r.context["buy"]["url"], "/play/buy/gal-paid1/")
+        self.assertContains(r, "Acheter et continuer")
+        self.assertContains(self.client.get("/play/"), 'href="/play/gal-paid1/"')

@@ -7,17 +7,30 @@
 <section class="panel wide">
   <h1>{% trans "Testez notre jeu" %}</h1>
   <p class="sub">{% trans "Peignez gratuitement un modèle en ligne et découvrez la précision de notre algorithme. Ensuite, créez la vôtre à partir de votre propre photo." %}</p>
-  <input type="search" id="gsearch" class="g-search" placeholder="{% trans 'Rechercher une toile…' %}" autocomplete="off">
+  <div class="g-filters">
+    <input type="search" id="gsearch" class="g-search" placeholder="{% trans 'Rechercher une toile…' %}" autocomplete="off" aria-label="{% trans 'Rechercher une toile…' %}">
+    {% if models %}
+    <select id="gprice" class="g-sel" aria-label="{% trans 'Prix' %}">
+      <option value="">{% trans "Tous les prix" %} ({{ models|length }})</option>
+      {% if n_free %}<option value="free">{% trans "Gratuites" %} ({{ n_free }})</option>{% endif %}
+      {% if n_paid %}<option value="paid">{% trans "Payantes" %} ({{ n_paid }})</option>{% endif %}
+    </select>
+    {% if cats %}<select id="gcat" class="g-sel" aria-label="{% trans 'Catégorie' %}">
+      <option value="">{% trans "Catégories" %}</option>
+      {% for c, n in cats %}<option value="{{ c|lower }}">{{ c }} ({{ n }})</option>{% endfor %}
+    </select>{% endif %}
+    {% endif %}
+  </div>
   {% if models %}
     <div class="models-grid" id="ggrid">
       {% for m in models %}
-        <a class="model-card gcard" href="{% if m.price and m.price > 0 %}{% url 'studio:gallery_buy' m.uid %}{% else %}{% url 'studio:digipaint' m.uid %}{% endif %}"
-           data-name="{{ m.title|lower }}" data-cat="{{ m.category|lower }}">
+        <a class="model-card gcard" href="{% url 'studio:digipaint' m.uid %}"
+           data-name="{{ m.title|lower }}" data-cat="{{ m.category|lower }}" data-free="{% if m.price and m.price > 0 %}0{% else %}1{% endif %}">
           <div class="mc-thumb"><div class="mc-img" style="aspect-ratio:40/50">
             <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="" loading="lazy">
             {% if m.price and m.price > 0 %}
               <span class="g-price">{{ m.price|floatformat:2 }}&nbsp;&euro;</span>
-              <span class="g-cta g-buy">{% trans "Acheter" %}</span>
+              <span class="g-cta g-buy">{% trans "Essai 5 min" %}</span>
             {% else %}
               <span class="g-cta g-free">Free</span>
               <span class="mc-play"><svg class="icplay" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span>
@@ -39,15 +52,25 @@
 <script>
 (function(){
   var q=document.getElementById('gsearch');if(!q)return;
+  var pr=document.getElementById('gprice'),ca=document.getElementById('gcat');
   var cards=[].slice.call(document.querySelectorAll('.gcard')),none=document.getElementById('gnone');
-  q.addEventListener('input',function(){
-    var v=q.value.trim().toLowerCase(),n=0;
-    cards.forEach(function(c){
-      var ok=!v||(c.dataset.name||'').indexOf(v)>=0||(c.dataset.cat||'').indexOf(v)>=0;
-      c.style.display=ok?'':'none';if(ok)n++;
+  var url=new URLSearchParams(location.search);              // filtres partageables : ?prix=free&cat=animaux&q=chat
+  if(pr&&url.get('prix'))pr.value=url.get('prix');
+  if(ca&&url.get('cat'))ca.value=url.get('cat');
+  if(url.get('q'))q.value=url.get('q');
+  function run(){
+    var v=q.value.trim().toLowerCase(),p=pr?pr.value:'',c=ca?ca.value:'',n=0;
+    cards.forEach(function(el){
+      var ok=(!v||(el.dataset.name||'').indexOf(v)>=0||(el.dataset.cat||'').indexOf(v)>=0)
+        &&(!p||(p==='free')===(el.dataset.free==='1'))&&(!c||el.dataset.cat===c);
+      el.style.display=ok?'':'none';if(ok)n++;
     });
     if(none)none.style.display=n?'none':'';
-  });
+    var u=new URLSearchParams();if(p)u.set('prix',p);if(c)u.set('cat',c);if(v)u.set('q',v);
+    history.replaceState(null,'',location.pathname+(u.toString()?'?'+u:''));
+  }
+  q.addEventListener('input',run);if(pr)pr.addEventListener('change',run);if(ca)ca.addEventListener('change',run);
+  if(location.search)run();
 })();
 </script>
 {% endblock %}

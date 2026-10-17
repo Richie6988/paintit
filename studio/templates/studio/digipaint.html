@@ -284,9 +284,15 @@
   <div class="big" id="finalScore">0</div><p style="color:var(--muted)">{% trans "Bravo, votre toile est complète." %}</p>
   <button class="btn pri" id="winok">{% trans "Continuer" %}</button></div></div>
 <div class="paywall" id="paywall"><div class="pw-card">
+  {% if buy %}
+  <h2>{% trans "Vous avez aimé ce modèle ?" %}</h2>
+  <p>{% trans "Votre essai de 5 minutes est terminé. Achetez ce modèle pour le terminer et le garder dans « Mes toiles » : votre progression est conservée." %}</p>
+  <a class="btn pri" id="pwBuy" href="{{ buy.url }}" style="display:flex;width:100%;box-sizing:border-box;justify-content:center;font-size:.92rem;font-weight:700;padding:10px;white-space:normal">{% trans "Acheter et continuer" %} · {{ buy.price|floatformat:2 }}&nbsp;&euro;</a>
+  {% else %}
   <h2>{% trans "Sauvegardez votre toile" %}</h2>
   <p>{% trans "Vous jouez depuis 5 minutes. Sauvegardez cette toile dans « Mes toiles » pour continuer à la peindre quand vous voulez." %}</p>
   <button class="btn pri" id="pwPay" style="width:100%;justify-content:center;font:inherit;font-size:.92rem;font-weight:700;padding:10px;white-space:normal">{% trans "Sauvegarder et continuer" %} · 0,99&nbsp;&euro;</button>
+  {% endif %}
   <p style="font-size:.72rem;margin:8px 0 0;opacity:.75">{% trans "Accès immédiat : en payant, vous renoncez au droit de rétractation." %} <a href="/cgv/" target="_blank" style="color:inherit">{% trans "CGV" %}</a></p>
   <a class="btn" id="pwBack" href="{{ back_url }}" style="display:flex;justify-content:center;width:100%;box-sizing:border-box;margin-top:10px;font-size:.92rem;font-weight:700;padding:10px">{{ back_label }}</a>
 </div></div>
@@ -310,7 +316,8 @@
       if(played>=FREE_S){clearInterval(tick);wall();}
     },5000);}
   }
-  document.getElementById('pwPay').addEventListener('click',function(){
+  var pwPay=document.getElementById('pwPay');
+  if(pwPay)pwPay.addEventListener('click',function(){
     fetch("/play/"+UID+"/confirm/",{method:'POST',headers:{'X-CSRFToken':CSRF}})
       .then(function(r){return r.json();}).then(function(d){if(d&&d.redirect){location.href=d.redirect;return;}if(d&&d.ok){OWNED=true;document.getElementById('paywall').classList.remove('show');}});
   });

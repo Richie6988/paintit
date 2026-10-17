@@ -616,6 +616,14 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 .g-search{width:100%;max-width:480px;margin:6px 0 18px;padding:12px 16px;border:1px solid #cdd8ea;border-radius:12px;
   font-size:1rem;background:#fff;color:#12224f}
 .g-search:focus{outline:2px solid var(--accent,#2f6bf2);border-color:var(--accent,#2f6bf2)}
+.g-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0 18px}
+.g-filters .g-search{margin:0;flex:1 1 260px}
+.g-sel{height:48px;padding:0 38px 0 14px;border:1px solid #cdd8ea;border-radius:12px;background:#fff;color:#12224f;font-size:.95rem;
+  font-weight:600;cursor:pointer;flex:0 1 auto;max-width:100%;appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2312224f' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center}
+.g-sel:focus{outline:2px solid var(--accent,#2f6bf2);border-color:var(--accent,#2f6bf2)}
+@media (max-width:560px){.g-filters .g-search{flex-basis:100%}.g-sel{flex:1 1 0;min-width:0}}
 .gcard .mc-meta{display:none}
 
 /* Upload : glisser-deposer fluide (survol) */

@@ -1764,3 +1764,37 @@ msgstr "Funnel: show only the areas left to paint."
 
 msgid "C'est parti !"
 msgstr "Let's go!"
+
+msgid "Tous les prix"
+msgstr "All prices"
+
+msgid "Gratuites"
+msgstr "Free"
+
+msgid "Payantes"
+msgstr "Paid"
+
+msgid "Toutes les catégories"
+msgstr "All categories"
+
+msgid "Catégorie"
+msgstr "Category"
+
+msgid "Catégories"
+msgstr "Categories"
+
+msgid "Vous avez aimé ce modèle ?"
+msgstr "Enjoying this design?"
+
+msgid ""
+"Votre essai de 5 minutes est terminé. Achetez ce modèle pour le terminer et "
+"le garder dans « Mes toiles » : votre progression est conservée."
+msgstr ""
+"Your 5-minute trial is over. Buy this design to finish it and keep it in “My"
+" canvases”: your progress is kept."
+
+msgid "Acheter et continuer"
+msgstr "Buy and continue"
+
+msgid "Essai 5 min"
+msgstr "5-min trial"

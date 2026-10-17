@@ -1777,3 +1777,37 @@ msgstr "Embudo: mostrar solo las zonas que quedan por pintar."
 
 msgid "C'est parti !"
 msgstr "¡Vamos!"
+
+msgid "Tous les prix"
+msgstr "Todos los precios"
+
+msgid "Gratuites"
+msgstr "Gratis"
+
+msgid "Payantes"
+msgstr "De pago"
+
+msgid "Toutes les catégories"
+msgstr "Todas las categorías"
+
+msgid "Catégorie"
+msgstr "Categoría"
+
+msgid "Catégories"
+msgstr "Categorías"
+
+msgid "Vous avez aimé ce modèle ?"
+msgstr "¿Te gusta este modelo?"
+
+msgid ""
+"Votre essai de 5 minutes est terminé. Achetez ce modèle pour le terminer et "
+"le garder dans « Mes toiles » : votre progression est conservée."
+msgstr ""
+"Tu prueba de 5 minutos ha terminado. Compra este modelo para terminarlo y "
+"guardarlo en «Mis lienzos»: tu progreso se conserva."
+
+msgid "Acheter et continuer"
+msgstr "Comprar y continuar"
+
+msgid "Essai 5 min"
+msgstr "Prueba 5 min"

@@ -1789,3 +1789,37 @@ msgstr "Imbuto: mostra solo le zone ancora da dipingere."
 
 msgid "C'est parti !"
 msgstr "Si parte!"
+
+msgid "Tous les prix"
+msgstr "Tutti i prezzi"
+
+msgid "Gratuites"
+msgstr "Gratuite"
+
+msgid "Payantes"
+msgstr "A pagamento"
+
+msgid "Toutes les catégories"
+msgstr "Tutte le categorie"
+
+msgid "Catégorie"
+msgstr "Categoria"
+
+msgid "Catégories"
+msgstr "Categorie"
+
+msgid "Vous avez aimé ce modèle ?"
+msgstr "Ti piace questo modello?"
+
+msgid ""
+"Votre essai de 5 minutes est terminé. Achetez ce modèle pour le terminer et "
+"le garder dans « Mes toiles » : votre progression est conservée."
+msgstr ""
+"La tua prova di 5 minuti è terminata. Acquista questo modello per finirlo e "
+"tenerlo in «Le mie tele»: i tuoi progressi restano salvati."
+
+msgid "Acheter et continuer"
+msgstr "Acquista e continua"
+
+msgid "Essai 5 min"
+msgstr "Prova 5 min"

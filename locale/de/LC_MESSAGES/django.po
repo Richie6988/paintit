@@ -1804,3 +1804,38 @@ msgstr "Trichter: nur die noch zu malenden Felder anzeigen."
 
 msgid "C'est parti !"
 msgstr "Los geht's!"
+
+msgid "Tous les prix"
+msgstr "Alle Preise"
+
+msgid "Gratuites"
+msgstr "Kostenlos"
+
+msgid "Payantes"
+msgstr "Kostenpflichtig"
+
+msgid "Toutes les catégories"
+msgstr "Alle Kategorien"
+
+msgid "Catégorie"
+msgstr "Kategorie"
+
+msgid "Catégories"
+msgstr "Kategorien"
+
+msgid "Vous avez aimé ce modèle ?"
+msgstr "Gefällt dir dieses Motiv?"
+
+msgid ""
+"Votre essai de 5 minutes est terminé. Achetez ce modèle pour le terminer et "
+"le garder dans « Mes toiles » : votre progression est conservée."
+msgstr ""
+"Deine 5-minütige Testphase ist vorbei. Kaufe dieses Motiv, um es "
+"fertigzustellen und in „Meine Leinwände“ zu behalten: dein Fortschritt "
+"bleibt erhalten."
+
+msgid "Acheter et continuer"
+msgstr "Kaufen und weitermachen"
+
+msgid "Essai 5 min"
+msgstr "5 Min. testen"
