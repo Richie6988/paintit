@@ -48,9 +48,11 @@ def sources():
             seen.add(c.uid); out.append((c.uid, c.title or c.uid))
     root = os.path.join(settings.MEDIA_ROOT, "orders")
     imported = [d for d in os.listdir(root) if d.startswith("vid-")] if os.path.isdir(root) else []
+    recent = []                                          # images importees / densites regenerees : la plus recente en tete
     for uid in sorted(imported, key=lambda d: -os.path.getmtime(os.path.join(root, d))):
-        if _svg_path(uid):                               # images importees / densites regenerees depuis cette page
-            seen.add(uid); out.insert(0, (uid, _label(uid)))
+        if _svg_path(uid):
+            seen.add(uid); recent.append((uid, _label(uid)))
+    out = recent + out
     for uid, camp in MarketingAd.objects.order_by("-created_at").values_list("image_uid", "campaign")[:300]:
         if uid not in seen and _svg_path(uid):
             seen.add(uid); out.append((uid, "Studio créatif · " + (camp or uid)))

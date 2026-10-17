@@ -4679,6 +4679,7 @@ def erp_videos(request):
     caption = "%s\n\n%s" % (satisfying.CAPTIONS["en"], satisfying.HASHTAGS)
     return render(request, "admin/erp_videos.html", {
         **_admin.site.each_context(request), "videos": videos, "sources": srcs, "hooks": HOOKS,
+        "picked": request.GET.get("canvas") if request.GET.get("canvas") in titles else (srcs[0][0] if srcs else ""),
         "music_styles": satisfying.MUSIC_STYLES, "densities": satisfying.DENSITIES,
         "titles": {"fill": satisfying.TITLES["en"] + satisfying.TITLES["fr"], **shorts.TITLES},
         "formats": shorts.FORMATS, "hashtags": satisfying.HASHTAGS,
@@ -4781,7 +4782,7 @@ def erp_images(request):
                         if op == "video":
                             satisfying.save_label(uid, "Banque · %s" % img.title[:80])
                             messages.success(request, "Toile prête : elle est sélectionnée en tête de liste.")
-                            return redirect("/admin-hub/videos/")
+                            return redirect("/admin-hub/videos/?canvas=%s" % uid)
                         return redirect("/marketing/?img=%s" % uid)
                 finally:
                     if os.path.exists(hd):
@@ -4834,7 +4835,7 @@ def erp_images(request):
     by_cat = dict(allq.values_list("category").annotate(n=Count("id")))
     return render(request, "admin/erp_images.html", {
         "tabs": [(k, l, counts[k]) for k, l in (("new", "À trier"), ("kept", "Retenues"), ("used", "Utilisées"),
-                                                ("rejected", "Écartées")) if k != "rejected" or counts[k]],
+                                                ("rejected", "Archivées")) if k != "rejected" or counts[k]],
         "prov_opts": [(k, l, imagebank.LICENSE_NOTES[k], k in imagebank.available()) for k, l in StockImage.PROVIDERS],
         "cat_opts": [(c, by_cat.get(c, 0)) for c in imagebank.THEMES], "mins": ["40", "50", "60", "70"],
         **_admin.site.each_context(request), "page": page, "status": status, "counts": counts, "total": allq.count(),
@@ -4843,6 +4844,46 @@ def erp_images(request):
               "people": request.GET.get("people", "")},
         "qs_nopage": params.urlencode(), "state": imagebank.state(), "page_links": page_links,
         "params_nopage": [(k, v) for k in params for v in params.getlist(k)],
+        "erp_section": "growth", "gtab": "images"})
+
+
+@staff_member_required
+def erp_images_swipe(request):
+    """Tri express facon Tinder : droite = garder (galerie), gauche = archiver. Une image a la fois, clavier ou glisser."""
+    import json as _json
+    from django.contrib import admin as _admin
+    from .models import StockImage
+    todo = StockImage.objects.filter(status="new")
+    if not request.GET.get("people"):
+        todo = todo.filter(people=False)
+    if request.method == "POST":
+        try:
+            d = _json.loads(request.body or b"{}")
+        except ValueError:
+            d = {}
+        st = d.get("status")
+        if st not in ("kept", "rejected", "new"):
+            return JsonResponse({"ok": False}, status=400)
+        n = StockImage.objects.filter(pk=d.get("id")).exclude(status="deleted").update(status=st)
+        return JsonResponse({"ok": bool(n), "left": todo.count()})
+    if request.GET.get("format") == "json":                   # lot suivant (les ids deja en file sont exclus)
+        skip = [int(x) for x in (request.GET.get("skip") or "").split(",") if x.isdigit()]
+        cat = request.GET.get("cat", "")
+        qs = todo.exclude(pk__in=skip)
+        if cat:
+            qs = qs.filter(category=cat)
+        items = [{"id": i.pk, "title": i.title, "cat": i.category, "lic": i.license or i.get_provider_display(),
+                  "src": i.get_provider_display(), "wh": "%d×%d" % (i.width, i.height), "v": round(i.vibrancy),
+                  "page": i.page_url, "people": i.people}
+                 for i in qs.order_by("-vibrancy", "pk")[:30]]
+        return JsonResponse({"items": items, "left": (todo.filter(category=cat) if cat else todo).count()})
+    from . import imagebank
+    from django.db.models import Count
+    by_cat = dict(todo.values_list("category").annotate(n=Count("id")))
+    return render(request, "admin/erp_images_swipe.html", {
+        **_admin.site.each_context(request), "left": todo.count(),
+        "kept": StockImage.objects.filter(status="kept").count(),
+        "cats": [(c, by_cat.get(c, 0)) for c in imagebank.THEMES if by_cat.get(c)],
         "erp_section": "growth", "gtab": "images"})
 
 

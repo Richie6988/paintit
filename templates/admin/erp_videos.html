@@ -13,7 +13,7 @@
  .vf .chk{display:flex;align-items:center;gap:6px;white-space:nowrap}
  .vf .chk input{width:auto;height:auto}
  .vf .go{display:flex;align-items:center;justify-content:space-between;gap:10px;height:38px}
- .pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;max-height:330px;overflow:auto;padding:2px}
+ .pick{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;max-height:330px;overflow:auto;padding:2px}
  .pk{position:relative;display:block!important;cursor:pointer;border-radius:12px;overflow:hidden;border:2px solid #e3e7ef;aspect-ratio:4/5;background:#f2f4f8}
  .pk input{position:absolute;opacity:0;pointer-events:none}
  .pk img{width:100%;height:100%;object-fit:cover;display:block}
@@ -55,7 +55,7 @@
           <span class="imp-t"><b>+ Importer une image</b><small>depuis l'ordinateur</small></span>
         </label>
         {% for uid, t in sources %}
-        <label class="pk"><input type="radio" name="canvas" value="{{ uid }}"{% if forloop.first %} checked{% endif %}>
+        <label class="pk"><input type="radio" name="canvas" value="{{ uid }}"{% if uid == picked %} checked{% endif %}>
           <img loading="lazy" src="/preview/img/{{ uid }}/source/" onerror="this.onerror=null;this.src='/preview/img/{{ uid }}/preview/'" alt="">
           <span>{{ t }}</span></label>
         {% endfor %}
@@ -136,6 +136,10 @@
 </div>
 {{ titles|json_script:"vtitles" }}
 <script>
+(function () {                                   // toile choisie (ex. envoyee depuis la banque) : visible dans la grille
+  var r = document.querySelector('input[name=canvas]:checked');
+  if (r) { var pk = r.closest(".pk"); pk.parentNode.scrollTop = pk.offsetTop - 8; }
+})();
 (function () {
   var sel = document.getElementById("vfmt"), hint = document.getElementById("vfmt-hint");
   var H = {fill: "La toile se remplit (22 à 32 s par défaut). Classique, très « satisfying ».",

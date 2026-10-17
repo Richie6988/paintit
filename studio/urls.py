@@ -97,6 +97,7 @@ urlpatterns = [
     path("admin-hub/videos/", views.erp_videos, name="erp_videos"),
     path("admin-hub/banner/", views.erp_banners, name="erp_banners"),
     path("admin-hub/images/", views.erp_images, name="erp_images"),
+    path("admin-hub/images/tri/", views.erp_images_swipe, name="erp_images_swipe"),
     path("admin-hub/images/<int:pk>.jpg", views.erp_image_thumb, name="erp_image_thumb"),
     path("admin-hub/test-data/", views.erp_test_data, name="erp_test_data"),
     path("admin-hub/videos/<int:pk>.<str:ext>", views.erp_video_file, name="erp_video_file"),

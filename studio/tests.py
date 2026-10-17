@@ -925,6 +925,20 @@ class SatisfyingVideoTests(TestCase):
         self.assertEqual(self.client.get("/admin-hub/videos/?format=json").json()["videos"][0]["status"], "queued")
         self.assertEqual(self.client.get("/admin-hub/videos/%d.mp4" % v.pk).status_code, 404)
 
+    def test_sources_newest_import_first(self):
+        import shutil as _sh, time as _t
+        from studio import satisfying
+        for uid in ("vid-old0000001", "vid-new0000001"):
+            d = os.path.join(MEDIA, "orders", uid)
+            os.makedirs(d, exist_ok=True)
+            _sh.copy(os.path.join(MEDIA, "orders", self.UID, self.UID + "_digipaint.svg"), os.path.join(d, uid + "_digipaint.svg"))
+            _t.sleep(0.05)
+        os.utime(os.path.join(MEDIA, "orders", "vid-new0000001"))
+        uids = [u for u, _t2 in satisfying.sources()]
+        self.assertEqual(uids[:2], ["vid-new0000001", "vid-old0000001"])
+        r = self.client.get("/admin-hub/videos/?canvas=vid-old0000001")
+        self.assertEqual(r.context["picked"], "vid-old0000001")
+
     def test_render_short_formats(self):
         from studio import shorts
         out = os.path.join(MEDIA, "s.mp4")
@@ -1322,3 +1336,20 @@ class ImageBankTests(TestCase):
         self.assertEqual(StockImage.objects.get(pk=first.pk).status, "deleted")
         self.assertNotIn(first.pk, [i.pk for i in self.client.get("/admin-hub/images/?sort=oldest").context["page"]])
         self.assertEqual(self.client.get("/admin-hub/images/").context["total"], 129)
+
+    def test_swipe_triage(self):
+        import json as _json
+        from studio.models import StockImage
+        a = StockImage.objects.create(provider="artic", ext_id="s1", title="A", full_url="https://x", vibrancy=80)
+        b = StockImage.objects.create(provider="artic", ext_id="s2", title="B", full_url="https://x", vibrancy=60)
+        self.assertContains(self.client.get("/admin-hub/images/tri/"), "Tri express")
+        d = self.client.get("/admin-hub/images/tri/?format=json").json()
+        self.assertEqual(([i["id"] for i in d["items"]], d["left"]), ([a.pk, b.pk], 2))
+        self.assertEqual([i["id"] for i in self.client.get("/admin-hub/images/tri/?format=json&skip=%d" % a.pk)
+                          .json()["items"]], [b.pk])
+        post = lambda pk, st: self.client.post("/admin-hub/images/tri/", _json.dumps({"id": pk, "status": st}),
+                                               content_type="application/json").json()
+        self.assertEqual(post(a.pk, "kept"), {"ok": True, "left": 1})
+        self.assertEqual(post(b.pk, "rejected")["left"], 0)
+        self.assertEqual(post(b.pk, "new")["left"], 1)                    # annuler
+        self.assertEqual(StockImage.objects.get(pk=a.pk).status, "kept")
