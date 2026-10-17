@@ -22,7 +22,8 @@ W, H, FPS = 1080, 1920, 30
 INTRO, OUTRO = 0.1, 3.4                       # ca demarre tout de suite ; fin = toile finie + nom qui se colorie
 PHOTO_HOLD, PHOTO_FADE = 0.6, 0.25             # avant / apres : photo breve puis fondu vers la toile vierge
 # ouverture « photo -> kit » : photo, contours traces comme un arc electrique, photo effacee, numeros qui apparaissent
-OPEN_PHOTO, OPEN_TRACE, OPEN_BLANK, OPEN_NUMS = 0.5, 4.5, 0.4, 0.6
+OPEN_PHOTO, OPEN_TRACE, OPEN_BLANK, OPEN_NUMS = 0.5, 5.5, 0.4, 0.6
+PREFILL = 0.08          # part des zones deja peintes quand la toile apparait : jamais d'ecran blanc qui fait zapper
 TOP, SIDE, CANVAS_H = 330, 24, 1250            # zone accroche en haut, marges laterales, hauteur max de la toile
 BG = (247, 244, 238)
 INK = (18, 34, 79)
@@ -291,7 +292,37 @@ def _crackle(out, sr, t0, t1, rng):
             out[p:p + L] += rng.uniform(0.05, 0.16) * rng.standard_normal(L) * np.exp(-np.arange(L) / (L / 4))
 
 
-def music(path, duration, fill_end, seed=0, sr=44100, style="ambient", plucks=None, crackle=None):
+def _cracks(out, sr, cracks, rng):
+    """Petit claquement electrique (le meme grain que l'ouverture) sur chaque zone peinte. Quand le rythme
+    s'emballe, chaque claquement s'adoucit : ca devient un crepitement continu, jamais un mur de bruit."""
+    last = -1.0
+    for t, amp in sorted(cracks):
+        gap = t - last
+        if gap < 0.012:
+            continue
+        last = t
+        k = amp * float(np.clip(gap / 0.09, 0.3, 1.0))
+        for _ in range(int(rng.integers(2, 4))):                     # 2-3 micro-claquements en 25 ms
+            L = int(sr * rng.uniform(0.002, 0.009))
+            sig = rng.uniform(0.07, 0.15) * k * rng.standard_normal(L) * np.exp(-np.arange(L) / (L / 4))
+            _add(out, sr, t + rng.uniform(0, 0.025), np.diff(sig, prepend=0) * 1.6)
+
+
+def _break(out, sr, at, rng):
+    """« Crac » final de l'ouverture : impact sec + coup sourd + eclats aigus qui retombent."""
+    L = int(0.12 * sr)
+    tt = np.arange(L) / sr
+    _add(out, sr, at, 0.55 * np.diff(rng.standard_normal(L), prepend=0) * np.exp(-tt * 38))
+    T = int(0.45 * sr)
+    tb = np.arange(T) / sr
+    _add(out, sr, at, 0.45 * np.sin(2 * np.pi * (58 * tb + 40 * (1 - np.exp(-tb * 12)))) * np.exp(-tb * 7))
+    for _ in range(6):                                                 # eclats « verre » qui tombent
+        f = rng.uniform(2200, 5200)
+        _add(out, sr, at + rng.uniform(0.02, 0.35), _tone(sr, 0.25, f, rng.uniform(0.03, 0.06), 22, (1, 0, 0.3)))
+
+
+def music(path, duration, fill_end, seed=0, sr=44100, style="ambient", plucks=None, crackle=None, cracks=None,
+          breaks=()):
     """Musique generee par le code (donc libre de droits), synchronisee sur le remplissage + « ding » final.
     style « none » + plucks : uniquement les sons de remplissage."""
     rng = np.random.default_rng(seed)
@@ -308,6 +339,10 @@ def music(path, duration, fill_end, seed=0, sr=44100, style="ambient", plucks=No
         _plucks(out, sr, plucks)
     if crackle:
         _crackle(out, sr, crackle[0], crackle[1], rng)
+    if cracks:
+        _cracks(out, sr, cracks, rng)
+    for b in breaks:
+        _break(out, sr, b, rng)
     _ding(out, sr, fill_end)
     out *= 0.9 / max(1e-6, np.abs(out).max())
     fade = min(len(out), int(1.2 * sr))
@@ -556,6 +591,22 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
     fill_seconds = max(10.0, duration - intro - OUTRO - SUSPENSE)
     start = schedule(n, numbers, mode, fill_seconds, seed, px, np.c_[cx, cy]) + intro
     dur = np.clip(0.16 + 0.0011 * np.sqrt(px), 0.16, 0.65)
+    # pre-remplissage : les premieres zones (~8 %) sont deja peintes quand la toile apparait (sous la photo pendant
+    # l'ouverture, ou des la 1re image sans ouverture) ; les autres reprennent la courbe complete depuis l'intro
+    order = np.argsort(start, kind="stable")
+    k_pre = int(round(PREFILL * n)) if n > 12 else 0
+    pre = order[:k_pre]
+    if k_pre:
+        if photo is not None:
+            t_pre = INTRO + OPEN_PHOTO + 0.3
+            start[pre] = np.linspace(t_pre, t_pre + OPEN_TRACE - 1.2, k_pre)
+        else:
+            start[pre] = -dur[pre] - 1.5             # deja peintes (et « pop » termine) a la 1re image
+        u = np.linspace(0, 1, 2001)
+        rest = order[k_pre:]
+        start[rest] = intro + fill_seconds * np.interp(np.arange(len(rest)) / max(1, len(rest)),
+                                                       0.3 * u + 0.7 * u ** 3, u)
+    prefilled = set(pre.tolist())
     # derniere zone : bien visible mais pas immense (1 a 3 % de la toile), proche du centre, parmi les dernieres
     late = np.argsort(start)[-max(3, n // 6):]
     share = px[late] / max(px.sum(), 1)
@@ -611,11 +662,16 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
         lum = col @ np.array([0.3, 0.59, 0.11], np.float32)
         idx = np.round(lum / 255 * (len(PENTA) - 1)).astype(int)
         amp = 0.45 + 0.55 * np.sqrt(px / max(px.max(), 1))
-        plucks = [(float(start[z]), int(idx[z]), float(amp[z])) for z in range(n) if z != last]
+        plucks = [(float(start[z]), int(idx[z]), float(amp[z])) for z in range(n) if z != last and z not in prefilled]
+    # claquement electrique sur chaque zone peinte (meme grain que l'ouverture)
+    cracks = [(float(start[z]), float(0.6 + 0.4 * np.sqrt(px[z] / max(px.max(), 1)))) for z in range(n)
+              if z != last and z not in prefilled] if fill_sounds else None
     crackle = (INTRO + OPEN_PHOTO, INTRO + OPEN_PHOTO + OPEN_TRACE) if photo is not None else None
+    breaks = (INTRO + OPEN_PHOTO + OPEN_TRACE,) if photo is not None else ()     # « crac » : la photo cede la place
     has_audio = style != "none" or bool(plucks) or bool(crackle)
     if has_audio:
-        music(tmp_audio, duration, fill_end, seed, style=style, plucks=plucks, crackle=crackle)
+        music(tmp_audio, duration, fill_end, seed, style=style, plucks=plucks, crackle=crackle, cracks=cracks,
+              breaks=breaks)
     cmd = [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
            "-s", "%dx%d" % (W, H), "-r", str(FPS), "-i", "-"]
     if has_audio:
@@ -672,7 +728,7 @@ def render(uid, out_path, mode="flow", duration=65.0, hook="", end_title="", end
             frame = base.copy()
             frame[oy:oy + ch, ox:ox + cw] = canvas
             # progression : compteur de zones peintes (bouge a chaque zone, plus vivant qu'un %) + barre
-            nz = int(done_z.sum())
+            nz = int(done_z.sum()) if photo is None or t >= INTRO + OPEN_PHOTO + OPEN_TRACE else 0
             wbar = int(round(cw * nz / max(n, 1)))
             if wbar:
                 frame[bar_y:bar_y + 8, ox:ox + wbar] = (47, 107, 242) if nz < n else (31, 157, 85)

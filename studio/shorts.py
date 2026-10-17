@@ -334,10 +334,11 @@ def render(fmt, uid, out_path, duration=0, hook="", answer="", series="", uid2="
     # --- son : musique + une note par zone (toile de gauche seulement en versus), bips du compte a rebours
     tmp_audio = out_path + ".wav"
     plucks = _plucks(ps[0], starts[0]) if fill_sounds else []
+    cracks = [(t, 0.8) for t, _i, _a in plucks] or None          # claquement electrique sur chaque zone peinte
     plucks += [(t, len(S.PENTA) - 1, a) for t, a in ticks]
     audio = None
     if music_style != "none" or plucks:
-        S.music(tmp_audio, duration, fill_end, seed, style=music_style, plucks=plucks or None)
+        S.music(tmp_audio, duration, fill_end, seed, style=music_style, plucks=plucks or None, cracks=cracks)
         audio = tmp_audio
     proc = _ffmpeg(out_path, audio)
     total = int(duration * FPS)
