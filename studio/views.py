@@ -562,10 +562,15 @@ def gallery(request):
     from django.utils.translation import gettext as _t
     models.sort(key=lambda m: bool(m.price and m.price > 0))   # gratuites d'abord : envie de tester (tri stable)
     from collections import Counter
+    from . import categories
+    lang = get_language() or "fr"
+    for m in models:
+        m.cat_label = categories.label(m.category, lang) if m.category else ""
     cats = Counter(m.category for m in models if m.category)
     n_free = sum(1 for m in models if not (m.price and m.price > 0))
     return render(request, "studio/gallery.html", {
-        "models": models, "cats": sorted(cats.items()), "n_free": n_free, "n_paid": len(models) - n_free,
+        "models": models, "n_free": n_free, "n_paid": len(models) - n_free,
+        "cats": sorted(((c, categories.label(c, lang), n) for c, n in cats.items()), key=lambda x: x[1].lower()),
         "ld_list": seo.dump(seo.item_list(models, lambda m: reverse("studio:digipaint", args=[m.uid]))),
         "ld_crumb": seo.dump(seo.breadcrumb((_t("Accueil"), "/"), (_t("Testez notre jeu"), request.path)))})
 
@@ -3233,7 +3238,9 @@ def erp_catalogue(request):
     return render(request, "admin/erp_catalogue.html", {
         **_admin.site.each_context(request), "tab": tab, "items": items, "q": q, "cat": cat, "pf": pf,
         "sort": sort, "cats": cats, "stats": stats, "slider": request.GET.get("slider", ""),
-        "bank": _bank_picks(), "erp_section": "catalogue"})
+        "bank": _bank_picks(), "erp_section": "catalogue",
+        "cat_suggest": sorted(set(cats) | set(__import__("studio.categories", fromlist=["x"]).names())),
+        "untranslated": [c for c in cats if not __import__("studio.categories", fromlist=["x"]).known(c)]})
 
 
 def _zones(v):

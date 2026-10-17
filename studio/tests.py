@@ -1406,7 +1406,7 @@ class PlayFiltersTests(TestCase):
         r = self.client.get("/play/")
         self.assertEqual([m.uid for m in r.context["models"]][-1], "gal-t0")          # payante en dernier
         self.assertEqual((r.context["n_free"], r.context["n_paid"]), (2, 1))
-        self.assertEqual(r.context["cats"], [("Animaux", 2), ("Fleurs", 1)])
+        self.assertEqual(r.context["cats"], [("Animaux", "Animaux", 2), ("Fleurs", "Fleurs", 1)])
         self.assertContains(r, 'id="gcat"'); self.assertContains(r, 'value="free"')
 
     def test_paid_model_has_5_min_trial_then_buy(self):
@@ -1420,3 +1420,13 @@ class PlayFiltersTests(TestCase):
         self.assertEqual(r.context["buy"]["url"], "/play/buy/gal-paid1/")
         self.assertContains(r, "Acheter et continuer")
         self.assertContains(self.client.get("/play/"), 'href="/play/gal-paid1/"')
+
+    def test_categories_translated(self):
+        from studio import categories
+        self.assertEqual(categories.label("papillons & insectes", "de"), "Schmetterlinge & Insekten")
+        self.assertEqual(categories.label("Ete", "it"), "Estate")
+        self.assertEqual(categories.label("Truc perso", "en"), "Truc perso")
+        DigitalCanvas.objects.create(uid="gal-c1", email="__library__", source="library", title="X", category="Fleurs")
+        r = self.client.get("/en/play/")
+        self.assertContains(r, '<option value="fleurs">Flowers (1)</option>', html=False)
+        self.assertContains(r, 'data-catl="flowers"')

@@ -68,6 +68,7 @@
 
   {% if messages %}{% for m in messages %}<div class="banner {% if m.tags == 'error' %}err{% else %}warn{% endif %}" style="{% if m.tags != 'error' %}background:#e7f6ec;border-color:#b7e4c7;color:#1e5b35{% endif %}"><span>{{ m }}</span></div>{% endfor %}{% endif %}
 
+  {% if untranslated %}<div class="card" style="border-left:4px solid #b45309;padding:10px 14px;font-size:.84rem">Catégories non traduites sur le site anglais, allemand, espagnol et italien : <b>{{ untranslated|join:", " }}</b>. Renommez-les avec un nom de la liste proposée à la saisie (Animaux, Fleurs, Paysages…), ou demandez l'ajout de leur traduction.</div>{% endif %}
   <div class="kpis">
     <div class="kpi"><div class="l">Modèles publiés</div><div class="v">{{ stats.models }}</div><div class="muted">{{ stats.free }} gratuits · {{ stats.paid }} payants{% if stats.hidden %} · {{ stats.hidden }} hors ligne{% endif %}</div></div>
     <div class="kpi"><div class="l">Joueurs</div><div class="v">{{ stats.players }}</div><div class="muted">toiles de la galerie en cours</div></div>
@@ -143,7 +144,7 @@
   </div>
 </div>
 
-<datalist id="cats">{% for c in cats %}<option value="{{ c }}">{% endfor %}</datalist>
+<datalist id="cats">{% for c in cat_suggest %}<option value="{{ c }}">{% endfor %}</datalist>
 
 <div class="drawer" id="dEdit" onclick="if(event.target===this)closeD()"><form class="pane" method="post">{% csrf_token %}
   <h2>Modifier le modèle</h2><div class="views3" id="eV"><figure><a target="_blank"><img data-k="source" alt=""></a><figcaption>Original</figcaption></figure><figure><a target="_blank"><img data-k="preview" alt=""></a><figcaption>Toile</figcaption></figure><figure><a target="_blank"><img data-k="template" alt=""></a><figcaption>Numérotée</figcaption></figure></div>

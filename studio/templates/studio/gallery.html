@@ -17,7 +17,7 @@
     </select>
     {% if cats %}<select id="gcat" class="g-sel" aria-label="{% trans 'Catégorie' %}">
       <option value="">{% trans "Catégories" %}</option>
-      {% for c, n in cats %}<option value="{{ c|lower }}">{{ c }} ({{ n }})</option>{% endfor %}
+      {% for c, lbl, n in cats %}<option value="{{ c|lower }}">{{ lbl }} ({{ n }})</option>{% endfor %}
     </select>{% endif %}
     {% endif %}
   </div>
@@ -25,7 +25,7 @@
     <div class="models-grid" id="ggrid">
       {% for m in models %}
         <a class="model-card gcard" href="{% url 'studio:digipaint' m.uid %}"
-           data-name="{{ m.title|lower }}" data-cat="{{ m.category|lower }}" data-free="{% if m.price and m.price > 0 %}0{% else %}1{% endif %}">
+           data-name="{{ m.title|lower }}" data-cat="{{ m.category|lower }}" data-catl="{{ m.cat_label|lower }}" data-free="{% if m.price and m.price > 0 %}0{% else %}1{% endif %}">
           <div class="mc-thumb"><div class="mc-img" style="aspect-ratio:40/50">
             <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="" loading="lazy">
             {% if m.price and m.price > 0 %}
@@ -61,7 +61,7 @@
   function run(){
     var v=q.value.trim().toLowerCase(),p=pr?pr.value:'',c=ca?ca.value:'',n=0;
     cards.forEach(function(el){
-      var ok=(!v||(el.dataset.name||'').indexOf(v)>=0||(el.dataset.cat||'').indexOf(v)>=0)
+      var ok=(!v||(el.dataset.name||'').indexOf(v)>=0||(el.dataset.cat||'').indexOf(v)>=0||(el.dataset.catl||'').indexOf(v)>=0)
         &&(!p||(p==='free')===(el.dataset.free==='1'))&&(!c||el.dataset.cat===c);
       el.style.display=ok?'':'none';if(ok)n++;
     });
