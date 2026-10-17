@@ -1548,6 +1548,27 @@ class CollabWebSocketTests(TransactionTestCase):
         async_to_sync(run)()
         self.assertEqual(CollabRoom.objects.get(token="tok1").painted, {"1": "#111111", "2": "#00ff00"})
 
+        async def reload_same_player():
+            def comm(q):
+                c = WebsocketCommunicator(app, "/ws/collab/tok1/?" + q)
+                c.scope["url_route"] = {"kwargs": {"token": "tok1"}}
+                return c
+            watcher, old, new = comm("pid=watcher01"), comm("pid=player0001"), comm("pid=player0001")
+            await watcher.connect(); await watcher.receive_json_from(); await watcher.receive_json_from()
+            await old.connect(); st = await old.receive_json_from()
+            assert st["me"]["id"] == "player0001"
+            await watcher.receive_json_from()                            # hello de l'ancien onglet
+            await new.connect(); st2 = await new.receive_json_from()
+            assert st2["me"] == st["me"]                                  # meme joueur, meme couleur
+            await watcher.receive_json_from()                            # hello du nouvel onglet (meme id)
+            await old.disconnect()                                       # l'ancien onglet se ferme...
+            assert await watcher.receive_nothing(0.2)                     # ...sans « bye » : le joueur est toujours la
+            await new.disconnect()
+            bye = await watcher.receive_json_from()
+            assert bye == {"t": "bye", "id": "player0001"}
+            await watcher.disconnect()
+        async_to_sync(reload_same_player)()
+
 
 @override_settings(MEDIA_ROOT=MEDIA)
 class CreatePhotoCacheTests(TestCase):

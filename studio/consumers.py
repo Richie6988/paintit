@@ -5,7 +5,7 @@ import random
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
-COLORS = ["#e8455f", "#2f6bf2", "#1f9d55", "#f08a3c", "#7a3ff2", "#0ea5b7", "#d63384", "#8a6d1f"]
+COLORS = ["#e8455f", "#2f6bf2", "#1f9d55", "#f08a3c", "#7a3ff2", "#0ea5b7", "#d63384", "#8a6d1f"]   # = views._PEER_COLORS
 
 
 @database_sync_to_async
@@ -26,6 +26,16 @@ def _presence(token, me, score=None, name=None, leave=False):
         cache.set("collab-peers:" + token, peers, 300)
         return
     _collab_players(token, me["id"], score, name, me["c"])
+
+
+@database_sync_to_async
+def _conn(token, pid, delta):
+    """Nombre de connexions ouvertes d'un meme joueur (plusieurs onglets, rechargement)."""
+    from django.core.cache import cache
+    key = "collab-conn:%s:%s" % (token, pid)
+    n = max(0, int(cache.get(key) or 0) + delta)
+    cache.set(key, n, 6 * 3600)
+    return n
 
 
 @database_sync_to_async
@@ -53,7 +63,13 @@ class CollabConsumer(AsyncJsonWebsocketConsumer):
             await self.close(code=4404)
             return
         self.group = "collab_" + "".join(c for c in self.token if c.isalnum() or c in "-_")
-        self.me = {"id": "%06x" % random.getrandbits(24), "c": random.choice(COLORS)}
+        # identifiant stable du navigateur (?pid=) : un rechargement de page ne cree pas un 2e joueur
+        from urllib.parse import parse_qs
+        import zlib
+        pid = (parse_qs(self.scope.get("query_string", b"").decode()).get("pid") or [""])[0]
+        pid = pid if 6 <= len(pid) <= 24 and pid.replace("-", "").replace("_", "").isalnum() else "%08x" % random.getrandbits(32)
+        self.me = {"id": pid, "c": COLORS[zlib.crc32(pid.encode()) % len(COLORS)]}
+        await _conn(self.token, pid, +1)
         self.last_cur = 0.0
         await self.channel_layer.group_add(self.group, self.channel_name)
         await self.accept()
@@ -62,8 +78,9 @@ class CollabConsumer(AsyncJsonWebsocketConsumer):
 
     async def disconnect(self, code):
         if hasattr(self, "group"):
-            await _presence(self.token, self.me, leave=True)
-            await self._broadcast({"t": "bye", "id": self.me["id"]})
+            if await _conn(self.token, self.me["id"], -1) <= 0:     # derniere connexion de ce joueur (pas un rechargement)
+                await _presence(self.token, self.me, leave=True)
+                await self._broadcast({"t": "bye", "id": self.me["id"]})
             await self.channel_layer.group_discard(self.group, self.channel_name)
 
     async def receive_json(self, msg, **kw):
