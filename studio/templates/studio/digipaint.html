@@ -161,6 +161,22 @@
  .peerchip[hidden]{display:none}
  .peerchip i{width:8px;height:8px;border-radius:50%;background:#1f9d55;box-shadow:0 0 0 3px rgba(31,157,85,.22)}
  .z.remote{animation:remotepop .7s ease}
+ .dots{position:absolute;inset:0;pointer-events:none;z-index:6;overflow:hidden}
+ .peerchip{cursor:pointer}
+ .ladder{position:absolute;top:46px;left:12px;z-index:8;list-style:none;margin:0;padding:6px;min-width:170px;max-width:230px;
+   background:rgba(255,255,255,.97);border:1px solid #e2e8f2;border-radius:14px;box-shadow:0 8px 22px rgba(18,34,79,.14);font:600 .8rem/1.2 system-ui,sans-serif;color:#33415c}
+ .ladder[hidden]{display:none}
+ .ladder li{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:9px;transition:background .3s}
+ .ladder li.me{background:#eef3ff;color:#12224f}
+ .ladder li.up{background:#fff3d6}
+ .ladder .rk{width:20px;text-align:center;font-size:.85rem}
+ .ladder .av{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+ .ladder .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .ladder b{font-variant-numeric:tabular-nums;color:#12224f}
+ @media (max-width:560px){.ladder{top:44px;left:8px;min-width:150px;font-size:.76rem}}
+ .dot{position:absolute;transform:translate(-50%,-50%);transition:left .12s linear,top .12s linear,opacity .4s;display:flex;align-items:center;gap:3px}
+ .dot i{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);flex:0 0 auto}
+ .dot span{font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
  @keyframes remotepop{0%{filter:brightness(1.6) drop-shadow(0 0 4px #fff)}100%{filter:none}}
  .sharesheet .pw-card{max-width:420px;text-align:left}
  .sharesheet h2{text-align:center}
@@ -296,6 +312,7 @@
 <a class="game-logo" href="{% url 'studio:home' %}" title="PaintIt"><img src="{% static 'studio/img/logo.png' %}" alt="PaintIt"></a>
 <div class="stagewrap">
   <div class="peerchip" id="peerChip" hidden><i></i><span id="peerN">1</span></div>
+  <ol class="ladder" id="ladder" hidden aria-label="{% trans 'Classement' %}"></ol>
   {% if not owned %}<div class="trialchip" id="trialChip" hidden role="timer" aria-live="off">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
     <span>{% trans "Essai" %}</span><b id="trialLeft">5:00</b><span class="tc-bar"><i id="trialBar" style="width:100%"></i></span>
@@ -356,7 +373,6 @@
     <button class="kitbtn" type="button" id="colNew" style="display:flex;width:100%;justify-content:center;height:44px"{% if room %} hidden{% endif %}>{% trans "Créer le lien d'invitation" %}</button>
     <div id="colLinkBox"{% if not room %} hidden{% endif %}>
       <div class="sh-link"><input id="colLink" readonly value="{% if room %}{{ request.build_absolute_uri }}{% endif %}" aria-label="{% trans 'Lien d’invitation' %}"><button type="button" class="kitbtn" id="colCopy" style="height:40px">{% trans "Copier" %}</button></div>
-      <div class="sh-row"><button type="button" id="colNative" hidden>{% trans "Envoyer…" %}</button><a id="colWa" target="_blank" rel="noopener">WhatsApp</a><a id="colSms">SMS</a><a id="colMail">E-mail</a></div>
       <p class="sh-note">{% trans "Toute personne qui a ce lien peut peindre cette toile avec vous." %}</p>
     </div>
   </div>{% endif %}
@@ -527,7 +543,7 @@
       var mult=multFor(combo);
       var a=parseFloat(z.dataset.a)||100,base=Math.max(1,Math.min(60,Math.round(520/Math.sqrt(a)))),pts=base*mult;
       z.style.fill=byN[selectedN]||'#888';z.dataset.done='1';if(z.parentNode)z.parentNode.classList.add('done');z.classList.add('pop');setTimeout(function(){z.classList.remove('pop');},320);if(navigator.vibrate)navigator.vibrate(12);score+=pts;done++;
-      floatPts(z,pts,mult,px,py);showCombo(mult,prev);updateHUD(true);countScore();save();if(ROOM)colPush(zones.indexOf(z),z.style.fill);if(done>=total)win();
+      floatPts(z,pts,mult,px,py);showCombo(mult,prev);updateHUD(true);countScore();save();if(ROOM){colPush(zones.indexOf(z),z.style.fill);colScore();}if(done>=total)win();
     }else{z.classList.remove('wrong');z.getBoundingClientRect();z.classList.add('wrong');}   // erreur : simple indice visuel, la serie continue
   }
   function setMode(){var free=mode==='free';document.getElementById('lockBtn').classList.toggle('unlocked',free);document.getElementById('freecolor').style.display=free?'inline-block':'none';markSel();}
@@ -622,25 +638,69 @@
     MODEL.w=wmm/10;MODEL.h=hmm/10;MODEL.orientation=(hmm>=wmm)?'portrait':'paysage';MODEL.colors=startPAL.length||24;
     try{var l=JSON.parse(localStorage.getItem('PIT_MODELS')||'[]').filter(function(x){return x.uid!==UID;});l.unshift(MODEL);localStorage.setItem('PIT_MODELS',JSON.stringify(l.slice(0,60)));}catch(e){}});
 
-  // ---------- Peindre a plusieurs : envoi des zones peintes, reception de celles des autres (sondage 2,5 s) ----------
-  var CID=Math.random().toString(36).slice(2,12), colV=0, colQ={}, colT=null;
-  function colPush(i,fill){if(i<0)return;colQ[i]=fill;clearTimeout(colT);colT=setTimeout(colFlush,700);}
+  // ---------- Peindre a plusieurs : WebSocket (zones en direct + curseurs des participants), repli HTTP (sondage) ----------
+  var CID=Math.random().toString(36).slice(2,12), colV=0, colQ={}, colT=null, ws=null, wsOk=false, pollT=null, peers={}, ME=null;
+  var NAMES=['🦊','🐼','🐸','🐯','🦉','🐙','🦋','🐝','🐨','🦄'], NAME;
+  try{NAME=localStorage.getItem('PIT_NAME');if(!NAME){NAME=NAMES[Math.floor(Math.random()*NAMES.length)];localStorage.setItem('PIT_NAME',NAME);}}catch(e){NAME=NAMES[0];}
+  function wsSend(o){if(wsOk){try{ws.send(JSON.stringify(o));return true;}catch(e){}}return false;}
+  function colPush(i,fill){if(i<0)return;var z={};z[i]=fill;if(wsSend({t:'paint',z:z}))return;
+    colQ[i]=fill;clearTimeout(colT);colT=setTimeout(colFlush,700);}
   function colFlush(){var z=colQ;colQ={};if(!Object.keys(z).length)return;
+    if(wsOk){var c={},n=0;Object.keys(z).forEach(function(k){c[k]=z[k];if(++n%200===0){wsSend({t:'paint',z:c});c={};}});if(Object.keys(c).length)wsSend({t:'paint',z:c});return;}
     fetch('/collab/'+ROOM+'/?cid='+CID,{method:'POST',headers:{'X-CSRFToken':CSRF,'Content-Type':'application/json'},body:JSON.stringify({zones:z})})
-      .then(function(r){return r.json();}).then(colPeers).catch(function(){Object.keys(z).forEach(function(k){colQ[k]=z[k];});});}
-  function colPeers(d){if(!d)return;var c=document.getElementById('peerChip');if(c){c.hidden=false;document.getElementById('peerN').textContent=
-    d.peers>1?interpolate(gettext_n(d.peers),[d.peers]):'{{ _("Vous seul pour l’instant")|escapejs }}';}}
-  function gettext_n(n){return '{{ _("%s peintres en ligne")|escapejs }}';}
-  function interpolate(f,a){return f.replace(/%+s/,a[0]);}
+      .then(function(r){return r.json();}).then(function(d){showPeers(d.peers);}).catch(function(){Object.keys(z).forEach(function(k){colQ[k]=z[k];});});}
+  function showPeers(n){var c=document.getElementById('peerChip');if(!c)return;c.hidden=false;
+    document.getElementById('peerN').textContent=n>1?'{{ _("%s peintres en ligne")|escapejs }}'.replace(/%+s/,n):'{{ _("Vous seul pour l’instant")|escapejs }}';}
+  function livePeers(){var now=Date.now();Object.keys(peers).forEach(function(k){if(now-peers[k].t>45000){delete peers[k];dropDot(k);}});
+    showPeers(1+Object.keys(peers).length);drawLadder();}
+  // classement des joueurs de la toile partagee (points du jeu : taille de zone x combo)
+  var ladOpen=true,lastSent=-1,scoreT=null;
+  function colScore(){clearTimeout(scoreT);scoreT=setTimeout(function(){if(score!==lastSent&&wsSend({t:'score',s:score,n:NAME}))lastSent=score;drawLadder();},300);}
+  function drawLadder(){var el=document.getElementById('ladder');if(!el)return;var ids=Object.keys(peers);
+    if(!wsOk||!ids.length||!ladOpen){el.hidden=true;return;}
+    var rows=ids.map(function(k){var p=peers[k];return {n:p.n||'?',c:p.c,s:p.s||0,up:p.up&&Date.now()-p.up<1500};});
+    rows.push({n:NAME+' {{ _("Vous")|escapejs }}',c:ME?ME.c:'#2f6bf2',s:score,me:true});
+    rows.sort(function(a,b){return b.s-a.s;});var med=['🥇','🥈','🥉'];
+    el.innerHTML=rows.slice(0,8).map(function(r,i){return '<li class="'+(r.me?'me':'')+(r.up?' up':'')+'"><span class="rk">'+(med[i]||(i+1))+'</span><span class="av" style="background:'+r.c+'"></span><span class="nm"></span><b>'+r.s.toLocaleString()+'</b></li>';}).join('');
+    [].forEach.call(el.querySelectorAll('.nm'),function(n,i){n.textContent=rows[i].n;});el.hidden=false;}
+  document.getElementById('peerChip').addEventListener('click',function(){ladOpen=!ladOpen;drawLadder();});
   function colApply(painted,fresh){var added=0;Object.keys(painted||{}).forEach(function(k){var z=zones[k];if(!z||z.dataset.done==='1')return;
       z.style.fill=painted[k];z.dataset.done='1';if(z.parentNode)z.parentNode.classList.add('done');done++;added++;
       if(fresh){z.classList.add('remote');setTimeout(function(){z.classList.remove('remote');},800);}});
     if(added){updateHUD();save();if(done>=total)win();}}
-  function colPoll(){if(document.hidden)return;fetch('/collab/'+ROOM+'/?cid='+CID+'&v='+colV,{cache:'no-store'})
-    .then(function(r){return r.json();}).then(function(d){colPeers(d);if(d.painted){colApply(d.painted,colV>0);}colV=d.v;}).catch(function(){});}
-  function colStart(){colPoll();setInterval(colPoll,2500);document.addEventListener('visibilitychange',function(){if(!document.hidden)colPoll();});
-    // ce que ce navigateur avait peint hors ligne est renvoye
-    zones.forEach(function(z,i){if(z.dataset.done==='1')colQ[i]=z.style.fill;});colFlush();}
+  function colPoll(){if(document.hidden||wsOk)return;fetch('/collab/'+ROOM+'/?cid='+CID+'&v='+colV,{cache:'no-store'})
+    .then(function(r){return r.json();}).then(function(d){showPeers(d.peers);if(d.painted){colApply(d.painted,colV>0);}colV=d.v;}).catch(function(){});}
+  function startPoll(){if(!pollT){colFlush();colPoll();pollT=setInterval(colPoll,2500);}}
+  function stopPoll(){clearInterval(pollT);pollT=null;}
+  // curseurs : un point de couleur par participant, place en coordonnees de la toile (suit zoom et deplacement)
+  var dotsEl=document.createElement('div');dotsEl.className='dots';boardEl.appendChild(dotsEl);
+  function dropDot(id){var d=document.getElementById('dot-'+id);if(d)d.remove();}
+  function placeDots(){var svg=host.querySelector('svg'),m=svg&&svg.getScreenCTM();if(m){var b=boardEl.getBoundingClientRect(),pt=svg.createSVGPoint(),now=Date.now();
+      Object.keys(peers).forEach(function(id){var p=peers[id];if(p.x==null)return;var d=document.getElementById('dot-'+id);
+        if(!d){d=document.createElement('div');d.className='dot';d.id='dot-'+id;d.innerHTML='<i></i><span></span>';dotsEl.appendChild(d);}
+        pt.x=p.x;pt.y=p.y;var q=pt.matrixTransform(m);d.style.left=(q.x-b.left)+'px';d.style.top=(q.y-b.top)+'px';
+        d.querySelector('i').style.background=p.c;d.querySelector('span').textContent=p.n||'';d.style.opacity=now-p.ct>8000?.35:1;});}
+    requestAnimationFrame(placeDots);}
+  var lastCur=0;
+  function sendCur(e){if(!wsOk)return;var now=Date.now();if(now-lastCur<60)return;lastCur=now;var svg=host.querySelector('svg'),m=svg&&svg.getScreenCTM();if(!m)return;
+    var pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;var q=pt.matrixTransform(m.inverse());wsSend({t:'cur',x:q.x,y:q.y,n:NAME});}
+  function wsConnect(){var opened=false;
+    try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/collab/'+ROOM+'/');}catch(e){startPoll();return;}
+    ws.onopen=function(){opened=true;wsOk=true;stopPoll();zones.forEach(function(z,i){if(z.dataset.done==='1')colQ[i]=z.style.fill;});colFlush();};
+    ws.onmessage=function(e){var d;try{d=JSON.parse(e.data);}catch(x){return;}var other=ME&&d.id&&d.id!==ME.id;
+      if(d.t==='state'){ME=d.me;colApply(d.painted,false);colV=d.v;wsSend({t:'here',s:score,n:NAME});livePeers();}
+      else if(d.t==='paint'){if(other)colApply(d.z,true);colV=d.v;}
+      else if(d.t==='hello'&&other){peers[d.id]={c:d.c,t:Date.now(),s:0};wsSend({t:'here',s:score,n:NAME});livePeers();}
+      else if((d.t==='here'||d.t==='score')&&other){var h=peers[d.id]=peers[d.id]||{};h.c=d.c;h.t=Date.now();h.n=d.n||h.n;
+        if(d.t==='score'&&d.s>(h.s||0))h.up=Date.now();h.s=d.s;livePeers();}
+      else if(d.t==='cur'&&other){var p=peers[d.id]=peers[d.id]||{};p.c=d.c;p.x=d.x;p.y=d.y;p.n=d.n;p.t=p.ct=Date.now();if(Object.keys(peers).length&&document.getElementById('peerChip').hidden)livePeers();}
+      else if(d.t==='bye'){delete peers[d.id];dropDot(d.id);livePeers();}};
+    ws.onclose=function(){wsOk=false;startPoll();setTimeout(wsConnect,opened?3000:20000);};}
+  function colStart(){wsConnect();setTimeout(function(){if(!wsOk)startPoll();},2500);
+    setInterval(function(){if(wsOk)wsSend({t:'here',s:score,n:NAME});livePeers();},20000);
+    boardEl.addEventListener('pointermove',sendCur);boardEl.addEventListener('pointerdown',sendCur);
+    document.addEventListener('visibilitychange',function(){if(!document.hidden)colPoll();});requestAnimationFrame(placeDots);
+    zones.forEach(function(z,i){if(z.dataset.done==='1')colQ[i]=z.style.fill;});}
 
   // ---------- Partager : image de l'etat de la toile + liens ----------
   var sheet=document.getElementById('sharesheet'), shBlob=null;
@@ -677,12 +737,7 @@
   sheet.querySelectorAll('.sh-tabs button').forEach(function(b){b.addEventListener('click',function(){
     sheet.querySelectorAll('.sh-tabs button').forEach(function(o){o.classList.toggle('on',o===b);});
     sheet.querySelectorAll('.sh-pane').forEach(function(p){p.hidden=p.dataset.pane!==b.dataset.tab;});});});
-  function colLinks(link){var inv='{{ _("Viens peindre cette toile avec moi sur PaintIt :")|escapejs }} ';
-    document.getElementById('colLink').value=link;document.getElementById('colLinkBox').hidden=false;
-    document.getElementById('colWa').href='https://wa.me/?text='+encodeURIComponent(inv+link);
-    document.getElementById('colSms').href='sms:?&body='+encodeURIComponent(inv+link);
-    document.getElementById('colMail').href='mailto:?subject='+encodeURIComponent('PaintIt')+'&body='+encodeURIComponent(inv+link);
-    var nb=document.getElementById('colNative');nb.hidden=!navigator.share;nb.onclick=function(){navigator.share({text:inv,url:link}).catch(function(){});};}
+  function colLinks(link){document.getElementById('colLink').value=link;document.getElementById('colLinkBox').hidden=false;}
   var colNew=document.getElementById('colNew');
   if(colNew){
     if(ROOM)colLinks(location.href);

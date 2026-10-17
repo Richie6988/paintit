@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "channels",
     "studio",
 ]
 
@@ -103,6 +104,14 @@ if os.environ.get("REDIS_URL"):
 else:
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache",
                           "LOCATION": "paintit"}}
+
+# --- WebSocket (peindre a plusieurs) : service ASGI separe (paintit-ws), groupes partages via Redis ---
+ASGI_APPLICATION = "pbnsite.asgi.application"
+if os.environ.get("REDIS_URL"):
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer",
+                                  "CONFIG": {"hosts": [os.environ["REDIS_URL"]]}}}
+else:
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 
 ROOT_URLCONF = "pbnsite.urls"
 

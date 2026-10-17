@@ -1940,3 +1940,9 @@ msgstr "Ich male diese Leinwand Zahl für Zahl auf PaintIt 🎨"
 
 msgid "Viens peindre cette toile avec moi sur PaintIt :"
 msgstr "Mal diese Leinwand mit mir auf PaintIt:"
+
+msgid "Classement"
+msgstr "Rangliste"
+
+msgid "Vous"
+msgstr "Du"

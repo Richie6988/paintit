@@ -1496,3 +1496,54 @@ class PlayFiltersTests(TestCase):
         s = self.client.session; s["last_photo"] = other; s.save()
         self.client.get("/play/AB12CD34-5678/buy/")
         self.assertNotIn("last_photo", self.client.session)
+
+
+from django.test import TransactionTestCase  # noqa: E402
+
+
+@override_settings(CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}})
+class CollabWebSocketTests(TransactionTestCase):
+    def test_paint_cursor_and_score_relay(self):
+        import sys
+        import types
+        from asgiref.sync import async_to_sync
+        if "daphne" not in sys.modules:                 # channels.testing importe daphne (serveur non utilise ici)
+            for name in ("daphne", "daphne.testing", "daphne.server", "daphne.endpoints"):
+                sys.modules.setdefault(name, types.ModuleType(name))
+            sys.modules["daphne.testing"].DaphneProcess = object
+        from channels.testing.websocket import WebsocketCommunicator
+        from studio.consumers import CollabConsumer
+        from studio.models import CollabRoom
+        CollabRoom.objects.create(token="tok1", uid="gal-x", painted={"1": "#111111"}, version=1)
+        app = CollabConsumer.as_asgi()
+
+        async def run():
+            a = WebsocketCommunicator(app, "/ws/collab/tok1/")
+            a.scope["url_route"] = {"kwargs": {"token": "tok1"}}
+            b = WebsocketCommunicator(app, "/ws/collab/tok1/")
+            b.scope["url_route"] = {"kwargs": {"token": "tok1"}}
+            assert (await a.connect())[0]
+            st = await a.receive_json_from()
+            assert st["t"] == "state" and st["painted"] == {"1": "#111111"}
+            await a.receive_json_from()                                  # son propre « hello »
+            assert (await b.connect())[0]
+            await b.receive_json_from(); await b.receive_json_from()     # state + hello de b
+            hello = await a.receive_json_from()
+            assert hello["t"] == "hello"
+            await b.send_json_to({"t": "paint", "z": {"2": "#00ff00", "1": "#000", "bad": "x"}})
+            m = await a.receive_json_from()
+            assert m["t"] == "paint" and m["z"] == {"2": "#00ff00"}        # premiere couleur gagne, valeurs filtrees
+            await b.receive_json_from()
+            await b.send_json_to({"t": "cur", "x": 12.34, "y": 5, "n": "🦊"})
+            c = await a.receive_json_from()
+            assert c["t"] == "cur" and c["x"] == 12.3 and c["n"] == "🦊"
+            await b.receive_json_from()
+            await b.send_json_to({"t": "score", "s": 320, "n": "🦊"})
+            sc = await a.receive_json_from()
+            assert sc["t"] == "score" and sc["s"] == 320
+            await a.disconnect(); await b.disconnect()
+            bad = WebsocketCommunicator(app, "/ws/collab/nope/")
+            bad.scope["url_route"] = {"kwargs": {"token": "nope"}}
+            assert not (await bad.connect())[0]
+        async_to_sync(run)()
+        self.assertEqual(CollabRoom.objects.get(token="tok1").painted, {"1": "#111111", "2": "#00ff00"})

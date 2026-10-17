@@ -1,0 +1,20 @@
+# PaintIt - service WebSocket (« Peindre a plusieurs » : zones en direct + curseurs des participants)
+# Cible : /etc/systemd/system/paintit-ws.service
+#   sudo cp deploy/paintit-ws.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#   sudo systemctl enable --now paintit-ws
+# Le site reste servi par gunicorn (paintit.service) ; ce service ne recoit que /ws/ (voir nginx).
+# Un seul processus : sans REDIS_URL, les participants d'une meme toile partagent ce processus (OK).
+[Unit]
+Description=PaintIt WebSocket (uvicorn ASGI)
+After=network.target
+
+[Service]
+User=paintit
+Group=paintit
+WorkingDirectory=/home/paintit/Django
+ExecStart=/home/paintit/Django/.venv/bin/uvicorn pbnsite.asgi:application --host 127.0.0.1 --port 8001 --proxy-headers --ws websockets --log-level warning
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

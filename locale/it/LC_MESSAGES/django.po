@@ -1923,3 +1923,9 @@ msgstr "Sto dipingendo questa tela numero per numero su PaintIt 🎨"
 
 msgid "Viens peindre cette toile avec moi sur PaintIt :"
 msgstr "Vieni a dipingere questa tela con me su PaintIt:"
+
+msgid "Classement"
+msgstr "Classifica"
+
+msgid "Vous"
+msgstr "Tu"

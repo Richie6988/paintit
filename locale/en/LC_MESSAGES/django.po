@@ -1898,3 +1898,9 @@ msgstr "I'm painting this canvas number by number on PaintIt 🎨"
 
 msgid "Viens peindre cette toile avec moi sur PaintIt :"
 msgstr "Come and paint this canvas with me on PaintIt:"
+
+msgid "Classement"
+msgstr "Leaderboard"
+
+msgid "Vous"
+msgstr "You"
