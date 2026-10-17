@@ -1279,3 +1279,17 @@ class StockImage(models.Model):
     @property
     def megapixels(self):
         return round(self.width * self.height / 1e6, 1)
+
+
+class CollabRoom(models.Model):
+    """Toile peinte a plusieurs : lien d'invitation (jeton), etat partage des zones terminees (indice -> couleur)."""
+    token = models.CharField(max_length=24, unique=True)
+    uid = models.CharField(max_length=40, db_index=True)
+    painted = models.JSONField(default=dict)
+    version = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Toile collaborative"
+        verbose_name_plural = "Toiles collaboratives"

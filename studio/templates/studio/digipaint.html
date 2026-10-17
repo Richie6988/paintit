@@ -156,6 +156,27 @@
    transform:translateX(-60%);animation:sweep 1.6s ease .2s 2}
  @keyframes sweep{to{transform:translateX(60%)}}
  #confetti{position:fixed;inset:0;pointer-events:none;z-index:31}
+ .peerchip{position:absolute;top:10px;left:12px;z-index:8;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.97);
+   border:1px solid #cfe6d8;border-radius:999px;padding:6px 11px;font:700 .8rem/1 system-ui,sans-serif;color:#1e5b35;box-shadow:0 6px 18px rgba(18,34,79,.12)}
+ .peerchip[hidden]{display:none}
+ .peerchip i{width:8px;height:8px;border-radius:50%;background:#1f9d55;box-shadow:0 0 0 3px rgba(31,157,85,.22)}
+ .z.remote{animation:remotepop .7s ease}
+ @keyframes remotepop{0%{filter:brightness(1.6) drop-shadow(0 0 4px #fff)}100%{filter:none}}
+ .sharesheet .pw-card{max-width:420px;text-align:left}
+ .sharesheet h2{text-align:center}
+ .sh-tabs{display:flex;gap:6px;margin:0 0 14px;background:rgba(255,255,255,.08);padding:4px;border-radius:12px}
+ .sh-tabs button{flex:1;border:0;border-radius:9px;padding:9px 6px;font-weight:800;font-size:.84rem;cursor:pointer;background:none;color:inherit}
+ .sh-tabs button.on{background:#fff;color:#12224f}
+ .sh-pane[hidden]{display:none}
+ .sh-prev{display:block;width:100%;max-height:42vh;object-fit:contain;border-radius:12px;background:#fff;margin-bottom:12px}
+ .sh-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+ .sh-row a,.sh-row button{flex:1 1 auto;display:flex;justify-content:center;align-items:center;gap:6px;min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.2);
+   background:rgba(255,255,255,.06);color:inherit;font-weight:700;font-size:.82rem;text-decoration:none;cursor:pointer;padding:0 10px}
+ .sh-link{display:flex;gap:6px;margin-top:10px}.sh-link input{flex:1;min-width:0;height:40px;border-radius:10px;border:0;padding:0 10px;font-size:.8rem}
+ .sh-note{font-size:.8rem;opacity:.8;margin:8px 0 0}
+ .kitbtn[hidden],.sh-row [hidden]{display:none!important}
+ .sh-link input{flex:1 1 auto;width:auto}
+ .pw-card .sh-link .kitbtn{width:auto;flex:0 0 auto;margin-top:0;height:40px;padding:0 16px}
  .kitbtn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:999px;border:0;cursor:pointer;
    background:linear-gradient(90deg,#e8455f,#f08a3c);color:#fff;font:800 .84rem/1 system-ui,sans-serif;text-decoration:none;
    box-shadow:0 6px 16px rgba(232,69,95,.35);white-space:nowrap}
@@ -264,6 +285,7 @@
   <div class="stat stat-score"><small>{% trans "Score" %}</small><span id="score">0</span></div>
   <div class="stat stat-zones"><small>{% trans "Zones" %}</small><span id="zones">0/0</span></div>
   <div class="sp"></div>
+  <button type="button" class="btn iconbtn" id="shareBtn" title="{% trans 'Partager · peindre à plusieurs' %}" aria-label="{% trans 'Partager · peindre à plusieurs' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
   <button type="button" class="kitbtn" id="kitBtn" title="{% trans 'Commander le kit à peindre' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg><span class="kb-t">{% trans "Commander le kit" %}</span></button>
   <button class="btn iconbtn" id="helpBtn" title="Help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.4 1.9-2.4 3.5"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
   <button class="btn iconbtn" id="full" title="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
@@ -273,6 +295,7 @@
 <div class="palbar" id="palbar"></div>
 <a class="game-logo" href="{% url 'studio:home' %}" title="PaintIt"><img src="{% static 'studio/img/logo.png' %}" alt="PaintIt"></a>
 <div class="stagewrap">
+  <div class="peerchip" id="peerChip" hidden><i></i><span id="peerN">1</span></div>
   {% if not owned %}<div class="trialchip" id="trialChip" hidden role="timer" aria-live="off">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
     <span>{% trans "Essai" %}</span><b id="trialLeft">5:00</b><span class="tc-bar"><i id="trialBar" style="width:100%"></i></span>
@@ -314,6 +337,31 @@
   <div class="big" id="finalScore">0</div><p style="color:var(--muted)">{% trans "Bravo, votre toile est complète." %}</p>
   <a class="kitbtn" href="{{ kit_url }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>{% trans "La peindre en vrai : commander le kit" %}</a>
   <button class="btn pri" id="winok" style="margin-top:10px">{% trans "Continuer" %}</button></div></div>
+<div class="paywall sharesheet" id="sharesheet"><div class="pw-card">
+  <h2>{% trans "Partager" %}</h2>
+  <div class="sh-tabs"><button type="button" class="on" data-tab="img">{% trans "Montrer ma toile" %}</button>{% if can_collab %}<button type="button" data-tab="collab">{% trans "Peindre à plusieurs" %}</button>{% endif %}</div>
+  <div class="sh-pane" data-pane="img">
+    <img class="sh-prev" id="shPrev" alt="">
+    <button class="kitbtn" type="button" id="shNative" hidden style="display:flex;width:100%;justify-content:center;height:44px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>{% trans "Partager l'image" %}</button>
+    <div class="sh-row">
+      <a id="shDl" download="paintit.png">{% trans "Télécharger" %}</a>
+      <a id="shWa" target="_blank" rel="noopener">WhatsApp</a>
+      <a id="shFb" target="_blank" rel="noopener">Facebook</a>
+      <a id="shX" target="_blank" rel="noopener">X</a>
+    </div>
+    <p class="sh-note">{% trans "Pour Instagram ou TikTok : téléchargez l'image puis publiez-la depuis l'application." %}</p>
+  </div>
+  {% if can_collab %}<div class="sh-pane" data-pane="collab" hidden>
+    <p style="margin:0 0 10px">{% trans "Invitez vos proches : chacun peint depuis son téléphone ou son ordinateur, et vous voyez leurs zones se colorer en direct sur la même toile." %}</p>
+    <button class="kitbtn" type="button" id="colNew" style="display:flex;width:100%;justify-content:center;height:44px"{% if room %} hidden{% endif %}>{% trans "Créer le lien d'invitation" %}</button>
+    <div id="colLinkBox"{% if not room %} hidden{% endif %}>
+      <div class="sh-link"><input id="colLink" readonly value="{% if room %}{{ request.build_absolute_uri }}{% endif %}" aria-label="{% trans 'Lien d’invitation' %}"><button type="button" class="kitbtn" id="colCopy" style="height:40px">{% trans "Copier" %}</button></div>
+      <div class="sh-row"><button type="button" id="colNative" hidden>{% trans "Envoyer…" %}</button><a id="colWa" target="_blank" rel="noopener">WhatsApp</a><a id="colSms">SMS</a><a id="colMail">E-mail</a></div>
+      <p class="sh-note">{% trans "Toute personne qui a ce lien peut peindre cette toile avec vous." %}</p>
+    </div>
+  </div>{% endif %}
+  <button class="btn" id="shClose" type="button" style="display:flex;justify-content:center;width:100%;box-sizing:border-box;margin-top:12px;font-size:.92rem;font-weight:700;padding:10px">{% trans "Fermer" %}</button>
+</div></div>
 <div class="paywall kitsheet" id="kitsheet"><div class="pw-card">
   <h2>{% trans "Peignez-la en vrai" %}</h2>
   <ul class="kit-pts">
@@ -343,7 +391,7 @@
 {{ palette|json_script:"palette-data" }}
 <script>
 (function(){
-  var UID="{{ uid|escapejs }}", CSRF="{{ csrf_token }}", OWNED={% if owned %}true{% else %}false{% endif %};
+  var UID="{{ uid|escapejs }}", ROOM="{{ room|escapejs }}", SHARE_URL="{{ share_url|escapejs }}", CSRF="{{ csrf_token }}", OWNED={% if owned %}true{% else %}false{% endif %};
   document.addEventListener('contextmenu',function(e){e.preventDefault();});  // pas de clic droit
   // Essai gratuit : 5 min de jeu (cumulees, onglet visible), puis proposition de sauvegarde a 0,99 EUR.
   var FREE_S=300, TKEY='digipaint-t:'+UID, played=0;
@@ -401,7 +449,7 @@
   function selectPot(i){if(!customPots[i])return;selectedPot=i;freeColor=customPots[i];mode='free';setMode();markSel();}
   var tx=0,ty=0,sc=1, combo=0,lastN=null, comboTimer=null, shown=0, countRaf=null;
   function imgURL(u,k){return "/preview/img/"+u+"/"+k+"/";}
-  function key(){return 'digipaint:'+board;}
+  function key(){return ROOM?'digipaint:room:'+ROOM:'digipaint:'+board;}
   function save(){try{var st={score:score,total:total,painted:{},done:{}};zones.forEach(function(z,i){if(z.style.fill){st.painted[i]=z.style.fill;if(z.dataset.done==='1')st.done[i]=1;}});localStorage.setItem(key(),JSON.stringify(st));}catch(e){}}
   function load(){try{return JSON.parse(localStorage.getItem(key())||(board.indexOf('gal-')===0?localStorage.getItem('digipaint:gal-'+board):null)||'null');}catch(e){return null;}}
   function apply(){wrap.style.transform='translate('+tx+'px,'+ty+'px) scale('+sc+')';updateMiniPos();}
@@ -479,7 +527,7 @@
       var mult=multFor(combo);
       var a=parseFloat(z.dataset.a)||100,base=Math.max(1,Math.min(60,Math.round(520/Math.sqrt(a)))),pts=base*mult;
       z.style.fill=byN[selectedN]||'#888';z.dataset.done='1';if(z.parentNode)z.parentNode.classList.add('done');z.classList.add('pop');setTimeout(function(){z.classList.remove('pop');},320);if(navigator.vibrate)navigator.vibrate(12);score+=pts;done++;
-      floatPts(z,pts,mult,px,py);showCombo(mult,prev);updateHUD(true);countScore();save();if(done>=total)win();
+      floatPts(z,pts,mult,px,py);showCombo(mult,prev);updateHUD(true);countScore();save();if(ROOM)colPush(zones.indexOf(z),z.style.fill);if(done>=total)win();
     }else{z.classList.remove('wrong');z.getBoundingClientRect();z.classList.add('wrong');}   // erreur : simple indice visuel, la serie continue
   }
   function setMode(){var free=mode==='free';document.getElementById('lockBtn').classList.toggle('unlocked',free);document.getElementById('freecolor').style.display=free?'inline-block':'none';markSel();}
@@ -568,11 +616,88 @@
 
   var PAL=JSON.parse(document.getElementById('palette-data').textContent);
   var startG=UID, startPAL=PAL;
-  try{var gm=JSON.parse(localStorage.getItem('PIT_GAME')||'{}');if(gm[UID]&&gm[UID].g&&gm[UID].pal&&gm[UID].pal.length){startG=gm[UID].g;startPAL=gm[UID].pal;}}catch(e){}
+  if(!ROOM)try{var gm=JSON.parse(localStorage.getItem('PIT_GAME')||'{}');if(gm[UID]&&gm[UID].g&&gm[UID].pal&&gm[UID].pal.length){startG=gm[UID].g;startPAL=gm[UID].pal;}}catch(e){}
   var MODEL={uid:UID,w:40,h:50,colors:startPAL.length||24,orientation:'portrait',format_label:'40 x 50 cm',date:Date.now()};
-  loadBoard(startG,startPAL).then(function(){var svg=host.querySelector('svg');if(!svg)return;var vb=(svg.getAttribute('viewBox')||'0 0 400 500').split(/\s+/);var wmm=parseFloat(vb[2])||400,hmm=parseFloat(vb[3])||500;
+  loadBoard(startG,startPAL).then(function(){if(ROOM)colStart();var svg=host.querySelector('svg');if(!svg)return;var vb=(svg.getAttribute('viewBox')||'0 0 400 500').split(/\s+/);var wmm=parseFloat(vb[2])||400,hmm=parseFloat(vb[3])||500;
     MODEL.w=wmm/10;MODEL.h=hmm/10;MODEL.orientation=(hmm>=wmm)?'portrait':'paysage';MODEL.colors=startPAL.length||24;
     try{var l=JSON.parse(localStorage.getItem('PIT_MODELS')||'[]').filter(function(x){return x.uid!==UID;});l.unshift(MODEL);localStorage.setItem('PIT_MODELS',JSON.stringify(l.slice(0,60)));}catch(e){}});
+
+  // ---------- Peindre a plusieurs : envoi des zones peintes, reception de celles des autres (sondage 2,5 s) ----------
+  var CID=Math.random().toString(36).slice(2,12), colV=0, colQ={}, colT=null;
+  function colPush(i,fill){if(i<0)return;colQ[i]=fill;clearTimeout(colT);colT=setTimeout(colFlush,700);}
+  function colFlush(){var z=colQ;colQ={};if(!Object.keys(z).length)return;
+    fetch('/collab/'+ROOM+'/?cid='+CID,{method:'POST',headers:{'X-CSRFToken':CSRF,'Content-Type':'application/json'},body:JSON.stringify({zones:z})})
+      .then(function(r){return r.json();}).then(colPeers).catch(function(){Object.keys(z).forEach(function(k){colQ[k]=z[k];});});}
+  function colPeers(d){if(!d)return;var c=document.getElementById('peerChip');if(c){c.hidden=false;document.getElementById('peerN').textContent=
+    d.peers>1?interpolate(gettext_n(d.peers),[d.peers]):'{{ _("Vous seul pour l’instant")|escapejs }}';}}
+  function gettext_n(n){return '{{ _("%s peintres en ligne")|escapejs }}';}
+  function interpolate(f,a){return f.replace(/%+s/,a[0]);}
+  function colApply(painted,fresh){var added=0;Object.keys(painted||{}).forEach(function(k){var z=zones[k];if(!z||z.dataset.done==='1')return;
+      z.style.fill=painted[k];z.dataset.done='1';if(z.parentNode)z.parentNode.classList.add('done');done++;added++;
+      if(fresh){z.classList.add('remote');setTimeout(function(){z.classList.remove('remote');},800);}});
+    if(added){updateHUD();save();if(done>=total)win();}}
+  function colPoll(){if(document.hidden)return;fetch('/collab/'+ROOM+'/?cid='+CID+'&v='+colV,{cache:'no-store'})
+    .then(function(r){return r.json();}).then(function(d){colPeers(d);if(d.painted){colApply(d.painted,colV>0);}colV=d.v;}).catch(function(){});}
+  function colStart(){colPoll();setInterval(colPoll,2500);document.addEventListener('visibilitychange',function(){if(!document.hidden)colPoll();});
+    // ce que ce navigateur avait peint hors ligne est renvoye
+    zones.forEach(function(z,i){if(z.dataset.done==='1')colQ[i]=z.style.fill;});colFlush();}
+
+  // ---------- Partager : image de l'etat de la toile + liens ----------
+  var sheet=document.getElementById('sharesheet'), shBlob=null;
+  function canvasImage(cb){var svg=host.querySelector('svg');if(!svg)return;var cl=svg.cloneNode(true);
+    cl.querySelectorAll('.zn,text').forEach(function(t){t.remove();});
+    cl.querySelectorAll('.z').forEach(function(z){if(z.dataset.done==='1'||z.style.fill){z.setAttribute('style','fill:'+(z.style.fill||'#fff')+';stroke:'+(z.style.fill||'#d5dbe6')+';stroke-width:.3');}
+      else{z.setAttribute('style','fill:#fff;stroke:#c9d1e0;stroke-width:.35');}});
+    var vb=(svg.getAttribute('viewBox')||'0 0 400 500').split(/\s+/).map(Number),W=1080,ih=Math.round(W*vb[3]/vb[2]);
+    cl.setAttribute('width',W);cl.setAttribute('height',ih);cl.setAttribute('xmlns','http://www.w3.org/2000/svg');
+    var url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(cl)],{type:'image/svg+xml'})),im=new Image();
+    im.onload=function(){var pad=40,foot=130,c=document.createElement('canvas');c.width=W+pad*2;c.height=ih+pad*2+foot;var x=c.getContext('2d');
+      x.fillStyle='#f7f4ee';x.fillRect(0,0,c.width,c.height);x.fillStyle='#fff';x.shadowColor='rgba(18,34,79,.18)';x.shadowBlur=24;x.fillRect(pad,pad,W,ih);x.shadowBlur=0;
+      x.drawImage(im,pad,pad,W,ih);URL.revokeObjectURL(url);
+      var pct=total?Math.round(done/total*100):0;x.fillStyle='#12224f';x.font='800 46px system-ui,sans-serif';x.textAlign='left';
+      x.fillText(pct+' %',pad,ih+pad+78);x.font='600 30px system-ui,sans-serif';x.fillStyle='#5b647a';
+      x.fillText(done+' / '+total+' {{ _("zones")|escapejs }}',pad+40+x.measureText(pct+' %').width*1.55,ih+pad+76);
+      x.textAlign='right';x.font='800 40px system-ui,sans-serif';var g=x.createLinearGradient(c.width-pad-300,0,c.width-pad,0);
+      g.addColorStop(0,'#e8455f');g.addColorStop(.5,'#f08a3c');g.addColorStop(1,'#2f6bf2');x.fillStyle=g;x.fillText('paintit.click',c.width-pad,ih+pad+78);
+      c.toBlob(function(b){cb(b,c.toDataURL('image/jpeg',.8));},'image/png');};
+    im.src=url;}
+  var msg='{{ _("Je peins cette toile numéro par numéro sur PaintIt 🎨")|escapejs }}';
+  function openShare(){sheet.classList.add('show');canvasImage(function(b,prev){shBlob=b;document.getElementById('shPrev').src=prev;
+      var dl=document.getElementById('shDl');dl.href=URL.createObjectURL(b);
+      var f=new File([b],'paintit.png',{type:'image/png'}),nb=document.getElementById('shNative');
+      nb.hidden=!(navigator.canShare&&navigator.canShare({files:[f]}));
+      nb.onclick=function(){navigator.share({files:[f],text:msg+' '+SHARE_URL}).catch(function(){});};});
+    var u=encodeURIComponent(SHARE_URL),t=encodeURIComponent(msg);
+    document.getElementById('shWa').href='https://wa.me/?text='+t+'%20'+u;
+    document.getElementById('shFb').href='https://www.facebook.com/sharer/sharer.php?u='+u;
+    document.getElementById('shX').href='https://twitter.com/intent/tweet?text='+t+'&url='+u;}
+  document.getElementById('shareBtn').addEventListener('click',openShare);
+  document.getElementById('shClose').addEventListener('click',function(){sheet.classList.remove('show');});
+  sheet.addEventListener('click',function(e){if(e.target===sheet)sheet.classList.remove('show');});
+  sheet.querySelectorAll('.sh-tabs button').forEach(function(b){b.addEventListener('click',function(){
+    sheet.querySelectorAll('.sh-tabs button').forEach(function(o){o.classList.toggle('on',o===b);});
+    sheet.querySelectorAll('.sh-pane').forEach(function(p){p.hidden=p.dataset.pane!==b.dataset.tab;});});});
+  function colLinks(link){var inv='{{ _("Viens peindre cette toile avec moi sur PaintIt :")|escapejs }} ';
+    document.getElementById('colLink').value=link;document.getElementById('colLinkBox').hidden=false;
+    document.getElementById('colWa').href='https://wa.me/?text='+encodeURIComponent(inv+link);
+    document.getElementById('colSms').href='sms:?&body='+encodeURIComponent(inv+link);
+    document.getElementById('colMail').href='mailto:?subject='+encodeURIComponent('PaintIt')+'&body='+encodeURIComponent(inv+link);
+    var nb=document.getElementById('colNative');nb.hidden=!navigator.share;nb.onclick=function(){navigator.share({text:inv,url:link}).catch(function(){});};}
+  var colNew=document.getElementById('colNew');
+  if(colNew){
+    if(ROOM)colLinks(location.href);
+    colNew.addEventListener('click',function(){colNew.disabled=true;var st={};
+      if(board===UID)zones.forEach(function(z,i){if(z.dataset.done==='1')st[i]=z.style.fill;});
+      fetch('/play/'+UID+'/collab/',{method:'POST',headers:{'X-CSRFToken':CSRF,'Content-Type':'application/json'},body:JSON.stringify({painted:st})})
+        .then(function(r){return r.json();}).then(function(d){if(!d.url){colNew.disabled=false;return;}
+          colLinks(d.url);colNew.hidden=true;
+          try{localStorage.setItem('digipaint:room:'+d.token,JSON.stringify({score:score,total:total,painted:st,done:Object.keys(st).reduce(function(a,k){a[k]=1;return a;},{})}));}catch(e){}
+          window.history.replaceState(null,'',d.url.replace(/^https?:\/\/[^/]+/,''));ROOM=d.token;if(board!==UID){location.reload();return;}colStart();})
+        .catch(function(){colNew.disabled=false;});});
+    document.getElementById('colCopy').addEventListener('click',function(e){var i=document.getElementById('colLink');i.select();
+      (navigator.clipboard?navigator.clipboard.writeText(i.value):Promise.reject()).catch(function(){document.execCommand('copy');});
+      e.target.textContent='✓';setTimeout(function(){e.target.textContent='{{ _("Copier")|escapejs }}';},1400);});
+  }
 })();
 </script>
 <script src="{% static 'studio/js/dialog.js' %}"></script>

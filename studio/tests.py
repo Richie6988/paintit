@@ -1451,3 +1451,30 @@ class PlayFiltersTests(TestCase):
         r = self.client.get("/play/")
         self.assertContains(r, '<span class="g-art">The Starry Night · Vincent van Gogh</span>', html=False)
         self.assertNotContains(r, '<span class="g-art">Rose')
+
+    def test_collab_room_create_sync_and_access(self):
+        import json as _json
+        from studio.models import CollabRoom
+        d = os.path.join(MEDIA, "orders", "gal-col1")
+        os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "gal-col1_digipaint.svg"), "w").write('<svg viewBox="0 0 400 500"></svg>')
+        DigitalCanvas.objects.create(uid="gal-col1", email="__library__", source="library", title="C", price=0)
+        r = self.client.post("/play/gal-col1/collab/", _json.dumps({"painted": {"3": "#ff0000", "x": "#fff", "5": "red;}"}}),
+                             content_type="application/json").json()
+        room = CollabRoom.objects.get(token=r["token"])
+        self.assertEqual(room.painted, {"3": "#ff0000"})                      # valeurs suspectes ignorees
+        self.assertIn("?room=" + room.token, r["url"])
+        g = self.client.get("/collab/%s/?cid=a&v=0" % room.token).json()
+        self.assertEqual((g["painted"], g["peers"]), ({"3": "#ff0000"}, 1))
+        p = self.client.post("/collab/%s/?cid=b" % room.token, _json.dumps({"zones": {"7": "rgb(1, 2, 3)", "3": "#000"}}),
+                             content_type="application/json").json()
+        self.assertEqual(p["peers"], 2)
+        room.refresh_from_db()
+        self.assertEqual(room.painted, {"3": "#ff0000", "7": "rgb(1, 2, 3)"})    # premiere couleur conservee
+        self.assertNotIn("painted", self.client.get("/collab/%s/?v=%d" % (room.token, room.version)).json())
+        self.assertEqual(self.client.get("/collab/nope/").status_code, 404)
+        # modele payant non achete : pas d'invitation pendant l'essai ; un invite n'a pas de minuteur
+        DigitalCanvas.objects.filter(uid="gal-col1").update(price=4)
+        self.assertEqual(self.client.post("/play/gal-col1/collab/", "{}", content_type="application/json").status_code, 403)
+        self.assertTrue(self.client.get("/play/gal-col1/?room=" + room.token).context["owned"])
+        self.assertFalse(self.client.get("/play/gal-col1/").context["owned"])

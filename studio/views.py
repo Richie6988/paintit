@@ -318,7 +318,9 @@ def digipaint(request, uid):
     lib = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
     buy = None
     owned = DigitalCanvas.objects.filter(uid=uid).exists()
-    if lib:
+    room = _collab_room(request.GET.get("room", ""))
+    room = room if room and room.uid == uid else None
+    if lib and not room:
         verified = request.session.get("verified_email")
         owns = bool(verified) and DigitalCanvas.objects.filter(email=verified, uid=uid).exists()
         if lib.hidden and not owns and not request.user.is_staff:
@@ -329,6 +331,8 @@ def digipaint(request, uid):
             owned = False                              # essai minute, y compris pour l'equipe (test du parcours)
         elif verified and not owns:
             _grant_gallery(request, lib, verified)   # gratuite -> arrive dans Mes Toiles
+    if room:
+        owned = True                                   # invite a peindre a plusieurs : pas de minuteur d'essai
     # Essai gratuit : "Retour a la commande" ramene a l'apercu de la commande en cours.
     # Sortie du jeu (croix, fin d'essai) : retour a l'apercu de la commande en cours, sans rien perdre.
     if request.session.get("digital_trial_uid") == uid and not owned:
@@ -342,7 +346,106 @@ def digipaint(request, uid):
     return render(request, "studio/digipaint.html",
                   {"uid": uid, "palette": palette, "owned": owned, "back_url": back_url, "back_label": back_label,
                    "buy": buy, "kit_url": reverse("studio:digipaint_buy", args=[uid]),
+                   "room": room.token if room else "", "can_collab": bool(room) or _can_collab(request, uid),
+                   "share_url": settings.SITE_URL + (reverse("studio:digipaint", args=[uid]) if uid.startswith("gal-") else "/"),
                    "kit_from": __import__("studio.landings", fromlist=["x"]).facts((get_language() or "fr")[:2])["price"]})
+
+
+_FILL_RX = None
+
+
+def _collab_room(token):
+    from .models import CollabRoom
+    return CollabRoom.objects.filter(token=token).first() if token and len(token) <= 24 else None
+
+
+def _clean_zones(raw, limit=400):
+    """{indice: couleur} venant du navigateur -> valeurs sures (indices entiers, couleurs #hex / rgb())."""
+    import re
+    global _FILL_RX
+    _FILL_RX = _FILL_RX or re.compile(r"^(#[0-9a-fA-F]{3,8}|rgba?\([\d\s.,%]{5,40}\))$")
+    out = {}
+    for k, v in list((raw or {}).items())[:limit]:
+        if str(k).isdigit() and int(k) < 20000 and isinstance(v, str) and _FILL_RX.match(v.strip()):
+            out[str(int(k))] = v.strip()
+    return out
+
+
+def _can_collab(request, uid):
+    """Inviter des amis : toile gratuite / possedee (pas pendant l'essai d'un modele payant non achete)."""
+    lib = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
+    if lib and float(lib.price or 0) > 0:
+        v = request.session.get("verified_email")
+        return bool(v) and DigitalCanvas.objects.filter(email=v, uid=uid).exists()
+    return DigitalCanvas.objects.filter(uid=uid).exists()
+
+
+def collab_create(request, uid):
+    """POST : cree le lien d'invitation, l'etat actuel du createur devient l'etat de depart de la toile partagee."""
+    import json
+    import secrets
+    from .models import CollabRoom
+    if request.method != "POST":
+        return JsonResponse({"error": "method"}, status=405)
+    if not os.path.exists(os.path.join(settings.MEDIA_ROOT, "orders", uid, f"{uid}_digipaint.svg")):
+        raise Http404
+    if not _can_collab(request, uid):
+        return JsonResponse({"error": "locked"}, status=403)
+    if security.rate_limited("collab-new:" + security.client_ip(request), 20, 3600):
+        return JsonResponse({"error": "rate"}, status=429)
+    try:
+        body = json.loads(request.body or b"{}")
+    except ValueError:
+        body = {}
+    room = CollabRoom.objects.create(token=secrets.token_urlsafe(12)[:16], uid=uid,
+                                     painted=_clean_zones(body.get("painted"), limit=20000), version=1)
+    request.session.setdefault("collab_rooms", [])
+    request.session["collab_rooms"] = (request.session["collab_rooms"] + [room.token])[-20:]
+    return JsonResponse({"token": room.token, "url": "%s%s?room=%s" % (settings.SITE_URL, reverse("studio:digipaint", args=[uid]), room.token)})
+
+
+def collab_sync(request, token):
+    """GET : etat partage (si change depuis ?v=) + nombre de peintres en ligne. POST : zones peintes a ajouter."""
+    import json
+    import time as _time
+    from django.core.cache import cache
+    from django.db import transaction
+    from .models import CollabRoom
+    room = _collab_room(token)
+    if not room:
+        raise Http404
+    cid = (request.GET.get("cid") or "")[:24]
+    peers = cache.get("collab-peers:" + token) or {}
+    now = _time.time()
+    if cid:
+        peers[cid] = now
+    peers = {k: t for k, t in peers.items() if now - t < 20}
+    cache.set("collab-peers:" + token, peers, 120)
+    if request.method == "POST":
+        if security.rate_limited("collab-post:" + token + ":" + security.client_ip(request), 240, 60):
+            return JsonResponse({"error": "rate"}, status=429)
+        try:
+            zones = _clean_zones(json.loads(request.body or b"{}").get("zones"))
+        except ValueError:
+            zones = {}
+        if zones:
+            with transaction.atomic():
+                r = CollabRoom.objects.select_for_update().get(pk=room.pk)
+                new = {k: v for k, v in zones.items() if k not in r.painted}
+                if new:
+                    r.painted.update(new)
+                    r.version += 1
+                    r.save(update_fields=["painted", "version", "updated_at"])
+                room = r
+        return JsonResponse({"v": room.version, "peers": len(peers)})
+    try:
+        since = int(request.GET.get("v") or 0)
+    except ValueError:
+        since = 0
+    data = {"v": room.version, "peers": len(peers)}
+    if since != room.version:
+        data["painted"] = room.painted
+    return JsonResponse(data)
 
 
 def preview(request):

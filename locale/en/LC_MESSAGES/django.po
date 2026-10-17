@@ -1843,3 +1843,58 @@ msgstr "Or order the painting kit"
 
 msgid "Remonter en haut"
 msgstr "Back to top"
+
+msgid "Partager · peindre à plusieurs"
+msgstr "Share · paint together"
+
+msgid "Partager"
+msgstr "Share"
+
+msgid "Montrer ma toile"
+msgstr "Show my canvas"
+
+msgid "Peindre à plusieurs"
+msgstr "Paint together"
+
+msgid "Partager l'image"
+msgstr "Share the image"
+
+msgid "Télécharger"
+msgstr "Download"
+
+msgid ""
+"Pour Instagram ou TikTok : téléchargez l'image puis publiez-la depuis "
+"l'application."
+msgstr ""
+"For Instagram or TikTok: download the image, then post it from the app."
+
+msgid ""
+"Invitez vos proches : chacun peint depuis son téléphone ou son ordinateur, "
+"et vous voyez leurs zones se colorer en direct sur la même toile."
+msgstr ""
+"Invite your loved ones: everyone paints from their phone or computer, and "
+"you watch their areas fill in live on the same canvas."
+
+msgid "Créer le lien d'invitation"
+msgstr "Create the invite link"
+
+msgid "Lien d’invitation"
+msgstr "Invite link"
+
+msgid "Envoyer…"
+msgstr "Send…"
+
+msgid "Toute personne qui a ce lien peut peindre cette toile avec vous."
+msgstr "Anyone with this link can paint this canvas with you."
+
+msgid "Vous seul pour l’instant"
+msgstr "Just you for now"
+
+msgid "%s peintres en ligne"
+msgstr "%s painters online"
+
+msgid "Je peins cette toile numéro par numéro sur PaintIt 🎨"
+msgstr "I'm painting this canvas number by number on PaintIt 🎨"
+
+msgid "Viens peindre cette toile avec moi sur PaintIt :"
+msgstr "Come and paint this canvas with me on PaintIt:"

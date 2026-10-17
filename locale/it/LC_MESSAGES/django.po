@@ -1869,3 +1869,57 @@ msgstr "Oppure ordina il kit da dipingere"
 
 msgid "Remonter en haut"
 msgstr "Torna su"
+
+msgid "Partager · peindre à plusieurs"
+msgstr "Condividi · dipingi insieme"
+
+msgid "Partager"
+msgstr "Condividi"
+
+msgid "Montrer ma toile"
+msgstr "Mostra la mia tela"
+
+msgid "Peindre à plusieurs"
+msgstr "Dipingi insieme"
+
+msgid "Partager l'image"
+msgstr "Condividi l'immagine"
+
+msgid "Télécharger"
+msgstr "Scarica"
+
+msgid ""
+"Pour Instagram ou TikTok : téléchargez l'image puis publiez-la depuis "
+"l'application."
+msgstr "Per Instagram o TikTok: scarica l'immagine e pubblicala dall'app."
+
+msgid ""
+"Invitez vos proches : chacun peint depuis son téléphone ou son ordinateur, "
+"et vous voyez leurs zones se colorer en direct sur la même toile."
+msgstr ""
+"Invita i tuoi cari: ognuno dipinge dal telefono o dal computer e vedi le "
+"loro zone colorarsi in diretta sulla stessa tela."
+
+msgid "Créer le lien d'invitation"
+msgstr "Crea il link di invito"
+
+msgid "Lien d’invitation"
+msgstr "Link di invito"
+
+msgid "Envoyer…"
+msgstr "Invia…"
+
+msgid "Toute personne qui a ce lien peut peindre cette toile avec vous."
+msgstr "Chiunque abbia questo link può dipingere questa tela con te."
+
+msgid "Vous seul pour l’instant"
+msgstr "Solo tu per ora"
+
+msgid "%s peintres en ligne"
+msgstr "%s pittori online"
+
+msgid "Je peins cette toile numéro par numéro sur PaintIt 🎨"
+msgstr "Sto dipingendo questa tela numero per numero su PaintIt 🎨"
+
+msgid "Viens peindre cette toile avec moi sur PaintIt :"
+msgstr "Vieni a dipingere questa tela con me su PaintIt:"

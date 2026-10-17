@@ -1857,3 +1857,57 @@ msgstr "O pide el kit para pintar"
 
 msgid "Remonter en haut"
 msgstr "Volver arriba"
+
+msgid "Partager · peindre à plusieurs"
+msgstr "Compartir · pintar juntos"
+
+msgid "Partager"
+msgstr "Compartir"
+
+msgid "Montrer ma toile"
+msgstr "Mostrar mi lienzo"
+
+msgid "Peindre à plusieurs"
+msgstr "Pintar juntos"
+
+msgid "Partager l'image"
+msgstr "Compartir la imagen"
+
+msgid "Télécharger"
+msgstr "Descargar"
+
+msgid ""
+"Pour Instagram ou TikTok : téléchargez l'image puis publiez-la depuis "
+"l'application."
+msgstr "Para Instagram o TikTok: descarga la imagen y publícala desde la app."
+
+msgid ""
+"Invitez vos proches : chacun peint depuis son téléphone ou son ordinateur, "
+"et vous voyez leurs zones se colorer en direct sur la même toile."
+msgstr ""
+"Invita a tus seres queridos: cada uno pinta desde su móvil u ordenador y ves"
+" sus zonas colorearse en directo en el mismo lienzo."
+
+msgid "Créer le lien d'invitation"
+msgstr "Crear el enlace de invitación"
+
+msgid "Lien d’invitation"
+msgstr "Enlace de invitación"
+
+msgid "Envoyer…"
+msgstr "Enviar…"
+
+msgid "Toute personne qui a ce lien peut peindre cette toile avec vous."
+msgstr "Cualquier persona con este enlace puede pintar este lienzo contigo."
+
+msgid "Vous seul pour l’instant"
+msgstr "Solo tú por ahora"
+
+msgid "%s peintres en ligne"
+msgstr "%s pintores en línea"
+
+msgid "Je peins cette toile numéro par numéro sur PaintIt 🎨"
+msgstr "Estoy pintando este lienzo número a número en PaintIt 🎨"
+
+msgid "Viens peindre cette toile avec moi sur PaintIt :"
+msgstr "Ven a pintar este lienzo conmigo en PaintIt:"

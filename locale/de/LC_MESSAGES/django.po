@@ -1886,3 +1886,57 @@ msgstr "Oder das Malset bestellen"
 
 msgid "Remonter en haut"
 msgstr "Nach oben"
+
+msgid "Partager · peindre à plusieurs"
+msgstr "Teilen · gemeinsam malen"
+
+msgid "Partager"
+msgstr "Teilen"
+
+msgid "Montrer ma toile"
+msgstr "Meine Leinwand zeigen"
+
+msgid "Peindre à plusieurs"
+msgstr "Gemeinsam malen"
+
+msgid "Partager l'image"
+msgstr "Bild teilen"
+
+msgid "Télécharger"
+msgstr "Herunterladen"
+
+msgid ""
+"Pour Instagram ou TikTok : téléchargez l'image puis publiez-la depuis "
+"l'application."
+msgstr "Für Instagram oder TikTok: Bild herunterladen und in der App posten."
+
+msgid ""
+"Invitez vos proches : chacun peint depuis son téléphone ou son ordinateur, "
+"et vous voyez leurs zones se colorer en direct sur la même toile."
+msgstr ""
+"Lade deine Liebsten ein: Jeder malt am Handy oder Computer, und du siehst "
+"ihre Felder live auf derselben Leinwand erscheinen."
+
+msgid "Créer le lien d'invitation"
+msgstr "Einladungslink erstellen"
+
+msgid "Lien d’invitation"
+msgstr "Einladungslink"
+
+msgid "Envoyer…"
+msgstr "Senden…"
+
+msgid "Toute personne qui a ce lien peut peindre cette toile avec vous."
+msgstr "Jeder mit diesem Link kann diese Leinwand mit dir malen."
+
+msgid "Vous seul pour l’instant"
+msgstr "Nur du im Moment"
+
+msgid "%s peintres en ligne"
+msgstr "%s Maler online"
+
+msgid "Je peins cette toile numéro par numéro sur PaintIt 🎨"
+msgstr "Ich male diese Leinwand Zahl für Zahl auf PaintIt 🎨"
+
+msgid "Viens peindre cette toile avec moi sur PaintIt :"
+msgstr "Mal diese Leinwand mit mir auf PaintIt:"
