@@ -16,6 +16,19 @@ def _room(token):
 
 
 @database_sync_to_async
+def _presence(token, me, score=None, name=None, leave=False):
+    """Meme registre de joueurs que le mode HTTP : le classement reunit les deux modes."""
+    from django.core.cache import cache
+    from .views import _collab_players
+    if leave:
+        peers = cache.get("collab-peers:" + token) or {}
+        peers.pop(me["id"], None)
+        cache.set("collab-peers:" + token, peers, 300)
+        return
+    _collab_players(token, me["id"], score, name, me["c"])
+
+
+@database_sync_to_async
 def _save(token, zones):
     """Ajoute les zones encore libres (la premiere couleur gagne) -> (zones ajoutees, version)."""
     from django.db import transaction
@@ -49,6 +62,7 @@ class CollabConsumer(AsyncJsonWebsocketConsumer):
 
     async def disconnect(self, code):
         if hasattr(self, "group"):
+            await _presence(self.token, self.me, leave=True)
             await self._broadcast({"t": "bye", "id": self.me["id"]})
             await self.channel_layer.group_discard(self.group, self.channel_name)
 
@@ -83,7 +97,9 @@ class CollabConsumer(AsyncJsonWebsocketConsumer):
                 pts = max(0, min(10 ** 9, int(msg.get("s") or 0)))
             except (TypeError, ValueError):
                 pts = 0
-            await self._broadcast({"t": t, "s": pts, "n": str(msg.get("n") or "")[:16], **self.me})
+            name = str(msg.get("n") or "")[:16]
+            await _presence(self.token, self.me, pts, name)
+            await self._broadcast({"t": t, "s": pts, "n": name, **self.me})
 
     async def _broadcast(self, data):
         await self.channel_layer.group_send(self.group, {"type": "relay", "data": data})

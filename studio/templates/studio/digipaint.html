@@ -162,7 +162,7 @@
  .peerchip i{width:8px;height:8px;border-radius:50%;background:#1f9d55;box-shadow:0 0 0 3px rgba(31,157,85,.22)}
  .z.remote{animation:remotepop .7s ease}
  .dots{position:absolute;inset:0;pointer-events:none;z-index:6;overflow:hidden}
- .peerchip{cursor:pointer}
+
  .ladder{position:absolute;top:46px;left:12px;z-index:8;list-style:none;margin:0;padding:6px;min-width:170px;max-width:230px;
    background:rgba(255,255,255,.97);border:1px solid #e2e8f2;border-radius:14px;box-shadow:0 8px 22px rgba(18,34,79,.14);font:600 .8rem/1.2 system-ui,sans-serif;color:#33415c}
  .ladder[hidden]{display:none}
@@ -647,31 +647,34 @@
     colQ[i]=fill;clearTimeout(colT);colT=setTimeout(colFlush,700);}
   function colFlush(){var z=colQ;colQ={};if(!Object.keys(z).length)return;
     if(wsOk){var c={},n=0;Object.keys(z).forEach(function(k){c[k]=z[k];if(++n%200===0){wsSend({t:'paint',z:c});c={};}});if(Object.keys(c).length)wsSend({t:'paint',z:c});return;}
-    fetch('/collab/'+ROOM+'/?cid='+CID,{method:'POST',headers:{'X-CSRFToken':CSRF,'Content-Type':'application/json'},body:JSON.stringify({zones:z})})
-      .then(function(r){return r.json();}).then(function(d){showPeers(d.peers);}).catch(function(){Object.keys(z).forEach(function(k){colQ[k]=z[k];});});}
+    fetch('/collab/'+ROOM+'/?cid='+CID+'&s='+score+'&n='+encodeURIComponent(NAME),{method:'POST',headers:{'X-CSRFToken':CSRF,'Content-Type':'application/json'},body:JSON.stringify({zones:z})})
+      .then(function(r){return r.json();}).then(function(d){mergePlayers(d.players);livePeers();}).catch(function(){Object.keys(z).forEach(function(k){colQ[k]=z[k];});});}
   function showPeers(n){var c=document.getElementById('peerChip');if(!c)return;c.hidden=false;
     document.getElementById('peerN').textContent=n>1?'{{ _("%s peintres en ligne")|escapejs }}'.replace(/%+s/,n):'{{ _("Vous seul pour l’instant")|escapejs }}';}
   function livePeers(){var now=Date.now();Object.keys(peers).forEach(function(k){if(now-peers[k].t>45000){delete peers[k];dropDot(k);}});
     showPeers(1+Object.keys(peers).length);drawLadder();}
   // classement des joueurs de la toile partagee (points du jeu : taille de zone x combo)
   var ladOpen=true,lastSent=-1,scoreT=null;
-  function colScore(){clearTimeout(scoreT);scoreT=setTimeout(function(){if(score!==lastSent&&wsSend({t:'score',s:score,n:NAME}))lastSent=score;drawLadder();},300);}
+  function colScore(){drawLadder();clearTimeout(scoreT);scoreT=setTimeout(function(){if(score!==lastSent&&wsSend({t:'score',s:score,n:NAME}))lastSent=score;},300);}
   function drawLadder(){var el=document.getElementById('ladder');if(!el)return;var ids=Object.keys(peers);
-    if(!wsOk||!ids.length||!ladOpen){el.hidden=true;return;}
-    var rows=ids.map(function(k){var p=peers[k];return {n:p.n||'?',c:p.c,s:p.s||0,up:p.up&&Date.now()-p.up<1500};});
+    if(!ROOM){el.hidden=true;return;}
+    var rows=ids.map(function(k){var p=peers[k];return {n:p.n||'?',c:p.c||'#8a93a6',s:p.s||0,up:p.up&&Date.now()-p.up<1500};});
     rows.push({n:NAME+' {{ _("Vous")|escapejs }}',c:ME?ME.c:'#2f6bf2',s:score,me:true});
     rows.sort(function(a,b){return b.s-a.s;});var med=['🥇','🥈','🥉'];
     el.innerHTML=rows.slice(0,8).map(function(r,i){return '<li class="'+(r.me?'me':'')+(r.up?' up':'')+'"><span class="rk">'+(med[i]||(i+1))+'</span><span class="av" style="background:'+r.c+'"></span><span class="nm"></span><b>'+r.s.toLocaleString()+'</b></li>';}).join('');
     [].forEach.call(el.querySelectorAll('.nm'),function(n,i){n.textContent=rows[i].n;});el.hidden=false;}
-  document.getElementById('peerChip').addEventListener('click',function(){ladOpen=!ladOpen;drawLadder();});
+
   function colApply(painted,fresh){var added=0;Object.keys(painted||{}).forEach(function(k){var z=zones[k];if(!z||z.dataset.done==='1')return;
       z.style.fill=painted[k];z.dataset.done='1';if(z.parentNode)z.parentNode.classList.add('done');done++;added++;
       if(fresh){z.classList.add('remote');setTimeout(function(){z.classList.remove('remote');},800);}});
     if(added){updateHUD();save();if(done>=total)win();}}
-  function colPoll(){if(document.hidden||wsOk)return;fetch('/collab/'+ROOM+'/?cid='+CID+'&v='+colV,{cache:'no-store'})
-    .then(function(r){return r.json();}).then(function(d){showPeers(d.peers);if(d.painted){colApply(d.painted,colV>0);}colV=d.v;}).catch(function(){});}
-  function startPoll(){if(!pollT){colFlush();colPoll();pollT=setInterval(colPoll,2500);}}
+  function colPoll(){if(document.hidden)return;fetch('/collab/'+ROOM+'/?cid='+(wsOk&&ME?ME.id:CID)+'&v='+colV+'&s='+score+'&n='+encodeURIComponent(NAME),{cache:'no-store'})
+    .then(function(r){return r.json();}).then(function(d){mergePlayers(d.players);if(d.painted&&!wsOk){colApply(d.painted,colV>0);colV=d.v;}livePeers();}).catch(function(){});}
+  function mergePlayers(list){var now=Date.now();(list||[]).forEach(function(p){if(p.id===CID||(ME&&p.id===ME.id))return;
+    var h=peers[p.id]=peers[p.id]||{};if(p.s>(h.s||0)&&h.s!=null)h.up=now;h.s=p.s;h.n=p.n||h.n;h.c=h.c||p.c;h.t=now;});}
+  function startPoll(){if(!pollT){colFlush();colPoll();pollT=setInterval(colPoll,2000);}}
   function stopPoll(){clearInterval(pollT);pollT=null;}
+  setInterval(function(){if(ROOM&&wsOk)colPoll();},5000);              // joueurs sans WebSocket : toujours dans le classement
   // curseurs : un point de couleur par participant, place en coordonnees de la toile (suit zoom et deplacement)
   var dotsEl=document.createElement('div');dotsEl.className='dots';boardEl.appendChild(dotsEl);
   function dropDot(id){var d=document.getElementById('dot-'+id);if(d)d.remove();}
@@ -696,7 +699,7 @@
       else if(d.t==='cur'&&other){var p=peers[d.id]=peers[d.id]||{};p.c=d.c;p.x=d.x;p.y=d.y;p.n=d.n;p.t=p.ct=Date.now();if(Object.keys(peers).length&&document.getElementById('peerChip').hidden)livePeers();}
       else if(d.t==='bye'){delete peers[d.id];dropDot(d.id);livePeers();}};
     ws.onclose=function(){wsOk=false;startPoll();setTimeout(wsConnect,opened?3000:20000);};}
-  function colStart(){wsConnect();setTimeout(function(){if(!wsOk)startPoll();},2500);
+  function colStart(){livePeers();wsConnect();setTimeout(function(){if(!wsOk)startPoll();},2500);
     setInterval(function(){if(wsOk)wsSend({t:'here',s:score,n:NAME});livePeers();},20000);
     boardEl.addEventListener('pointermove',sendCur);boardEl.addEventListener('pointerdown',sendCur);
     document.addEventListener('visibilitychange',function(){if(!document.hidden)colPoll();});requestAnimationFrame(placeDots);

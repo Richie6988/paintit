@@ -1568,3 +1568,12 @@ class CreatePhotoCacheTests(TestCase):
         open(os.path.join(d2, "EF12CD34-8888_source_b.jpg"), "wb").write(b"b")
         self.client.get("/play/EF12CD34-8888/buy/")
         self.assertNotEqual(self.client.get("/create/").context["photo_v"], v1)   # autre toile -> autre adresse d'image
+
+    def test_http_players_scores_for_ladder(self):
+        from studio.models import CollabRoom
+        CollabRoom.objects.create(token="tokh", uid="gal-x", version=1)
+        self.client.get("/collab/tokh/?cid=a&s=120&n=🦊")
+        d = self.client.get("/collab/tokh/?cid=b&s=40&n=🐼").json()
+        got = {p["id"]: (p["s"], p["n"]) for p in d["players"]}
+        self.assertEqual(got, {"a": (120, "🦊"), "b": (40, "🐼")})
+        self.assertTrue(all(p["c"].startswith("#") for p in d["players"]))

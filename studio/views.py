@@ -399,6 +399,39 @@ def _can_collab(request, uid):
     return DigitalCanvas.objects.filter(uid=uid).exists()
 
 
+_PEER_COLORS = ["#e8455f", "#2f6bf2", "#1f9d55", "#f08a3c", "#7a3ff2", "#0ea5b7", "#d63384", "#8a6d1f"]
+
+
+def _collab_players(token, pid, score=None, name=None, color=None, ttl=45):
+    """Joueurs presents sur une toile partagee (cache partage HTTP + WebSocket) : {id: {t, s, n, c}}."""
+    import time as _time
+    import zlib
+    from django.core.cache import cache
+    key = "collab-peers:" + token
+    peers = cache.get(key) or {}
+    now = _time.time()
+    if pid:
+        p = peers.get(pid) or {"s": 0, "n": "", "c": color or _PEER_COLORS[zlib.crc32(pid.encode()) % len(_PEER_COLORS)]}
+        p["t"] = now
+        try:
+            if score is not None and str(score) != "":
+                p["s"] = max(0, min(10 ** 9, int(score)))
+        except (TypeError, ValueError):
+            pass
+        if name:
+            p["n"] = str(name)[:16]
+        if color:
+            p["c"] = color
+        peers[pid] = p
+    peers = {k: v for k, v in peers.items() if isinstance(v, dict) and now - v.get("t", 0) < ttl}
+    cache.set(key, peers, 300)
+    return peers
+
+
+def _players_list(peers):
+    return [{"id": k, "s": v.get("s", 0), "n": v.get("n", ""), "c": v.get("c", "#2f6bf2")} for k, v in peers.items()]
+
+
 def collab_create(request, uid):
     """POST : cree le lien d'invitation, l'etat actuel du createur devient l'etat de depart de la toile partagee."""
     import json
@@ -434,12 +467,7 @@ def collab_sync(request, token):
     if not room:
         raise Http404
     cid = (request.GET.get("cid") or "")[:24]
-    peers = cache.get("collab-peers:" + token) or {}
-    now = _time.time()
-    if cid:
-        peers[cid] = now
-    peers = {k: t for k, t in peers.items() if now - t < 20}
-    cache.set("collab-peers:" + token, peers, 120)
+    peers = _collab_players(token, cid, request.GET.get("s"), request.GET.get("n"))
     if request.method == "POST":
         if security.rate_limited("collab-post:" + token + ":" + security.client_ip(request), 240, 60):
             return JsonResponse({"error": "rate"}, status=429)
@@ -456,12 +484,12 @@ def collab_sync(request, token):
                     r.version += 1
                     r.save(update_fields=["painted", "version", "updated_at"])
                 room = r
-        return JsonResponse({"v": room.version, "peers": len(peers)})
+        return JsonResponse({"v": room.version, "peers": len(peers), "players": _players_list(peers)})
     try:
         since = int(request.GET.get("v") or 0)
     except ValueError:
         since = 0
-    data = {"v": room.version, "peers": len(peers)}
+    data = {"v": room.version, "peers": len(peers), "players": _players_list(peers)}
     if since != room.version:
         data["painted"] = room.painted
     return JsonResponse(data)
