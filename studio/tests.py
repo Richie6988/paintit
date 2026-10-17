@@ -1478,3 +1478,21 @@ class PlayFiltersTests(TestCase):
         self.assertEqual(self.client.post("/play/gal-col1/collab/", "{}", content_type="application/json").status_code, 403)
         self.assertTrue(self.client.get("/play/gal-col1/?room=" + room.token).context["owned"])
         self.assertFalse(self.client.get("/play/gal-col1/").context["owned"])
+
+    def test_order_kit_from_game_keeps_this_canvas_photo(self):
+        d = os.path.join(MEDIA, "orders", "AB12CD34-5678")
+        os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "AB12CD34-5678_digipaint.svg"), "w").write('<svg viewBox="0 0 400 500"></svg>')
+        src = os.path.join(d, "AB12CD34-5678_source_chat.jpg")
+        open(src, "wb").write(b"x")
+        other = os.path.join(MEDIA, "uploads", "autre.jpg")
+        os.makedirs(os.path.dirname(other), exist_ok=True)
+        open(other, "wb").write(b"y")
+        s = self.client.session; s["last_photo"] = other; s.save()       # photo d'une creation precedente
+        self.client.get("/play/AB12CD34-5678/buy/")
+        self.assertEqual(self.client.session["last_photo"], src)        # « Modifier » repart de cette toile
+        self.assertTrue(self.client.get("/create/").context["has_photo"])
+        os.remove(src)                                                   # photo d'origine purgee : pas de mauvaise photo
+        s = self.client.session; s["last_photo"] = other; s.save()
+        self.client.get("/play/AB12CD34-5678/buy/")
+        self.assertNotIn("last_photo", self.client.session)

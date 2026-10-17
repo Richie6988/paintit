@@ -256,6 +256,17 @@ def digipaint_buy(request, uid):
     d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
     if not os.path.exists(os.path.join(d, f"{uid}_digipaint.svg")):
         return redirect("studio:upload")
+    # « Modifier » (couleurs, cadrage) depuis l'apercu doit repartir de la photo de CETTE toile,
+    # pas de la derniere photo envoyee sur le site
+    from .pipeline import source_file
+    src = source_file(d, uid)
+    if src and os.path.exists(src):
+        request.session["last_photo"] = src
+        request.session["last_photo_name"] = os.path.basename(src)
+    else:
+        request.session.pop("last_photo", None)
+        request.session.pop("last_photo_name", None)
+    request.session["last_focus"] = [0.5, 0.5]
     cj = os.path.join(d, f"{uid}_colors.json")
     colors_list = json.load(open(cj, encoding="utf-8")) if os.path.exists(cj) else []
     colors = len(colors_list) or 24
