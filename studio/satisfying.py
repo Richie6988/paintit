@@ -22,7 +22,7 @@ W, H, FPS = 1080, 1920, 30
 INTRO, OUTRO = 0.1, 3.4                       # ca demarre tout de suite ; fin = toile finie + nom qui se colorie
 PHOTO_HOLD, PHOTO_FADE = 0.6, 0.25             # avant / apres : photo breve puis fondu vers la toile vierge
 # ouverture « photo -> kit » : photo, contours traces comme un arc electrique, photo effacee, numeros qui apparaissent
-OPEN_PHOTO, OPEN_TRACE, OPEN_BLANK, OPEN_NUMS = 0.5, 5.5, 0.4, 0.6
+OPEN_PHOTO, OPEN_TRACE, OPEN_BLANK, OPEN_NUMS = 0.5, 3.8, 0.4, 0.6
 PREFILL = 0.08          # part des zones deja peintes quand la toile apparait : jamais d'ecran blanc qui fait zapper
 TOP, SIDE, CANVAS_H = 330, 24, 1250            # zone accroche en haut, marges laterales, hauteur max de la toile
 BG = (247, 244, 238)
