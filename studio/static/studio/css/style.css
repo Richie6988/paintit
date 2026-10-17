@@ -977,3 +977,20 @@ body.pv-busy .options .cta{opacity:.6;pointer-events:none}
   pointer-events:none;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .gcard:hover .g-art,.gcard:focus-visible .g-art{opacity:1;transform:none}
 @media (hover:none){.gcard .g-art{opacity:1;transform:none;font-size:.7rem;padding:8px 9px 20px}}
+
+/* Jouer : tri + curseurs doubles couleurs / zones */
+.g-filters2{margin-top:-6px}
+.g-range{flex:1 1 200px;min-width:170px;background:#fff;border:1px solid #cdd8ea;border-radius:12px;padding:7px 14px 9px;box-sizing:border-box}
+.gr-lbl{display:flex;justify-content:space-between;font-size:.78rem;color:#5b647a;font-weight:600;margin-bottom:4px}
+.gr-lbl b{color:#12224f;font-variant-numeric:tabular-nums}
+.gr-track{position:relative;height:22px}
+.gr-track::before{content:"";position:absolute;left:0;right:0;top:9px;height:4px;border-radius:4px;background:#e3e9f4}
+.gr-fill{position:absolute;top:9px;height:4px;border-radius:4px;background:var(--accent,#2f6bf2)}
+.gr-track input{position:absolute;left:0;top:0;width:100%;height:22px;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none;z-index:3}
+.gr-track input::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--accent,#2f6bf2);box-shadow:0 2px 6px rgba(18,34,79,.25);cursor:pointer}
+.gr-track input::-moz-range-thumb{pointer-events:auto;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--accent,#2f6bf2);box-shadow:0 2px 6px rgba(18,34,79,.25);cursor:pointer}
+.gr-track input::-webkit-slider-runnable-track{background:none}
+.gr-track input::-moz-range-track{background:none}
+.g-reset{height:48px;padding:0 16px;border:0;background:none;color:var(--accent,#2f6bf2);font-weight:700;cursor:pointer}
+.g-reset[hidden]{display:none}
+@media (max-width:560px){.g-filters2 #gsort{flex-basis:100%}.g-range{flex-basis:100%}}

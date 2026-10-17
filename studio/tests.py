@@ -1408,6 +1408,7 @@ class PlayFiltersTests(TestCase):
         self.assertEqual((r.context["n_free"], r.context["n_paid"]), (2, 1))
         self.assertEqual(r.context["cats"], [("Animaux", "Animaux", 2), ("Fleurs", "Fleurs", 1)])
         self.assertContains(r, 'id="gcat"'); self.assertContains(r, 'value="free"')
+        self.assertContains(r, 'id="gsort"'); self.assertContains(r, 'data-zones="10"')
 
     def test_paid_model_has_5_min_trial_then_buy(self):
         d = os.path.join(MEDIA, "orders", "gal-paid1")

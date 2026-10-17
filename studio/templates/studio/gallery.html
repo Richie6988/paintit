@@ -22,10 +22,28 @@
     {% endif %}
   </div>
   {% if models %}
+  <div class="g-filters g-filters2">
+    <select id="gsort" class="g-sel" aria-label="{% trans 'Trier' %}">
+      <option value="">{% trans "Gratuites d'abord" %}</option>
+      <option value="c-asc">{% trans "Moins de couleurs" %}</option>
+      <option value="c-desc">{% trans "Plus de couleurs" %}</option>
+      <option value="z-asc">{% trans "Moins de zones (facile)" %}</option>
+      <option value="z-desc">{% trans "Plus de zones (expert)" %}</option>
+    </select>
+    {% if rng.cmax > rng.cmin %}<div class="g-range" data-k="c" data-min="{{ rng.cmin }}" data-max="{{ rng.cmax }}" data-step="1">
+      <div class="gr-lbl"><span>{% trans "Couleurs" %}</span><b class="gr-val"></b></div>
+      <div class="gr-track"><i class="gr-fill"></i><input type="range" class="gr-lo" min="{{ rng.cmin }}" max="{{ rng.cmax }}" step="1" value="{{ rng.cmin }}" aria-label="{% trans 'Couleurs' %} min"><input type="range" class="gr-hi" min="{{ rng.cmin }}" max="{{ rng.cmax }}" step="1" value="{{ rng.cmax }}" aria-label="{% trans 'Couleurs' %} max"></div>
+    </div>{% endif %}
+    {% if rng.zmax > rng.zmin %}<div class="g-range" data-k="z" data-min="{{ rng.zmin }}" data-max="{{ rng.zmax }}" data-step="10">
+      <div class="gr-lbl"><span>{% trans "Zones" %}</span><b class="gr-val"></b></div>
+      <div class="gr-track"><i class="gr-fill"></i><input type="range" class="gr-lo" min="{{ rng.zmin }}" max="{{ rng.zmax }}" step="1" value="{{ rng.zmin }}" aria-label="{% trans 'Zones' %} min"><input type="range" class="gr-hi" min="{{ rng.zmin }}" max="{{ rng.zmax }}" step="1" value="{{ rng.zmax }}" aria-label="{% trans 'Zones' %} max"></div>
+    </div>{% endif %}
+    <button type="button" class="g-reset" id="greset" hidden>{% trans "Réinitialiser" %}</button>
+  </div>
     <div class="models-grid" id="ggrid">
       {% for m in models %}
         <a class="model-card gcard" href="{% url 'studio:digipaint' m.uid %}"
-           data-name="{{ m.art_caption|default:m.title|lower }}" data-cat="{{ m.category|lower }}" data-catl="{{ m.cat_label|lower }}" data-free="{% if m.price and m.price > 0 %}0{% else %}1{% endif %}">
+           data-name="{{ m.art_caption|default:m.title|lower }}" data-cat="{{ m.category|lower }}" data-catl="{{ m.cat_label|lower }}" data-free="{% if m.price and m.price > 0 %}0{% else %}1{% endif %}" data-colors="{{ m.colors|default:24 }}" data-zones="{{ m.zones|default:0 }}" data-i="{{ forloop.counter0 }}">
           <div class="mc-thumb"><div class="mc-img" style="aspect-ratio:40/50">
             <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="{{ m.art_caption|default:m.title }}" loading="lazy">
             {% if m.art_caption %}<span class="g-art">{{ m.art_caption }}</span>{% endif %}
@@ -63,24 +81,46 @@
 <script>
 (function(){
   var q=document.getElementById('gsearch');if(!q)return;
-  var pr=document.getElementById('gprice'),ca=document.getElementById('gcat');
-  var cards=[].slice.call(document.querySelectorAll('.gcard')),none=document.getElementById('gnone');
-  var url=new URLSearchParams(location.search);              // filtres partageables : ?prix=free&cat=animaux&q=chat
+  var pr=document.getElementById('gprice'),ca=document.getElementById('gcat'),so=document.getElementById('gsort'),rs=document.getElementById('greset');
+  var grid=document.getElementById('ggrid'),cards=[].slice.call(document.querySelectorAll('.gcard')),none=document.getElementById('gnone');
+  var ranges=[].slice.call(document.querySelectorAll('.g-range'));
+  var url=new URLSearchParams(location.search);   // filtres partageables : ?prix=free&cat=animaux&tri=z-asc&cmin=12&zmax=400
   if(pr&&url.get('prix'))pr.value=url.get('prix');
   if(ca&&url.get('cat'))ca.value=url.get('cat');
+  if(so&&url.get('tri'))so.value=url.get('tri');
   if(url.get('q'))q.value=url.get('q');
+  function bounds(r){var lo=r.querySelector('.gr-lo'),hi=r.querySelector('.gr-hi');return [+lo.value,+hi.value];}
+  function paintRange(r){var lo=r.querySelector('.gr-lo'),hi=r.querySelector('.gr-hi'),mn=+r.dataset.min,mx=+r.dataset.max,b=bounds(r);
+    var f=r.querySelector('.gr-fill');f.style.left=(100*(b[0]-mn)/(mx-mn))+'%';f.style.right=(100-100*(b[1]-mn)/(mx-mn))+'%';
+    r.querySelector('.gr-val').textContent=b[0]===b[1]?b[0]:b[0]+' – '+b[1];
+    lo.style.zIndex=b[0]>mx-(mx-mn)*0.1?5:3;}
+  ranges.forEach(function(r){var k=r.dataset.k,lo=r.querySelector('.gr-lo'),hi=r.querySelector('.gr-hi');
+    if(url.get(k+'min'))lo.value=url.get(k+'min');if(url.get(k+'max'))hi.value=url.get(k+'max');
+    function fix(e){if(+lo.value>+hi.value){if(e&&e.target===lo)hi.value=lo.value;else lo.value=hi.value;}paintRange(r);run();}
+    lo.addEventListener('input',fix);hi.addEventListener('input',fix);paintRange(r);});
+  var keys={'c-asc':['colors',1],'c-desc':['colors',-1],'z-asc':['zones',1],'z-desc':['zones',-1]};
   function run(){
-    var v=q.value.trim().toLowerCase(),p=pr?pr.value:'',c=ca?ca.value:'',n=0;
+    var v=q.value.trim().toLowerCase(),p=pr?pr.value:'',c=ca?ca.value:'',n=0,lim={};
+    ranges.forEach(function(r){lim[r.dataset.k]=bounds(r);});
     cards.forEach(function(el){
+      var col=+el.dataset.colors,zo=+el.dataset.zones;
       var ok=(!v||(el.dataset.name||'').indexOf(v)>=0||(el.dataset.cat||'').indexOf(v)>=0||(el.dataset.catl||'').indexOf(v)>=0)
-        &&(!p||(p==='free')===(el.dataset.free==='1'))&&(!c||el.dataset.cat===c);
+        &&(!p||(p==='free')===(el.dataset.free==='1'))&&(!c||el.dataset.cat===c)
+        &&(!lim.c||(col>=lim.c[0]&&col<=lim.c[1]))&&(!lim.z||!zo||(zo>=lim.z[0]&&zo<=lim.z[1]));
       el.style.display=ok?'':'none';if(ok)n++;
     });
+    var t=so?so.value:'',k=keys[t];                      // tri : gratuites d'abord (ordre d'origine) ou couleurs / zones
+    cards.slice().sort(function(a,b){if(!k)return a.dataset.i-b.dataset.i;var d=(a.dataset[k[0]]-b.dataset[k[0]])*k[1];return d||a.dataset.i-b.dataset.i;})
+      .forEach(function(el){grid.appendChild(el);});
     if(none)none.style.display=n?'none':'';
-    var u=new URLSearchParams();if(p)u.set('prix',p);if(c)u.set('cat',c);if(v)u.set('q',v);
+    var u=new URLSearchParams();if(p)u.set('prix',p);if(c)u.set('cat',c);if(t)u.set('tri',t);if(v)u.set('q',v);
+    ranges.forEach(function(r){var b=bounds(r),k2=r.dataset.k;if(b[0]>+r.dataset.min)u.set(k2+'min',b[0]);if(b[1]<+r.dataset.max)u.set(k2+'max',b[1]);});
+    if(rs)rs.hidden=!u.toString();
     history.replaceState(null,'',location.pathname+(u.toString()?'?'+u:''));
   }
-  q.addEventListener('input',run);if(pr)pr.addEventListener('change',run);if(ca)ca.addEventListener('change',run);
+  q.addEventListener('input',run);[pr,ca,so].forEach(function(e){if(e)e.addEventListener('change',run);});
+  if(rs)rs.addEventListener('click',function(){q.value='';[pr,ca,so].forEach(function(e){if(e)e.value='';});
+    ranges.forEach(function(r){r.querySelector('.gr-lo').value=r.dataset.min;r.querySelector('.gr-hi').value=r.dataset.max;paintRange(r);});run();});
   if(location.search)run();
 })();
 </script>

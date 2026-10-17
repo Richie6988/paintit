@@ -1904,3 +1904,24 @@ msgstr "Leaderboard"
 
 msgid "Vous"
 msgstr "You"
+
+msgid "Trier"
+msgstr "Sort"
+
+msgid "Gratuites d'abord"
+msgstr "Free first"
+
+msgid "Moins de couleurs"
+msgstr "Fewest colours"
+
+msgid "Plus de couleurs"
+msgstr "Most colours"
+
+msgid "Moins de zones (facile)"
+msgstr "Fewest areas (easy)"
+
+msgid "Plus de zones (expert)"
+msgstr "Most areas (expert)"
+
+msgid "Réinitialiser"
+msgstr "Reset"

@@ -731,6 +731,10 @@ def gallery(request):
     n_free = sum(1 for m in models if not (m.price and m.price > 0))
     return render(request, "studio/gallery.html", {
         "models": models, "n_free": n_free, "n_paid": len(models) - n_free,
+        "rng": {"cmin": min((m.colors or 24) for m in models) if models else 0,
+                "cmax": max((m.colors or 24) for m in models) if models else 0,
+                "zmin": min((m.zones or 0) for m in models) if models else 0,
+                "zmax": max((m.zones or 0) for m in models) if models else 0},
         "cats": sorted(((c, categories.label(c, lang), n) for c, n in cats.items()), key=lambda x: x[1].lower()),
         "ld_list": seo.dump(seo.item_list(models, lambda m: reverse("studio:digipaint", args=[m.uid]))),
         "ld_crumb": seo.dump(seo.breadcrumb((_t("Accueil"), "/"), (_t("Testez notre jeu"), request.path)))})

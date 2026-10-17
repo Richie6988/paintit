@@ -1917,3 +1917,24 @@ msgstr "Clasificación"
 
 msgid "Vous"
 msgstr "Tú"
+
+msgid "Trier"
+msgstr "Ordenar"
+
+msgid "Gratuites d'abord"
+msgstr "Gratis primero"
+
+msgid "Moins de couleurs"
+msgstr "Menos colores"
+
+msgid "Plus de couleurs"
+msgstr "Más colores"
+
+msgid "Moins de zones (facile)"
+msgstr "Menos zonas (fácil)"
+
+msgid "Plus de zones (expert)"
+msgstr "Más zonas (experto)"
+
+msgid "Réinitialiser"
+msgstr "Restablecer"

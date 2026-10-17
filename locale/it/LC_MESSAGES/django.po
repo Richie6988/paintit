@@ -1929,3 +1929,24 @@ msgstr "Classifica"
 
 msgid "Vous"
 msgstr "Tu"
+
+msgid "Trier"
+msgstr "Ordina"
+
+msgid "Gratuites d'abord"
+msgstr "Gratuite prima"
+
+msgid "Moins de couleurs"
+msgstr "Meno colori"
+
+msgid "Plus de couleurs"
+msgstr "Più colori"
+
+msgid "Moins de zones (facile)"
+msgstr "Meno zone (facile)"
+
+msgid "Plus de zones (expert)"
+msgstr "Più zone (esperto)"
+
+msgid "Réinitialiser"
+msgstr "Reimposta"

@@ -1946,3 +1946,24 @@ msgstr "Rangliste"
 
 msgid "Vous"
 msgstr "Du"
+
+msgid "Trier"
+msgstr "Sortieren"
+
+msgid "Gratuites d'abord"
+msgstr "Kostenlose zuerst"
+
+msgid "Moins de couleurs"
+msgstr "Wenigste Farben"
+
+msgid "Plus de couleurs"
+msgstr "Meiste Farben"
+
+msgid "Moins de zones (facile)"
+msgstr "Wenigste Felder (leicht)"
+
+msgid "Plus de zones (expert)"
+msgstr "Meiste Felder (Profi)"
+
+msgid "Réinitialiser"
+msgstr "Zurücksetzen"
