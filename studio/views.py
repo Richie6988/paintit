@@ -326,7 +326,7 @@ def digipaint(request, uid):
         if float(lib.price or 0) > 0 and not owns:
             # modele payant : 5 min d'essai (comme les toiles des commandes), puis achat pour continuer
             buy = {"url": reverse("studio:gallery_buy", args=[uid]), "price": float(lib.price)}
-            owned = request.user.is_staff
+            owned = False                              # essai minute, y compris pour l'equipe (test du parcours)
         elif verified and not owns:
             _grant_gallery(request, lib, verified)   # gratuite -> arrive dans Mes Toiles
     # Essai gratuit : "Retour a la commande" ramene a l'apercu de la commande en cours.

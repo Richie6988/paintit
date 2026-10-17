@@ -1845,3 +1845,6 @@ msgstr "Mit meinem Foto ausprobieren"
 
 msgid "Jouer en ligne"
 msgstr "Online spielen"
+
+msgid "Essai"
+msgstr "Test"

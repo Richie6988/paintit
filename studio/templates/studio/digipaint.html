@@ -75,6 +75,18 @@
  .game-logo{position:fixed;left:16px;bottom:16px;z-index:13;line-height:0;opacity:.55;mix-blend-mode:multiply}
  .game-logo img{height:46px;width:auto;background:none;padding:0;filter:none}
  .stagewrap{position:relative;flex:1 1 auto;min-height:0}
+ .trialchip{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:7px;
+   background:rgba(255,255,255,.97);border:1px solid #e2e8f2;border-radius:999px;padding:6px 8px 6px 12px;
+   box-shadow:0 6px 18px rgba(18,34,79,.14);font:600 .82rem/1 system-ui,sans-serif;color:#33415c;white-space:nowrap}
+ .trialchip[hidden]{display:none}
+ .trialchip svg{width:15px;height:15px;flex:0 0 auto}
+ .trialchip b{font-variant-numeric:tabular-nums;color:#12224f;font-size:.9rem;min-width:34px}
+ .trialchip .tc-bar{width:54px;height:5px;border-radius:5px;background:#e8edf5;overflow:hidden}
+ .trialchip .tc-bar i{display:block;height:100%;background:#2f6bf2;border-radius:5px;transition:width 1s linear}
+ .trialchip a{background:#2f6bf2;color:#fff;text-decoration:none;border-radius:999px;padding:6px 11px;font-weight:800;font-size:.78rem}
+ .trialchip.warn{border-color:#f5c27a;background:#fff7ec}
+ .trialchip.warn b{color:#b45309}.trialchip.warn .tc-bar i{background:#f08a3c}
+ .trialchip:not(:has(a)){padding-right:12px}
  .board{position:absolute;inset:0;overflow:hidden;touch-action:none;
    background:
      radial-gradient(900px 460px at 72% -16%, rgba(255,255,255,.95), rgba(255,255,255,0)) no-repeat,
@@ -248,6 +260,11 @@
 <div class="palbar" id="palbar"></div>
 <a class="game-logo" href="{% url 'studio:home' %}" title="PaintIt"><img src="{% static 'studio/img/logo.png' %}" alt="PaintIt"></a>
 <div class="stagewrap">
+  {% if not owned %}<div class="trialchip" id="trialChip" hidden role="timer" aria-live="off">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
+    <span>{% trans "Essai" %}</span><b id="trialLeft">5:00</b><span class="tc-bar"><i id="trialBar" style="width:100%"></i></span>
+    {% if buy %}<a href="{{ buy.url }}">{% trans "Acheter" %}</a>{% endif %}
+  </div>{% endif %}
   <div class="board" id="board">
     <div id="svgwrap"><div id="host"></div></div>
     <div class="zoomctl">
@@ -306,15 +323,20 @@
   // Essai gratuit : 5 min de jeu (cumulees, onglet visible), puis proposition de sauvegarde a 0,99 EUR.
   var FREE_S=300, TKEY='digipaint-t:'+UID, played=0;
   try{played=parseInt(localStorage.getItem(TKEY),10)||0;}catch(e){}
-  function wall(){document.getElementById('paywall').classList.add('show');}
+  var chip=document.getElementById('trialChip');
+  function wall(){document.getElementById('paywall').classList.add('show');if(chip)chip.hidden=true;}
+  function showLeft(){if(!chip)return;var r=Math.max(0,FREE_S-played);chip.hidden=false;
+    document.getElementById('trialLeft').textContent=Math.floor(r/60)+':'+('0'+(r%60)).slice(-2);
+    document.getElementById('trialBar').style.width=(100*r/FREE_S)+'%';chip.classList.toggle('warn',r<=60);}
   if(!OWNED){
     if(played>=FREE_S){wall();}
-    else{var tick=setInterval(function(){
-      if(OWNED){clearInterval(tick);return;}
+    else{showLeft();var tick=setInterval(function(){         // temps de jeu visible, decompte seulement onglet affiche
+      if(OWNED){clearInterval(tick);if(chip)chip.hidden=true;return;}
       if(document.hidden)return;
-      played+=5;try{localStorage.setItem(TKEY,String(played));}catch(e){}
-      if(played>=FREE_S){clearInterval(tick);wall();}
-    },5000);}
+      played+=1;if(played%5===0){try{localStorage.setItem(TKEY,String(played));}catch(e){}}
+      showLeft();
+      if(played>=FREE_S){clearInterval(tick);try{localStorage.setItem(TKEY,String(played));}catch(e){}wall();}
+    },1000);}
   }
   var pwPay=document.getElementById('pwPay');
   if(pwPay)pwPay.addEventListener('click',function(){

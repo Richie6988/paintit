@@ -1817,3 +1817,6 @@ msgstr "Probar con mi foto"
 
 msgid "Jouer en ligne"
 msgstr "Jugar en línea"
+
+msgid "Essai"
+msgstr "Prueba"

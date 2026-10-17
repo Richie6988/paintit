@@ -1804,3 +1804,6 @@ msgstr "Try it with my photo"
 
 msgid "Jouer en ligne"
 msgstr "Play online"
+
+msgid "Essai"
+msgstr "Trial"
