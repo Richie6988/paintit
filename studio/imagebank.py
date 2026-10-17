@@ -402,3 +402,92 @@ def mark_used(img, where):
     if img.status == "new":
         img.status = "kept"
     img.save(update_fields=["used_in", "status"])
+
+
+# ---------------- Traitements par lot (galerie, videos TikTok) ----------------
+_BKEY = "imagebank_bulk"
+
+
+def bulk_state():
+    from django.core.cache import cache
+    return cache.get(_BKEY) or {"running": False}
+
+
+def _bset(**kw):
+    from django.core.cache import cache
+    st = bulk_state()
+    st.update(kw)
+    cache.set(_BKEY, st, 24 * 3600)
+
+
+def _bulk_one(kind, img, opts):
+    """Une image -> modele de galerie, ou toile + video TikTok mise en file de rendu."""
+    import random
+    import uuid
+    hd = fetch_hd(img)
+    try:
+        if kind == "gallery":
+            from decimal import Decimal
+            from .views import _create_gallery_model, _zones
+            m = _create_gallery_model((img.title or "Modèle")[:80], img.category, Decimal(opts.get("price") or "0"),
+                                      colors=opts["colors"], image_path=hd, in_slider=False,
+                                      orientation="paysage" if img.orientation == "paysage" else "portrait",
+                                      zones=_zones(opts.get("density")))
+            mark_used(img, "catalogue " + m.uid)
+            return
+        from . import satisfying, shorts
+        from .forms import DENSITY_LEVELS
+        from .models import SocialVideo
+        from .pipeline import generate
+        uid = "vid-" + uuid.uuid4().hex[:10]
+        dens, det = DENSITY_LEVELS["auto"]
+        generate(hd, opts["colors"], 40, 50, uid=uid, source_name="stock-%d.jpg" % img.pk, density=dens, detail=det)
+        label = "Banque · %s" % img.title[:80]
+        satisfying.save_label(uid, label)
+        fmt, style = opts.get("fmt", "fill"), opts.get("music_style", "ambient")
+        hooks = opts.get("hooks") or [""]
+        v = SocialVideo.objects.create(
+            canvas_uid=uid, fmt=fmt, title=label[:120], music=style != "none", music_style=style,
+            duration=shorts.DEFAULT_DURATION.get(fmt) or round(random.uniform(22, 32), 1),
+            hook=random.choice(hooks) if fmt == "fill" else "", before_after=True, fill_sounds=True,
+            show_numbers=True, seed=random.randint(1, 10 ** 6))
+        satisfying.enqueue(v)
+        mark_used(img, "vidéo " + uid)
+    finally:
+        if os.path.exists(hd):
+            os.remove(hd)
+
+
+def bulk_async(kind, ids, opts):
+    """Lance un lot en arriere-plan (un seul a la fois). Les images deja publiees au catalogue sont sautees (galerie)."""
+    from django.core.cache import cache
+    if not cache.add("imagebank_bulk_lock", 1, 12 * 3600):
+        return False
+    _bset(running=True, kind=kind, total=len(ids), done=0, ok=0, errors=0, current="", finished="", last_error="")
+
+    def run():
+        import logging
+        from django.db import close_old_connections
+        from django.utils import timezone
+        from .models import StockImage
+        close_old_connections()
+        ok = err = 0
+        try:
+            for k, pk in enumerate(ids):
+                img = StockImage.objects.filter(pk=pk).exclude(status="deleted").first()
+                if img and not (kind == "gallery" and "catalogue" in img.used_in):
+                    _bset(current=img.title[:60])
+                    try:
+                        _bulk_one(kind, img, opts)
+                        ok += 1
+                    except Exception as exc:                 # une image en echec n'arrete pas le lot
+                        err += 1
+                        logging.getLogger(__name__).exception("Lot banque %s #%s", kind, pk)
+                        _bset(last_error="%s : %s" % (img.title[:40], str(exc)[:160]))
+                _bset(done=k + 1, ok=ok, errors=err)
+        finally:
+            _bset(running=False, current="", finished=timezone.localtime().strftime("%d/%m %H:%M"))
+            cache.delete("imagebank_bulk_lock")
+            close_old_connections()
+    threading.Thread(target=run, daemon=True, name="imagebank-bulk").start()
+    return True

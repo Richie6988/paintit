@@ -36,8 +36,15 @@
  .hv{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px 12px;font-size:.8rem;margin:8px 0}
  .hv label{display:flex;gap:6px;align-items:center}
  .prog{height:8px;border-radius:9px;background:#e8edf5;overflow:hidden;margin-top:8px}.prog i{display:block;height:100%;background:#2f6bf2}
- .bulk{position:sticky;bottom:12px;z-index:5;display:none;gap:8px;align-items:center;background:#12224f;color:#fff;padding:10px 14px;border-radius:12px;margin-top:14px;width:max-content}
+ .bulk{position:sticky;bottom:12px;z-index:5;display:none;gap:10px;align-items:flex-start;flex-wrap:wrap;background:#12224f;color:#fff;padding:12px 14px;border-radius:14px;margin-top:14px;box-shadow:0 12px 30px rgba(18,34,79,.3)}
  .bulk.on{display:flex}
+ .bulk .grp{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:rgba(255,255,255,.08);padding:6px 8px;border-radius:10px}
+ .bulk .grp b{font-size:.74rem;opacity:.85;margin-right:2px}
+ .bulk select,.bulk input{height:32px;border-radius:8px;border:0;padding:0 7px;font-size:.78rem}
+ .bulk #bulkn{font-weight:800;align-self:center;min-width:120px}
+ .seltools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px;font-size:.82rem}
+ .seltools label{display:flex;gap:6px;align-items:center;font-weight:700;color:#33415c;cursor:pointer}
+ .seltools a{font-weight:700;color:#2f6bf2;cursor:pointer}
  .pg{display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:16px}
 </style>
 <div class="erp gx">
@@ -72,6 +79,15 @@
     </details>
   </div>
 
+  {% if bulk.running or bulk.finished %}
+  <div class="card" style="padding:12px 16px">
+    <b style="color:#12224f">{% if bulk.kind == "gallery" %}Ajout à la galerie{% else %}Vidéos TikTok{% endif %}{% if bulk.running %} · en cours{% else %} · terminé le {{ bulk.finished }}{% endif %}</b>
+    <span class="muted"> — {{ bulk.done }} / {{ bulk.total }} traitées · {{ bulk.ok }} réussie{{ bulk.ok|pluralize }}{% if bulk.errors %} · <span style="color:#b42318">{{ bulk.errors }} échec{{ bulk.errors|pluralize }}</span>{% endif %}{% if bulk.current %} · {{ bulk.current }}{% endif %}</span>
+    {% if bulk.running %}<div class="prog"><i style="width:{% widthratio bulk.done bulk.total 100 %}%"></i></div>{% endif %}
+    {% if bulk.last_error %}<div class="muted" style="font-size:.74rem;color:#b42318;margin-top:4px">Dernière erreur : {{ bulk.last_error }}</div>{% endif %}
+    {% if not bulk.running %}<div style="margin-top:6px"><a class="pbtn sm" href="{% if bulk.kind == 'gallery' %}/admin-hub/catalogue/{% else %}/admin-hub/videos/{% endif %}">{% if bulk.kind == "gallery" %}Voir la galerie{% else %}Voir les vidéos{% endif %}</a></div>{% endif %}
+  </div>
+  {% endif %}
   <div class="ib-tabs">
     {% for k, l, n in tabs %}
     <a href="?status={{ k }}" class="{% if status == k %}on{% endif %}">{{ l }} · {{ n }}</a>{% endfor %}
@@ -89,7 +105,10 @@
   </form>
 
   {% if page.object_list %}
-  <form method="post" id="bulkf">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"></form>
+  <form method="post" id="bulkf">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <input type="hidden" name="all" id="selall" value=""><input type="hidden" name="filter_qs" value="{{ filter_qs }}"></form>
+  <div class="seltools"><label><input type="checkbox" id="pageall"> Tout sélectionner sur cette page</label>
+    {% if page.has_other_pages %}<a id="filtall" hidden>Sélectionner les {{ filtered }} images du filtre</a>{% endif %}</div>
   <div class="ib-g">
     {% for i in page.object_list %}
     <div class="ib-c {{ i.status }}">
@@ -127,8 +146,17 @@
     {% endfor %}
   </div>
   <div class="bulk" id="bulk"><span id="bulkn"></span>
-    <button class="pbtn" form="bulkf" name="op" value="kept">★ Retenir</button>
-    <button class="pbtn" form="bulkf" name="op" value="delete" onclick="return confirm('Supprimer les images sélectionnées ?')">🗑 Supprimer</button></div>
+    <div class="grp"><button class="pbtn" form="bulkf" name="op" value="kept">★ Retenir</button>
+      <button class="pbtn" form="bulkf" name="op" value="delete" onclick="return confirm('Supprimer les images sélectionnées ?')">🗑 Supprimer</button></div>
+    <div class="grp"><b>Galerie</b>
+      <select form="bulkf" name="colors" aria-label="Couleurs"><option value="12">12 coul.</option><option value="24" selected>24 coul.</option><option value="36">36 coul.</option><option value="48">48 coul.</option></select>
+      <select form="bulkf" name="density" aria-label="Densité de zones"><option value="">Densité auto</option><option value="0.25|1.35">Faible · facile</option><option value="0.45|1.0">Moyenne</option><option value="0.7|0.75">Élevée</option><option value="1.0|0.6">Très élevée</option></select>
+      <input form="bulkf" name="price" type="number" min="0" step="0.01" value="0" style="width:74px" aria-label="Prix (€)" title="Prix (€), 0 = gratuit">
+      <button class="pbtn pri" form="bulkf" name="op" value="bulk_gallery" data-confirm="gallery">＋ Ajouter à la galerie</button></div>
+    <div class="grp"><b>TikTok</b>
+      <select form="bulkf" name="fmt" aria-label="Format">{% for k, l in formats %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select>
+      <select form="bulkf" name="music_style" aria-label="Musique">{% for k, l in music_styles %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select>
+      <button class="pbtn pri" form="bulkf" name="op" value="bulk_video" data-confirm="video">▶ Une vidéo par image</button></div></div>
   {% if page.has_other_pages %}<div class="pg">
     {% if page.has_previous %}<a class="pbtn" href="?{{ qs_nopage }}&page={{ page.previous_page_number }}" aria-label="Page précédente">‹</a>{% endif %}
     {% for num in page_links %}{% if num %}<a class="pbtn{% if num == page.number %} pri{% endif %}" href="?{{ qs_nopage }}&page={{ num }}"{% if num == page.number %} aria-current="page"{% endif %}>{{ num }}</a>{% else %}<span class="muted" style="align-self:center">…</span>{% endif %}{% endfor %}
@@ -142,13 +170,30 @@
 </div>
 <script>
 (function () {
-  var b = document.getElementById("bulk"), n = document.getElementById("bulkn");
-  var up = function () { var k = document.querySelectorAll(".sel:checked").length; if (b) { b.classList.toggle("on", k > 0); n.textContent = k + " sélectionnée" + (k > 1 ? "s" : ""); } };
-  document.querySelectorAll(".sel").forEach(function (c) { c.addEventListener("change", up); });
+  var b = document.getElementById("bulk"), n = document.getElementById("bulkn"), all = document.getElementById("selall");
+  var pa = document.getElementById("pageall"), fa = document.getElementById("filtall"), total = {{ filtered }};
+  var count = function () { return all && all.value ? total : document.querySelectorAll(".sel:checked").length; };
+  var up = function () {
+    var k = count(), boxes = document.querySelectorAll(".sel"), on = document.querySelectorAll(".sel:checked").length;
+    if (b) { b.classList.toggle("on", k > 0); n.textContent = k + " image" + (k > 1 ? "s" : "") + (all.value ? " (tout le filtre)" : " sélectionnée" + (k > 1 ? "s" : "")); }
+    if (pa) pa.checked = boxes.length && on === boxes.length;
+    if (fa) fa.hidden = !(boxes.length && on === boxes.length) || !!all.value;
+  };
+  document.querySelectorAll(".sel").forEach(function (c) { c.addEventListener("change", function () { if (all) all.value = ""; up(); }); });
+  if (pa) pa.addEventListener("change", function () { all.value = ""; document.querySelectorAll(".sel").forEach(function (c) { c.checked = pa.checked; }); up(); });
+  if (fa) fa.addEventListener("click", function () { all.value = "1"; up(); });
+  document.querySelectorAll("[data-confirm]").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      var k = count(), msg = btn.dataset.confirm === "gallery"
+        ? "Publier " + k + " image(s) dans la galerie ? Compter 20 à 40 s par image, en arrière-plan."
+        : "Créer " + k + " vidéo(s) TikTok (une par image) ? Les toiles sont créées en arrière-plan, puis les vidéos rendues une à une.";
+      if (!confirm(msg)) e.preventDefault();
+    });
+  });
   document.querySelectorAll("[data-busy]").forEach(function (btn) {
     btn.addEventListener("click", function () { var t = btn; setTimeout(function () { t.disabled = true; t.textContent = "Création de la toile…"; }, 0); });
   });
-  {% if state.running %}setTimeout(function () { location.reload(); }, 8000);{% endif %}
+  {% if state.running or bulk.running %}setTimeout(function () { location.reload(); }, 8000);{% endif %}
 })();
 </script>
 {% endblock %}

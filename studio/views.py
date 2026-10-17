@@ -4715,6 +4715,37 @@ def _banner_form():
     return BannerForm
 
 
+def _bank_filter(params):
+    """Images de la banque selon les filtres de la page (GET) -> queryset ordonne (ou liste si filtre de format)."""
+    from django.db.models import Q
+    from .models import StockImage
+    qs = StockImage.objects.exclude(status="deleted")
+    status = params.get("status", "new")
+    if status == "used":
+        qs = qs.exclude(used_in="")
+    elif status in dict(StockImage.STATUS):
+        qs = qs.filter(status=status)
+    cat, prov, q = params.get("cat", ""), params.get("prov", ""), (params.get("q") or "").strip()
+    try:
+        vmin = float(params.get("min") or 0)
+    except ValueError:
+        vmin = 0
+    if cat:
+        qs = qs.filter(category=cat)
+    if prov:
+        qs = qs.filter(provider=prov)
+    if q:
+        qs = qs.filter(Q(title__icontains=q) | Q(tags__icontains=q) | Q(query__icontains=q))
+    if vmin:
+        qs = qs.filter(vibrancy__gte=vmin)
+    if not params.get("people"):
+        qs = qs.filter(people=False)
+    qs = qs.order_by({"size": "-width", "recent": "-created_at", "oldest": "created_at"}.get(params.get("sort"), "-vibrancy"),
+                     "-pk")
+    orient = params.get("orient", "")
+    return [i for i in qs if i.orientation == orient] if orient else qs
+
+
 @staff_member_required
 def erp_images(request):
     """Banque d'images libres : collecte (Openverse, Wikimedia, Pixabay, Pexels), tri, envoi vers catalogue / videos / studio."""
@@ -4730,6 +4761,13 @@ def erp_images(request):
         op = request.POST.get("op")
         img = StockImage.objects.filter(pk=request.POST.get("id")).first()
         back = request.POST.get("next") or request.get_full_path()
+
+        def selected():
+            """Images choisies : cases cochees, ou toutes celles du filtre courant (toutes pages)."""
+            from django.http import QueryDict
+            if request.POST.get("all"):
+                return [i.pk for i in _bank_filter(QueryDict(request.POST.get("filter_qs", "")))]
+            return [int(x) for x in request.POST.getlist("ids") if x.isdigit()] or ([img.pk] if img else [])
         if op == "harvest":
             cats = [c for c in request.POST.getlist("cat") if c in imagebank.THEMES] or None
             provs = [p for p in request.POST.getlist("prov") if p in imagebank.available()] or None
@@ -4742,9 +4780,34 @@ def erp_images(request):
                                  % imagebank.total_queries(cats, provs))
             else:
                 messages.error(request, "Une collecte est déjà en cours.")
+        elif op in ("bulk_gallery", "bulk_video"):
+            ids = selected()
+            try:
+                colors = int(request.POST.get("colors") or 24)
+            except ValueError:
+                colors = 24
+            opts = {"colors": colors if colors in (12, 18, 24, 30, 36, 48) else 24}
+            if op == "bulk_gallery":
+                try:
+                    pr = max(Decimal("0"), Decimal((request.POST.get("price") or "0").replace(",", ".")))
+                except InvalidOperation:
+                    pr = Decimal("0")
+                opts.update(price=str(pr), density=request.POST.get("density", ""))
+            else:
+                from . import shorts
+                fmt = request.POST.get("fmt") if request.POST.get("fmt") in ("fill", "guess", "tips") else "fill"
+                style = request.POST.get("music_style") if request.POST.get("music_style") in dict(satisfying.MUSIC_STYLES) else "ambient"
+                opts.update(fmt=fmt, music_style=style, hooks=[h for _g, lines in HOOKS for h in lines])
+            if not ids:
+                messages.error(request, "Aucune image sélectionnée.")
+            elif imagebank.bulk_async("gallery" if op == "bulk_gallery" else "video", ids, opts):
+                messages.success(request, "%d image(s) en cours de traitement en arrière-plan (environ 20 à 40 s par image)%s."
+                                 % (len(ids), "" if op == "bulk_gallery" else ", puis rendu des vidéos dans « Vidéos TikTok »"))
+            else:
+                messages.error(request, "Un traitement par lot est déjà en cours : attendez qu'il se termine.")
         elif op == "delete":
             # suppression = vignette effacee + fiche gardee en « supprimee » : une collecte future ne la reimporte pas
-            ids = request.POST.getlist("ids") or ([img.pk] if img else [])
+            ids = selected()
             gone = StockImage.objects.filter(pk__in=ids)
             for i in gone:
                 if os.path.exists(i.thumb_path()):
@@ -4752,7 +4815,7 @@ def erp_images(request):
             n = gone.update(status="deleted")
             messages.success(request, "%d image(s) supprimée(s)." % n)
         elif op in ("kept", "rejected", "new"):
-            ids = request.POST.getlist("ids") or ([img.pk] if img else [])
+            ids = selected()
             n = StockImage.objects.filter(pk__in=ids).exclude(status="deleted").update(status=op)
             messages.success(request, "%d image(s) : %s." % (n, dict(StockImage.STATUS)[op].lower()))
         elif op in ("catalogue", "video", "studio") and img:
@@ -4792,31 +4855,10 @@ def erp_images(request):
                 messages.error(request, "Impossible d'utiliser cette image : %s" % exc)
         return redirect(back)
 
-    qs = StockImage.objects.exclude(status="deleted")
-    status = request.GET.get("status", "new")
-    if status == "used":
-        qs = qs.exclude(used_in="")
-    elif status in dict(StockImage.STATUS):
-        qs = qs.filter(status=status)
-    cat, prov, q = request.GET.get("cat", ""), request.GET.get("prov", ""), (request.GET.get("q") or "").strip()
-    orient, sort = request.GET.get("orient", ""), request.GET.get("sort", "vibrancy")
-    try:
-        vmin = float(request.GET.get("min") or 0)
-    except ValueError:
-        vmin = 0
-    if cat:
-        qs = qs.filter(category=cat)
-    if prov:
-        qs = qs.filter(provider=prov)
-    if q:
-        qs = qs.filter(Q(title__icontains=q) | Q(tags__icontains=q) | Q(query__icontains=q))
-    if vmin:
-        qs = qs.filter(vibrancy__gte=vmin)
-    if not request.GET.get("people"):
-        qs = qs.filter(people=False)
-    qs = qs.order_by({"size": "-width", "recent": "-created_at", "oldest": "created_at"}.get(sort, "-vibrancy"), "-pk")
-    if orient:
-        qs = [i for i in qs if i.orientation == orient]
+    status, cat = request.GET.get("status", "new"), request.GET.get("cat", "")
+    prov, q, orient = request.GET.get("prov", ""), (request.GET.get("q") or "").strip(), request.GET.get("orient", "")
+    sort = request.GET.get("sort", "vibrancy")
+    qs = _bank_filter(request.GET)
     page = Paginator(qs, 60).get_page(request.GET.get("page"))
     n_pages, cur = page.paginator.num_pages, page.number
     shown = sorted({1, n_pages, *range(max(1, cur - 2), min(n_pages, cur + 2) + 1)})
@@ -4843,6 +4885,9 @@ def erp_images(request):
         "f": {"cat": cat, "prov": prov, "q": q, "min": request.GET.get("min", ""), "orient": orient, "sort": sort,
               "people": request.GET.get("people", "")},
         "qs_nopage": params.urlencode(), "state": imagebank.state(), "page_links": page_links,
+        "bulk": imagebank.bulk_state(), "filtered": page.paginator.count, "filter_qs": params.urlencode(),
+        "formats": [f for f in __import__("studio.shorts", fromlist=["x"]).FORMATS if f[0] != "versus"],
+        "music_styles": satisfying.MUSIC_STYLES,
         "params_nopage": [(k, v) for k in params for v in params.getlist(k)],
         "erp_section": "growth", "gtab": "images"})
 

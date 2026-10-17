@@ -1353,3 +1353,45 @@ class ImageBankTests(TestCase):
         self.assertEqual(post(b.pk, "rejected")["left"], 0)
         self.assertEqual(post(b.pk, "new")["left"], 1)                    # annuler
         self.assertEqual(StockImage.objects.get(pk=a.pk).status, "kept")
+
+    def test_bulk_select_all_filtered_gallery_and_videos(self):
+        from studio.models import StockImage
+        for k in range(70):
+            StockImage.objects.create(provider="artic", ext_id="b%d" % k, title="Img %d" % k, category="Fleurs" if k < 65 else "Espace",
+                                      full_url="https://x", width=2000, height=2000, vibrancy=60)
+        r = self.client.get("/admin-hub/images/?cat=Fleurs")
+        self.assertContains(r, "Sélectionner les 65 images du filtre")
+        with mock.patch("studio.imagebank.bulk_async", return_value=True) as ba:
+            self.client.post("/admin-hub/images/", {"op": "bulk_gallery", "all": "1", "filter_qs": "cat=Fleurs",
+                                                    "colors": "36", "density": "0.45|1.0", "price": "2.5"})
+            kind, ids, opts = ba.call_args.args
+            self.assertEqual((kind, len(ids), opts["colors"], opts["price"], opts["density"]), ("gallery", 65, 36, "2.5", "0.45|1.0"))
+            one = StockImage.objects.filter(category="Espace").first()
+            self.client.post("/admin-hub/images/", {"op": "bulk_video", "ids": [one.pk], "fmt": "guess", "music_style": "space"})
+            kind, ids, opts = ba.call_args.args
+            self.assertEqual((kind, ids, opts["fmt"], opts["music_style"]), ("video", [one.pk], "guess", "space"))
+
+    def test_bulk_worker_creates_video_and_gallery(self):
+        from studio import imagebank
+        from studio.models import StockImage, SocialVideo
+        img = StockImage.objects.create(provider="artic", ext_id="w1", title="Sunflowers", category="Fleurs",
+                                        full_url="https://x", width=2000, height=2000, vibrancy=60)
+        hd = os.path.join(MEDIA, "uploads", "stock-w1.jpg")
+        os.makedirs(os.path.dirname(hd), exist_ok=True)
+
+        def fake_hd(i, max_side=3000):
+            open(hd, "wb").write(b"x")
+            return hd
+
+        class M:
+            uid = "gal-sun"
+        with mock.patch("studio.imagebank.fetch_hd", side_effect=fake_hd), mock.patch("studio.pipeline.generate"), \
+                mock.patch("studio.satisfying.save_label"), mock.patch("studio.satisfying.enqueue") as enq, \
+                mock.patch("studio.views._create_gallery_model", return_value=M()) as cg:
+            imagebank._bulk_one("video", img, {"colors": 24, "fmt": "tips", "music_style": "electro", "hooks": ["x"]})
+            imagebank._bulk_one("gallery", img, {"colors": 36, "price": "0", "density": ""})
+        v = SocialVideo.objects.get()
+        self.assertEqual((v.fmt, v.music_style, v.duration), ("tips", "electro", 21.0))
+        self.assertTrue(enq.called and cg.call_args.kwargs["colors"] == 36)
+        used = StockImage.objects.get(pk=img.pk).used_in
+        self.assertIn("vidéo vid-", used); self.assertIn("catalogue gal-sun", used)
