@@ -179,12 +179,18 @@ def upload(request):
         form = UploadForm(initial=initial)
     has_photo = bool(last_photo and os.path.exists(last_photo))
     fx, fy = (request.session.get("last_focus") or [0.5, 0.5]) if has_photo else (0.5, 0.5)
+    # adresse propre a CETTE photo : le navigateur ne peut pas reafficher une ancienne photo mise en cache
+    import hashlib
+    photo_v = hashlib.sha1(("%s:%s" % (last_photo, os.path.getmtime(last_photo))).encode()).hexdigest()[:12] \
+        if has_photo else ""
     from . import seo
-    return render(request, "studio/upload.html", {
+    resp = render(request, "studio/upload.html", {
         "ld_product": seo.dump(seo.product()),
-        "form": form, "price_cfg": price_cfg(), "has_photo": has_photo,
+        "form": form, "price_cfg": price_cfg(), "has_photo": has_photo, "photo_v": photo_v,
         "focus_x": "%.4f" % fx, "focus_y": "%.4f" % fy,
     })
+    resp["Cache-Control"] = "no-store, private"                # retour arriere : page rechargee avec la photo en cours
+    return resp
 
 
 def processing(request):
@@ -292,7 +298,9 @@ def current_photo(request):
     p = request.session.get("last_photo")
     if not p or not os.path.exists(p):
         raise Http404
-    return FileResponse(open(p, "rb"))
+    resp = FileResponse(open(p, "rb"))
+    resp["Cache-Control"] = "no-store, private"                # photo de la session : jamais d'ancienne version en cache
+    return resp
 
 
 def digipaint(request, uid):

@@ -1547,3 +1547,24 @@ class CollabWebSocketTests(TransactionTestCase):
             assert not (await bad.connect())[0]
         async_to_sync(run)()
         self.assertEqual(CollabRoom.objects.get(token="tok1").painted, {"1": "#111111", "2": "#00ff00"})
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+class CreatePhotoCacheTests(TestCase):
+    def test_create_page_photo_never_stale(self):
+        d = os.path.join(MEDIA, "orders", "EF12CD34-9999")
+        os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "EF12CD34-9999_digipaint.svg"), "w").write('<svg viewBox="0 0 400 500"></svg>')
+        open(os.path.join(d, "EF12CD34-9999_source_a.jpg"), "wb").write(b"a")
+        self.client.get("/play/EF12CD34-9999/buy/")
+        r = self.client.get("/create/")
+        self.assertIn("no-store", r["Cache-Control"])
+        v1 = r.context["photo_v"]
+        self.assertContains(r, "/current-photo/?v=" + v1)
+        self.assertIn("no-store", self.client.get("/current-photo/")["Cache-Control"])
+        d2 = os.path.join(MEDIA, "orders", "EF12CD34-8888")
+        os.makedirs(d2, exist_ok=True)
+        open(os.path.join(d2, "EF12CD34-8888_digipaint.svg"), "w").write('<svg viewBox="0 0 400 500"></svg>')
+        open(os.path.join(d2, "EF12CD34-8888_source_b.jpg"), "wb").write(b"b")
+        self.client.get("/play/EF12CD34-8888/buy/")
+        self.assertNotEqual(self.client.get("/create/").context["photo_v"], v1)   # autre toile -> autre adresse d'image

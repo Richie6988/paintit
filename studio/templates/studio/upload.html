@@ -33,7 +33,7 @@
     <div class="field" id="cropfield" {% if not has_photo %}hidden{% endif %}>
       <span>{% trans "Aperçu du cadrage" %}</span>
       <div class="cropbox" id="cropbox">
-        <img id="cropimg" alt="" draggable="false" {% if has_photo %}src="{% url 'studio:current_photo' %}"{% endif %}>
+        <img id="cropimg" alt="" draggable="false" {% if has_photo %}src="{% url 'studio:current_photo' %}?v={{ photo_v }}"{% endif %}>
       </div>
       <em class="hint">{% trans "Glissez l'image pour recentrer le cadrage." %}</em>
     </div>
@@ -115,4 +115,5 @@
     frame(); applyPos();
   })();
 </script>
+<script>window.addEventListener('pageshow',function(e){if(e.persisted)location.reload();});</script>
 {% endblock %}
