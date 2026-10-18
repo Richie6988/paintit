@@ -1599,3 +1599,23 @@ class CreatePhotoCacheTests(TestCase):
         got = {p["id"]: (p["s"], p["n"]) for p in d["players"]}
         self.assertEqual(got, {"a": (120, "🦊"), "b": (40, "🐼")})
         self.assertTrue(all(p["c"].startswith("#") for p in d["players"]))
+
+    def test_played_gallery_canvases_show_in_my_canvases(self):
+        for uid, price in (("gal-pa", 0), ("gal-pb", 4.9)):
+            d = os.path.join(MEDIA, "orders", uid)
+            os.makedirs(d, exist_ok=True)
+            open(os.path.join(d, uid + "_digipaint.svg"), "w").write('<svg viewBox="0 0 400 500"></svg>')
+            DigitalCanvas.objects.create(uid=uid, email="__library__", source="library", title=uid, price=price, colors=24)
+        self.client.get("/play/gal-pa/"); self.client.get("/play/gal-pb/")
+        r = self.client.get("/paint/")
+        self.assertEqual([c.uid for c in r.context["canvases"]], ["gal-pb", "gal-pa"])     # derniere jouee en tete
+        self.assertTrue(r.context["canvases"][0].trial)
+        self.assertContains(r, "Essai 5 min")
+        self.client.post("/play/gal-pa/delete/")                                           # retiree de Mes toiles...
+        self.assertTrue(os.path.exists(os.path.join(MEDIA, "orders", "gal-pa", "gal-pa_digipaint.svg")))  # ...fichiers intacts
+        self.assertEqual([c.uid for c in self.client.get("/paint/").context["canvases"]], ["gal-pb"])
+        self.client.get("/play/gal-pa/")
+        s = self.client.session; s["verified_email"] = "jo@x.fr"; s.save()
+        self.client.get("/paint/")
+        self.assertTrue(DigitalCanvas.objects.filter(email="jo@x.fr", uid="gal-pa").exists())   # gratuite -> compte
+        self.assertFalse(DigitalCanvas.objects.filter(email="jo@x.fr", uid="gal-pb").exists())  # payante : pas offerte

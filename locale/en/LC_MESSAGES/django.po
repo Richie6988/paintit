@@ -1925,3 +1925,6 @@ msgstr "Most areas (expert)"
 
 msgid "Réinitialiser"
 msgstr "Reset"
+
+msgid "galerie"
+msgstr "gallery"

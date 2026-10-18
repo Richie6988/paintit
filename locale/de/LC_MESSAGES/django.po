@@ -1967,3 +1967,6 @@ msgstr "Meiste Felder (Profi)"
 
 msgid "Réinitialiser"
 msgstr "Zurücksetzen"
+
+msgid "galerie"
+msgstr "Galerie"

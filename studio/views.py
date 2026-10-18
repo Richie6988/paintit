@@ -350,6 +350,9 @@ def digipaint(request, uid):
             owned = False                              # essai minute, y compris pour l'equipe (test du parcours)
         elif verified and not owns:
             _grant_gallery(request, lib, verified)   # gratuite -> arrive dans Mes Toiles
+    if lib and not room:                               # « Mes toiles » : la toile jouee y apparait (la plus recente en tete)
+        played = [u for u in request.session.get("played", []) if u != uid]
+        request.session["played"] = ([uid] + played)[:60]
     if room:
         owned = True                                   # invite a peindre a plusieurs : pas de minuteur d'essai
     # Essai gratuit : "Retour a la commande" ramene a l'apercu de la commande en cours.
@@ -676,8 +679,26 @@ def my_models(request):
 
 def paint_portal(request):
     verified = request.session.get("verified_email", "")
-    canvases = list(DigitalCanvas.objects.filter(email=verified)) if verified else []
-    free_used = (len(canvases) >= 1) if verified else bool(request.session.get("free_used"))
+    own = list(DigitalCanvas.objects.filter(email=verified)) if verified else []
+    free_used = (len(own) >= 1) if verified else bool(request.session.get("free_used"))
+    # toiles de la galerie jouees sur cet appareil : en tete, dans l'ordre de la derniere partie
+    played = request.session.get("played", [])
+    libs = {m.uid: m for m in DigitalCanvas.objects.filter(email="__library__", uid__in=played, hidden=False)}
+    own_by_uid = {c.uid: c for c in own}
+    canvases, seen = [], set()
+    for uid in played:
+        c = own_by_uid.get(uid)
+        if not c and uid in libs:
+            m = libs[uid]
+            if verified and not float(m.price or 0) > 0:
+                _grant_gallery(request, m, verified)          # gratuite : rattachee au compte (tous ses appareils)
+                c = DigitalCanvas.objects.filter(email=verified, uid=uid).first()
+            if not c:
+                c = m
+                c.trial = float(m.price or 0) > 0             # modele payant en essai
+        if c and uid not in seen:
+            canvases.append(c); seen.add(uid)
+    canvases += [c for c in own if c.uid not in seen]
     return render(request, "studio/portal.html", {
         "verified_email": verified, "canvases": canvases,
         "free_used": free_used, "credits": request.session.get("paid_credits", 0),
@@ -910,7 +931,12 @@ def paint_delete(request, uid):
     if request.method != "POST":
         return redirect("studio:paint_portal")
     verified = request.session.get("verified_email", "")
-    DigitalCanvas.objects.filter(uid=uid, email=verified).delete()
+    request.session["played"] = [u for u in request.session.get("played", []) if u != uid]
+    if verified:
+        DigitalCanvas.objects.filter(uid=uid, email=verified).delete()
+    # Modele de la galerie : on le retire seulement de « Mes toiles », ses fichiers servent a tout le monde.
+    if DigitalCanvas.objects.filter(email="__library__", uid=uid).exists() or uid.startswith(("gal-", "lib-")):
+        return JsonResponse({"ok": True})
     # Suppression des fichiers seulement si aucune commande physique n'y est liee.
     if not Order.objects.filter(uid=uid).exists():
         import shutil

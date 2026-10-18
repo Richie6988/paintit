@@ -1950,3 +1950,6 @@ msgstr "Più zone (esperto)"
 
 msgid "Réinitialiser"
 msgstr "Reimposta"
+
+msgid "galerie"
+msgstr "galleria"

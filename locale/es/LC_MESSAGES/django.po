@@ -1938,3 +1938,6 @@ msgstr "Más zonas (experto)"
 
 msgid "Réinitialiser"
 msgstr "Restablecer"
+
+msgid "galerie"
+msgstr "galería"
