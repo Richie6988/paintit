@@ -129,8 +129,6 @@ def upload(request):
         if form.is_valid() and security.rate_limited("gen:" + security.client_ip(request), 40, 3600):
             form.add_error(None, _("Trop de générations en peu de temps. Réessayez dans quelques minutes."))
         elif form.is_valid():
-            from . import analytics
-            analytics.log_event(request, "generation", "Aperçu (upload)", "/create/")
             f = form.cleaned_data.get("photo")
             if f:
                 src = _save_upload(f)
@@ -169,6 +167,8 @@ def upload(request):
                     form.add_error(None, _("Nos serveurs sont très sollicités en ce moment. "
                                            "Merci de réessayer dans quelques secondes."))
                 else:
+                    from . import analytics     # comptee seulement si la generation est vraiment lancee
+                    analytics.log_event(request, "generation", "Aperçu (upload)", "/create/")
                     return redirect("%s?uid=%s" % (reverse("studio:processing"), uid))
     else:
         initial = {}
@@ -1153,8 +1153,6 @@ def digipaint_regen(request, uid):
     if security.rate_limited("gen:" + security.client_ip(request), 40, 3600):
         return JsonResponse({"ok": False, "error": "rate_limited"}, status=429)
     gameuid = uid + "-G"
-    from . import analytics
-    analytics.log_event(request, "generation", "Jeu DigiPaint")
     jobs.start(gameuid)
     try:
         genqueue.submit(_run_game_generation, gameuid, src, colors, w_cm, h_cm, detail,
@@ -1163,6 +1161,8 @@ def digipaint_regen(request, uid):
     except genqueue.QueueFull:
         jobs.pop(gameuid)
         return JsonResponse({"error": "busy"}, status=429)
+    from . import analytics
+    analytics.log_event(request, "generation", "Jeu DigiPaint")
     request.session["game_uid"] = gameuid
     return JsonResponse({"job": gameuid})
 
