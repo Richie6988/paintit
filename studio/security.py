@@ -31,6 +31,16 @@ def file_url(uid, name, absolute=True):
     return (settings.SITE_URL + path) if absolute else path
 
 
+def production_url(uid, absolute=True):
+    """Lien COURT vers la page qui regroupe tous les fichiers de fabrication d'une commande (remarque ERP)."""
+    path = "/p/%s/%s/" % (uid, _sig("prod", uid)[:12])
+    return (settings.SITE_URL + path) if absolute else path
+
+
+def check_production(uid, sig):
+    return bool(sig) and hmac.compare_digest(_sig("prod", uid)[:12], sig)
+
+
 def check_file_token(uid, name, token):
     return bool(token) and hmac.compare_digest(file_token(uid, name), token)
 

@@ -20,6 +20,7 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 import re
 import secrets
 import time
@@ -150,8 +151,8 @@ def _lines(o):
 
 
 def _note(o):
-    from .shopify import line_properties
-    return "Commande PaintIt %s\n%s" % (o.uid, "\n".join("%s: %s" % kv for kv in line_properties(o)[1:]))
+    from .shopify import _short_note
+    return _short_note(o)
 
 
 def order_legacy(o):
@@ -396,6 +397,16 @@ def _route(request, sup, route, modern):
             if not li:
                 return None, 404, {}, "produit inconnu"
             imgs = [{"id": pid, "src": li["image"], "position": 0, "name": li["sku"], "alt": li["name"]}] if li["image"] else []
+            if li["image"] and order:                  # l'ERP affiche les images produit : toile .tiff, tableau des couleurs, apercu
+                from .security import file_url
+                from .fulfillment import ensure_supplier_files
+                ensure_supplier_files(order.uid)
+                for k, (nm, alt) in enumerate((("%s_template.tiff", "Print file TIFF / 印刷文件"),
+                                               ("%s_supplier_colors.jpg", "Colour table / 色卡"),
+                                               ("%s_template.png", "Numbered canvas / 数字画布")), 1):
+                    if os.path.exists(os.path.join(settings.MEDIA_ROOT, "orders", order.uid, nm % order.uid)):
+                        imgs.append({"id": pid * 10 + k, "src": file_url(order.uid, nm % order.uid), "position": k,
+                                     "name": nm % order.uid, "alt": alt})
             prod = {"id": pid, "title": li["name"], "name": li["name"], "sku": li["sku"], "type": "simple",
                     "status": "publish", "price": "%.2f" % li["price"], "regular_price": "%.2f" % li["price"],
                     "in_stock": True, "stock_status": "instock", "virtual": False, "weight": "",

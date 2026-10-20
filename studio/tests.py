@@ -599,6 +599,48 @@ class WooConnectorTests(TestCase):
         self.assertNotIn(self.keys["cs"], " ".join(ConnectorLog.objects.values_list("query", flat=True)))
 
 
+@override_settings(MEDIA_ROOT=MEDIA)
+class SupplierFilesTests(TestCase):
+    """L'ERP fournisseur doit voir tous les fichiers : TIFF + tableau couleurs en images produit, lien court en remarque."""
+    def setUp(self):
+        import os
+        from studio.models import Supplier
+        from studio import woo_api, integrations
+        self.sup = Supplier.objects.create(name="Yingsa", checkout="kit", integration="woo")
+        self.auth = dict(zip(("consumer_key", "consumer_secret"), (lambda k: (k["ck"], k["cs"]))(woo_api.generate_keys(self.sup))))
+        self.o = make_order(uid="FILES000-0001", status=Order.FULFILLED)
+        self.assertTrue(integrations.dispatch({"uid": self.o.uid}, {}, sup=self.sup))
+        d = os.path.join(MEDIA, "orders", self.o.uid)
+        os.makedirs(d, exist_ok=True)
+        for n in ("poster.png", "template.tiff", "template.png", "supplier.json", "supplier_colors.jpg"):
+            open(os.path.join(d, "%s_%s" % (self.o.uid, n)), "wb").write(b"x")
+        open(os.path.join(d, "%s_supplier.txt" % self.o.uid), "w").write("Order FILES000-0001 / 订单")
+
+    def test_erp_sees_all_files(self):
+        from studio import security, shopify
+        li = self.client.get("/wc-api/v3/orders", self.auth).json()["orders"][0]
+        self.assertIn(security.production_url(self.o.uid), li["note"])
+        p = self.client.get("/wc-api/v3/products/%d" % li["line_items"][0]["product_id"], self.auth).json()["product"]
+        srcs = " ".join(i["src"] for i in p["images"])
+        for n in ("_poster.png", "_template.tiff", "_supplier_colors.jpg"):
+            self.assertIn(n, srcs)
+        props = " ".join(v for _, v in shopify.line_properties(self.o))
+        self.assertIn("_supplier.txt", props)
+        self.assertIn("_supplier_colors.jpg", props)
+        r = self.client.get(security.production_url(self.o.uid, absolute=False))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "_template.tiff")
+        self.assertContains(r, "订单")
+        self.assertEqual(r["X-Robots-Tag"], "noindex, nofollow")
+        self.assertEqual(self.client.get("/p/%s/badsig000000/" % self.o.uid).status_code, 404)
+        import io, zipfile
+        from urllib.parse import urlparse
+        z = self.client.get(urlparse(security.file_url(self.o.uid, "production.zip")).path + "?" +
+                            urlparse(security.file_url(self.o.uid, "production.zip")).query)
+        names = zipfile.ZipFile(io.BytesIO(b"".join(z.streaming_content) if z.streaming else z.content)).namelist()
+        self.assertTrue(any(n.endswith("_supplier.txt") for n in names))
+
+
 @override_settings(AFTERSHIP_API_KEY="k", EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class ParcelTests(TestCase):
     """Arrivee dans le pays -> e-mail « ça arrive » (une fois) avec le n° du transporteur national ; livre -> Livree."""

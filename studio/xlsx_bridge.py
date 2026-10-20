@@ -132,7 +132,7 @@ def order_values(sup, order, sku_pattern=None):
         "country": order.country, "country_code": (address.COUNTRIES.get(order.country) or ("",))[0],
         # proprietes de ligne Shopify, une par ligne (« Nom: valeur ») : Mango n'accepte pas de piece jointe a l'import
         "note": "\n".join("%s: %s" % (n, v) for n, v in props)[:2000],
-        "files": file_url(order.uid, "production.zip"),
+        "files": __import__("studio.security", fromlist=["x"]).production_url(order.uid),
     }
 
 

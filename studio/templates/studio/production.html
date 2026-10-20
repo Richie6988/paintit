@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>PaintIt {{ uid }} / 订单</title>
+<style>
+body{font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;margin:0;background:#f6f6f8;color:#1d1d1f}
+main{max-width:860px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:22px;margin:0 0 16px}
+.zip{display:block;text-align:center;background:#e4572e;color:#fff;text-decoration:none;font-weight:700;font-size:18px;padding:16px;border-radius:10px;margin-bottom:20px}
+ul{list-style:none;padding:0;margin:0 0 20px;background:#fff;border-radius:10px;overflow:hidden}
+li{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid #eee;flex-wrap:wrap}
+li:last-child{border-bottom:0}
+li a{color:#e4572e;font-weight:600;word-break:break-all}
+pre{background:#fff;border-radius:10px;padding:14px;white-space:pre-wrap;word-break:break-word;font-size:14px}
+img{max-width:100%;border-radius:10px;background:#fff;margin-bottom:14px;display:block}
+</style>
+</head>
+<body>
+<main>
+  <h1>PaintIt order {{ uid }} / 订单</h1>
+  <a class="zip" href="{{ zip }}">Download all (ZIP) / 下载全部</a>
+  <ul>
+    {% for label, name, url in files %}<li><span>{{ label }}</span><a href="{{ url }}" download>{{ name }}</a></li>{% endfor %}
+  </ul>
+  {% if txt %}<pre>{{ txt }}</pre>{% endif %}
+  {% for src in imgs %}<img src="{{ src }}" alt="" loading="lazy">{% endfor %}
+</main>
+</body>
+</html>

@@ -330,6 +330,17 @@ def write_supplier_text(uid, sj=None):
     return p
 
 
+def ensure_supplier_files(uid):
+    """Fiche texte (EN/中文) et tableau des couleurs (JPG) presents pour la commande (crees depuis le JSON si besoin)."""
+    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    if not (os.path.exists(os.path.join(d, "%s_supplier.txt" % uid))
+            and os.path.exists(os.path.join(d, "%s_supplier_colors.jpg" % uid))):
+        try:
+            write_supplier_text(uid)
+        except Exception:
+            pass
+
+
 def supplier_colors(colors):
     """Couleurs pour le FOURNISSEUR : numero de la toile -> code interne de SON nuancier + hex/RGB.
     Toile generee avant l'import du nuancier : code de la teinte la plus proche (CIEDE2000), marque « approx »."""

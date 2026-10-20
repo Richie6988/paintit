@@ -45,6 +45,7 @@ urlpatterns = [
     path("preview/reformat/", views.preview_reformat, name="preview_reformat"),
     path("preview/img/<str:uid>/<str:kind>/", views.order_image, name="order_image"),
     path("files/<str:uid>/<str:name>", views.order_file, name="order_file"),
+    path("p/<str:uid>/<str:sig>/", views.production_page, name="production_page"),
     path("play/", views.gallery, name="gallery"),
     path("play/buy/<str:uid>/", views.gallery_buy, name="gallery_buy"),
     path("play/buy-success/", views.gallery_buy_success, name="gallery_buy_success"),

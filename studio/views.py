@@ -625,6 +625,36 @@ def order_image(request, uid, kind):
     return resp
 
 
+def production_page(request, uid, sig):
+    """Page fournisseur (lien court dans la remarque de commande ERP) : infos + tous les fichiers de fabrication.
+    Jamais la photo d'origine du client ni de prix."""
+    if "/" in uid or uid.startswith(".") or not security.check_production(uid, sig):
+        raise Http404
+    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    if not os.path.isdir(d):
+        raise Http404
+    fulfillment.ensure_supplier_files(uid)
+    rows = [("Numbered canvas (print file) / 数字画布（印刷文件）", "%s_template.tiff" % uid),
+            ("Poster (reference) / 参考海报", "%s_poster.png" % uid),
+            ("Colour table / 色卡", "%s_supplier_colors.jpg" % uid),
+            ("Order sheet / 订单信息", "%s_supplier.txt" % uid),
+            ("Colour data / 颜色数据 (JSON)", "%s_supplier.json" % uid)]
+    files = [(label, n, security.file_url(uid, n, absolute=False)) for label, n in rows if os.path.isfile(os.path.join(d, n))]
+    txt = ""
+    try:
+        with open(os.path.join(d, "%s_supplier.txt" % uid), encoding="utf-8") as fh:
+            txt = fh.read()
+    except OSError:
+        pass
+    imgs = [security.file_url(uid, n, absolute=False) for n in ("%s_supplier_colors.jpg" % uid, "%s_poster.png" % uid)
+            if os.path.isfile(os.path.join(d, n))]
+    resp = render(request, "studio/production.html", {"uid": uid, "files": files, "txt": txt, "imgs": imgs,
+                                                      "zip": security.file_url(uid, "production.zip", absolute=False)})
+    resp["X-Robots-Tag"] = "noindex, nofollow"
+    resp["Cache-Control"] = "private, no-store"
+    return resp
+
+
 def order_file(request, uid, name):
     """Fichier de media/orders/<uid>/ via lien signe (fournisseurs) ou pour le staff.
     Le dossier n'est plus servi publiquement par nginx (donnees clients)."""
@@ -639,7 +669,9 @@ def order_file(request, uid, name):
         import json as _json
         d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
         names = ["%s_poster.png" % uid, "%s_template.tiff" % uid, "%s_supplier.json" % uid]
-        found = [n for n in names if os.path.isfile(os.path.join(d, n))]
+        fulfillment.ensure_supplier_files(uid)              # + fiche texte EN/中文 et tableau des couleurs JPG
+        extra = ["%s_supplier.txt" % uid, "%s_supplier_colors.jpg" % uid]
+        found = [n for n in names + extra if os.path.isfile(os.path.join(d, n))]
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
             for n in found:

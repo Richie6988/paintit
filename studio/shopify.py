@@ -251,15 +251,27 @@ def variant_title(order):
 def line_properties(order):
     """Proprietes de ligne de commande (vues par l'ERP du fournisseur) : identiques dans Shopify et dans l'Excel
     MangoERP. Fichiers = ce dont le fournisseur a besoin : poster, toile .tiff, JSON des couleurs (+ ZIP des 3)."""
-    from .security import file_url
+    from .security import file_url, production_url
+    from .fulfillment import ensure_supplier_files
     u = order.uid
+    ensure_supplier_files(u)
     return [("Commande PaintIt", u),
+            ("All files / 全部文件", production_url(u)),
             ("Format", "%s (%s)" % (order.format_label, order.orientation)),
             ("Couleurs", str(order.colors)),
             ("Poster", file_url(u, "%s_poster.png" % u)),
             ("Toile numérotée (TIFF)", file_url(u, "%s_template.tiff" % u)),
+            ("Order sheet / 订单 (TXT)", file_url(u, "%s_supplier.txt" % u)),
+            ("Colour table / 色卡 (JPG)", file_url(u, "%s_supplier_colors.jpg" % u)),
             ("Fiche couleurs (JSON)", file_url(u, "%s_supplier.json" % u)),
             ("Fichiers (ZIP)", file_url(u, "production.zip"))]
+
+
+def _short_note(order):
+    """Remarque courte (les ERP tronquent ou ignorent les remarques longues) : un seul lien vers tous les fichiers."""
+    from .security import production_url
+    return "PaintIt %s | %s, %s colors / 色\nAll files / 全部文件: %s" % (
+        order.uid, order.format_label, order.colors, production_url(order.uid))
 
 
 def push_order(sup, order, files):
@@ -304,7 +316,7 @@ def push_order(sup, order, files):
         ship["phone"] = phone
     inp = {"lineItems": lines, "email": order.customer_email, "shippingAddress": ship, "billingAddress": ship,
            "financialStatus": "PAID", "currency": cur, "tags": [TAG, "paintit-" + order.uid],
-           "note": "Commande PaintIt %s · fichiers de production dans les propriétés de la ligne." % order.uid,
+           "note": _short_note(order),
            "customAttributes": [{"key": "paintit_uid", "value": order.uid}],
            "transactions": [{"kind": "SALE", "status": "SUCCESS", "gateway": "stripe (paintit.click)",
                              "amountSet": {"shopMoney": {"amount": "%.2f" % total, "currencyCode": cur}}}]}
