@@ -20,7 +20,7 @@ FIELDS = [
     ("date", "Date de commande", ["日期", "下单时间", "付款时间", "date", "time"]),
     ("sku_qty", "SKU*quantité (MangoERP : sku*1;sku*1)", ["sku编码和数量", "sku and qty", "sku*"]),
     ("sku", "SKU (modèle ci-dessous)", ["sku", "商品编码", "产品编码", "货号", "seller sku"]),
-    ("amount", "Montant de la commande (payé TTC)", ["订单金额", "订单总额", "order amount", "order total", "montant"]),
+    ("amount", "Montant (prix d'achat fournisseur, pas le prix de vente)", ["订单金额", "订单总额", "order amount", "order total", "montant"]),
     ("product", "Nom du produit", ["商品名称", "产品名称", "品名", "标题", "title", "product name", "product", "item name"]),
     ("variant", "Variante (format · couleurs)", ["属性", "规格", "变体", "variant", "variation", "option"]),
     ("qty", "Quantité (1)", ["数量", "qty", "quantity", "quantité"]),
@@ -119,7 +119,7 @@ def order_values(sup, order, sku_pattern=None):
     sku_qty = "%s*1" % sku + (";%s*1" % (cfg.get("brush_sku") or _shop.BRUSH_SKU) if order.brushes else "")
     props = _shop.line_properties(order)
     return {
-        "sku_qty": sku_qty, "amount": round(float(order.total or order.price or 0), 2), "mobile": phone,
+        "sku_qty": sku_qty, "amount": _shop.supplier_amounts(order, sup)[2], "mobile": phone,
         "address_full": ", ".join(x for x in (order.address1, order.address2) if x),
         "ioss": cfg.get("ioss", ""), "logistics": cfg.get("logistics", ""),
         "sender_tax": getattr(CompanyInfo.get(), "vat_number", "") or "",

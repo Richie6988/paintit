@@ -135,10 +135,8 @@ def _address(o):
 def _lines(o):
     """Lignes vues par l'ERP : SKU identiques a Shopify / Excel (PBN-40x50-24C, PBN-BRUSHES), proprietes = fichiers."""
     from .models import format_key
-    from .shopify import sku_for, BRUSH_SKU, PRODUCT_TITLE, variant_title, line_properties
-    price, total = float(o.price or 0), float(o.total or o.price or 0)
-    k = (total / price) if price else 1.0
-    canvas = round((price - float(o.brushes_amount or 0)) * k, 2)
+    from .shopify import sku_for, BRUSH_SKU, PRODUCT_TITLE, variant_title, line_properties, supplier_amounts
+    canvas, brush_amt, _total = supplier_amounts(o)          # prix d'achat fournisseur, jamais notre prix de vente
     from .security import file_url
     img = file_url(o.uid, "%s_poster.png" % o.uid)
     out = [{"id": o.pk * 10 + 1, "image": img, "sku": sku_for(format_key(o.width_cm, o.height_cm), o.colors),
@@ -146,7 +144,7 @@ def _lines(o):
             "total": canvas, "meta": line_properties(o)}]
     if o.brushes:
         out.append({"id": o.pk * 10 + 2, "image": "", "sku": BRUSH_SKU, "name": "Set de pinceaux", "quantity": 1,
-                    "price": round(total - canvas, 2), "total": round(total - canvas, 2), "meta": []})
+                    "price": brush_amt, "total": brush_amt, "meta": []})
     return out
 
 
@@ -164,9 +162,9 @@ def order_legacy(o):
         "created_at": _iso(o.created_at), "updated_at": _iso(_updated(o)),
         "completed_at": _iso(o.status_changed_at) if o.status in ("shipped", "delivered") else None,
         "status": STATUS_OUT.get(o.status, "pending"), "currency": "EUR",
-        "total": "%.2f" % float(o.total or 0), "subtotal": "%.2f" % float(o.price or 0),
+        "total": "%.2f" % sum(li["total"] for li in lines), "subtotal": "%.2f" % sum(li["total"] for li in lines),
         "total_line_items_quantity": len(lines), "total_tax": "0.00", "total_shipping": "0.00",
-        "cart_tax": "0.00", "shipping_tax": "0.00", "total_discount": "%.2f" % float(o.discount_amount or 0),
+        "cart_tax": "0.00", "shipping_tax": "0.00", "total_discount": "0.00",
         "shipping_methods": "Livraison offerte",
         "payment_details": {"method_id": "stripe", "method_title": "Carte bancaire (Stripe)", "paid": True},
         "billing_address": a, "shipping_address": ship, "note": _note(o),
@@ -194,9 +192,9 @@ def order_rest(o):
         "date_modified": _iso(_updated(o), True), "date_modified_gmt": _iso(_updated(o), True),
         "date_paid": _iso(o.created_at, True), "date_paid_gmt": _iso(o.created_at, True),
         "date_completed": _iso(o.status_changed_at, True) if o.status in ("shipped", "delivered") else None,
-        "discount_total": "%.2f" % float(o.discount_amount or 0), "discount_tax": "0.00",
+        "discount_total": "0.00", "discount_tax": "0.00",
         "shipping_total": "0.00", "shipping_tax": "0.00", "cart_tax": "0.00",
-        "total": "%.2f" % float(o.total or 0), "total_tax": "0.00", "prices_include_tax": True,
+        "total": "%.2f" % sum(li["total"] for li in lines), "total_tax": "0.00", "prices_include_tax": True,
         "customer_id": 0, "customer_note": _note(o), "billing": a, "shipping": ship,
         "payment_method": "stripe", "payment_method_title": "Carte bancaire (Stripe)", "transaction_id": "",
         "meta_data": [{"id": 1, "key": "paintit_uid", "value": o.uid}] + (

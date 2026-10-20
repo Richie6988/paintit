@@ -248,6 +248,20 @@ def variant_title(order):
     return "%s / %d" % (format_key(order.width_cm, order.height_cm), int(order.colors))
 
 
+def supplier_amounts(order, sup=None):
+    """Montants vus par le fournisseur : SON prix d'achat (grille/offre), jamais notre prix de vente.
+    -> (toile, pinceaux, total) en EUR ; 0 si le format n'est pas tarife chez lui."""
+    from .models import format_key, Supplier
+    sup = sup or getattr(order, "supplier", None) or Supplier.for_checkout("kit")
+    fmt = format_key(order.width_cm, order.height_cm)
+    canvas = (sup.goods_cost(fmt, order.colors, False) if sup else None) or 0.0
+    brushes = 0.0
+    if order.brushes and sup:
+        withb = sup.goods_cost(fmt, order.colors, True)
+        brushes = max(0.0, round((withb or 0.0) - canvas, 2))
+    return round(canvas, 2), brushes, round(canvas + brushes, 2)
+
+
 def line_properties(order):
     """Proprietes de ligne de commande (vues par l'ERP du fournisseur) : identiques dans Shopify et dans l'Excel
     MangoERP. Fichiers = ce dont le fournisseur a besoin : poster, toile .tiff, JSON des couleurs (+ ZIP des 3)."""
@@ -285,12 +299,8 @@ def push_order(sup, order, files):
     sku = sku_for(fmt, order.colors)
     variant = (c.get("variants") or {}).get(sku)
     cur = c.get("currency") or "EUR"
-    # remise eventuelle repartie au prorata sur les lignes : total Shopify = montant reellement encaisse
-    price = float(order.price or 0)
-    total = float(order.total or price)
-    k = (total / price) if price else 1.0
-    canvas = round((price - float(order.brushes_amount or 0)) * k, 2)
-    brush_amt = round(total - canvas, 2) if order.brushes else 0.0
+    # le fournisseur voit son prix d'achat, pas notre prix de vente
+    canvas, brush_amt, total = supplier_amounts(order, sup)
     props = [{"name": n, "value": v} for n, v in line_properties(order)]
     li = {"quantity": 1, "properties": props,
           "priceSet": {"shopMoney": {"amount": "%.2f" % canvas, "currencyCode": cur}}}

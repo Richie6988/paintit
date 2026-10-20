@@ -620,6 +620,7 @@ class SupplierFilesTests(TestCase):
         from studio import security, shopify
         li = self.client.get("/wc-api/v3/orders", self.auth).json()["orders"][0]
         self.assertIn(security.production_url(self.o.uid), li["note"])
+        self.assertNotIn("49.90", str(li))                      # jamais notre prix de vente
         p = self.client.get("/wc-api/v3/products/%d" % li["line_items"][0]["product_id"], self.auth).json()["product"]
         srcs = " ".join(i["src"] for i in p["images"])
         for n in ("_poster.png", "_template.tiff", "_supplier_colors.jpg"):
