@@ -392,7 +392,8 @@ def _route(request, sup, route, modern):
     parts = [p for p in route.strip("/").split("/") if p]
     if not parts or parts[0] != "orders":
         if len(parts) == 2 and parts[0] == "products" and parts[1].isdigit():
-            # produit = ligne de commande (id = commande*10 + n) : l'ERP y lit l'image (le poster du client)
+            # produit = ligne de commande (id = commande*10 + n) : l'ERP y lit l'image ; lien produit = page des fichiers
+            from .security import production_url
             pid = int(parts[1])
             order = _scope(sup).filter(pk=pid // 10).first()
             li = next((x for x in (_lines(order) if order else []) if x["id"] == pid), None)
@@ -413,7 +414,8 @@ def _route(request, sup, route, modern):
             prod = {"id": pid, "title": li["name"], "name": li["name"], "sku": li["sku"], "type": "simple",
                     "status": "publish", "price": "%.2f" % li["price"], "regular_price": "%.2f" % li["price"],
                     "in_stock": True, "stock_status": "instock", "virtual": False, "weight": "",
-                    "images": imgs, "featured_src": li["image"], "permalink": settings.SITE_URL}
+                    "images": imgs, "featured_src": li["image"],
+                    "permalink": production_url(order.uid) if order else settings.SITE_URL}
             return (prod if modern else {"product": prod}), 200, {}, "produit"
         if parts and parts[0] in ("products", "customers", "coupons", "webhooks", "reports"):
             return ([] if modern else {parts[0]: []}), 200, {}, "vide"

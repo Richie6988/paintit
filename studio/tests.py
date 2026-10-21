@@ -630,6 +630,12 @@ class SupplierFilesTests(TestCase):
         props = " ".join(v for _, v in shopify.line_properties(self.o))
         self.assertIn("_supplier.txt", props)
         self.assertIn("_supplier_colors.jpg", props)
+        from urllib.parse import urlparse
+        card = urlparse(li["line_items"][0]["image"]["src"])
+        self.assertIn("_supplier_card.jpg", card.path)
+        nav = self.client.get(card.path + "?" + card.query, HTTP_SEC_FETCH_DEST="document")
+        self.assertEqual((nav.status_code, nav["Location"]), (302, security.production_url(self.o.uid, absolute=False)))
+        self.assertEqual(self.client.get(card.path + "?" + card.query, HTTP_SEC_FETCH_DEST="image").status_code, 200)
         r = self.client.get(security.production_url(self.o.uid, absolute=False))
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "_template.tiff")

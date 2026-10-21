@@ -662,6 +662,12 @@ def order_file(request, uid, name):
         raise Http404
     if not (request.user.is_staff or security.check_file_token(uid, name, request.GET.get("t", ""))):
         raise Http404
+    if name.endswith("_supplier_card.jpg"):
+        # Image de ligne dans l'ERP : affichee en miniature, mais « 查看原图 » (ouverture dans un onglet)
+        # mene directement a la page de tous les fichiers -> lien cliquable depuis le tableau des commandes.
+        dest = request.headers.get("Sec-Fetch-Dest", "")
+        if dest == "document" or (not dest and "text/html" in request.headers.get("Accept", "")):
+            return redirect(security.production_url(uid, absolute=False))
     if name == "production.zip":
         # Tous les fichiers de production d'une commande en un seul lien (fournisseur / ERP) - sans prix
         import io, zipfile
