@@ -103,7 +103,7 @@ def authenticate(request):
     if auth.lower().startswith("oauth "):
         params.update({k: v.strip('"') for k, v in re.findall(r'(oauth_\w+)="?([^",]*)"?', auth)})
     sup = _find(ck or params.get("oauth_consumer_key", ""))
-    if not sup or not sup.active:
+    if not sup or not (sup.active or (sup.woo or {}).get("test")):     # boutique test : inactive mais lisible
         return None
     if cs:
         return sup if hmac.compare_digest(sup.woo.get("cs", ""), cs) else None
@@ -167,7 +167,7 @@ def order_legacy(o):
         "cart_tax": "0.00", "shipping_tax": "0.00", "total_discount": "0.00",
         "shipping_methods": "Livraison offerte",
         "payment_details": {"method_id": "stripe", "method_title": "Carte bancaire (Stripe)", "paid": True},
-        "billing_address": a, "shipping_address": ship, "note": _note(o),
+        "billing_address": a, "shipping_address": ship, "note": _note(o), "customer_note": _note(o),
         "customer_ip": "", "customer_user_agent": "", "customer_id": 0, "view_order_url": "",
         "line_items": [{"id": li["id"], "subtotal": "%.2f" % li["total"], "subtotal_tax": "0.00",
                         "total": "%.2f" % li["total"], "total_tax": "0.00", "price": "%.2f" % li["price"],
@@ -452,8 +452,13 @@ def _route(request, sup, route, modern):
                 n = {"id": n["id"], "author": "ERP", "date_created": _iso(timezone.now(), True), "note": note,
                      "customer_note": False}
             return (n if modern else {"order_note": n}), 201, {}, "note"
-        notes = [{"id": e.pk, "created_at": _iso(e.at), "note": e.text, "customer_note": False}
-                 for e in OrderEvent.objects.filter(order=order, kind="action").order_by("-at")[:20]]
+        # 1re note = remarque fournisseur (lien vers tous les fichiers) : certains ERP lisent le « 卖家备注 » ici
+        notes = [{"id": 1, "created_at": _iso(order.created_at), "note": _note(order), "customer_note": True}]
+        notes += [{"id": e.pk + 1, "created_at": _iso(e.at), "note": e.text, "customer_note": False}
+                  for e in OrderEvent.objects.filter(order=order, kind="action").order_by("-at")[:20]]
+        if modern:
+            notes = [{"id": n["id"], "author": "PaintIt", "date_created": n["created_at"], "note": n["note"],
+                      "customer_note": n["customer_note"]} for n in notes]
         return (notes if modern else {"order_notes": notes}), 200, {}, ""
     if parts[2] == "shipment-trackings":
         if m == "POST":

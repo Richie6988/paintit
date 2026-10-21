@@ -642,6 +642,34 @@ class SupplierFilesTests(TestCase):
         self.assertTrue(any(n.endswith("_supplier.txt") for n in names))
 
 
+@override_settings(MEDIA_ROOT=MEDIA)
+class WooTestShopTests(TestCase):
+    def test_create_and_delete(self):
+        import io, os
+        from django.core.management import call_command
+        from studio.models import Supplier
+        src = make_order(uid="SRC00000-0001", status=Order.FULFILLED)
+        d = os.path.join(MEDIA, "orders", src.uid)
+        os.makedirs(d, exist_ok=True)
+        for n in ("poster.png", "template.tiff", "source.jpg", "order.json"):
+            open(os.path.join(d, "%s_%s" % (src.uid, n)), "wb").write(b"x")
+        out = io.StringIO()
+        call_command("woo_test_shop", stdout=out)
+        shop = Supplier.objects.get(name__startswith="Boutique test")
+        self.assertFalse(shop.active)
+        t = Order.objects.get(uid__startswith="TEST")
+        self.assertTrue(t.is_test)
+        files = os.listdir(os.path.join(MEDIA, "orders", t.uid))
+        self.assertIn("%s_template.tiff" % t.uid, files)
+        self.assertFalse(any("_source" in f or f.endswith("_order.json") for f in files))
+        r = self.client.get("/wc-api/v3/orders", {"consumer_key": shop.woo["ck"], "consumer_secret": shop.woo["cs"]})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()["orders"][0]["order_number"], t.uid)
+        self.assertIn("/p/", r.json()["orders"][0]["customer_note"])
+        call_command("woo_test_shop", "--delete", stdout=out)
+        self.assertFalse(Supplier.objects.filter(pk=shop.pk).exists() or Order.objects.filter(uid=t.uid).exists())
+
+
 @override_settings(AFTERSHIP_API_KEY="k", EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class ParcelTests(TestCase):
     """Arrivee dans le pays -> e-mail « ça arrive » (une fois) avec le n° du transporteur national ; livre -> Livree."""
