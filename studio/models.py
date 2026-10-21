@@ -5,6 +5,14 @@ from django.utils import timezone
 
 
 COLOR_COUNTS = (12, 24, 36, 48)
+SUPPLIER_MIN_COLORS = 24     # le fournisseur ne fait pas de kit 12 couleurs
+
+
+def supplier_color_count(n):
+    """Nombre de couleurs cote FOURNISSEUR : 12 (offert au client) -> kit 24 avec chaque couleur en double.
+    Le client ne voit aucun changement ; SKU, prix d'achat et fiches fournisseur utilisent ce nombre."""
+    n = int(n or 0)
+    return SUPPLIER_MIN_COLORS if 0 < n < SUPPLIER_MIN_COLORS else n
 
 
 class Pricing(models.Model):
@@ -692,6 +700,7 @@ class Supplier(models.Model):
 
     def goods_cost(self, fmt_key, colors, brushes=False):
         """Prix d'achat produit (EUR, hors livraison/taxes) ou None."""
+        colors = supplier_color_count(colors)
         if self.grid():
             p = self.grid_goods(fmt_key, colors)
             if p is None:
@@ -712,6 +721,7 @@ class Supplier(models.Model):
     def order_cost(self, fmt_key, colors, brushes=False, country="FR"):
         """Cout de revient d'une commande chez ce fournisseur (EUR) : produit + droits + livraison + frais
         (+ TVA fournisseur si non recuperable). None si le format, les couleurs ou la livraison ne sont pas tarifes."""
+        colors = supplier_color_count(colors)
         goods = self.goods_cost(fmt_key, colors, brushes)
         if goods is None:
             return None

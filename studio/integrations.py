@@ -71,12 +71,17 @@ def build_payload(sup, o, shipping, event="order.created"):
         "event": event, "version": 1, "sent_at": timezone.now().isoformat(timespec="seconds"),
         "supplier": sup.name, "callback_url": callback_url(sup),
         "order": {"uid": o.get("uid"), "format": o.get("format_label"), "orientation": o.get("orientation"),
-                  "width_cm": o.get("width_cm"), "height_cm": o.get("height_cm"), "colors": o.get("colors"),
+                  "width_cm": o.get("width_cm"), "height_cm": o.get("height_cm"), "colors": _sup_colors(o.get("colors")),
                   "brushes": bool(o.get("brushes"))},   # aucun prix transmis au fournisseur
         "shipping": {k: shipping.get(k, "") for k in ("full_name", "email", "phone_code", "phone", "address1",
                                                       "address2", "postal_code", "city", "country")},
         "files": order_files(sup, o.get("uid")) if o.get("uid") else {},
     }
+
+
+def _sup_colors(n):
+    from .models import supplier_color_count
+    return supplier_color_count(n) if n else n
 
 
 def _send(sup, payload):

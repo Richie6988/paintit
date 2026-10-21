@@ -2008,7 +2008,7 @@ def shop_pricing(request):
         from django.contrib.auth.views import redirect_to_login
         return redirect_to_login(request.get_full_path())
     kit = Pricing.get(); tab = PrintPricing.get()
-    from .models import Supplier, CompanyInfo, KitFormat as _KF
+    from .models import Supplier, CompanyInfo, KitFormat as _KF, supplier_color_count
     sup = Supplier.for_checkout("kit")
     if request.method == "POST" and request.POST.get("op") == "align" and sup:
         if not any(sup.offer_get("formats", kf.key).get("on") for kf in _KF.objects.all()):
@@ -2019,7 +2019,8 @@ def shop_pricing(request):
         for kf in _KF.objects.all():
             kf.available = bool(sup.offer_get("formats", kf.key).get("on")); kf.save(update_fields=["available"])
         for n in (12, 24, 36, 48):
-            setattr(kit, "av_c%d" % n, bool(sup.offer_get("colors", n).get("on")))
+            # 12 couleurs : proposees au client si le fournisseur fait 24 (chaque couleur en double)
+            setattr(kit, "av_c%d" % n, bool(sup.offer_get("colors", supplier_color_count(n)).get("on")))
         kit.av_brushes = bool(sup.offer_get("extras", "brushes").get("on"))
         kit.save()
         messages.success(request, "Disponibilités alignées sur l'offre de %s." % sup.name)

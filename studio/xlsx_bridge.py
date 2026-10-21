@@ -101,13 +101,13 @@ def order_values(sup, order, sku_pattern=None):
     """Valeurs d'une commande (modele Order) pour chaque champ PaintIt."""
     from . import address
     from .security import file_url
-    from .models import format_key
+    from .models import format_key, supplier_color_count
     fmt = format_key(order.width_cm, order.height_cm)
     pattern = sku_pattern or DEFAULT_SKU
     try:
-        sku = pattern.format(format=fmt, colors=order.colors, brushes="B" if order.brushes else "")
+        sku = pattern.format(format=fmt, colors=supplier_color_count(order.colors), brushes="B" if order.brushes else "")
     except (KeyError, IndexError, ValueError):
-        sku = DEFAULT_SKU.format(format=fmt, colors=order.colors)
+        sku = DEFAULT_SKU.format(format=fmt, colors=supplier_color_count(order.colors))
     cost = sup.goods_cost(fmt, order.colors, order.brushes)
     # Meme contenu que si la commande arrivait de la boutique Shopify : SKU, titre produit et variante,
     # telephone international, proprietes de ligne (fichiers) -> le fournisseur traite les deux a l'identique.

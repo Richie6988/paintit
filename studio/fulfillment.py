@@ -173,6 +173,7 @@ def _compose_poster(uid, d, colors, lang):
 
 
 from .printfiles import PAD_MM
+from .models import supplier_color_count
 PAD_CM = PAD_MM / 10.0
 
 
@@ -182,6 +183,25 @@ def _print_size(oi):
         return "%g x %g cm" % (float(oi.get("width_cm")) + 2 * PAD_CM, float(oi.get("height_cm")) + 2 * PAD_CM)
     except (TypeError, ValueError):
         return "-"
+
+
+def double_for_supplier(specs):
+    """Kit fournisseur au minimum SUPPLIER_MIN_COLORS pots : 12 couleurs -> chaque couleur en 2 pots (meme numero
+    sur la toile, surface partagee entre les 2). Au-dela, liste inchangee."""
+    from .models import supplier_color_count
+    n = len(specs)
+    target = supplier_color_count(n)
+    if not n or target == n:
+        return specs
+    out = []
+    for i in range(target):
+        c = dict(specs[i % n])
+        reps = target // n + (1 if (i % n) < target % n else 0)
+        for k in ("area_cm2", "area_pct"):
+            if isinstance(c.get(k), (int, float)):
+                c[k] = round(c[k] / reps, 2)
+        out.append(c)
+    return sort_by_code(out)
 
 
 def supplier_text(sj):
@@ -336,6 +356,11 @@ def write_supplier_text(uid, sj=None):
     if specs and "area_pct" not in specs[0]:
         oi = sj.get("order_information", {})
         sj["color_specifications"] = add_areas(uid, specs, oi.get("width_cm"), oi.get("height_cm"), specs)
+    # anciennes fiches 12 couleurs : meme presentation que les nouvelles (kit 24, chaque couleur en double)
+    sj["color_specifications"] = double_for_supplier(sj.get("color_specifications") or [])
+    oi = sj.setdefault("order_information", {})
+    if oi.get("colors_count"):
+        oi["colors_count"] = supplier_color_count(oi["colors_count"])
     p = os.path.join(d, "%s_supplier.txt" % uid)
     with open(p, "w", encoding="utf-8") as f:
         f.write(supplier_text(sj))
@@ -571,10 +596,11 @@ def build(order, shipping):
             "uid": uid, "created_at": oi["created_at"],
             "format": oi["format"], "orientation": oi["orientation"],
             "width_cm": oi["width_cm"], "height_cm": oi["height_cm"],
-            "colors_count": oi["colors_count"], "brushes": oi["brushes"],
+            "colors_count": supplier_color_count(oi["colors_count"]), "brushes": oi["brushes"],
             "files": {"template_tiff": "%s_template.tiff" % uid, "poster_png": "%s_poster.png" % uid},
         },
-        "color_specifications": add_areas(uid, supplier_colors(colors), oi["width_cm"], oi["height_cm"], colors),
+        "color_specifications": double_for_supplier(
+            add_areas(uid, supplier_colors(colors), oi["width_cm"], oi["height_cm"], colors)),
     }
     with open(os.path.join(d, "%s_supplier.json" % uid), "w", encoding="utf-8") as f:
         json.dump(supplier_json, f, ensure_ascii=False, indent=2)

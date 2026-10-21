@@ -21,6 +21,8 @@ import urllib.parse
 import urllib.request
 
 from django.conf import settings
+
+from .models import supplier_color_count
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -137,7 +139,7 @@ def test(sup):
 
 # ---------------------------------------------------------------- catalogue
 def sku_for(fmt_key, colors):
-    return "PBN-%s-%dC" % (fmt_key, int(colors))
+    return "PBN-%s-%dC" % (fmt_key, supplier_color_count(colors))   # 12 couleurs -> kit fournisseur 24
 
 
 def catalogue(sup=None):
@@ -147,7 +149,9 @@ def catalogue(sup=None):
     out = []
     for kf in KitFormat.objects.filter(available=True):
         for n in p.available_colors():
-            out.append({"format": kf.key, "colors": n, "sku": sku_for(kf.key, n),
+            if any(i["sku"] == sku_for(kf.key, n) for i in out):
+                continue              # 12 couleurs = meme variante fournisseur que 24
+            out.append({"format": kf.key, "colors": supplier_color_count(n), "sku": sku_for(kf.key, n),
                         "price": round(float(kf.price) + p.color_price(n), 2)})
     return out
 
@@ -245,7 +249,7 @@ def _phone(code, number):
 def variant_title(order):
     """Titre de variante tel que Shopify l'affiche (options Format / Couleurs) : « 40x50 / 24 »."""
     from .models import format_key
-    return "%s / %d" % (format_key(order.width_cm, order.height_cm), int(order.colors))
+    return "%s / %d" % (format_key(order.width_cm, order.height_cm), supplier_color_count(order.colors))
 
 
 def supplier_amounts(order, sup=None):
@@ -272,7 +276,7 @@ def line_properties(order):
     return [("Commande PaintIt", u),
             ("All files / 全部文件", production_url(u)),
             ("Format", "%s (%s)" % (order.format_label, order.orientation)),
-            ("Couleurs", str(order.colors)),
+            ("Couleurs", str(supplier_color_count(order.colors))),
             ("Poster (print, put in parcel / 打印放入包裹)", file_url(u, "%s_poster.png" % u)),
             ("Toile numérotée (TIFF)", file_url(u, "%s_template.tiff" % u)),
             ("Order sheet / 订单 (TXT)", file_url(u, "%s_supplier.txt" % u)),
@@ -285,7 +289,7 @@ def _short_note(order):
     """Remarque courte (les ERP tronquent ou ignorent les remarques longues) : un seul lien vers tous les fichiers."""
     from .security import production_url
     return "PaintIt %s | %s, %s colors / 色\nAll files / 全部文件: %s" % (
-        order.uid, order.format_label, order.colors, production_url(order.uid))
+        order.uid, order.format_label, supplier_color_count(order.colors), production_url(order.uid))
 
 
 def push_order(sup, order, files):
@@ -307,7 +311,7 @@ def push_order(sup, order, files):
     if variant:
         li["variantId"] = variant
     else:   # catalogue pas encore synchronise : ligne personnalisee avec le SKU
-        li.update({"title": "PaintIt %s · %d couleurs" % (order.format_label, order.colors), "sku": sku,
+        li.update({"title": "PaintIt %s · %d couleurs" % (order.format_label, supplier_color_count(order.colors)), "sku": sku,
                    "requiresShipping": True})
     lines = [li]
     if order.brushes:

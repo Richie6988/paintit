@@ -699,6 +699,23 @@ class WooTestShopTests(TestCase):
         self.assertFalse(Supplier.objects.filter(pk=shop.pk).exists())
 
 
+class TwelveColorsSupplierTests(TestCase):
+    """12 couleurs offertes au client, fournisseur sans kit 12 : vu comme 24 (chaque couleur en double)."""
+    def test_supplier_side_is_24(self):
+        from studio import shopify
+        from studio.fulfillment import double_for_supplier
+        o = make_order(uid="TWELVE00-0001")
+        Order.objects.filter(pk=o.pk).update(colors=12)
+        o.refresh_from_db()
+        self.assertEqual(o.colors, 12)                                   # client inchange
+        self.assertEqual(shopify.sku_for("40x50", o.colors), "PBN-40x50-24C")
+        self.assertIn(("Couleurs", "24"), shopify.line_properties(o))
+        specs = double_for_supplier([{"number": i, "supplier_code": str(i)} for i in range(1, 13)])
+        self.assertEqual(len(specs), 24)
+        self.assertEqual(sorted(c["number"] for c in specs), sorted(list(range(1, 13)) * 2))
+        self.assertEqual(len(double_for_supplier([{"number": i} for i in range(1, 25)])), 24)
+
+
 @override_settings(AFTERSHIP_API_KEY="k", EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class ParcelTests(TestCase):
     """Arrivee dans le pays -> e-mail « ça arrive » (une fois) avec le n° du transporteur national ; livre -> Livree."""
