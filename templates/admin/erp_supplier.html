@@ -18,7 +18,7 @@
         <p>{{ sup.get_checkout_display }} · {{ sup.channel|default:"canal à configurer" }} · production {{ sup.lead_time_days }} j</p></div>
     </div>
     <form method="post" style="display:flex;gap:8px">{% csrf_token %}
-      <button class="gx-btn" name="op" value="toggle">{% if sup.active %}Mettre en pause{% else %}Réactiver{% endif %}</button>
+      {% if not woo.test %}<button class="gx-btn" name="op" value="toggle">{% if sup.active %}Mettre en pause{% else %}Réactiver{% endif %}</button>{% endif %}
     </form>
   </div>
 
@@ -103,7 +103,7 @@
         </ol>
         <div class="sf-grid" style="margin-top:12px">
           <div class="gx-field"><span>URL du site</span><div class="sf-code"><span>{{ woo_site }}</span><button type="button" data-copy="{{ woo_site }}">Copier</button></div></div>
-          <div class="gx-field"><span>Nom de la boutique</span><div class="sf-code"><span>PaintIt</span><button type="button" data-copy="PaintIt">Copier</button></div></div>
+          <div class="gx-field"><span>Nom de la boutique</span>{% if woo.test %}<div class="sf-code"><span>PaintIt TEST</span><button type="button" data-copy="PaintIt TEST">Copier</button></div>{% else %}<div class="sf-code"><span>PaintIt</span><button type="button" data-copy="PaintIt">Copier</button></div>{% endif %}</div>
           <div class="gx-field"><span>consumerKey</span><div class="sf-code"><span>{{ woo.ck }}</span><button type="button" data-copy="{{ woo.ck }}">Copier</button></div></div>
           <div class="gx-field"><span>consumerSecret</span><div class="sf-code"><span>{{ woo.cs }}</span><button type="button" data-copy="{{ woo.cs }}">Copier</button></div></div>
         </div>
@@ -112,7 +112,29 @@
         <form method="post" style="display:flex;gap:8px;margin-top:14px">{% csrf_token %}<input type="hidden" name="_tab" value="integration">
           <button class="gx-btn{% if not woo.ck %} pri{% endif %}" name="op" value="woo_keys"{% if woo.ck %} data-confirm="Régénérer les accès ? L'ERP devra être reconfiguré." data-ok="Régénérer"{% endif %}>{% if woo.ck %}Régénérer les accès{% else %}Générer les accès{% endif %}</button>
           {% if woo.ck %}<button class="gx-btn danger" name="op" value="woo_revoke" data-confirm="Couper l'accès de l'ERP ?" data-danger>Révoquer</button>{% endif %}</form>
-        <details class="sf-more"><summary>Journal des appels de l'ERP</summary>
+        {% if woo_test %}
+        <div class="sf-card" style="margin-top:16px;border:2px dashed #f0a23c">
+          <h2>Boutique test : où arrive chaque information ?</h2>
+          <p class="sub">1. Dans MangoERP, ajoutez une <b>nouvelle boutique WooCommerce</b> avec les accès ci-dessus (nom : « PaintIt TEST »). 2. 订单 → 同步订单. 3. Ouvrez la commande TEST et notez dans la dernière colonne où vous voyez chaque information : c'est votre tuto. Les commandes TEST ne sont jamais expédiées et sont hors compta.</p>
+          <form method="post" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0">{% csrf_token %}<input type="hidden" name="_tab" value="integration">
+            <input name="src" placeholder="Copier la commande… (vide = la plus récente)" style="min-width:260px">
+            <button class="gx-btn pri" name="op" value="woo_test_order">Ajouter une commande TEST</button>
+            <button class="gx-btn danger" name="op" value="woo_test_delete" data-confirm="Supprimer la boutique test, ses commandes TEST et leurs fichiers ?" data-danger>Supprimer la boutique test</button>
+          </form>
+          {% if woo_test.orders %}<p class="gx-muted">Commandes TEST : {% for o in woo_test.orders %}<a href="/admin-hub/orders/{{ o.pk }}/">{{ o.uid }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+          {% if woo_test.rows %}
+          <form method="post">{% csrf_token %}<input type="hidden" name="_tab" value="integration">
+          <div style="overflow-x:auto"><table class="log" style="margin-top:8px;min-width:720px">
+            <tr><th>Information</th><th>Champ WooCommerce</th><th>Valeur envoyée ({{ woo_test.orders.0.uid }})</th><th>Où dans MangoERP ?</th></tr>
+            {% for r in woo_test.rows %}<tr><td><b>{{ r.info }}</b></td><td><code>{{ r.field }}</code></td>
+              <td style="word-break:break-all;max-width:320px">{% if r.value|slice:":4" == "http" %}<a href="{{ r.value }}" target="_blank" rel="noopener">{{ r.value|truncatechars:70 }}</a>{% else %}{{ r.value|linebreaksbr }}{% endif %}</td>
+              <td><input name="map_{{ r.key }}" value="{{ r.where }}" placeholder="ex. 订单详情 → 备注" style="width:100%;min-width:180px"></td></tr>{% endfor %}
+          </table></div>
+          <button class="gx-btn" name="op" value="woo_test_notes" style="margin-top:8px">Enregistrer les emplacements</button></form>
+          {% endif %}
+        </div>
+        {% endif %}
+        <details class="sf-more"{% if woo_test %} open{% endif %}><summary>Journal des appels de l'ERP</summary>
           {% if woo_logs %}<table class="log" style="margin-top:8px">{% for l in woo_logs %}<tr><td class="gx-muted" style="white-space:nowrap">{{ l.at|date:"d/m H:i" }}</td><td><b>{{ l.method }}</b> {{ l.path }}{% if l.body %}<div class="gx-muted" style="word-break:break-all">{{ l.body|truncatechars:200 }}</div>{% endif %}</td>
             <td><span class="gx-chip {% if l.status < 300 %}ok{% else %}bad{% endif %}">{{ l.status }}</span></td><td class="gx-muted">{{ l.note }}</td></tr>{% endfor %}</table>
           {% else %}<p class="gx-muted">Aucun appel reçu.</p>{% endif %}</details>

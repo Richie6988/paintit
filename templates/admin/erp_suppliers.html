@@ -36,7 +36,10 @@
 <div class="erp">
   <div class="erp-head">
     <div><h1>Fournisseurs</h1><div class="muted">Production &amp; expédition en dropshipping : routage des commandes, performance et santé des intégrations</div></div>
-    <a class="pbtn pri" href="/admin-hub/suppliers/new/">+ Ajouter un fournisseur</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <form method="post">{% csrf_token %}<button class="pbtn" name="op" value="woo_test" title="Boutique WooCommerce de démonstration à brancher dans MangoERP, avec une commande TEST (jamais expédiée, hors compta)">Boutique test MangoERP</button></form>
+      <a class="pbtn pri" href="/admin-hub/suppliers/new/">+ Ajouter un fournisseur</a>
+    </div>
   </div>
 
   {% if unassigned %}
@@ -91,7 +94,7 @@
       <div class="spc-foot">
         <span class="meta">{% if s.channel %}<span class="bdg2 info">{{ s.channel }}</span>{% else %}<span class="bdg2 err">Aucun canal</span>{% endif %}
           {% if s.last_sync_at %}<span>transmis il y a {{ s.last_sync_at|timesince }}</span>{% endif %}</span>
-        <form method="post" class="spc-act">{% csrf_token %}<input type="hidden" name="sup" value="{{ s.pk }}"><button class="pbtn sm" name="op" value="toggle">{% if s.active %}Mettre en pause{% else %}Activer{% endif %}</button></form>
+        {% if not s.woo.test %}        <form method="post" class="spc-act">{% csrf_token %}<input type="hidden" name="sup" value="{{ s.pk }}"><button class="pbtn sm" name="op" value="toggle">{% if s.active %}Mettre en pause{% else %}Activer{% endif %}</button></form>{% endif %}
         <span class="spc-go" aria-hidden="true">Ouvrir la fiche →</span>
       </div>
     </div>

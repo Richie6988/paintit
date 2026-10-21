@@ -669,6 +669,27 @@ class WooTestShopTests(TestCase):
         call_command("woo_test_shop", "--delete", stdout=out)
         self.assertFalse(Supplier.objects.filter(pk=shop.pk).exists() or Order.objects.filter(uid=t.uid).exists())
 
+    def test_admin_ui(self):
+        import os
+        from django.contrib.auth.models import User
+        from studio.models import Supplier
+        src = make_order(uid="SRC00000-0002", status=Order.FULFILLED)
+        d = os.path.join(MEDIA, "orders", src.uid)
+        os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "%s_poster.png" % src.uid), "wb").write(b"x")
+        User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
+        self.client.login(username="boss", password="pw-Secret-123")
+        r = self.client.post("/admin-hub/suppliers/", {"op": "woo_test"})
+        shop = Supplier.objects.get(name__startswith="Boutique test")
+        page = self.client.get("/admin-hub/suppliers/%d/" % shop.pk)
+        self.assertContains(page, "où arrive chaque information")
+        self.assertContains(page, "customer_note / note")
+        self.client.post("/admin-hub/suppliers/%d/" % shop.pk, {"op": "woo_test_notes", "map_note": "订单详情 → 备注"})
+        shop.refresh_from_db()
+        self.assertEqual(shop.woo["map"]["note"], "订单详情 → 备注")
+        self.client.post("/admin-hub/suppliers/%d/" % shop.pk, {"op": "woo_test_delete"})
+        self.assertFalse(Supplier.objects.filter(pk=shop.pk).exists())
+
 
 @override_settings(AFTERSHIP_API_KEY="k", EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class ParcelTests(TestCase):

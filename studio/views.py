@@ -2772,8 +2772,18 @@ def erp_suppliers(request):
     from .models import Supplier
     if request.method == "POST":
         sup = Supplier.objects.filter(pk=request.POST.get("sup")).first()
-        if sup and request.POST.get("op") == "toggle":
+        if sup and request.POST.get("op") == "toggle" and not (sup.woo or {}).get("test"):
             sup.active = not sup.active; sup.save(update_fields=["active"])
+        if request.POST.get("op") == "woo_test":
+            from django.contrib import messages
+            from . import woo_test
+            shop = woo_test.create_shop()
+            if not woo_test.test_orders(shop).exists():
+                try:
+                    woo_test.add_order(shop, user=request.user.get_username())
+                except ValueError as exc:
+                    messages.error(request, str(exc))
+            return redirect(reverse("studio:erp_supplier", args=[shop.pk]) + "#integration")
         return redirect("studio:erp_suppliers")
     sups = [_sup_card(s) for s in Supplier.objects.all()]
     routing = {c: Supplier.for_checkout(c) for c in ("kit", "print")}
@@ -2788,6 +2798,18 @@ def erp_suppliers(request):
     return render(request, "admin/erp_suppliers.html", {
         **_admin.site.each_context(request), "sups": sups, "tot": tot, "routing": routing,
         "unassigned": erp.unassigned_orders().count(), "erp_section": "suppliers"})
+
+
+def _woo_test_ctx(sup):
+    """Boutique test : commandes TEST + carte « information -> champ WooCommerce -> ou dans MangoERP »."""
+    if not (sup.woo or {}).get("test"):
+        return None
+    from . import woo_test
+    orders = list(woo_test.test_orders(sup)[:10])
+    notes = (sup.woo or {}).get("map") or {}
+    rows = [{"key": k, "info": i, "field": f, "value": v, "where": notes.get(k, "")}
+            for k, i, f, v in (woo_test.field_map(orders[0]) if orders else [])]
+    return {"orders": orders, "rows": rows}
 
 
 @staff_member_required
@@ -2823,7 +2845,7 @@ def erp_supplier(request, pk):
             shutil.rmtree(os.path.join(settings.MEDIA_ROOT, "private", "suppliers", str(spk)), ignore_errors=True)
             messages.success(request, "Fournisseur %s supprimé." % name)
             return redirect("studio:erp_suppliers")
-        if op == "toggle":
+        if op == "toggle" and not (sup.woo or {}).get("test"):     # la boutique test ne doit jamais recevoir de vraie commande
             sup.active = not sup.active; sup.save(update_fields=["active"])
         elif op == "resend":
             o = Order.objects.filter(pk=request.POST.get("order")).first()
@@ -2934,6 +2956,23 @@ def erp_supplier(request, pk):
                     from . import woo_api
                     woo_api.generate_keys(sup)
                 messages.success(request, "Canal : %s." % sup.get_integration_display())
+        elif op in ("woo_test_order", "woo_test_delete", "woo_test_notes") and (sup.woo or {}).get("test"):
+            from . import woo_test
+            if op == "woo_test_delete":
+                woo_test.delete_shop(sup)
+                messages.success(request, "Boutique test supprimée (commandes TEST et fichiers compris).")
+                return redirect("studio:erp_suppliers")
+            if op == "woo_test_notes":      # « où le trouver dans MangoERP » : brouillon du tuto
+                sup.woo = {**sup.woo, "map": {k[4:]: v.strip()[:200] for k, v in request.POST.items()
+                                              if k.startswith("map_") and v.strip()}}
+                sup.save(update_fields=["woo"])
+                messages.success(request, "Emplacements enregistrés.")
+            else:
+                try:
+                    o = woo_test.add_order(sup, request.POST.get("src", "").strip(), user=user)
+                    messages.success(request, "Commande %s créée : dans MangoERP, 订单 → 同步订单." % o.uid)
+                except ValueError as exc:
+                    messages.error(request, str(exc))
         elif op in ("woo_keys", "woo_revoke"):
             from . import woo_api
             if op == "woo_keys":
@@ -3015,7 +3054,7 @@ def erp_supplier(request, pk):
         "xfields": __import__("studio.xlsx_bridge", fromlist=["x"]).FIELDS,
         "xsku_default": __import__("studio.xlsx_bridge", fromlist=["x"]).DEFAULT_SKU,
         "attention": _supplier_attention(sup),
-        "woo": sup.woo or {}, "woo_site": settings.SITE_URL,
+        "woo": sup.woo or {}, "woo_site": settings.SITE_URL, "woo_test": _woo_test_ctx(sup),
         "woo_logs": (ConnectorLog.objects.filter(models.Q(supplier=sup) | models.Q(
                          supplier__isnull=True, at__gte=timezone.now() - timedelta(days=7)))[:20]
                      if sup.integration == "woo" else []),
