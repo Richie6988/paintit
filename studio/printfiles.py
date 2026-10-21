@@ -7,6 +7,7 @@ Source : <uid>_template.svg (vectoriel, en mm). Aucune dependance systeme (pas d
                           avec precision sub-pixel, chiffres en vraie typo, niveaux de gris 8 bits, LZW.
 Finitions « premium » : traits gris anthracite fins et reguliers, chiffres gris moyen avec un fin
 halo blanc (restent lisibles meme quand ils touchent un trait), marges de securite respectees.
+Marge blanche de PAD_MM autour de la toile (montage sur chassis) et n° de commande imprime au-dessus.
 """
 import os
 import re
@@ -16,6 +17,9 @@ LINE_GREY = 45         # anthracite (0 = noir)
 NUM_GREY = 105         # chiffres gris moyen : lisibles, couverts par la peinture
 HALO = 0.14            # halo blanc autour des chiffres (fraction de la taille du chiffre)
 MAX_MEGAPIXELS = 160   # plafond memoire du TIFF (dpi reduit automatiquement au-dela)
+PAD_MM = 40            # marge blanche autour de la toile (montage sur chassis) : 40x50 -> 48x58 cm
+LABEL_MM = 7           # hauteur du n° de commande imprime au-dessus de la toile
+LABEL_GAP_MM = 10      # distance entre le n° de commande et le bord de la toile
 
 _FONT_CANDIDATES = [
     os.path.join(os.path.dirname(__file__), "static", "studio", "fonts", "print.ttf"),
@@ -53,7 +57,7 @@ def parse_template(svg):
     return w, h, paths, texts
 
 
-def render_pdf(svg, out_path):
+def render_pdf(svg, out_path, label=""):
     from reportlab.lib.units import mm
     from reportlab.pdfgen import canvas as pdfcanvas
     from reportlab.pdfbase import pdfmetrics
@@ -66,8 +70,13 @@ def render_pdf(svg, out_path):
             pdfmetrics.registerFont(TTFont("PaintItPrint", fp)); font = "PaintItPrint"
         except Exception:
             pass
-    c = pdfcanvas.Canvas(out_path, pagesize=(w * mm, h * mm))
+    P = PAD_MM
+    c = pdfcanvas.Canvas(out_path, pagesize=((w + 2 * P) * mm, (h + 2 * P) * mm))
     c.setTitle("PaintIt - toile numerotee"); c.setAuthor("PaintIt"); c.setCreator("PaintIt print engine")
+    c.translate(P * mm, P * mm)                      # toile au centre, marge blanche tout autour
+    if label:
+        c.setFillColorRGB(0, 0, 0); c.setFont(font, LABEL_MM * mm)
+        c.drawString(0, (h + LABEL_GAP_MM) * mm, label)
     c.setLineWidth(LINE_MM * mm); c.setLineJoin(1); c.setLineCap(1)
     g = LINE_GREY / 255.0
     c.setStrokeColorRGB(g, g, g)
@@ -98,22 +107,23 @@ def render_pdf(svg, out_path):
     return out_path
 
 
-def render_tiff(svg, out_path, dpi=600):
+def render_tiff(svg, out_path, dpi=600, label=""):
     import numpy as np
     import cv2
     from PIL import Image, ImageDraw, ImageFont
     w, h, paths, texts = parse_template(svg)
     # plafond memoire : on reduit le dpi pour les tres grands formats
-    mp = (w / 25.4 * dpi) * (h / 25.4 * dpi) / 1e6
+    P = PAD_MM
+    mp = ((w + 2 * P) / 25.4 * dpi) * ((h + 2 * P) / 25.4 * dpi) / 1e6
     if mp > MAX_MEGAPIXELS:
         dpi = int(dpi * (MAX_MEGAPIXELS / mp) ** 0.5)
     k = dpi / 25.4                                   # px par mm
-    W, H = int(round(w * k)), int(round(h * k))
+    W, H = int(round((w + 2 * P) * k)), int(round((h + 2 * P) * k))
     img = np.full((H, W), 255, np.uint8)
     SH = 4                                           # precision sub-pixel (1/16 px)
     thick = max(1, int(round(LINE_MM * k)))
     for pts, closed in paths:
-        arr = (np.array(pts, np.float64) * k * (1 << SH)).round().astype(np.int32).reshape(-1, 1, 2)
+        arr = ((np.array(pts, np.float64) + P) * k * (1 << SH)).round().astype(np.int32).reshape(-1, 1, 2)
         cv2.polylines(img, [arr], closed, LINE_GREY, thick, cv2.LINE_AA, SH)
     pil = Image.fromarray(img, "L")
     draw = ImageDraw.Draw(pil)
@@ -126,8 +136,15 @@ def render_tiff(svg, out_path, dpi=600):
                 cache[px] = ImageFont.truetype(fp, px) if fp else ImageFont.load_default(px)
             except Exception:
                 cache[px] = ImageFont.load_default()
-        draw.text((x * k, y * k), t, font=cache[px], fill=NUM_GREY, anchor="ms",
+        draw.text(((x + P) * k, (y + P) * k), t, font=cache[px], fill=NUM_GREY, anchor="ms",
                   stroke_width=max(1, int(round(px * HALO))), stroke_fill=255)
+    if label:
+        lpx = int(round(LABEL_MM * k))
+        try:
+            lf = ImageFont.truetype(fp, lpx) if fp else ImageFont.load_default(lpx)
+        except Exception:
+            lf = ImageFont.load_default()
+        draw.text((P * k, (P - LABEL_GAP_MM) * k), label, font=lf, fill=0, anchor="ls")
     pil.save(out_path, format="TIFF", compression="tiff_lzw", dpi=(dpi, dpi))
     return out_path, dpi, (W, H)
 
@@ -141,7 +158,7 @@ def export(uid, media_root, dpi=600):
     svg = open(sp, encoding="utf-8").read()
     made = {}
     pdf = os.path.join(d, "%s_template.pdf" % uid)
-    render_pdf(svg, pdf + ".tmp"); os.replace(pdf + ".tmp", pdf); made[os.path.basename(pdf)] = pdf
+    render_pdf(svg, pdf + ".tmp", label=uid); os.replace(pdf + ".tmp", pdf); made[os.path.basename(pdf)] = pdf
     tif = os.path.join(d, "%s_template.tiff" % uid)
-    render_tiff(svg, tif + ".tmp.tiff", dpi); os.replace(tif + ".tmp.tiff", tif); made[os.path.basename(tif)] = tif
+    render_tiff(svg, tif + ".tmp.tiff", dpi, label=uid); os.replace(tif + ".tmp.tiff", tif); made[os.path.basename(tif)] = tif
     return made

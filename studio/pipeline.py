@@ -195,6 +195,16 @@ def compute_price(fmt_key, colors):
     return round(p.format_price(fmt_key) + p.color_price(colors), 2)
 
 
+def _print_font(px):
+    from PIL import ImageFont
+    from .printfiles import _font_path
+    fp = _font_path()
+    try:
+        return ImageFont.truetype(fp, px) if fp else ImageFont.load_default(px)
+    except Exception:
+        return ImageFont.load_default()
+
+
 def export_tiff(uid, media_root=None, dpi=600):
     """Genere des .tiff HAUTE RESOLUTION (impression fournisseur) :
     - rendu vectoriel des SVG (toile numerotee + coloriee) a `dpi` via cairosvg (net),
@@ -219,8 +229,18 @@ def export_tiff(uid, media_root=None, dpi=600):
     made = {}
 
     def _save(img, out_name):
+        # rendu de secours : meme marge blanche + n° de commande que le moteur d'impression principal
+        from PIL import ImageDraw
+        from .printfiles import PAD_MM, LABEL_MM, LABEL_GAP_MM
+        k = dpi / 25.4
+        pad = int(round(PAD_MM * k))
+        img = img.convert("RGB")
+        page = Image.new("RGB", (img.width + 2 * pad, img.height + 2 * pad), "white")
+        page.paste(img, (pad, pad))
+        ImageDraw.Draw(page).text((pad, pad - LABEL_GAP_MM * k), uid, fill="black", anchor="ls",
+                                  font=_print_font(int(round(LABEL_MM * k))))
         op = os.path.join(d, out_name)
-        img.convert("RGB").save(op, format="TIFF", compression="tiff_lzw", dpi=(dpi, dpi))
+        page.save(op, format="TIFF", compression="tiff_lzw", dpi=(dpi, dpi))
         made[out_name] = op
 
     # 1) Rendu vectoriel haute def des SVG (net a l'impression)

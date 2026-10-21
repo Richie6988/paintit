@@ -109,13 +109,16 @@ def _compose_poster(uid, d, colors, lang):
     img = np.full((A4_H, A4_W, 3), 255, np.uint8)
     mid = A4_H // 2
 
+    # Tout en haut : n° de commande (rapprochement colis / toile chez le fournisseur).
+    cv2.putText(img, uid, (MARGIN, MARGIN + 10), DUP, 1.6, (20, 20, 20), 3, cv2.LINE_AA)
     # Haut : apercu (contain).
-    box_w, box_h = A4_W - 2 * MARGIN, mid - MARGIN - 30
+    top = MARGIN + 50
+    box_w, box_h = A4_W - 2 * MARGIN, mid - top - 30
     ph, pw = prev.shape[:2]
     s = min(box_w / pw, box_h / ph)
     nw, nh = int(pw * s), int(ph * s)
     p = cv2.resize(prev, (nw, nh), interpolation=cv2.INTER_AREA)
-    img[MARGIN + (box_h - nh) // 2:MARGIN + (box_h - nh) // 2 + nh, (A4_W - nw) // 2:(A4_W - nw) // 2 + nw] = p
+    img[top + (box_h - nh) // 2:top + (box_h - nh) // 2 + nh, (A4_W - nw) // 2:(A4_W - nw) // 2 + nw] = p
     cv2.line(img, (MARGIN, mid), (A4_W - MARGIN, mid), (225, 225, 225), 2)
 
     # Palette.
@@ -169,6 +172,18 @@ def _compose_poster(uid, d, colors, lang):
     cv2.imwrite(out, img)
 
 
+from .printfiles import PAD_MM
+PAD_CM = PAD_MM / 10.0
+
+
+def _print_size(oi):
+    """Taille du fichier d'impression (toile + marge blanche des 2 cotes) : 40x50 -> 48x58 cm."""
+    try:
+        return "%g x %g cm" % (float(oi.get("width_cm")) + 2 * PAD_CM, float(oi.get("height_cm")) + 2 * PAD_CM)
+    except (TypeError, ValueError):
+        return "-"
+
+
 def supplier_text(sj):
     """Fiche fournisseur en texte simple (EN + 中文), meme contenu que <uid>_supplier.json, lisible sans outil :
     commande, destinataire, puis couleurs « numero -> reference fournisseur »."""
@@ -179,6 +194,7 @@ def supplier_text(sj):
          "Date / 日期:            %s" % (oi.get("created_at") or "")[:16].replace("T", " "),
          "Product / 产品:         Paint by numbers kit / 数字油画套装",
          "Size / 尺寸:            %s x %s cm (%s)" % (oi.get("width_cm"), oi.get("height_cm"), oi.get("orientation", "")),
+         "Print file / 印刷尺寸:  %s (%g cm white border / %g厘米白边)" % (_print_size(oi), PAD_CM, PAD_CM),
          "Colors / 颜色数量:      %s" % oi.get("colors_count", ""),
          "Brushes / 画笔:         %s" % yn(oi.get("brushes")),
          "Files / 文件:           %s" % ", ".join((oi.get("files") or {}).values()),
