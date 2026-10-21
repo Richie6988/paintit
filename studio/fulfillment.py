@@ -330,6 +330,64 @@ def write_supplier_text(uid, sj=None):
     return p
 
 
+def _cjk_font(size):
+    """Police chinoise si le serveur en a une (sinon None : la fiche reste en anglais)."""
+    from PIL import ImageFont
+    for f in ("/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+              "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc", "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+              "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+              os.path.join(settings.BASE_DIR, "studio", "static", "studio", "fonts", "NotoSansSC-Bold.ttf")):
+        if os.path.exists(f):
+            return ImageFont.truetype(f, size)
+    return None
+
+
+def supplier_card(uid):
+    """Image de la ligne de commande vue dans l'ERP du fournisseur : apercu du poster + QR + lien « ALL FILES ».
+    L'ERP affiche cette image (et « 查看原图 ») : le lien vers tous les fichiers ne peut pas passer inapercu."""
+    from PIL import Image, ImageDraw
+    from .security import production_url
+    d = _order_dir(uid)
+    url = production_url(uid)
+    W, H = 1200, 1500
+    im = Image.new("RGB", (W, H), "white")
+    dr = ImageDraw.Draw(im)
+    try:
+        poster = Image.open(os.path.join(d, "%s_poster.png" % uid)).convert("RGB")
+        poster.thumbnail((W - 80, 820))
+        im.paste(poster, ((W - poster.width) // 2, 30))
+    except OSError:
+        pass
+    y = 880
+    dr.rectangle([0, y, W, H], fill=(255, 236, 140))
+    cjk = _cjk_font(52)
+    dr.text((40, y + 30), "ALL PRODUCTION FILES", font=_font(60, True), fill="black")
+    if cjk:
+        dr.text((40, y + 105), "全部生产文件（TIFF、色卡、订单信息）", font=cjk, fill="black")
+    dr.text((40, y + 180), "TIFF + colour table + order sheet (ZIP)", font=_font(34), fill=(60, 60, 60))
+    if cjk:
+        dr.text((40, y + 240), "Scan the QR code or open: / 扫码或打开：", font=_cjk_font(34), fill=(60, 60, 60))
+    else:
+        dr.text((40, y + 240), "Scan the QR code or open:", font=_font(34), fill=(60, 60, 60))
+    f_u = _font(30, True)
+    line, lines = "", []
+    for ch in url:                                   # URL coupee pour tenir a gauche du QR
+        if dr.textlength(line + ch, font=f_u) > W - 480:
+            lines.append(line); line = ""
+        line += ch
+    lines.append(line)
+    for i, l in enumerate(lines):
+        dr.text((40, y + 300 + i * 42), l, font=f_u, fill=(20, 60, 200))
+    dr.text((40, H - 70), "Order %s" % uid, font=_font(36, True), fill="black")
+    qr = _qr(url, 380)
+    if qr is not None:
+        q = Image.fromarray(cv2.cvtColor(qr, cv2.COLOR_BGR2RGB)).resize((380, 380), Image.NEAREST)
+        im.paste(q, (W - 420, y + 200))
+    out = os.path.join(d, "%s_supplier_card.jpg" % uid)
+    im.save(out, "JPEG", quality=88)
+    return out
+
+
 def ensure_supplier_files(uid):
     """Fiche texte (EN/中文) et tableau des couleurs (JPG) presents pour la commande (crees depuis le JSON si besoin)."""
     d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
@@ -337,6 +395,12 @@ def ensure_supplier_files(uid):
             and os.path.exists(os.path.join(d, "%s_supplier_colors.jpg" % uid))):
         try:
             write_supplier_text(uid)
+        except Exception:
+            pass
+    if not os.path.exists(os.path.join(d, "%s_supplier_card.jpg" % uid)) and \
+            os.path.exists(os.path.join(d, "%s_poster.png" % uid)):
+        try:
+            supplier_card(uid)
         except Exception:
             pass
 

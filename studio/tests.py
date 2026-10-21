@@ -612,8 +612,10 @@ class SupplierFilesTests(TestCase):
         self.assertTrue(integrations.dispatch({"uid": self.o.uid}, {}, sup=self.sup))
         d = os.path.join(MEDIA, "orders", self.o.uid)
         os.makedirs(d, exist_ok=True)
-        for n in ("poster.png", "template.tiff", "template.png", "supplier.json", "supplier_colors.jpg"):
+        for n in ("template.tiff", "template.png", "supplier.json", "supplier_colors.jpg"):
             open(os.path.join(d, "%s_%s" % (self.o.uid, n)), "wb").write(b"x")
+        from PIL import Image
+        Image.new("RGB", (60, 80), "red").save(os.path.join(d, "%s_poster.png" % self.o.uid))
         open(os.path.join(d, "%s_supplier.txt" % self.o.uid), "w").write("Order FILES000-0001 / 订单")
 
     def test_erp_sees_all_files(self):
@@ -623,7 +625,7 @@ class SupplierFilesTests(TestCase):
         self.assertNotIn("49.90", str(li))                      # jamais notre prix de vente
         p = self.client.get("/wc-api/v3/products/%d" % li["line_items"][0]["product_id"], self.auth).json()["product"]
         srcs = " ".join(i["src"] for i in p["images"])
-        for n in ("_poster.png", "_template.tiff", "_supplier_colors.jpg"):
+        for n in ("_supplier_card.jpg", "_poster.png", "_template.tiff", "_supplier_colors.jpg"):
             self.assertIn(n, srcs)
         props = " ".join(v for _, v in shopify.line_properties(self.o))
         self.assertIn("_supplier.txt", props)

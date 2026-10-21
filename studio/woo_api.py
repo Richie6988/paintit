@@ -138,7 +138,11 @@ def _lines(o):
     from .shopify import sku_for, BRUSH_SKU, PRODUCT_TITLE, variant_title, line_properties, supplier_amounts
     canvas, brush_amt, _total = supplier_amounts(o)          # prix d'achat fournisseur, jamais notre prix de vente
     from .security import file_url
-    img = file_url(o.uid, "%s_poster.png" % o.uid)
+    from .fulfillment import ensure_supplier_files
+    ensure_supplier_files(o.uid)
+    card = os.path.exists(os.path.join(settings.MEDIA_ROOT, "orders", o.uid, "%s_supplier_card.jpg" % o.uid))
+    # image de la ligne = fiche « ALL FILES / 全部文件 » (apercu + QR + lien) : la seule chose que l'ERP affiche a coup sur
+    img = file_url(o.uid, ("%s_supplier_card.jpg" if card else "%s_poster.png") % o.uid)
     out = [{"id": o.pk * 10 + 1, "image": img, "sku": sku_for(format_key(o.width_cm, o.height_cm), o.colors),
             "name": "%s - %s" % (PRODUCT_TITLE, variant_title(o)), "quantity": 1, "price": canvas,
             "total": canvas, "meta": line_properties(o)}]
@@ -399,7 +403,8 @@ def _route(request, sup, route, modern):
                 from .security import file_url
                 from .fulfillment import ensure_supplier_files
                 ensure_supplier_files(order.uid)
-                for k, (nm, alt) in enumerate((("%s_template.tiff", "Print file TIFF / 印刷文件"),
+                for k, (nm, alt) in enumerate((("%s_poster.png", "Poster / 海报"),
+                                               ("%s_template.tiff", "Print file TIFF / 印刷文件"),
                                                ("%s_supplier_colors.jpg", "Colour table / 色卡"),
                                                ("%s_template.png", "Numbered canvas / 数字画布")), 1):
                     if os.path.exists(os.path.join(settings.MEDIA_ROOT, "orders", order.uid, nm % order.uid)):
