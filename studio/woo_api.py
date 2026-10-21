@@ -404,7 +404,7 @@ def _route(request, sup, route, modern):
                 from .security import file_url
                 from .fulfillment import ensure_supplier_files
                 ensure_supplier_files(order.uid)
-                for k, (nm, alt) in enumerate((("%s_poster.png", "Poster / 海报"),
+                for k, (nm, alt) in enumerate((("%s_poster.png", "Poster: print, put in parcel / 海报：打印放入包裹"),
                                                ("%s_template.tiff", "Print file TIFF / 印刷文件"),
                                                ("%s_supplier_colors.jpg", "Colour table / 色卡"),
                                                ("%s_template.png", "Numbered canvas / 数字画布")), 1):

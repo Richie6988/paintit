@@ -273,7 +273,7 @@ def line_properties(order):
             ("All files / 全部文件", production_url(u)),
             ("Format", "%s (%s)" % (order.format_label, order.orientation)),
             ("Couleurs", str(order.colors)),
-            ("Poster", file_url(u, "%s_poster.png" % u)),
+            ("Poster (print, put in parcel / 打印放入包裹)", file_url(u, "%s_poster.png" % u)),
             ("Toile numérotée (TIFF)", file_url(u, "%s_template.tiff" % u)),
             ("Order sheet / 订单 (TXT)", file_url(u, "%s_supplier.txt" % u)),
             ("Colour table / 色卡 (JPG)", file_url(u, "%s_supplier_colors.jpg" % u)),

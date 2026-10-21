@@ -635,10 +635,9 @@ def production_page(request, uid, sig):
         raise Http404
     fulfillment.ensure_supplier_files(uid)
     rows = [("Numbered canvas (print file) / 数字画布（印刷文件）", "%s_template.tiff" % uid),
-            ("Poster (reference) / 参考海报", "%s_poster.png" % uid),
+            ("Poster: print it and put it in the parcel / 海报：请打印并放入包裹", "%s_poster.png" % uid),
             ("Colour table / 色卡", "%s_supplier_colors.jpg" % uid),
-            ("Order sheet / 订单信息", "%s_supplier.txt" % uid),
-            ("Colour data / 颜色数据 (JSON)", "%s_supplier.json" % uid)]
+            ("Order sheet / 订单信息", "%s_supplier.txt" % uid)]
     files = [(label, n, security.file_url(uid, n, absolute=False)) for label, n in rows if os.path.isfile(os.path.join(d, n))]
     txt = ""
     try:
