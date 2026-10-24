@@ -33,7 +33,99 @@ class ParcelError(Exception):
 
 
 def enabled():
-    return bool(getattr(settings, "AFTERSHIP_API_KEY", ""))
+    return bool(getattr(settings, "AFTERSHIP_API_KEY", "") or getattr(settings, "PARCELSAPP_API_KEY", ""))
+
+
+# ------------------------------------------------------------------ Parcelsapp API v4 (YunExpress, 17track... agreges)
+PA_STATUS = {"delivered": "Delivered", "pickup": "AvailableForPickup", "arrived": "AvailableForPickup",
+             "out_for_delivery": "OutForDelivery", "delivering": "OutForDelivery"}
+EN_NAMES = {"FR": "France", "BE": "Belgium", "LU": "Luxembourg", "DE": "Germany", "ES": "Spain", "IT": "Italy",
+            "PT": "Portugal", "NL": "Netherlands", "AT": "Austria", "IE": "Ireland", "DK": "Denmark", "SE": "Sweden",
+            "FI": "Finland", "PL": "Poland", "CZ": "Czech", "GR": "Greece", "SK": "Slovakia", "SI": "Slovenia",
+            "HR": "Croatia", "HU": "Hungary", "RO": "Romania", "BG": "Bulgaria", "CY": "Cyprus", "MT": "Malta",
+            "EE": "Estonia", "LV": "Latvia", "LT": "Lithuania", "US": "United States", "GB": "United Kingdom",
+            "NZ": "New Zealand"}
+
+
+def guess_carrier(number):
+    n = (number or "").upper()
+    return "YunExpress" if n.startswith("YT") else ("Cainiao" if n.startswith("LP") else "")
+
+
+def public_url(number):
+    """Page de suivi publique (tous transporteurs) donnee au client et au staff."""
+    return "https://parcelsapp.com/en/tracking/%s" % (number or "").strip()
+
+
+def _pa_http(method, path, data=None):
+    base = getattr(settings, "PARCELSAPP_API_BASE", "") or "https://parcelsapp.com/api/v4"
+    req = urllib.request.Request(base + path, method=method, data=json.dumps(data).encode() if data is not None else None,
+                                 headers={"Content-Type": "application/json", "User-Agent": "PaintIt/1",
+                                          "Authorization": "Bearer %s" % settings.PARCELSAPP_API_KEY})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read() or b"{}")
+    except urllib.error.HTTPError as e:
+        try:
+            msg = ((json.loads(e.read() or b"{}").get("error") or {}).get("message") or "")
+        except ValueError:
+            msg = ""
+        raise ParcelError(("Parcelsapp HTTP %s %s" % (e.code, msg)).strip())
+    except (urllib.error.URLError, ValueError) as e:
+        raise ParcelError("Parcelsapp : %s" % e)
+
+
+def _pa_fetch(order):
+    """-> Shipment Parcelsapp, ou None si la recherche est encore en cours (resultat au prochain passage du cron)."""
+    p = order.parcel or {}
+    r = None
+    if p.get("pa_req"):
+        try:
+            r = _pa_http("GET", "/trackings/%s" % p["pa_req"])
+        except ParcelError as e:
+            if "404" not in str(e) and "410" not in str(e):     # requete expiree (~30 min) : on relance
+                raise
+    if r is None:
+        r = _pa_http("POST", "/trackings", {"language": "en", "shipments": [
+            {"tracking_number": order.tracking_number, "destination_country": dest_iso2(order) or "FR"}]})
+    if r.get("rejected") and not r.get("results"):
+        rej = r["rejected"][0] if isinstance(r["rejected"][0], dict) else {}
+        raise ParcelError("Parcelsapp : n° refusé (%s)" % (rej.get("reason") or rej.get("error") or "?"))
+    if not r.get("done"):
+        _save(order, pa_req=r.get("request_id", ""))
+        return None
+    _save(order, pa_req="")
+    res = (r.get("results") or [{}])[0]
+    sh = res.get("shipment") or {}
+    if sh.get("error"):
+        raise ParcelError("Parcelsapp : %s" % sh["error"])
+    return sh
+
+
+def _pa_normalize(order, sh):
+    """Shipment Parcelsapp -> meme forme que AfterShip (tag, checkpoints, last_mile) pour `analyse`."""
+    iso2 = dest_iso2(order)
+    name = EN_NAMES.get(iso2, "").lower()
+    services = sh.get("services") or []
+    cps = []
+    for st in reversed(sh.get("states") or []):        # Parcelsapp : plus recent en premier
+        loc = str(st.get("location") or "")
+        i = st.get("carrier")
+        car = services[i].get("slug", "") if isinstance(i, int) and 0 <= i < len(services) else ""
+        cps.append({"checkpoint_time": str(st.get("date") or ""), "message": str(st.get("state") or "")[:160],
+                    "location": loc, "slug": car,
+                    "country_region": iso2 if name and loc.lower().endswith(name) else ""})
+    status = str(sh.get("status") or "").lower().replace(" ", "_")
+    last = (cps[-1]["message"].lower() if cps else "")
+    tag = PA_STATUS.get(status) or ("OutForDelivery" if "out for delivery" in last else ("InTransit" if cps else ""))
+    lm = {}
+    ext = [x for x in (sh.get("externalTracking") or []) if x.get("trackingId")]
+    if ext:     # n° du transporteur national (La Poste, USPS...) : donne au client a l'arrivee dans le pays
+        lm = {"tracking_number": ext[-1]["trackingId"], "slug": ext[-1].get("slug", ""),
+              "courier_tracking_link": ext[-1].get("url", "")}
+    det = sh.get("detectedCarrier") or {}
+    return {"tag": tag, "checkpoints": cps, "slug": det.get("name") or order.carrier or "", "last_mile": lm,
+            "courier_tracking_link": order.tracking_url or public_url(order.tracking_number)}
 
 
 def _http(method, path, data=None):
@@ -133,14 +225,23 @@ def check(order, force=False):
         if last and timezone.now() - last < CHECK_EVERY:
             return "deja verifie"
     try:
-        if not p.get("id"):
-            register(order)
-        t = _http("GET", "/trackings/%s" % order.parcel["id"])
+        if getattr(settings, "PARCELSAPP_API_KEY", ""):
+            s = _pa_fetch(order)
+            if s is None:
+                _save(order, last_check=timezone.now().isoformat(timespec="seconds"), error="")
+                return "recherche en cours"
+            t = _pa_normalize(order, s)
+        else:
+            if not p.get("id"):
+                register(order)
+            t = _http("GET", "/trackings/%s" % order.parcel["id"])
     except ParcelError as e:
         _save(order, error=str(e)[:200], last_check=timezone.now().isoformat(timespec="seconds"))
         return "erreur : %s" % e
     a = analyse(order, t)
     upd = {"state": a["state"], "checkpoint": a["checkpoint"], "last_mile": a["last_mile"], "error": "",
+           "events": [{"at": c.get("checkpoint_time", "")[:16], "text": c.get("message", ""),
+                       "where": c.get("location", "")} for c in (t.get("checkpoints") or [])][-15:],
            "last_check": timezone.now().isoformat(timespec="seconds")}
     if a["arrived"] and not p.get("dest_arrived_at"):
         upd["dest_arrived_at"] = upd["last_check"]

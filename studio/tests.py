@@ -1753,3 +1753,39 @@ class ShippingCountriesTests(TestCase):
         self.assertFalse(DeliveryForm(base).is_valid())
         self.assertTrue(address.validate(base))
         self.assertTrue(address.ships_to("Etats-Unis") and not address.ships_to("Japon"))
+
+
+@override_settings(PARCELSAPP_API_KEY="pk", AFTERSHIP_API_KEY="")
+class ParcelsappTrackingTests(TestCase):
+    def test_yunexpress_flow(self):
+        from studio import parcel, integrations
+        from studio.models import Supplier
+        sup = Supplier.objects.create(name="Y", integration="woo")
+        o = make_order(uid="TRK00000-0001", status=Order.FULFILLED)
+        Order.objects.filter(pk=o.pk).update(supplier=sup)
+        integrations.handle_event(sup, {"uid": o.uid, "status": "shipped", "tracking_number": "YT2629600705738403"})
+        o.refresh_from_db()
+        self.assertEqual((o.status, o.carrier), (Order.SHIPPED, "YunExpress"))
+        self.assertIn("parcelsapp.com/en/tracking/YT2629600705738403", o.tracking_url)
+        res = {"request_id": "r1", "status": "completed", "done": True, "results": [{
+            "tracking_number": "YT2629600705738403", "state": "completed", "shipment": {
+                "status": "delivered", "services": [{"slug": "yunexpress"}, {"slug": "colissimo"}],
+                "states": [{"date": "2026-10-20T10:00", "state": "Delivered", "location": "Lyon, France", "carrier": 1},
+                           {"date": "2026-10-12T08:00", "state": "Departed facility", "location": "Shenzhen, China",
+                            "carrier": 0}],
+                "externalTracking": [{"slug": "colissimo", "trackingId": "6A123", "url": "https://laposte.fr/6A123"}]}}]}
+        with mock.patch.object(parcel, "_pa_http", return_value=res), \
+                mock.patch("studio.emails.send_coming_soon", return_value=True):
+            r = parcel.check(o, force=True)
+        o.refresh_from_db()
+        self.assertIn("livré", r)
+        self.assertEqual(o.status, Order.DELIVERED)
+        self.assertEqual(o.parcel["events"][0]["where"], "Shenzhen, China")
+        self.assertEqual(o.parcel["last_mile"]["number"], "6A123")
+        # recherche asynchrone : request_id garde, resultat au passage suivant
+        o2 = make_order(uid="TRK00000-0002", status=Order.SHIPPED)
+        Order.objects.filter(pk=o2.pk).update(tracking_number="YT1", supplier=sup)
+        o2.refresh_from_db()
+        with mock.patch.object(parcel, "_pa_http", return_value={"request_id": "r2", "done": False, "results": []}):
+            self.assertEqual(parcel.check(o2, force=True), "recherche en cours")
+        self.assertEqual(o2.parcel["pa_req"], "r2")

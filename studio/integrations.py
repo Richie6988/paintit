@@ -207,6 +207,12 @@ def handle_event(sup, data):
         v = (data.get(f) or "").strip()
         if v and getattr(order, f) != v:
             setattr(order, f, v[:300]); changed.append(f)
+    if order.tracking_number and "tracking_number" in changed:     # n° seul (cas MangoERP) : transporteur + lien deduits
+        from .parcel import guess_carrier, public_url
+        if not order.carrier:
+            order.carrier = guess_carrier(order.tracking_number); changed.append("carrier")
+        if not (data.get("tracking_url") or "").strip():
+            order.tracking_url = public_url(order.tracking_number); changed.append("tracking_url")
     ref = (data.get("supplier_ref") or "").strip()
     if ref and order.supplier_ref != ref:
         order.supplier_ref = ref[:64]; changed.append("supplier_ref")

@@ -164,6 +164,9 @@
           <button class="pbtn" style="width:100%;margin-top:10px">Enregistrer le suivi</button>
           {% if o.tracking_url %}<a class="pbtn sm" style="margin-top:6px" href="{{ o.tracking_url }}" target="_blank" rel="noopener">Suivre le colis ↗</a>{% endif %}
         </form>
+        {% if o.tracking_number %}<form method="post">{% csrf_token %}<button class="pbtn sm" style="margin-top:6px" name="op" value="parcel_check">Actualiser le suivi</button></form>{% endif %}
+        {% if o.parcel.events %}<ul class="muted" style="margin:10px 0 0;padding-left:16px;font-size:.8rem">{% for e in o.parcel.events reversed %}<li>{{ e.at }} · {{ e.text }}{% if e.where %} ({{ e.where }}){% endif %}</li>{% endfor %}</ul>
+        {% elif o.parcel.error %}<p class="muted" style="font-size:.8rem">Suivi : {{ o.parcel.error }}</p>{% endif %}
       </div>
 
       <div class="card">

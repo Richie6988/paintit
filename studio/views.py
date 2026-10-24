@@ -3744,6 +3744,12 @@ def erp_order(request, pk):
                 o.save(update_fields=fields)
                 log("action", "Suivi : %s %s" % (o.carrier, o.tracking_number))
                 messages.success(request, "Suivi enregistré.")
+            elif op == "parcel_check":
+                from . import parcel
+                if not parcel.enabled():
+                    messages.error(request, "Suivi automatique inactif : ajoutez PARCELSAPP_API_KEY (ou AFTERSHIP_API_KEY) dans .env.")
+                else:
+                    messages.info(request, "Suivi : %s" % parcel.check(o, force=True))
             elif op == "note":
                 txt = (request.POST.get("text") or "").strip()
                 if txt:
