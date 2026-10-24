@@ -118,6 +118,14 @@
 PaintIt reads your shipments through the WooCommerce store "PaintIt" in MangoERP.
 PaintIt 通过芒果店长中的 WooCommerce 店铺「PaintIt」读取发货信息。
 
+0. Carrier mapping (fixes "对应的平台承运商没有设置") / 设置平台承运商
+   In MangoERP logistics settings (物流设置 → 物流渠道), open the channel used (e.g. 云途物流 / YunExpress)
+   and set the PLATFORM CARRIER for WooCommerce / the store "PaintIt" to: YunExpress
+   (as you do for Shopify, but in the WooCommerce / 独立站 column).
+   请在「物流设置 → 物流渠道」中打开所用渠道（如云途物流），为 WooCommerce / 独立站（店铺 PaintIt）设置
+   「平台承运商」= YunExpress（与 Shopify 的设置方式相同，只是选择 WooCommerce / 独立站）。
+   Then re-submit the failed orders / 然后重新提交「提交失败」的订单。
+
 1. Tracking number / 运单号
    After the parcel label is created (分配运单号), the order must be SUBMITTED to the store:
    订单 → 提交平台 (Submit to platform / 标记发货).

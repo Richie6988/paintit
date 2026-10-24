@@ -382,6 +382,18 @@ def _index(modern):
                                "links": {"help": "https://woocommerce.github.io/woocommerce-rest-api-docs/"}}}}
 
 
+# Transporteurs proposes a l'ERP (format du plugin WooCommerce Shipment Tracking : pays -> {nom: lien %1$s})
+TRACKING_PROVIDERS = {
+    "China": {"YunExpress": "https://www.yuntrack.com/parcelTracking?id=%1$s",
+              "Cainiao": "https://global.cainiao.com/detail.htm?mailNoList=%1$s",
+              "4PX": "https://track.4px.com/#/result/0/%1$s", "Yanwen": "https://track.yw56.com.cn/en/querydel?nums=%1$s",
+              "China Post": "https://parcelsapp.com/en/tracking/%1$s"},
+    "Global": {"DHL": "https://www.dhl.com/global-en/home/tracking.html?tracking-id=%1$s",
+               "UPS": "https://www.ups.com/track?tracknum=%1$s", "FedEx": "https://www.fedex.com/fedextrack/?trknbr=%1$s",
+               "Other": "https://parcelsapp.com/en/tracking/%1$s"},
+}
+
+
 def _route(request, sup, route, modern):
     """-> (payload, http_status, extra_headers, note)"""
     from .models import OrderEvent
@@ -466,6 +478,8 @@ def _route(request, sup, route, modern):
                       "customer_note": n["customer_note"]} for n in notes]
         return (notes if modern else {"order_notes": notes}), 200, {}, ""
     if parts[2] == "shipment-trackings":
+        if len(parts) > 3 and parts[3] == "providers":       # liste des transporteurs (plugin Shipment Tracking)
+            return TRACKING_PROVIDERS, 200, {}, "transporteurs"
         if m == "POST":
             trk = _tracking_from(data)
             _apply(sup, order, "completed", trk, "Shipment tracking")

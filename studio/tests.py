@@ -548,6 +548,9 @@ class WooConnectorTests(TestCase):
         from studio.models import ConnectorLog
         self.assertTrue(ConnectorLog.objects.filter(supplier=self.sup, method="PUT").exists())
         self.assertNotIn(self.keys["cs"], " ".join(ConnectorLog.objects.values_list("query", flat=True)))
+        pv = self.client.get("/wp-json/wc-shipment-tracking/v3/orders/%d/shipment-trackings/providers" % self.o.pk,
+                             self.auth).json()
+        self.assertIn("YunExpress", pv["China"])
 
 
 @override_settings(MEDIA_ROOT=MEDIA)
