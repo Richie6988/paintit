@@ -467,55 +467,6 @@ class SeoTests(TestCase):
         self.assertContains(self.client.get("/create/"), 'value="48"')
 
 
-@override_settings(MEDIA_ROOT=MEDIA, EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
-class ShopifyBridgeTests(TestCase):
-    """Boutique Shopify relais (MangoERP) : creation de commande + retours d'expedition signes."""
-    def setUp(self):
-        from studio.models import Supplier
-        self.sup = Supplier.objects.create(name="Yingsa", checkout="kit", integration="shopify",
-                                           shopify={"domain": "pi", "client_id": "cid", "client_secret": "sec"})
-        self.calls = []
-
-    def fake(self, url, data=None, headers=None, form=False, timeout=25):
-        self.calls.append((url, data))
-        if url.endswith("/admin/oauth/access_token"):
-            return 200, {"access_token": "tok", "expires_in": 86399}, {}
-        if "orderCreate" in (data or {}).get("query", ""):
-            return 200, {"data": {"orderCreate": {"order": {"id": "gid://shopify/Order/77", "name": "#1001",
-                                                            "legacyResourceId": "77"}, "userErrors": []}}}, {}
-        return 200, {"data": {}}, {}
-
-    def test_push_order_once_with_client_credentials(self):
-        from studio import shopify
-        o = make_order(status=Order.PAID)
-        with mock.patch("studio.shopify._http", side_effect=self.fake):
-            self.assertEqual(shopify.push_order(self.sup, o, {"X_template.pdf": "https://f/x.pdf"}), "#1001")
-            o.refresh_from_db()
-            self.assertEqual(o.shopify_order_id, "77")
-            self.assertTrue(shopify.push_order(self.sup, o, {}).startswith("deja"))   # pas de doublon
-        self.assertTrue(self.calls[0][0].startswith("https://pi.myshopify.com/admin/oauth/access_token"))
-        order_in = [d for u, d in self.calls if "orderCreate" in (d or {}).get("query", "")][0]["variables"]["order"]
-        self.assertEqual(order_in["financialStatus"], "PAID")
-        self.assertEqual(order_in["shippingAddress"]["countryCode"], "FR")
-
-    def test_signed_fulfillment_webhook_marks_shipped(self):
-        import base64, hashlib, hmac, json
-        o = make_order(status=Order.FULFILLED)
-        Order.objects.filter(pk=o.pk).update(shopify_order_id="77", supplier=self.sup)
-        body = json.dumps({"order_id": 77, "status": "success", "tracking_company": "YunExpress",
-                           "tracking_number": "YT1"}).encode()
-        url = "/api/shopify/%s/webhook/" % self.sup.webhook_secret
-        bad = self.client.post(url, body, content_type="application/json", HTTP_X_SHOPIFY_HMAC_SHA256="x",
-                               HTTP_X_SHOPIFY_TOPIC="fulfillments/create")
-        self.assertEqual(bad.status_code, 401)
-        sig = base64.b64encode(hmac.new(b"sec", body, hashlib.sha256).digest()).decode()
-        ok = self.client.post(url, body, content_type="application/json", HTTP_X_SHOPIFY_HMAC_SHA256=sig,
-                              HTTP_X_SHOPIFY_TOPIC="fulfillments/create")
-        self.assertEqual(ok.status_code, 200)
-        o.refresh_from_db()
-        self.assertEqual((o.status, o.tracking_number), (Order.SHIPPED, "YT1"))
-
-
 class WooConnectorTests(TestCase):
     """Connecteur compatible WooCommerce : l'ERP du fournisseur (MangoERP) lit les commandes et renvoie le suivi."""
     def setUp(self):
@@ -619,7 +570,7 @@ class SupplierFilesTests(TestCase):
         open(os.path.join(d, "%s_supplier.txt" % self.o.uid), "w").write("Order FILES000-0001 / 订单")
 
     def test_erp_sees_all_files(self):
-        from studio import security, shopify
+        from studio import security, order_lines as shopify
         li = self.client.get("/wc-api/v3/orders", self.auth).json()["orders"][0]
         self.assertIn(security.production_url(self.o.uid), li["note"])
         self.assertNotIn("49.90", str(li))                      # jamais notre prix de vente
@@ -702,7 +653,7 @@ class WooTestShopTests(TestCase):
 class TwelveColorsSupplierTests(TestCase):
     """12 couleurs offertes au client, fournisseur sans kit 12 : vu comme 24 (chaque couleur en double)."""
     def test_supplier_side_is_24(self):
-        from studio import shopify
+        from studio import order_lines as shopify
         from studio.fulfillment import double_for_supplier
         o = make_order(uid="TWELVE00-0001")
         Order.objects.filter(pk=o.pk).update(colors=12)
@@ -1795,7 +1746,7 @@ class ParcelsappTrackingTests(TestCase):
 class FrameOptionTests(TestCase):
     """Avec cadre -> SKU BK + prix d'achat du produit cadre ; sans cadre -> WF ; jamais de ligne pinceaux."""
     def test_framed_flow(self):
-        from studio import shopify, woo_api, integrations
+        from studio import order_lines as shopify, woo_api, integrations
         from studio.models import Supplier, KitFormat
         kf, _ = KitFormat.objects.update_or_create(width_cm=40, height_cm=50, defaults=dict(
             price=34.9, frame_price=12, frame_available=True, available=True))
@@ -1812,7 +1763,6 @@ class FrameOptionTests(TestCase):
         self.assertEqual(float(lines[0]["price"]), 8.8)                         # grille : DIY frame kit 40x50
         self.assertEqual(shopify.supplier_amounts(o, sup)[1], 0.0)
         self.assertIn(("Finish / 款式", "Framed / 带框 (BK)"), shopify.line_properties(o))
-        self.assertIn("BK", [i["finish"] for i in shopify.catalogue(sup)])
         # parcours client : option cadre a l'apercu -> prix + cadre
         s = self.client.session
         s["order"] = {"uid": "X", "colors": 24, "width_cm": 40, "height_cm": 50, "orientation": "portrait",

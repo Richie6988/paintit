@@ -102,7 +102,7 @@ def order_values(sup, order, sku_pattern=None):
     from . import address
     from .security import file_url
     from .models import format_key, supplier_color_count
-    from . import shopify as _shop
+    from . import order_lines as _shop
     fmt = format_key(order.width_cm, order.height_cm)
     pattern = sku_pattern or DEFAULT_SKU
     if "{finish}" not in pattern and pattern.startswith("PBN-"):

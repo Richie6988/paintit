@@ -81,7 +81,7 @@ def build_payload(sup, o, shipping, event="order.created"):
 
 
 def _sup_sku(o):
-    from .shopify import sku_for
+    from .order_lines import sku_for
     from .models import format_key
     try:
         return sku_for(format_key(o.get("width_cm"), o.get("height_cm")), o.get("colors") or 24, bool(o.get("framed")))
@@ -96,22 +96,6 @@ def _sup_colors(n):
 
 def _send(sup, payload):
     """Envoie le payload par le canal du fournisseur. -> (ok, canal, erreur)"""
-    if sup.integration == "shopify":
-        # Boutique Shopify relais : l'ERP du fournisseur (MangoERP...) y recupere la commande
-        from . import shopify
-        from .models import Order
-        try:
-            uid = (payload.get("order") or {}).get("uid")
-            if not uid:
-                shop = shopify.test(sup)
-                return True, "Shopify", "" if shop else "boutique introuvable"
-            row = Order.objects.filter(uid=uid).first()
-            if not row:
-                return False, "Shopify", "commande %s introuvable" % uid
-            name = shopify.push_order(sup, row, payload.get("files") or {})
-            return True, "Shopify %s" % name, ""
-        except Exception as exc:
-            return False, "Shopify", str(exc)[:300]
     if sup.integration == "woo":
         # Connecteur WooCommerce : l'ERP du fournisseur vient chercher la commande (/wc-api/v3/orders)
         if not (sup.woo or {}).get("ck"):

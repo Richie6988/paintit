@@ -112,6 +112,35 @@
         <form method="post" style="display:flex;gap:8px;margin-top:14px">{% csrf_token %}<input type="hidden" name="_tab" value="integration">
           <button class="gx-btn{% if not woo.ck %} pri{% endif %}" name="op" value="woo_keys"{% if woo.ck %} data-confirm="Régénérer les accès ? L'ERP devra être reconfiguré." data-ok="Régénérer"{% endif %}>{% if woo.ck %}Régénérer les accès{% else %}Générer les accès{% endif %}</button>
           {% if woo.ck %}<button class="gx-btn danger" name="op" value="woo_revoke" data-confirm="Couper l'accès de l'ERP ?" data-danger>Révoquer</button>{% endif %}</form>
+        <details class="sf-more"><summary>Consignes fournisseur : renvoyer le suivi automatiquement (EN / 中文)</summary>
+          <pre id="supTrackGuide" style="white-space:pre-wrap">PaintIt - automatic shipment updates / 自动回传物流信息
+
+PaintIt reads your shipments through the WooCommerce store "PaintIt" in MangoERP.
+PaintIt 通过芒果店长中的 WooCommerce 店铺「PaintIt」读取发货信息。
+
+1. Tracking number / 运单号
+   After the parcel label is created (分配运单号), the order must be SUBMITTED to the store:
+   订单 → 提交平台 (Submit to platform / 标记发货).
+   This sends the carrier + tracking number (e.g. YunExpress YT...) to PaintIt.
+   生成运单号后，请在订单中点击「提交平台」（标记发货），系统会把物流商和运单号（例如云途 YT...）回传给 PaintIt。
+
+2. Make it automatic / 设置自动提交
+   In MangoERP order rules (订单规则 / 自动化规则), enable
+   "automatically submit to platform after the tracking number is assigned" for the store PaintIt.
+   请在「订单规则」中为 PaintIt 店铺开启「分配运单号后自动提交平台（自动标记发货）」。
+
+3. Use the tracking number the customer can follow (YunExpress YT..., not an internal number).
+   请回传客户可以查询的运单号（云途 YT...），不要回传内部单号。
+
+4. Check / 确认
+   Within 15 minutes the order shows "Shipped" in PaintIt. If not, tell us the order number.
+   提交后 15 分钟内 PaintIt 订单会变为「已发货」。如果没有，请告诉我们订单号。
+
+Own system instead of MangoERP? / 如使用自有系统：
+POST JSON to / 发送 JSON 到 {{ automation.callback }}
+{"uid": "&lt;PaintIt order number&gt;", "status": "shipped", "carrier": "YunExpress", "tracking_number": "YT..."}</pre>
+          <button type="button" class="gx-btn sm" onclick="navigator.clipboard.writeText(document.getElementById('supTrackGuide').innerText)">Copier les consignes</button>
+        </details>
         {% if woo_test %}
         <div class="sf-card" style="margin-top:16px;border:2px dashed #f0a23c">
           <h2>Boutique test : où arrive chaque information ?</h2>
@@ -138,26 +167,6 @@
           {% if woo_logs %}<table class="log" style="margin-top:8px">{% for l in woo_logs %}<tr><td class="gx-muted" style="white-space:nowrap">{{ l.at|date:"d/m H:i" }}</td><td><b>{{ l.method }}</b> {{ l.path }}{% if l.body %}<div class="gx-muted" style="word-break:break-all">{{ l.body|truncatechars:200 }}</div>{% endif %}</td>
             <td><span class="gx-chip {% if l.status < 300 %}ok{% else %}bad{% endif %}">{{ l.status }}</span></td><td class="gx-muted">{{ l.note }}</td></tr>{% endfor %}</table>
           {% else %}<p class="gx-muted">Aucun appel reçu.</p>{% endif %}</details>
-
-      {% elif sup.integration == "shopify" %}
-        <ul class="sf-list">
-          <li><span>Boutique Shopify</span><b>{{ shop.shop_name|default:shop.domain|default:"—" }}</b></li>
-          <li><span>Catalogue publié</span><b>{% if shop.catalogue_synced %}{{ shop.variants|length }} variantes{% else %}non{% endif %}</b></li>
-          <li><span>Retours d'expédition</span><b>{% if shop.webhooks %}actifs{% else %}inactifs{% endif %}</b></li>
-        </ul>
-        <form method="post" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">{% csrf_token %}<input type="hidden" name="_tab" value="integration">
-          <button class="gx-btn sm" name="op" value="shop_test">Tester</button><button class="gx-btn sm" name="op" value="shop_catalog">Publier le catalogue</button>
-          <button class="gx-btn sm" name="op" value="shop_webhooks">Activer les retours</button><button class="gx-btn sm" name="op" value="shop_poll">Synchroniser les suivis</button>
-          {% if shop_pending %}<button class="gx-btn sm pri" name="op" value="shop_push" data-confirm="Créer {{ shop_pending }} commande(s) dans Shopify ?" data-ok="Envoyer">Envoyer {{ shop_pending }} commande{{ shop_pending|pluralize }}</button>{% endif %}</form>
-        <form method="post" class="sf-more" style="border-top:1px solid var(--line);margin-top:16px;padding-top:16px">{% csrf_token %}<input type="hidden" name="op" value="save"><input type="hidden" name="section" value="channel"><input type="hidden" name="_tab" value="integration">
-          {% for f in forms.channel %}{{ f.as_hidden }}{% endfor %}
-          <div class="sf-grid">
-            <label class="gx-field"><span>Domaine myshopify</span><input type="text" name="shop_domain" value="{{ shop.domain|default:'' }}" placeholder="boutique.myshopify.com"></label>
-            <label class="gx-field"><span>Version d'API</span><input type="text" name="shop_api_version" value="{{ shop.api_version|default:'' }}" placeholder="2025-07"></label>
-            <label class="gx-field"><span>Client ID</span><input type="text" name="shop_client_id" value="{{ shop.client_id|default:'' }}" autocomplete="off"></label>
-            <label class="gx-field"><span>Client secret</span><input type="password" name="shop_client_secret" placeholder="{% if shop.client_secret %}enregistré — laisser vide pour conserver{% endif %}" autocomplete="new-password"></label>
-          </div>
-          <div class="sf-actions"><button class="gx-btn pri">Enregistrer</button></div></form>
 
       {% else %}
         <form method="post">{% csrf_token %}<input type="hidden" name="op" value="save"><input type="hidden" name="section" value="channel"><input type="hidden" name="_tab" value="integration">

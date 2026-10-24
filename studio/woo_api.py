@@ -124,7 +124,7 @@ def _updated(o):
 
 def _address(o):
     from . import address
-    from .shopify import _split_name, _phone
+    from .order_lines import _split_name, _phone
     first, last = _split_name(o.customer_name)
     iso = (address.COUNTRIES.get(o.country) or (o.country[:2].upper() if o.country else "FR",))[0]
     return {"first_name": first, "last_name": last, "company": "", "address_1": o.address1 or "",
@@ -133,10 +133,10 @@ def _address(o):
 
 
 def _lines(o):
-    """Lignes vues par l'ERP : SKU identiques a Shopify / Excel (WF-40x50-24C / BK-...), proprietes = fichiers.
+    """Lignes vues par l'ERP : SKU identiques a l'Excel (WF-40x50-24C / BK-...), proprietes = fichiers.
     Pas de ligne pinceaux : ils ne sont pas commandes au fournisseur."""
     from .models import format_key
-    from .shopify import sku_for, PRODUCT_TITLE, variant_title, line_properties, supplier_amounts
+    from .order_lines import sku_for, PRODUCT_TITLE, variant_title, line_properties, supplier_amounts
     canvas, brush_amt, _total = supplier_amounts(o)          # prix d'achat fournisseur, jamais notre prix de vente
     from .security import file_url
     from .fulfillment import ensure_supplier_files
@@ -151,7 +151,7 @@ def _lines(o):
 
 
 def _note(o):
-    from .shopify import _short_note
+    from .order_lines import _short_note
     return _short_note(o)
 
 
@@ -218,7 +218,7 @@ def order_rest(o):
 # ---------------------------------------------------------------- requetes
 def _scope(sup):
     """Commandes de ce fournisseur effectivement transmises via ce connecteur (pas les anciennes envoyees
-    par e-mail/Shopify, ni les commandes de test annulees) : l'ERP ne voit que ce qu'il doit produire."""
+    par e-mail, ni les commandes de test annulees) : l'ERP ne voit que ce qu'il doit produire."""
     from .models import Order, OrderEvent
     from .integrations import OK_PREFIX, WOO_CHANNEL
     sent = OrderEvent.objects.filter(kind="action", text__startswith=OK_PREFIX, text__contains=WOO_CHANNEL,

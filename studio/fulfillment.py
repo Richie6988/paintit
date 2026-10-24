@@ -186,7 +186,7 @@ def _print_size(oi):
 
 
 def _supplier_sku(oi):
-    from .shopify import sku_for
+    from .order_lines import sku_for
     from .models import format_key
     try:
         return sku_for(format_key(oi.get("width_cm"), oi.get("height_cm")), oi.get("colors_count") or 24,
