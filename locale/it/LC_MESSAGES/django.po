@@ -1953,3 +1953,10 @@ msgstr "Reimposta"
 
 msgid "galerie"
 msgstr "galleria"
+
+msgid ""
+"Livraison : Union européenne, États-Unis, Royaume-Uni, Nouvelle-Zélande."
+msgstr "Spedizione: Unione Europea, Stati Uniti, Regno Unito, Nuova Zelanda."
+
+msgid "Désolé, nous ne livrons pas encore ce pays."
+msgstr "Spiacenti, non spediamo ancora in questo paese."

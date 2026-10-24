@@ -67,7 +67,9 @@ class DeliveryForm(forms.Form):
     address2 = forms.CharField(label=_("Complément"), max_length=200, required=False)
     postal_code = forms.CharField(label=_("Code postal"), max_length=20)
     city = forms.CharField(label=_("Ville"), max_length=120)
-    country = forms.ChoiceField(choices=address.COUNTRY_CHOICES, initial="France", label=_("Pays"))
+    country = forms.ChoiceField(choices=address.COUNTRY_CHOICES, initial="France", label=_("Pays"),
+                                help_text=_("Livraison : Union européenne, États-Unis, Royaume-Uni, Nouvelle-Zélande."),
+                                error_messages={"invalid_choice": _("Désolé, nous ne livrons pas encore ce pays.")})
 
     AUTOCOMPLETE = {"full_name": "shipping name", "email": "email", "phone_code": "tel-country-code",
                     "phone": "tel-national", "address1": "shipping address-line1", "address2": "shipping address-line2",

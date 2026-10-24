@@ -1941,3 +1941,10 @@ msgstr "Restablecer"
 
 msgid "galerie"
 msgstr "galería"
+
+msgid ""
+"Livraison : Union européenne, États-Unis, Royaume-Uni, Nouvelle-Zélande."
+msgstr "Envío: Unión Europea, Estados Unidos, Reino Unido, Nueva Zelanda."
+
+msgid "Désolé, nous ne livrons pas encore ce pays."
+msgstr "Lo sentimos, aún no enviamos a este país."

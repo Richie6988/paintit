@@ -1928,3 +1928,11 @@ msgstr "Reset"
 
 msgid "galerie"
 msgstr "gallery"
+
+msgid ""
+"Livraison : Union européenne, États-Unis, Royaume-Uni, Nouvelle-Zélande."
+msgstr ""
+"Shipping to: European Union, United States, United Kingdom, New Zealand."
+
+msgid "Désolé, nous ne livrons pas encore ce pays."
+msgstr "Sorry, we don't ship to this country yet."

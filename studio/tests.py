@@ -1736,3 +1736,20 @@ class CreatePhotoCacheTests(TestCase):
         self.client.get("/paint/")
         self.assertTrue(DigitalCanvas.objects.filter(email="jo@x.fr", uid="gal-pa").exists())   # gratuite -> compte
         self.assertFalse(DigitalCanvas.objects.filter(email="jo@x.fr", uid="gal-pb").exists())  # payante : pas offerte
+
+
+class ShippingCountriesTests(TestCase):
+    """Pays desservis : UE + Etats-Unis + Royaume-Uni + Nouvelle-Zelande ; le reste est refuse."""
+    def test_scope(self):
+        from studio import address
+        from studio.forms import DeliveryForm
+        names = [c for c, _ in DeliveryForm().fields["country"].choices]
+        for ok in ("France", "Etats-Unis", "Royaume-Uni", "Nouvelle-Zelande", "Croatie"):
+            self.assertIn(ok, names)
+        for ko in ("Suisse", "Canada", "Japon", "Maroc"):
+            self.assertNotIn(ko, names)
+        base = {"full_name": "A B", "email": "a@b.fr", "phone_code": "+41", "phone": "791234567",
+                "address1": "1 rue", "postal_code": "1200", "city": "Geneve", "country": "Suisse"}
+        self.assertFalse(DeliveryForm(base).is_valid())
+        self.assertTrue(address.validate(base))
+        self.assertTrue(address.ships_to("Etats-Unis") and not address.ships_to("Japon"))

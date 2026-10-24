@@ -1970,3 +1970,11 @@ msgstr "Zurücksetzen"
 
 msgid "galerie"
 msgstr "Galerie"
+
+msgid ""
+"Livraison : Union européenne, États-Unis, Royaume-Uni, Nouvelle-Zélande."
+msgstr ""
+"Lieferung: Europäische Union, USA, Vereinigtes Königreich, Neuseeland."
+
+msgid "Désolé, nous ne livrons pas encore ce pays."
+msgstr "Leider liefern wir noch nicht in dieses Land."

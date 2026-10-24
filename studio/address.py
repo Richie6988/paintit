@@ -46,9 +46,33 @@ COUNTRIES = {
     "Senegal": ("SN", ANY),
     "Emirats arabes unis": ("AE", ANY),
     "Singapour": ("SG", r"^\d{6}$"),
+    "Slovaquie": ("SK", r"^\d{3} ?\d{2}$"),
+    "Slovenie": ("SI", r"^\d{4}$"),
+    "Croatie": ("HR", r"^\d{5}$"),
+    "Hongrie": ("HU", r"^\d{4}$"),
+    "Roumanie": ("RO", r"^\d{6}$"),
+    "Bulgarie": ("BG", r"^\d{4}$"),
+    "Chypre": ("CY", r"^\d{4}$"),
+    "Malte": ("MT", r"^[A-Z]{3} ?\d{4}$"),
+    "Estonie": ("EE", r"^\d{5}$"),
+    "Lettonie": ("LV", r"^(LV-)?\d{4}$"),
+    "Lituanie": ("LT", r"^(LT-)?\d{5}$"),
+    "Nouvelle-Zelande": ("NZ", r"^\d{4}$"),
 }
 
-COUNTRY_CHOICES = [(c, c) for c in COUNTRIES]
+# Pays desservis par le fournisseur (en attendant sa liste complete) : UE + Etats-Unis + Royaume-Uni + Nouvelle-Zelande.
+# Hors liste : pays absent du formulaire et commande refusee.
+EU = {"FR", "BE", "LU", "DE", "ES", "IT", "PT", "NL", "AT", "IE", "DK", "SE", "FI", "PL", "CZ", "GR", "SK", "SI",
+      "HR", "HU", "RO", "BG", "CY", "MT", "EE", "LV", "LT"}
+SHIP_ISO = EU | {"US", "GB", "NZ"}
+
+
+def ships_to(country):
+    spec = COUNTRIES.get(country)
+    return bool(spec) and spec[0] in SHIP_ISO
+
+
+COUNTRY_CHOICES = [(c, c) for c in COUNTRIES if ships_to(c)]
 
 
 def validate(shipping):
@@ -59,6 +83,9 @@ def validate(shipping):
             errors.append("Champ requis manquant : %s." % field)
 
     country = shipping.get("country", "")
+    if country and not ships_to(country):
+        from django.utils.translation import gettext as _
+        errors.append(_("Désolé, nous ne livrons pas encore ce pays."))
     postal = str(shipping.get("postal_code", "")).strip().upper()
     spec = COUNTRIES.get(country)
     if spec and postal and not re.match(spec[1], postal):
