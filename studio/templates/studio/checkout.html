@@ -24,6 +24,7 @@
   </form>
 
   <div class="totals">
+    <div class="line"><span>{{ order.format_label }}, {{ order.colors }} {% trans "couleurs" %}{% if order.framed %}, {% trans "avec cadre" %}{% else %}, {% trans "sans cadre" %}{% endif %}</span><span></span></div>
     <div class="line"><span>{% trans "Sous-total" %}</span><span>{{ order.price|floatformat:2 }} &euro;</span></div>
     {% if discount %}<div class="line disc"><span>{% trans "Remise" %} ({{ discount.code }}, -{{ discount.percent }}%)</span><span>-{{ discount.amount|floatformat:2 }} &euro;</span></div>{% endif %}
     <div class="line grand"><span>{% trans "Total" %}</span><span>{{ total|floatformat:2 }} &euro;</span></div>

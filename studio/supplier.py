@@ -30,7 +30,7 @@ def estimate_cost(order, shipping=None):
             iso = (address.COUNTRIES.get((shipping or {}).get("country") or "France") or ("FR",))[0]
             from .models import format_key
             c = sup.order_cost(format_key(order["width_cm"], order["height_cm"]),
-                               int(order["colors"]), bool(order.get("brushes")), iso)
+                               int(order["colors"]), False, iso, framed=bool(order.get("framed")))
             if c is not None:
                 return c
     except Exception:

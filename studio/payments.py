@@ -38,6 +38,8 @@ def demo_allowed():
 def order_description(order):
     base = (f"Peinture par numeros personnalisee, {order['format_label']} "
             f"({order['orientation']}), {order['colors']} couleurs")
+    if order.get("framed"):
+        base += ", avec cadre"
     if order.get("brushes"):
         base += " + pinceaux"
     return base

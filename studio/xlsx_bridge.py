@@ -53,7 +53,7 @@ TRACK_KEYS = {
     "carrier": ["物流方式", "物流渠道", "承运商", "物流公司", "carrier", "shipping method", "logistics", "transporteur"],
 }
 
-DEFAULT_SKU = "PBN-{format}-{colors}C"
+DEFAULT_SKU = "{finish}-{format}-{colors}C"      # BK-40x50-24C (avec cadre) / WF-40x50-24C (sans cadre)
 
 
 def _norm(s):
@@ -102,21 +102,24 @@ def order_values(sup, order, sku_pattern=None):
     from . import address
     from .security import file_url
     from .models import format_key, supplier_color_count
+    from . import shopify as _shop
     fmt = format_key(order.width_cm, order.height_cm)
     pattern = sku_pattern or DEFAULT_SKU
+    if "{finish}" not in pattern and pattern.startswith("PBN-"):
+        pattern = "{finish}-" + pattern[4:]          # ancien modele PBN- : remplace par le code BK / WF
     try:
-        sku = pattern.format(format=fmt, colors=supplier_color_count(order.colors), brushes="B" if order.brushes else "")
+        sku = pattern.format(format=fmt, colors=supplier_color_count(order.colors), brushes="",
+                             finish=_shop.FRAMED_PREFIX if order.framed else _shop.UNFRAMED_PREFIX)
     except (KeyError, IndexError, ValueError):
-        sku = DEFAULT_SKU.format(format=fmt, colors=supplier_color_count(order.colors))
-    cost = sup.goods_cost(fmt, order.colors, order.brushes)
+        sku = _shop.sku_for(fmt, order.colors, order.framed)
+    cost = sup.goods_cost(fmt, order.colors, False, order.framed)      # pinceaux : non commandes au fournisseur
     # Meme contenu que si la commande arrivait de la boutique Shopify : SKU, titre produit et variante,
     # telephone international, proprietes de ligne (fichiers) -> le fournisseur traite les deux a l'identique.
-    from . import shopify as _shop
     from .models import CompanyInfo
-    variant = _shop.variant_title(order) + (" + Set de pinceaux" if order.brushes else "")
+    variant = _shop.variant_title(order)
     cfg = (sup.offer or {}).get("xlsx") or {}
     phone = _shop._phone(order.phone_code, order.phone) or ""
-    sku_qty = "%s*1" % sku + (";%s*1" % (cfg.get("brush_sku") or _shop.BRUSH_SKU) if order.brushes else "")
+    sku_qty = "%s*1" % sku
     props = _shop.line_properties(order)
     return {
         "sku_qty": sku_qty, "amount": _shop.supplier_amounts(order, sup)[2], "mobile": phone,

@@ -41,13 +41,24 @@
       {% if order.colors_list %}<div class="ci-chips">{% for c in order.colors_list %}<i style="background:{{ c.hex }}" title="{{ c.number }}"></i>{% endfor %}</div>{% endif %}
     </div>
     {% if formats %}
+    {% if frame_any %}
+    <div class="fmt-select">
+      <span class="fmt-title">{% trans "Finition" %}</span>
+      <div class="fmt-opts">
+        <label class="fmt-opt"><input type="radio" name="framed" value="0" {% if not framed %}checked{% endif %}>
+          <span class="fmt-card"><b>{% trans "Sans cadre" %}</b><em>{% trans "toile roulée" %}</em></span></label>
+        <label class="fmt-opt" id="frameOpt"><input type="radio" name="framed" value="1" {% if framed %}checked{% endif %}>
+          <span class="fmt-card"><b>{% trans "Avec cadre" %}</b><em id="frameP">{% trans "tendue sur châssis bois, prête à peindre" %}</em></span></label>
+      </div>
+    </div>
+    {% endif %}
     <div class="fmt-select">
       <span class="fmt-title">{% trans "Choisissez le format" %}</span>
       <div class="fmt-opts">
         {% for fm in formats %}
         <label class="fmt-opt">
-          <input type="radio" name="kit_format" value="{{ fm.id }}" data-price="{{ fm.price|unlocalize }}" data-w="{{ fm.w|unlocalize }}" data-h="{{ fm.h|unlocalize }}" {% if fm.id == current_format %}checked{% endif %}>
-          <span class="fmt-card"><b>{{ fm.label }}</b><em>{{ fm.price|floatformat:2 }} &euro;</em></span>
+          <input type="radio" name="kit_format" value="{{ fm.id }}" data-price="{{ fm.price|unlocalize }}" data-frame="{% if fm.frame is not None %}{{ fm.frame|unlocalize }}{% endif %}" data-w="{{ fm.w|unlocalize }}" data-h="{{ fm.h|unlocalize }}" {% if fm.id == current_format %}checked{% endif %}>
+          <span class="fmt-card"><b>{{ fm.label }}</b><em class="fmt-p">{{ fm.price|floatformat:2 }} &euro;</em></span>
         </label>
         {% endfor %}
       </div>
@@ -103,10 +114,34 @@
     if (z) ['contextmenu','dragstart','selectstart'].forEach(function(ev){ z.addEventListener(ev, function(e){e.preventDefault();}); });
     var base = {{ order.canvas_price|unlocalize }}, bp = {{ brushes_price|unlocalize }};
     var cb = document.getElementById('brushes'), t = document.getElementById('ptotal');
-    function upd(){ if(!t) return; t.textContent = (base + (cb && cb.checked ? bp : 0)).toFixed(2).replace('.', ','); }
-    document.querySelectorAll('input[name=kit_format]').forEach(function(r){
-      r.addEventListener('change', function(){ if(r.checked){ base = parseFloat(r.dataset.price)||base; upd(); } });
-    });
+    var fmts = document.querySelectorAll('input[name=kit_format]'), frames = document.querySelectorAll('input[name=framed]');
+    var fp = document.getElementById('frameP');
+    function fx(n){ return n.toFixed(2).replace('.', ','); }
+    function framed(){ var f = document.querySelector('input[name=framed]:checked'); return !!f && f.value === '1'; }
+    function upd(){
+      var fr = framed(), price = base;
+      fmts.forEach(function(r){    // avec cadre : seuls les formats proposes avec cadre restent choisissables
+        var off = fr && r.dataset.frame === '';
+        r.disabled = off; r.parentNode.style.opacity = off ? .4 : 1;
+      });
+      var sel = document.querySelector('input[name=kit_format]:checked');
+      if (sel && sel.disabled) {
+        var alt = Array.prototype.find.call(fmts, function(r){ return !r.disabled; });
+        if (alt) { alt.checked = true; alt.dispatchEvent(new Event('change')); sel = alt; }
+      }
+      if (sel) {
+        var fprice = sel.dataset.frame === '' ? null : parseFloat(sel.dataset.frame);
+        if (fp && fprice !== null) fp.textContent = '+' + fx(fprice) + ' \u20ac';
+        price = parseFloat(sel.dataset.price) + (fr && fprice !== null ? fprice : 0);
+        fmts.forEach(function(r){   // prix de chaque format selon la finition choisie
+          var f = r.dataset.frame === '' ? null : parseFloat(r.dataset.frame), em = r.parentNode.querySelector('.fmt-p');
+          if (em) em.textContent = fx(parseFloat(r.dataset.price) + (fr && f !== null ? f : 0)) + ' \u20ac';
+        });
+      }
+      if (t) t.textContent = fx(price + (cb && cb.checked ? bp : 0));
+    }
+    fmts.forEach(function(r){ r.addEventListener('change', upd); });
+    frames.forEach(function(r){ r.addEventListener('change', upd); });
     if (cb) cb.addEventListener('change', upd);
     upd();
   })();

@@ -133,9 +133,10 @@ def _address(o):
 
 
 def _lines(o):
-    """Lignes vues par l'ERP : SKU identiques a Shopify / Excel (PBN-40x50-24C, PBN-BRUSHES), proprietes = fichiers."""
+    """Lignes vues par l'ERP : SKU identiques a Shopify / Excel (WF-40x50-24C / BK-...), proprietes = fichiers.
+    Pas de ligne pinceaux : ils ne sont pas commandes au fournisseur."""
     from .models import format_key
-    from .shopify import sku_for, BRUSH_SKU, PRODUCT_TITLE, variant_title, line_properties, supplier_amounts
+    from .shopify import sku_for, PRODUCT_TITLE, variant_title, line_properties, supplier_amounts
     canvas, brush_amt, _total = supplier_amounts(o)          # prix d'achat fournisseur, jamais notre prix de vente
     from .security import file_url
     from .fulfillment import ensure_supplier_files
@@ -143,12 +144,9 @@ def _lines(o):
     card = os.path.exists(os.path.join(settings.MEDIA_ROOT, "orders", o.uid, "%s_supplier_card.jpg" % o.uid))
     # image de la ligne = fiche « ALL FILES / 全部文件 » (apercu + QR + lien) : la seule chose que l'ERP affiche a coup sur
     img = file_url(o.uid, ("%s_supplier_card.jpg" if card else "%s_poster.png") % o.uid)
-    out = [{"id": o.pk * 10 + 1, "image": img, "sku": sku_for(format_key(o.width_cm, o.height_cm), o.colors),
+    out = [{"id": o.pk * 10 + 1, "image": img, "sku": sku_for(format_key(o.width_cm, o.height_cm), o.colors, o.framed),
             "name": "%s - %s" % (PRODUCT_TITLE, variant_title(o)), "quantity": 1, "price": canvas,
             "total": canvas, "meta": line_properties(o)}]
-    if o.brushes:
-        out.append({"id": o.pk * 10 + 2, "image": "", "sku": BRUSH_SKU, "name": "Set de pinceaux", "quantity": 1,
-                    "price": brush_amt, "total": brush_amt, "meta": []})
     return out
 
 

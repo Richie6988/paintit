@@ -10,7 +10,7 @@
 
   <div class="recap">
     <ul>
-      <li>{% trans "Produit" %} : {{ order.format_label }} ({{ order.orientation }}), {{ order.colors }} {% trans "couleurs" %}</li>
+      <li>{% trans "Produit" %} : {{ order.format_label }} ({{ order.orientation }}), {{ order.colors }} {% trans "couleurs" %}{% if order.framed %}, {% trans "avec cadre" %}{% endif %}</li>
       <li>{% trans "Sous-total" %} : {{ order.price|floatformat:2 }} &euro;</li>
       {% if discount %}<li>{% trans "Remise" %} {{ discount.code }} : -{{ discount.amount|floatformat:2 }} &euro;</li>{% endif %}
       <li><b>{% trans "Total" %} : {{ total|floatformat:2 }} &euro;</b></li>

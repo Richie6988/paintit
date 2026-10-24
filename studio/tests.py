@@ -395,7 +395,7 @@ class SupplierPaletteTests(TestCase):
             "color_specifications": [{"number": 1, "supplier_code": "A-01"},
                                      {"number": 2, "supplier_code": "B-07", "supplier_code_approx": True},
                                      {"number": 3, "hex": "#123456"}]})
-        for part in ("PAINTIT ORDER / 订单  AB12-CD34", "Marie Curie", "+33 612345678", "40 x 50 cm", "YES / 是",
+        for part in ("PAINTIT ORDER / 订单  AB12-CD34", "Marie Curie", "+33 612345678", "40 x 50 cm", "Unframed / 无框 (WF)", "WF-40x50-24C",
                      "A-01", "B-07 *", "#123456", "closest code"):
             self.assertIn(part, txt)
         self.assertNotIn("price", txt.lower())
@@ -541,7 +541,7 @@ class WooConnectorTests(TestCase):
         self.assertEqual(r["X-WC-Total"], "1")
         o = r.json()["orders"][0]
         self.assertEqual((o["order_number"], o["status"]), (self.o.uid, "processing"))
-        self.assertEqual(o["line_items"][0]["sku"], "PBN-40x50-24C")
+        self.assertEqual(o["line_items"][0]["sku"], "WF-40x50-24C")
         self.assertEqual(o["shipping_address"]["country"], "FR")
         self.assertTrue(any(m["key"] == "Fichiers (ZIP)" for m in o["line_items"][0]["meta"]))
         self.assertNotIn("cost", str(o))
@@ -708,7 +708,7 @@ class TwelveColorsSupplierTests(TestCase):
         Order.objects.filter(pk=o.pk).update(colors=12)
         o.refresh_from_db()
         self.assertEqual(o.colors, 12)                                   # client inchange
-        self.assertEqual(shopify.sku_for("40x50", o.colors), "PBN-40x50-24C")
+        self.assertEqual(shopify.sku_for("40x50", o.colors), "WF-40x50-24C")
         self.assertIn(("Couleurs", "24"), shopify.line_properties(o))
         specs = double_for_supplier([{"number": i, "supplier_code": str(i)} for i in range(1, 13)])
         self.assertEqual(len(specs), 24)
@@ -1789,3 +1789,41 @@ class ParcelsappTrackingTests(TestCase):
         with mock.patch.object(parcel, "_pa_http", return_value={"request_id": "r2", "done": False, "results": []}):
             self.assertEqual(parcel.check(o2, force=True), "recherche en cours")
         self.assertEqual(o2.parcel["pa_req"], "r2")
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+class FrameOptionTests(TestCase):
+    """Avec cadre -> SKU BK + prix d'achat du produit cadre ; sans cadre -> WF ; jamais de ligne pinceaux."""
+    def test_framed_flow(self):
+        from studio import shopify, woo_api, integrations
+        from studio.models import Supplier, KitFormat
+        kf, _ = KitFormat.objects.update_or_create(width_cm=40, height_cm=50, defaults=dict(
+            price=34.9, frame_price=12, frame_available=True, available=True))
+        grid = dict(Supplier.GRID_TEMPLATE, currency="EUR", fx=1.0)
+        sup = Supplier.objects.create(name="Y", integration="woo", offer={"grid": grid})
+        keys = woo_api.generate_keys(sup)
+        o = make_order(uid="FRAME000-0001", status=Order.FULFILLED)
+        Order.objects.filter(pk=o.pk).update(framed=True, brushes=True, brushes_amount=3)
+        o.refresh_from_db()
+        self.assertTrue(integrations.dispatch({"uid": o.uid}, {}, sup=sup))
+        r = self.client.get("/wc-api/v3/orders", {"consumer_key": keys["ck"], "consumer_secret": keys["cs"]})
+        lines = r.json()["orders"][0]["line_items"]
+        self.assertEqual([l["sku"] for l in lines], ["BK-40x50-24C"])          # pas de ligne pinceaux
+        self.assertEqual(float(lines[0]["price"]), 8.8)                         # grille : DIY frame kit 40x50
+        self.assertEqual(shopify.supplier_amounts(o, sup)[1], 0.0)
+        self.assertIn(("Finish / 款式", "Framed / 带框 (BK)"), shopify.line_properties(o))
+        self.assertIn("BK", [i["finish"] for i in shopify.catalogue(sup)])
+        # parcours client : option cadre a l'apercu -> prix + cadre
+        s = self.client.session
+        s["order"] = {"uid": "X", "colors": 24, "width_cm": 40, "height_cm": 50, "orientation": "portrait",
+                      "format_label": "40 x 50 cm", "canvas_price": 42.9, "price": 42.9}
+        s.save()
+        self.client.post("/preview/options/", {"kit_format": kf.id, "framed": "1"})
+        od = self.client.session["order"]
+        self.assertTrue(od["framed"])
+        self.assertAlmostEqual(od["canvas_price"], 34.9 + Pricing_color(24) + 12, places=2)
+
+
+def Pricing_color(n):
+    from studio.models import Pricing
+    return Pricing.get().color_price(n)

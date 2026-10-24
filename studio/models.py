@@ -153,6 +153,7 @@ class Order(models.Model):
     colors = models.IntegerField()
     difficulty = models.CharField(max_length=12, default="moyen")
     brushes = models.BooleanField(default=False)
+    framed = models.BooleanField("Avec cadre", default=False)
     brushes_amount = models.FloatField(default=0.0)
     price = models.FloatField()          # sous-total produit (toile + pinceaux)
     cost = models.FloatField(default=0.0)
@@ -511,6 +512,9 @@ class KitFormat(models.Model):
     height_cm = models.PositiveIntegerField("Hauteur (cm)", default=50)
     price = models.DecimalField("Prix (EUR)", max_digits=7, decimal_places=2, default=34.90)
     available = models.BooleanField("Disponible", default=True)
+    # Option « avec cadre » (toile tendue sur chassis bois, SKU fournisseur BK ; sans cadre = WF)
+    frame_price = models.DecimalField("Supplément cadre (EUR)", max_digits=7, decimal_places=2, default=12.00)
+    frame_available = models.BooleanField("Cadre disponible", default=True)
     sort = models.PositiveIntegerField("Ordre", default=0)
 
     class Meta:
@@ -698,11 +702,21 @@ class Supplier(models.Model):
         d = self.offer_get(group, key)
         return d.get("cost") if d.get("on") else None
 
-    def goods_cost(self, fmt_key, colors, brushes=False):
-        """Prix d'achat produit (EUR, hors livraison/taxes) ou None."""
+    def grid_frame_product(self):
+        """Produit « kit avec cadre » du devis (SKU BK) : cle contenant « frame », sinon 1er produit non-kit."""
+        prods = self.grid().get("products") or []
+        return next((p for p in prods if "frame" in str(p.get("key", "")).lower() and not p.get("kit")),
+                    next((p for p in prods if not p.get("kit")), None))
+
+    def _grid_product(self, framed):
+        return ((self.grid_frame_product() if framed else self.grid_kit_product()) or {}).get("key")
+
+    def goods_cost(self, fmt_key, colors, brushes=False, framed=False):
+        """Prix d'achat produit (EUR, hors livraison/taxes) ou None. Les pinceaux ne sont pas commandes au
+        fournisseur (bonus PaintIt) : `brushes` n'ajoute que le cout eventuel saisi dans son offre."""
         colors = supplier_color_count(colors)
         if self.grid():
-            p = self.grid_goods(fmt_key, colors)
+            p = self.grid_goods(fmt_key, colors, self._grid_product(framed))
             if p is None:
                 return None
             g = p * self.grid_fx()
@@ -711,6 +725,11 @@ class Supplier(models.Model):
             if f is None:
                 return None
             g = f + (self.offer_cost("colors", colors) or 0.0)
+            if framed:
+                fr = self.offer_cost("extras", "frame")
+                if fr is None:
+                    return None
+                g += fr
         return round(g + ((self.offer_cost("extras", "brushes") or 0.0) if brushes else 0.0), 2)
 
     def taxes(self):
@@ -718,16 +737,16 @@ class Supplier(models.Model):
         return {"vat_rate": float(t.get("vat_rate") or 0), "vat_recoverable": bool(t.get("vat_recoverable", True)),
                 "duties_rate": float(t.get("duties_rate") or 0), "customs_fee": float(t.get("customs_fee") or 0)}
 
-    def order_cost(self, fmt_key, colors, brushes=False, country="FR"):
+    def order_cost(self, fmt_key, colors, brushes=False, country="FR", framed=False):
         """Cout de revient d'une commande chez ce fournisseur (EUR) : produit + droits + livraison + frais
         (+ TVA fournisseur si non recuperable). None si le format, les couleurs ou la livraison ne sont pas tarifes."""
         colors = supplier_color_count(colors)
-        goods = self.goods_cost(fmt_key, colors, brushes)
+        goods = self.goods_cost(fmt_key, colors, brushes, framed)
         if goods is None:
             return None
         sh = (self.offer or {}).get("shipping") or {}
         if self.grid():
-            ship = self.grid_shipping(fmt_key, colors, country)
+            ship = self.grid_shipping(fmt_key, colors, country, self._grid_product(framed))
             if ship is None:
                 return None
             ship *= self.grid_fx()

@@ -1960,3 +1960,24 @@ msgstr "Spedizione: Unione Europea, Stati Uniti, Regno Unito, Nuova Zelanda."
 
 msgid "Désolé, nous ne livrons pas encore ce pays."
 msgstr "Spiacenti, non spediamo ancora in questo paese."
+
+msgid "Finition"
+msgstr "Finitura"
+
+msgid "Sans cadre"
+msgstr "Senza telaio"
+
+msgid "toile roulée"
+msgstr "tela arrotolata"
+
+msgid "Avec cadre"
+msgstr "Con telaio"
+
+msgid "tendue sur châssis bois, prête à peindre"
+msgstr "tesa su telaio in legno, pronta da dipingere"
+
+msgid "avec cadre"
+msgstr "con telaio"
+
+msgid "sans cadre"
+msgstr "senza telaio"

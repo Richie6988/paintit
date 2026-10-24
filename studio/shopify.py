@@ -138,8 +138,16 @@ def test(sup):
 
 
 # ---------------------------------------------------------------- catalogue
-def sku_for(fmt_key, colors):
-    return "PBN-%s-%dC" % (fmt_key, supplier_color_count(colors))   # 12 couleurs -> kit fournisseur 24
+FRAMED_PREFIX, UNFRAMED_PREFIX = "BK", "WF"      # codes du fournisseur : BK = kit avec cadre, WF = sans cadre
+
+
+def sku_for(fmt_key, colors, framed=False):
+    """SKU fournisseur : BK-40x50-24C (avec cadre) / WF-40x50-24C (sans cadre) ; 12 couleurs -> kit 24."""
+    return "%s-%s-%dC" % (FRAMED_PREFIX if framed else UNFRAMED_PREFIX, fmt_key, supplier_color_count(colors))
+
+
+def finish_label(framed):
+    return "Framed / 带框 (BK)" if framed else "Unframed / 无框 (WF)"
 
 
 def catalogue(sup=None):
@@ -148,29 +156,34 @@ def catalogue(sup=None):
     p = Pricing.get()
     out = []
     for kf in KitFormat.objects.filter(available=True):
-        for n in p.available_colors():
-            if any(i["sku"] == sku_for(kf.key, n) for i in out):
-                continue              # 12 couleurs = meme variante fournisseur que 24
-            out.append({"format": kf.key, "colors": supplier_color_count(n), "sku": sku_for(kf.key, n),
-                        "price": round(float(kf.price) + p.color_price(n), 2)})
+        for framed in ((False, True) if kf.frame_available else (False,)):
+            for n in p.available_colors():
+                if any(i["sku"] == sku_for(kf.key, n, framed) for i in out):
+                    continue              # 12 couleurs = meme variante fournisseur que 24
+                out.append({"format": kf.key, "colors": supplier_color_count(n), "framed": framed,
+                            "finish": UNFRAMED_PREFIX if not framed else FRAMED_PREFIX,
+                            "sku": sku_for(kf.key, n, framed),
+                            "price": round(float(kf.price) + p.color_price(n) + (float(kf.frame_price) if framed else 0), 2)})
     return out
 
 
 def sync_catalogue(sup):
-    """Cree / met a jour le produit Shopify (une variante par format x couleurs, SKU PBN-40x50-24C)
-    + le produit « Set de pinceaux ». Le fournisseur associe ces SKU a ses produits dans son ERP."""
+    """Cree / met a jour le produit Shopify (une variante par format x couleurs x finition, SKU WF-40x50-24C /
+    BK-40x50-24C). Le fournisseur associe ces SKU a ses produits dans son ERP."""
     items = catalogue(sup)
     if not items:
         raise ShopifyError("Aucun format/couleur disponible dans l'onglet Tarifs.")
     fmts = list(dict.fromkeys(i["format"] for i in items))
     cols = list(dict.fromkeys(str(i["colors"]) for i in items))
+    fins = list(dict.fromkeys(i["finish"] for i in items))
     c = cfg(sup)
 
     def variants(sku_inside):
         vs = []
         for i in items:
             v = {"optionValues": [{"optionName": "Format", "name": i["format"]},
-                                  {"optionName": "Couleurs", "name": str(i["colors"])}],
+                                  {"optionName": "Couleurs", "name": str(i["colors"])},
+                                  {"optionName": "Finition", "name": i["finish"]}],
                  "price": "%.2f" % i["price"]}
             if sku_inside:
                 v["inventoryItem"] = {"sku": i["sku"], "tracked": False, "requiresShipping": True}
@@ -184,7 +197,8 @@ def sync_catalogue(sup):
              userErrors { field message } } }"""
     base = {"title": PRODUCT_TITLE, "vendor": "PaintIt", "productType": "Paint by numbers", "status": "ACTIVE",
             "tags": [TAG], "productOptions": [{"name": "Format", "values": [{"name": f} for f in fmts]},
-                                               {"name": "Couleurs", "values": [{"name": x} for x in cols]}]}
+                                               {"name": "Couleurs", "values": [{"name": x} for x in cols]},
+                                               {"name": "Finition", "values": [{"name": x} for x in fins]}]}
     if c.get("product_id"):
         base["id"] = c["product_id"]
     res, err = None, ""
@@ -201,28 +215,8 @@ def sync_catalogue(sup):
         raise ShopifyError("Création du produit impossible : %s" % (err or "réponse vide"))
     prod = res["product"]
     vmap = {n["sku"]: n["id"] for n in prod["variants"]["nodes"] if n.get("sku")}
-    # Set de pinceaux (produit separe, SKU fixe)
-    bq = {"title": "PaintIt - Set de pinceaux", "vendor": "PaintIt", "status": "ACTIVE", "tags": [TAG],
-          "productOptions": [{"name": "Title", "values": [{"name": "Default Title"}]}]}
-    if c.get("brush_product_id"):
-        bq["id"] = c["brush_product_id"]
-    from .models import Pricing
-    bprice = "%.2f" % Pricing.get().brushes_price
-    brush_id = c.get("brush_product_id")
-    for sku_inside in (True, False):
-        v = {"optionValues": [{"optionName": "Title", "name": "Default Title"}], "price": bprice}
-        v.update({"inventoryItem": {"sku": BRUSH_SKU, "tracked": False, "requiresShipping": True}} if sku_inside
-                 else {"sku": BRUSH_SKU})
-        try:
-            r2 = gql(sup, q, {"input": dict(bq, variants=[v])}).get("productSet") or {}
-        except ShopifyError:
-            continue
-        if not _user_errors(r2) and r2.get("product"):
-            brush_id = r2["product"]["id"]
-            for n in r2["product"]["variants"]["nodes"]:
-                vmap[n.get("sku") or BRUSH_SKU] = n["id"]
-            break
-    _save(sup, product_id=prod["id"], brush_product_id=brush_id, variants=vmap,
+    # Pas de produit « pinceaux » chez le fournisseur : ils ne lui sont pas commandes (bonus PaintIt)
+    _save(sup, product_id=prod["id"], variants=vmap,
           catalogue_synced=timezone.now().isoformat(timespec="seconds"))
     return len(vmap)
 
@@ -249,7 +243,8 @@ def _phone(code, number):
 def variant_title(order):
     """Titre de variante tel que Shopify l'affiche (options Format / Couleurs) : « 40x50 / 24 »."""
     from .models import format_key
-    return "%s / %d" % (format_key(order.width_cm, order.height_cm), supplier_color_count(order.colors))
+    return "%s / %d / %s" % (format_key(order.width_cm, order.height_cm), supplier_color_count(order.colors),
+                             FRAMED_PREFIX if order.framed else UNFRAMED_PREFIX)
 
 
 def supplier_amounts(order, sup=None):
@@ -258,11 +253,8 @@ def supplier_amounts(order, sup=None):
     from .models import format_key, Supplier
     sup = sup or getattr(order, "supplier", None) or Supplier.for_checkout("kit")
     fmt = format_key(order.width_cm, order.height_cm)
-    canvas = (sup.goods_cost(fmt, order.colors, False) if sup else None) or 0.0
-    brushes = 0.0
-    if order.brushes and sup:
-        withb = sup.goods_cost(fmt, order.colors, True)
-        brushes = max(0.0, round((withb or 0.0) - canvas, 2))
+    canvas = (sup.goods_cost(fmt, order.colors, False, bool(getattr(order, "framed", False))) if sup else None) or 0.0
+    brushes = 0.0          # pinceaux : pas commandes au fournisseur (bonus PaintIt)
     return round(canvas, 2), brushes, round(canvas + brushes, 2)
 
 
@@ -277,6 +269,7 @@ def line_properties(order):
             ("All files / 全部文件", production_url(u)),
             ("Format", "%s (%s)" % (order.format_label, order.orientation)),
             ("Couleurs", str(supplier_color_count(order.colors))),
+            ("Finish / 款式", finish_label(order.framed)),
             ("Poster (print, put in parcel / 打印放入包裹)", file_url(u, "%s_poster.png" % u)),
             ("Toile numérotée (TIFF)", file_url(u, "%s_template.tiff" % u)),
             ("Order sheet / 订单 (TXT)", file_url(u, "%s_supplier.txt" % u)),
@@ -288,8 +281,9 @@ def line_properties(order):
 def _short_note(order):
     """Remarque courte (les ERP tronquent ou ignorent les remarques longues) : un seul lien vers tous les fichiers."""
     from .security import production_url
-    return "PaintIt %s | %s, %s colors / 色\nAll files / 全部文件: %s" % (
-        order.uid, order.format_label, supplier_color_count(order.colors), production_url(order.uid))
+    return "PaintIt %s | %s, %s colors / 色, %s\nAll files / 全部文件: %s" % (
+        order.uid, order.format_label, supplier_color_count(order.colors), finish_label(order.framed),
+        production_url(order.uid))
 
 
 def push_order(sup, order, files):
@@ -300,7 +294,7 @@ def push_order(sup, order, files):
     c = cfg(sup)
     from .models import format_key
     fmt = format_key(order.width_cm, order.height_cm)
-    sku = sku_for(fmt, order.colors)
+    sku = sku_for(fmt, order.colors, order.framed)
     variant = (c.get("variants") or {}).get(sku)
     cur = c.get("currency") or "EUR"
     # le fournisseur voit son prix d'achat, pas notre prix de vente
@@ -311,16 +305,10 @@ def push_order(sup, order, files):
     if variant:
         li["variantId"] = variant
     else:   # catalogue pas encore synchronise : ligne personnalisee avec le SKU
-        li.update({"title": "PaintIt %s · %d couleurs" % (order.format_label, supplier_color_count(order.colors)), "sku": sku,
+        li.update({"title": "PaintIt %s · %d couleurs · %s" % (order.format_label, supplier_color_count(order.colors),
+                                                                finish_label(order.framed)), "sku": sku,
                    "requiresShipping": True})
-    lines = [li]
-    if order.brushes:
-        b = {"quantity": 1, "priceSet": {"shopMoney": {"amount": "%.2f" % brush_amt, "currencyCode": cur}}}
-        if (c.get("variants") or {}).get(BRUSH_SKU):
-            b["variantId"] = c["variants"][BRUSH_SKU]
-        else:
-            b.update({"title": "Set de pinceaux", "sku": BRUSH_SKU, "requiresShipping": True})
-        lines.append(b)
+    lines = [li]                 # pas de ligne pinceaux : non commandes au fournisseur
     first, last = _split_name(order.customer_name)
     iso = (address.COUNTRIES.get(order.country) or ("FR",))[0]
     phone = _phone(order.phone_code, order.phone)

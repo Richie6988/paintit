@@ -514,7 +514,8 @@ def preview(request):
     for kf in KitFormat.objects.filter(available=True):
         fw, fh = _oriented(kf)
         formats.append({"id": kf.id, "label": "%d x %d cm" % (fw, fh), "w": fw, "h": fh,
-                        "ratio": round(fw / fh, 3), "price": round(float(kf.price) + p.color_price(colors), 2)})
+                        "ratio": round(fw / fh, 3), "price": round(float(kf.price) + p.color_price(colors), 2),
+                        "frame": round(float(kf.frame_price), 2) if kf.frame_available else None})
     gw, gh = order.get("gen_w") or order.get("width_cm"), order.get("gen_h") or order.get("height_cm")
     gen_ratio = round(float(gw) / float(gh), 3) if gw and gh else None
     current_format = next((fm["id"] for fm in formats
@@ -524,7 +525,9 @@ def preview(request):
     # aligne le prix affiche sur le format courant
     if formats:
         cf = next((fm for fm in formats if fm["id"] == current_format), formats[0])
-        order["canvas_price"] = cf["price"]
+        if order.get("framed") and cf["frame"] is None:
+            order["framed"] = False                     # cadre plus propose pour ce format
+        order["canvas_price"] = round(cf["price"] + (cf["frame"] if order.get("framed") else 0), 2)
         order["width_cm"], order["height_cm"], order["format_label"] = cf["w"], cf["h"], cf["label"]
         order["price"] = round(cf["price"] + order.get("brushes_amount", 0.0), 2)
         request.session["order"] = order
@@ -537,7 +540,8 @@ def preview(request):
     return render(request, "studio/preview.html",
                   {"order": order, "brushes_price": p.brushes_price, "formats": formats, "level": level,
                    "gen_ratio": gen_ratio, "gen_w": gw, "gen_h": gh,
-                   "current_format": current_format,
+                   "current_format": current_format, "framed": bool(order.get("framed")),
+                   "frame_any": any(fm["frame"] is not None for fm in formats),
                    "brushes_available": p.av_brushes})
 
 
@@ -586,14 +590,19 @@ def set_options(request):
         p = Pricing.get()
         from .models import KitFormat
         fmt_id = request.POST.get("kit_format")
-        if fmt_id:
-            kf = KitFormat.objects.filter(id=fmt_id, available=True).first()
-            if kf:
-                a, b = sorted((kf.width_cm, kf.height_cm))
-                fw, fh = (b, a) if order.get("orientation") == "paysage" else (a, b)
-                order["width_cm"], order["height_cm"] = fw, fh
-                order["format_label"] = "%d x %d cm" % (fw, fh)
-                order["canvas_price"] = round(float(kf.price) + p.color_price(order.get("colors", 24)), 2)
+        kf = KitFormat.objects.filter(id=fmt_id, available=True).first() if fmt_id else None
+        if not kf:      # format courant (pas de changement de format dans le formulaire)
+            a, b = sorted((int(order.get("width_cm") or 40), int(order.get("height_cm") or 50)))
+            kf = KitFormat.objects.filter(width_cm=a, height_cm=b, available=True).first()
+        if kf:
+            a, b = sorted((kf.width_cm, kf.height_cm))
+            fw, fh = (b, a) if order.get("orientation") == "paysage" else (a, b)
+            order["width_cm"], order["height_cm"] = fw, fh
+            order["format_label"] = "%d x %d cm" % (fw, fh)
+            framed = request.POST.get("framed") == "1" and kf.frame_available
+            order["framed"] = framed
+            order["canvas_price"] = round(float(kf.price) + p.color_price(order.get("colors", 24))
+                                          + (float(kf.frame_price) if framed else 0), 2)
         brushes = bool(request.POST.get("brushes")) and p.av_brushes
         bp = p.brushes_price if brushes else 0.0
         order["brushes"] = brushes
@@ -1393,6 +1402,7 @@ def _upsert_order(o, shipping, status, supplier_ref=None):
         "width_cm": o["width_cm"], "height_cm": o["height_cm"], "colors": o["colors"],
         "difficulty": o.get("difficulty", "auto"),
         "brushes": bool(o.get("brushes")), "brushes_amount": o.get("brushes_amount", 0.0),
+        "framed": bool(o.get("framed")),
         "price": o["price"], "cost": supplier.estimate_cost(o, shipping),
         "discount_code": d["code"] if d else None, "discount_amount": d["amount"] if d else 0.0,
         "total": o.get("total", o["price"]),
@@ -1587,7 +1597,7 @@ def _order_from_row(r):
     return {"uid": r.uid, "format_label": r.format_label, "orientation": r.orientation,
             "width_cm": r.width_cm, "height_cm": r.height_cm, "colors": r.colors,
             "difficulty": r.difficulty, "brushes": r.brushes, "brushes_amount": r.brushes_amount,
-            "canvas_price": canvas, "price": r.price, "discount": discount, "total": r.total,
+            "framed": r.framed, "canvas_price": canvas, "price": r.price, "discount": discount, "total": r.total,
             "lang": r.lang}
 
 
@@ -2017,7 +2027,9 @@ def shop_pricing(request):
             return redirect("studio:shop_pricing")
         # Disponibilites du Kit = ce que le fournisseur actif propose
         for kf in _KF.objects.all():
-            kf.available = bool(sup.offer_get("formats", kf.key).get("on")); kf.save(update_fields=["available"])
+            kf.available = bool(sup.offer_get("formats", kf.key).get("on"))
+            kf.frame_available = sup.goods_cost(kf.key, 24, False, True) is not None    # kit BK tarife chez lui
+            kf.save(update_fields=["available", "frame_available"])
         for n in (12, 24, 36, 48):
             # 12 couleurs : proposees au client si le fournisseur fait 24 (chaque couleur en double)
             setattr(kit, "av_c%d" % n, bool(sup.offer_get("colors", supplier_color_count(n)).get("on")))
@@ -2036,6 +2048,8 @@ def shop_pricing(request):
                 kf.delete(); continue
             kf.price = f("fmt_price_%d" % kf.id, float(kf.price))
             kf.available = bb("fmt_av_%d" % kf.id)
+            kf.frame_price = f("fmt_frame_%d" % kf.id, float(kf.frame_price))
+            kf.frame_available = bb("fmt_frav_%d" % kf.id)
             kf.save()
         nw = request.POST.get("new_w"); nh = request.POST.get("new_h")
         if nw and nh:
@@ -2073,6 +2087,7 @@ def shop_pricing(request):
         for kf in kfs:
             d = sup.offer_get("formats", kf.key)
             kf.sup_on, kf.sup_cost = bool(d.get("on")), d.get("cost")
+            kf.sup_frame = sup.goods_cost(kf.key, 24, False, True)       # kit avec cadre (BK), 24 couleurs
         for c in kit_colors:
             d = sup.offer_get("colors", c["key"])
             c["sup_on"], c["sup_cost"] = bool(d.get("on")), d.get("cost")

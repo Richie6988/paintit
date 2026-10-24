@@ -185,6 +185,16 @@ def _print_size(oi):
         return "-"
 
 
+def _supplier_sku(oi):
+    from .shopify import sku_for
+    from .models import format_key
+    try:
+        return sku_for(format_key(oi.get("width_cm"), oi.get("height_cm")), oi.get("colors_count") or 24,
+                       bool(oi.get("framed")))
+    except Exception:
+        return ""
+
+
 def double_for_supplier(specs):
     """Kit fournisseur au minimum SUPPLIER_MIN_COLORS pots : 12 couleurs -> chaque couleur en 2 pots (meme numero
     sur la toile, surface partagee entre les 2). Au-dela, liste inchangee."""
@@ -216,7 +226,8 @@ def supplier_text(sj):
          "Size / 尺寸:            %s x %s cm (%s)" % (oi.get("width_cm"), oi.get("height_cm"), oi.get("orientation", "")),
          "Print file / 印刷尺寸:  %s (%g cm white border / %g厘米白边)" % (_print_size(oi), PAD_CM, PAD_CM),
          "Colors / 颜色数量:      %s" % oi.get("colors_count", ""),
-         "Brushes / 画笔:         %s" % yn(oi.get("brushes")),
+         "Finish / 款式:          %s" % ("Framed / 带框 (BK)" if oi.get("framed") else "Unframed / 无框 (WF)"),
+         "SKU:                    %s" % (oi.get("sku") or _supplier_sku(oi)),
          "Files / 文件:           %s" % ", ".join((oi.get("files") or {}).values()),
          "", "CONSIGNEE / 收货人", "-" * 44,
          "Name / 姓名:            %s" % ci.get("full_name", ""),
@@ -566,6 +577,7 @@ def build(order, shipping):
             "format": order["format_label"], "orientation": order["orientation"],
             "width_cm": order["width_cm"], "height_cm": order["height_cm"],
             "colors_count": order["colors"], "brushes": bool(order.get("brushes")),
+            "framed": bool(order.get("framed")),
             "files": {
                 "template_svg": "%s_template.svg" % uid,
                 "template_tiff": "%s_template.tiff" % uid,
@@ -596,7 +608,8 @@ def build(order, shipping):
             "uid": uid, "created_at": oi["created_at"],
             "format": oi["format"], "orientation": oi["orientation"],
             "width_cm": oi["width_cm"], "height_cm": oi["height_cm"],
-            "colors_count": supplier_color_count(oi["colors_count"]), "brushes": oi["brushes"],
+            "colors_count": supplier_color_count(oi["colors_count"]), "framed": oi.get("framed", False),
+            "sku": _supplier_sku(oi),
             "files": {"template_tiff": "%s_template.tiff" % uid, "poster_png": "%s_poster.png" % uid},
         },
         "color_specifications": double_for_supplier(

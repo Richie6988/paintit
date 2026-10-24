@@ -44,12 +44,14 @@
       <div style="background:#fff;border:1px solid #e2e8f2;border-radius:14px;padding:18px">
         <h2 style="margin-top:0">Kit a peindre</h2>
         <h3>Formats disponibles</h3>
-        <table><tr><th>Format</th><th>Prix TTC (&euro;)</th><th>Dispo</th>{% if sup %}<th>Coût fourn.</th>{% endif %}<th></th></tr>
+        <table><tr><th>Format</th><th>Prix TTC (&euro;)</th><th>Dispo</th>{% if sup %}<th>Coût fourn.</th>{% endif %}<th>+ Cadre (&euro;)</th><th>Cadre dispo</th><th></th></tr>
         {% for kf in kit_formats %}<tr>
           <td><b>{{ kf.width_cm }} &times; {{ kf.height_cm }} cm</b></td>
           <td><span class="eur"><input type="number" step="0.01" name="fmt_price_{{ kf.id }}" value="{{ kf.price|unlocalize }}" style="width:100px"></span></td>
           <td style="text-align:center"><input type="checkbox" name="fmt_av_{{ kf.id }}" {% if kf.available %}checked{% endif %}></td>
           {% if sup %}<td class="supc">{% if kf.sup_on %}{% if kf.sup_cost is not None %}{{ kf.sup_cost|floatformat:2 }} €{% else %}<span class="warn">prix ?</span>{% endif %}{% else %}<span class="{% if kf.available %}bad{% else %}muted{% endif %}">non proposé</span>{% endif %}</td>{% endif %}
+          <td><span class="eur"><input type="number" step="0.01" name="fmt_frame_{{ kf.id }}" value="{{ kf.frame_price|unlocalize }}" style="width:80px"></span>{% if sup %}<div class="supc" style="font-size:.72rem">{% if kf.sup_frame is not None %}achat BK {{ kf.sup_frame|floatformat:2 }} €{% else %}<span class="warn">BK non tarifé</span>{% endif %}</div>{% endif %}</td>
+          <td style="text-align:center"><input type="checkbox" name="fmt_frav_{{ kf.id }}" {% if kf.frame_available %}checked{% endif %}></td>
           <td style="text-align:center"><label style="color:#c0392b;font-weight:600;font-size:.78rem;margin:0"><input type="checkbox" name="del_fmt_{{ kf.id }}"> suppr.</label></td>
         </tr>{% endfor %}
         <tr style="background:#f7f9fd">

@@ -107,6 +107,9 @@ def send_order_confirmation(order, shipping):
     canvas = money(order["price"] - brushes_amt)
     total = money(order.get("total", order["price"]))
     orient = T["orient"].get(order.get("orientation", ""), order.get("orientation", ""))
+    if order.get("framed"):
+        orient += ", " + {"fr": "avec cadre", "en": "framed", "de": "mit Rahmen", "es": "con marco",
+                          "it": "con telaio"}.get(lang, "framed")
     addr2 = (", " + shipping["address2"]) if shipping.get("address2") else ""
     phone = ("%s %s" % (shipping.get("phone_code", ""), shipping.get("phone", ""))).strip()
 

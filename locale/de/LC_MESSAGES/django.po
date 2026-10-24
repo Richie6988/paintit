@@ -1978,3 +1978,24 @@ msgstr ""
 
 msgid "Désolé, nous ne livrons pas encore ce pays."
 msgstr "Leider liefern wir noch nicht in dieses Land."
+
+msgid "Finition"
+msgstr "Ausführung"
+
+msgid "Sans cadre"
+msgstr "Ohne Rahmen"
+
+msgid "toile roulée"
+msgstr "gerollte Leinwand"
+
+msgid "Avec cadre"
+msgstr "Mit Rahmen"
+
+msgid "tendue sur châssis bois, prête à peindre"
+msgstr "auf Holzrahmen gespannt, malfertig"
+
+msgid "avec cadre"
+msgstr "mit Rahmen"
+
+msgid "sans cadre"
+msgstr "ohne Rahmen"

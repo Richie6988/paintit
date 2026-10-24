@@ -50,7 +50,7 @@
   <div class="erp-head" style="margin-top:6px">
     <div>
       <h1 style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">Commande {{ o.uid }} <span class="pill st-{{ o.status }}">{{ o.get_status_display }}</span>{% if o.is_test %}<span class="pill" style="background:#fff1d6;color:#8a4b00">Test</span>{% endif %}</h1>
-      <div class="muted">Passée le {{ o.created_at|date:"d/m/Y à H:i" }} · statut depuis {{ age }} j · {{ o.format_label }} · {{ o.colors }} couleurs{% if o.brushes %} · pinceaux{% endif %} · langue {{ o.lang }}</div>
+      <div class="muted">Passée le {{ o.created_at|date:"d/m/Y à H:i" }} · statut depuis {{ age }} j · {{ o.format_label }} · {{ o.colors }} couleurs · {% if o.framed %}avec cadre (BK){% else %}sans cadre (WF){% endif %}{% if o.brushes %} · pinceaux{% endif %} · langue {{ o.lang }}</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <a class="pbtn" href="/paint/{{ o.uid }}/" target="_blank">Voir le jeu</a>

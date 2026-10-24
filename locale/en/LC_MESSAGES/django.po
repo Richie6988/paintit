@@ -1936,3 +1936,24 @@ msgstr ""
 
 msgid "Désolé, nous ne livrons pas encore ce pays."
 msgstr "Sorry, we don't ship to this country yet."
+
+msgid "Finition"
+msgstr "Finish"
+
+msgid "Sans cadre"
+msgstr "Unframed"
+
+msgid "toile roulée"
+msgstr "rolled canvas"
+
+msgid "Avec cadre"
+msgstr "Framed"
+
+msgid "tendue sur châssis bois, prête à peindre"
+msgstr "stretched on a wooden frame, ready to paint"
+
+msgid "avec cadre"
+msgstr "framed"
+
+msgid "sans cadre"
+msgstr "unframed"

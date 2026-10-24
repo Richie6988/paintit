@@ -1948,3 +1948,24 @@ msgstr "Envío: Unión Europea, Estados Unidos, Reino Unido, Nueva Zelanda."
 
 msgid "Désolé, nous ne livrons pas encore ce pays."
 msgstr "Lo sentimos, aún no enviamos a este país."
+
+msgid "Finition"
+msgstr "Acabado"
+
+msgid "Sans cadre"
+msgstr "Sin marco"
+
+msgid "toile roulée"
+msgstr "lienzo enrollado"
+
+msgid "Avec cadre"
+msgstr "Con marco"
+
+msgid "tendue sur châssis bois, prête à peindre"
+msgstr "tensado en bastidor de madera, listo para pintar"
+
+msgid "avec cadre"
+msgstr "con marco"
+
+msgid "sans cadre"
+msgstr "sin marco"
