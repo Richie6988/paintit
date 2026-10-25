@@ -302,6 +302,7 @@
   <div class="stat stat-zones"><small>{% trans "Zones" %}</small><span id="zones">0/0</span></div>
   <div class="sp"></div>
   <button type="button" class="btn iconbtn" id="shareBtn" title="{% trans 'Partager · peindre à plusieurs' %}" aria-label="{% trans 'Partager · peindre à plusieurs' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+  {% if dl_formats %}<button type="button" class="btn iconbtn" id="dlBtn" title="{% trans 'Télécharger ma toile à imprimer' %}" aria-label="{% trans 'Télécharger ma toile à imprimer' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button>{% endif %}
   <button type="button" class="kitbtn" id="kitBtn" title="{% trans 'Commander le kit à peindre' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg><span class="kb-t">{% trans "Commander le kit" %}</span></button>
   <button class="btn iconbtn" id="helpBtn" title="Help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.4 1.9-2.4 3.5"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
   <button class="btn iconbtn" id="full" title="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
@@ -354,6 +355,42 @@
   <div class="big" id="finalScore">0</div><p style="color:var(--muted)">{% trans "Bravo, votre toile est complète." %}</p>
   <a class="kitbtn" href="{{ kit_url }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>{% trans "La peindre en vrai : commander le kit" %}</a>
   <button class="btn pri" id="winok" style="margin-top:10px">{% trans "Continuer" %}</button></div></div>
+{% if dl_formats %}<div class="paywall" id="dlsheet"><div class="pw-card">
+  <h2>{% trans "Télécharger ma toile" %}</h2>
+  {% if can_dl %}
+  <p style="color:var(--muted)">{% trans "Toile numérotée haute définition (TIFF) + poster des couleurs, à imprimer vous-même. Choisissez le format :" %}</p>
+  <select id="dlFmt" style="width:100%;height:42px;border-radius:10px;font:inherit;padding:0 10px">{% for i, l in dl_formats %}<option value="{{ i }}">{{ l }}</option>{% endfor %}</select>
+  <a class="kitbtn" id="dlGo" href="{% url 'studio:paint_download' uid %}" style="display:flex;justify-content:center;height:44px;margin-top:12px">{% trans "Télécharger (ZIP)" %}</a>
+  <p id="dlWait" hidden style="color:var(--muted);font-size:.85rem;margin:8px 0 0">{% trans "Préparation du fichier… le téléchargement démarre dans quelques secondes." %}</p>
+  {% else %}
+  <p style="color:var(--muted)">{% trans "Achetez la toile pour la télécharger en haute définition au format de votre choix, avec son poster des couleurs." %}</p>
+  <button type="button" class="btn pri" id="dlPay" style="width:100%;justify-content:center;font:inherit;font-weight:700;padding:10px">{% if dl_buy %}{% trans "Acheter la toile" %}{% else %}{% trans "Acheter et télécharger" %} · 0,99&nbsp;&euro;{% endif %}</button>
+  {% endif %}
+  <button type="button" class="btn" id="dlClose" style="width:100%;justify-content:center;margin-top:10px">{% trans "Fermer" %}</button>
+</div></div>
+<script>
+(function(){
+  var sh = document.getElementById('dlsheet'), b = document.getElementById('dlBtn');
+  function open(){ sh.classList.add('show'); }
+  if (b) b.addEventListener('click', open);
+  document.getElementById('dlClose').addEventListener('click', function(){ sh.classList.remove('show'); });
+  var go = document.getElementById('dlGo'), fmt = document.getElementById('dlFmt'), base = go ? go.getAttribute('href') : '';
+  function setHref(){ if (go) go.href = base + '?f=' + encodeURIComponent(fmt.value); }
+  if (fmt) { fmt.addEventListener('change', setHref); setHref(); }
+  if (go) go.addEventListener('click', function(){ var w = document.getElementById('dlWait'); w.hidden = false;
+    setTimeout(function(){ w.hidden = true; }, 15000); });
+  var pay = document.getElementById('dlPay');
+  if (pay) pay.addEventListener('click', function(){
+    {% if dl_buy %}location.href = "{{ dl_buy|escapejs }}"; return;{% endif %}
+    var fd = new FormData(); fd.append('dl', '1');
+    fetch("{% url 'studio:paint_confirm' uid %}", {method: 'POST', body: fd,
+          headers: {'X-CSRFToken': '{{ csrf_token }}'}})
+      .then(function(r){ return r.json(); }).then(function(d){ if (d && d.redirect) location.href = d.redirect; });
+  });
+  {% if request.GET.dl and can_dl %}open(); if (go) go.click();{% endif %}
+})();
+</script>
+{% endif %}
 <div class="paywall sharesheet" id="sharesheet"><div class="pw-card">
   <h2>{% trans "Partager" %}</h2>
   <div class="sh-tabs"><button type="button" class="on" data-tab="img">{% trans "Montrer ma toile" %}</button>{% if can_collab %}<button type="button" data-tab="collab">{% trans "Peindre à plusieurs" %}</button>{% endif %}</div>

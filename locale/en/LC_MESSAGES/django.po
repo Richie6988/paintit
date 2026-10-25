@@ -1957,3 +1957,52 @@ msgstr "framed"
 
 msgid "sans cadre"
 msgstr "unframed"
+
+msgid "Toile digitale jouable"
+msgstr "Playable digital canvas"
+
+msgid "Télécharger ma toile"
+msgstr "Download my canvas"
+
+msgid ""
+"Toile numérotée haute définition (TIFF) au format de votre choix + poster "
+"des couleurs, à imprimer vous-même. Inclut la toile digitale jouable."
+msgstr ""
+"High-definition numbered canvas (TIFF) in the size of your choice + colour "
+"poster, to print yourself. Includes the playable digital canvas."
+
+msgid "Paiement indisponible pour le moment, réessayez dans un instant."
+msgstr "Payment unavailable right now, please try again in a moment."
+
+msgid "Télécharger ma toile à imprimer"
+msgstr "Download my canvas to print"
+
+msgid ""
+"Toile numérotée haute définition (TIFF) + poster des couleurs, à imprimer "
+"vous-même. Choisissez le format :"
+msgstr ""
+"High-definition numbered canvas (TIFF) + colour poster, to print yourself. "
+"Choose the size:"
+
+msgid "Télécharger (ZIP)"
+msgstr "Download (ZIP)"
+
+msgid ""
+"Préparation du fichier… le téléchargement démarre dans quelques secondes."
+msgstr "Preparing the file… the download starts in a few seconds."
+
+msgid ""
+"Achetez la toile pour la télécharger en haute définition au format de votre "
+"choix, avec son poster des couleurs."
+msgstr ""
+"Buy the canvas to download it in high definition in the size of your choice,"
+" with its colour poster."
+
+msgid "Acheter la toile"
+msgstr "Buy the canvas"
+
+msgid "Acheter et télécharger"
+msgstr "Buy and download"
+
+msgid "Trop de téléchargements en peu de temps. Réessayez plus tard."
+msgstr "Too many downloads in a short time. Please try again later."

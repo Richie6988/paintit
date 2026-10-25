@@ -1999,3 +1999,52 @@ msgstr "mit Rahmen"
 
 msgid "sans cadre"
 msgstr "ohne Rahmen"
+
+msgid "Toile digitale jouable"
+msgstr "Spielbare digitale Leinwand"
+
+msgid "Télécharger ma toile"
+msgstr "Mein Bild herunterladen"
+
+msgid ""
+"Toile numérotée haute définition (TIFF) au format de votre choix + poster "
+"des couleurs, à imprimer vous-même. Inclut la toile digitale jouable."
+msgstr ""
+"Nummerierte Leinwand in hoher Auflösung (TIFF) im Format Ihrer Wahl + "
+"Farbposter, zum Selbstdrucken. Inklusive spielbarer digitaler Leinwand."
+
+msgid "Paiement indisponible pour le moment, réessayez dans un instant."
+msgstr "Zahlung derzeit nicht verfügbar, bitte gleich erneut versuchen."
+
+msgid "Télécharger ma toile à imprimer"
+msgstr "Mein Bild zum Drucken herunterladen"
+
+msgid ""
+"Toile numérotée haute définition (TIFF) + poster des couleurs, à imprimer "
+"vous-même. Choisissez le format :"
+msgstr ""
+"Nummerierte Leinwand in hoher Auflösung (TIFF) + Farbposter, zum "
+"Selbstdrucken. Format wählen:"
+
+msgid "Télécharger (ZIP)"
+msgstr "Herunterladen (ZIP)"
+
+msgid ""
+"Préparation du fichier… le téléchargement démarre dans quelques secondes."
+msgstr "Datei wird vorbereitet… der Download startet in wenigen Sekunden."
+
+msgid ""
+"Achetez la toile pour la télécharger en haute définition au format de votre "
+"choix, avec son poster des couleurs."
+msgstr ""
+"Kaufen Sie das Bild, um es in hoher Auflösung im Format Ihrer Wahl mit "
+"Farbposter herunterzuladen."
+
+msgid "Acheter la toile"
+msgstr "Bild kaufen"
+
+msgid "Acheter et télécharger"
+msgstr "Kaufen und herunterladen"
+
+msgid "Trop de téléchargements en peu de temps. Réessayez plus tard."
+msgstr "Zu viele Downloads in kurzer Zeit. Bitte später erneut versuchen."

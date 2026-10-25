@@ -1969,3 +1969,52 @@ msgstr "con marco"
 
 msgid "sans cadre"
 msgstr "sin marco"
+
+msgid "Toile digitale jouable"
+msgstr "Lienzo digital jugable"
+
+msgid "Télécharger ma toile"
+msgstr "Descargar mi lienzo"
+
+msgid ""
+"Toile numérotée haute définition (TIFF) au format de votre choix + poster "
+"des couleurs, à imprimer vous-même. Inclut la toile digitale jouable."
+msgstr ""
+"Lienzo numerado en alta definición (TIFF) en el formato que elijas + póster "
+"de colores, para imprimir tú mismo. Incluye el lienzo digital jugable."
+
+msgid "Paiement indisponible pour le moment, réessayez dans un instant."
+msgstr "Pago no disponible por ahora, inténtalo de nuevo en un momento."
+
+msgid "Télécharger ma toile à imprimer"
+msgstr "Descargar mi lienzo para imprimir"
+
+msgid ""
+"Toile numérotée haute définition (TIFF) + poster des couleurs, à imprimer "
+"vous-même. Choisissez le format :"
+msgstr ""
+"Lienzo numerado en alta definición (TIFF) + póster de colores, para imprimir"
+" tú mismo. Elige el formato:"
+
+msgid "Télécharger (ZIP)"
+msgstr "Descargar (ZIP)"
+
+msgid ""
+"Préparation du fichier… le téléchargement démarre dans quelques secondes."
+msgstr "Preparando el archivo… la descarga empieza en unos segundos."
+
+msgid ""
+"Achetez la toile pour la télécharger en haute définition au format de votre "
+"choix, avec son poster des couleurs."
+msgstr ""
+"Compra el lienzo para descargarlo en alta definición en el formato que "
+"elijas, con su póster de colores."
+
+msgid "Acheter la toile"
+msgstr "Comprar el lienzo"
+
+msgid "Acheter et télécharger"
+msgstr "Comprar y descargar"
+
+msgid "Trop de téléchargements en peu de temps. Réessayez plus tard."
+msgstr "Demasiadas descargas en poco tiempo. Inténtalo más tarde."

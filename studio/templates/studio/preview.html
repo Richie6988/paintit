@@ -79,8 +79,27 @@
   <div class="digital-offer">
     <div class="do-txt"><b>{% trans "Découvrez votre toile avant de commander" %}</b>
       <span>{% trans "Testez-la en peignant quelques zones en ligne, gratuitement : vous voyez le rendu réel avant de passer commande." %}</span></div>
-    <a class="digibtn" href="{% url 'studio:digipaint' order.uid %}">{% trans "Tester ma toile" %}</a>
+    <div class="do-acts">
+      <a class="digibtn" href="{% url 'studio:digipaint' order.uid %}">{% trans "Tester ma toile" %}</a>
+      <button type="button" class="digibtn dl" id="dlBuy" data-cta="Aperçu · Télécharger ma toile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>{% trans "Télécharger ma toile" %} · {{ dl_price }}&nbsp;&euro;</button>
+    </div>
+    <small class="do-note">{% trans "Toile numérotée haute définition (TIFF) au format de votre choix + poster des couleurs, à imprimer vous-même. Inclut la toile digitale jouable." %}</small>
   </div>
+  <script>
+  (function(){
+    var b = document.getElementById('dlBuy'); if (!b) return;
+    b.addEventListener('click', function(){
+      if (b.dataset.busy) return; b.dataset.busy = '1'; b.style.opacity = .7;
+      var fd = new FormData(); fd.append('dl', '1');
+      fetch("{% url 'studio:paint_confirm' order.uid %}", {method: 'POST', body: fd,
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}})
+        .then(function(r){ return r.json(); })
+        .then(function(d){ if (d && d.redirect) { location.href = d.redirect; return; }
+                           delete b.dataset.busy; b.style.opacity = 1; alert('{% trans "Paiement indisponible pour le moment, réessayez dans un instant." %}'); })
+        .catch(function(){ delete b.dataset.busy; b.style.opacity = 1; });
+    });
+  })();
+  </script>
 
   <div class="kit-included">
     <h3>{% trans "Inclus dans le kit" %}</h3>
@@ -96,7 +115,7 @@
         <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">
           <rect x="10" y="16" width="44" height="30" rx="4" fill="#dfe8ff"/><path d="M24 26l10 5-10 5z" fill="#2f6bf2" stroke="none"/>
           <path d="M20 52h24" stroke-width="2.4"/></g></svg>
-        <span>{% trans "Jeu DigiPaint" %}</span>
+        <span>{% trans "Toile digitale jouable" %}</span>
       </div>
       <div class="kit-item">
         <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">

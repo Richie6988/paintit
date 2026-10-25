@@ -1780,3 +1780,47 @@ class FrameOptionTests(TestCase):
 def Pricing_color(n):
     from studio.models import Pricing
     return Pricing.get().color_price(n)
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+class CanvasDownloadTests(TestCase):
+    """« Télécharger ma toile » : reserve aux toiles achetees ; ZIP = TIFF au format choisi + poster sans remise."""
+    def setUp(self):
+        import json, os
+        from PIL import Image
+        from studio.models import KitFormat
+        KitFormat.objects.update_or_create(width_cm=40, height_cm=50, defaults=dict(price=34.9, available=True))
+        self.uid = "DLTEST00-0001"
+        d = os.path.join(MEDIA, "orders", self.uid)
+        os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "%s_template.svg" % self.uid), "w").write(
+            '<svg viewBox="0 0 300 400"><path d="M 0 0 L 300 0 L 300 400 L 0 400 Z"/>'
+            '<text x="150" y="200" font-size="6">1</text></svg>')
+        open(os.path.join(d, "%s_digipaint.svg" % self.uid), "w").write('<svg><path class="z"/></svg>')
+        Image.new("RGB", (300, 400), (200, 120, 60)).save(os.path.join(d, "%s_preview.png" % self.uid))
+        json.dump([{"number": 1, "hex": "#C8783C", "rgb": [200, 120, 60]}],
+                  open(os.path.join(d, "%s_colors.json" % self.uid), "w"))
+
+    def test_download_requires_purchase_then_zip(self):
+        import io, zipfile
+        url = "/play/%s/download/" % self.uid
+        self.assertEqual(self.client.get(url).status_code, 302)                 # pas achetee -> retour au jeu
+        page = self.client.get("/play/%s/" % self.uid)
+        self.assertContains(page, 'id="dlBtn"')
+        self.assertContains(page, 'id="dlPay"')                                # bouton d'achat, pas de lien
+        s = self.client.session; s["dl_uids"] = [self.uid]; s.save()            # achat confirme dans la session
+        r = self.client.post("/play/%s/confirm/" % self.uid, {"dl": "1"})
+        self.assertIn("dl=1", r.json()["redirect"])                             # deja achetee : pas de 2e paiement
+        page = self.client.get("/play/%s/" % self.uid)
+        self.assertContains(page, 'id="dlGo"')
+        self.assertContains(page, "40 x 50 cm")
+        fid = [f for f in page.context["dl_formats"] if f[1] == "40 x 50 cm"][0][0]
+        r = self.client.get(url, {"f": fid})
+        self.assertEqual(r.status_code, 200)
+        z = zipfile.ZipFile(io.BytesIO(b"".join(r.streaming_content)))
+        names = z.namelist()
+        self.assertTrue(any(n.endswith("40x50cm.tiff") for n in names))
+        self.assertTrue(any(n.endswith("poster.png") for n in names))
+        from PIL import Image
+        im = Image.open(io.BytesIO(z.read([n for n in names if n.endswith(".tiff")][0])))
+        self.assertEqual(im.size, (round(400 / 25.4 * 300), round(500 / 25.4 * 300)))   # 40x50 cm a 300 dpi

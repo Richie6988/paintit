@@ -435,6 +435,9 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 .digital-offer{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
   margin-top:14px;padding:14px 18px;border:1px dashed var(--ring);border-radius:14px;background:#f7faff}
 .digital-offer .do-txt{display:flex;flex-direction:column}
+.digital-offer .do-acts{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;width:100%}
+.digital-offer .digibtn.dl{border:0;cursor:pointer;font:inherit;font-weight:700;background:linear-gradient(120deg,#1f9d55,#0ea5b7)}
+.digital-offer .do-note{color:var(--muted,#5b647a);font-size:.78rem;width:100%}
 .digital-offer .do-txt b{color:var(--ink)}
 .digital-offer .do-txt span{color:var(--muted,#5b647a);font-size:.9rem}
 
@@ -741,7 +744,7 @@ main{overflow-x:clip}
   .code-row button,.vf-row button{flex:1 1 100%}
   .actions{flex-wrap:wrap}
   .digital-offer{flex-wrap:wrap}
-  .digital-offer .digibtn{width:100%;text-align:center}
+  .digital-offer .digibtn{width:100%;text-align:center;justify-content:center}
   form .cta[type=submit]{width:100%}
 }
 .cgv-check span{font-weight:400;color:var(--muted,#5b647a);line-height:1.45}

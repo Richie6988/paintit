@@ -370,6 +370,8 @@ def digipaint(request, uid):
                    "buy": buy, "kit_url": reverse("studio:digipaint_buy", args=[uid]),
                    "room": room.token if room else "", "can_collab": bool(room) or _can_collab(request, uid),
                    "share_url": settings.SITE_URL + (reverse("studio:digipaint", args=[uid]) if uid.startswith("gal-") else "/"),
+                   "can_dl": can_download(request, uid), "dl_formats": [(i, l) for i, l, _ in download_formats(uid)],
+                   "dl_buy": buy["url"] if buy else "",
                    "kit_from": __import__("studio.landings", fromlist=["x"]).facts((get_language() or "fr")[:2])["price"]})
 
 
@@ -541,6 +543,7 @@ def preview(request):
                   {"order": order, "brushes_price": p.brushes_price, "formats": formats, "level": level,
                    "gen_ratio": gen_ratio, "gen_w": gw, "gen_h": gh,
                    "current_format": current_format, "framed": bool(order.get("framed")),
+                   "dl_price": "0,99" if (get_language() or "fr")[:2] != "en" else "0.99",
                    "frame_any": any(fm["frame"] is not None for fm in formats),
                    "brushes_available": p.av_brushes})
 
@@ -944,13 +947,18 @@ def _digital_receipt(email, uid, title, sess, lang=None):
 
 
 def paint_confirm(request, uid):
-    """Mur de paiement 'pour continuer' (0,99 EUR). Stripe si configure, sinon demo immediat."""
+    """Mur de paiement 'pour continuer' (0,99 EUR). Stripe si configure, sinon demo immediat.
+    `dl=1` : achat depuis « Télécharger ma toile » -> apres paiement, le jeu ouvre le telechargement."""
     if request.method != "POST":
         return JsonResponse({"ok": False}, status=405)
+    dl = request.POST.get("dl") == "1" or request.GET.get("dl") == "1"
+    game = reverse("studio:digipaint", args=[uid]) + "?dl=1"
+    if dl and can_download(request, uid):          # deja achetee : pas de second paiement
+        return JsonResponse({"ok": True, "redirect": game})
     if payments.stripe_live():
         try:
             url = payments.create_digital_session(
-                uid, request, email=request.session.get("verified_email") or None)
+                uid, request, email=request.session.get("verified_email") or None, download=dl)
             return JsonResponse({"ok": True, "redirect": url})
         except Exception as exc:
             logger.exception("Stripe digital session %s", uid)
@@ -959,7 +967,8 @@ def paint_confirm(request, uid):
         return JsonResponse({"ok": False, "error": "paiement indisponible"}, status=503)
     # Demo (dev uniquement) : pas de paiement reel -> credit immediat.
     _credit_digital(request, uid)
-    return JsonResponse({"ok": True})
+    _grant_download(request, uid)
+    return JsonResponse({"ok": True, "redirect": game} if dl else {"ok": True})
 
 
 def paint_unlock_success(request):
@@ -969,8 +978,100 @@ def paint_unlock_success(request):
     sess = payments.paid_session(sid, uid=uid, kind="digital") if uid else None
     if sess:
         _credit_digital(request, uid, sess)
-        return redirect(reverse("studio:digipaint", args=[uid]) + "?bought=1")
+        _grant_download(request, uid)
+        return redirect(reverse("studio:digipaint", args=[uid]) + "?bought=1" + ("&dl=1" if request.GET.get("dl") else ""))
     return redirect("studio:digipaint", uid=uid)
+
+
+def _grant_download(request, uid):
+    dl = [u for u in request.session.get("dl_uids", []) if u != uid]
+    request.session["dl_uids"] = (dl + [uid])[-60:]
+
+
+def can_download(request, uid):
+    """Telecharger les fichiers imprimables : toile ACHETEE (jeu 0,99 €, modele payant, ou kit commande).
+    Les toiles seulement jouees / offertes passent par l'achat."""
+    if request.user.is_staff or uid in request.session.get("dl_uids", []):
+        return True
+    v = (request.session.get("verified_email") or "").strip()
+    if not v:
+        o = request.session.get("order") or {}
+        return o.get("uid") == uid and Order.objects.filter(uid=uid, status__in=Order.PAID_STATUSES).exists()
+    from .models import LedgerEntry
+    return (LedgerEntry.objects.filter(uid=uid, kind="sale", email__iexact=v).exists()
+            or Order.objects.filter(uid=uid, customer_email__iexact=v, status__in=Order.PAID_STATUSES).exists())
+
+
+def download_formats(uid):
+    """Formats proposes au telechargement (meme orientation que la toile) : [(id, libelle, (L, H) mm)]."""
+    from .models import KitFormat
+    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    try:
+        from .printfiles import parse_template
+        with open(os.path.join(d, "%s_template.svg" % uid), encoding="utf-8") as fh:
+            w, h = parse_template(fh.read())[:2]
+    except (OSError, AttributeError, ValueError):
+        return []
+    land = w > h
+    out = []
+    for kf in KitFormat.objects.filter(available=True):
+        a, b = sorted((kf.width_cm, kf.height_cm))
+        fw, fh = (b, a) if land else (a, b)
+        out.append((kf.id, "%d x %d cm" % (fw, fh), (fw * 10, fh * 10)))
+    nat = (int(round(w / 10)), int(round(h / 10)))
+    same = [f for f in out if f[2] == (nat[0] * 10, nat[1] * 10)]
+    # taille d'origine de la toile en tete (choix par defaut), puis les autres formats
+    return (same or [(0, "%d x %d cm" % nat, (w, h))]) + [f for f in out if f not in same]
+
+
+def paint_download(request, uid):
+    """ZIP genere a la demande (fichiers temporaires) : toile numerotee TIFF au format choisi + poster."""
+    import tempfile, zipfile, shutil
+    from django.http import FileResponse
+    if "/" in uid or uid.startswith("."):
+        raise Http404
+    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    svgp = os.path.join(d, "%s_template.svg" % uid)
+    if not os.path.exists(svgp):
+        raise Http404
+    if not can_download(request, uid):
+        return redirect(reverse("studio:digipaint", args=[uid]))
+    if security.rate_limited("dl:" + security.client_ip(request), 30, 3600):
+        return HttpResponse(_("Trop de téléchargements en peu de temps. Réessayez plus tard."), status=429)
+    fmts = download_formats(uid)
+    try:
+        fid = int(request.GET.get("f", fmts[0][0] if fmts else 0))
+    except ValueError:
+        fid = 0
+    fmt = next((f for f in fmts if f[0] == fid), fmts[0] if fmts else (0, "", None))
+    from .printfiles import render_tiff
+    from . import fulfillment
+    tmp = tempfile.mkdtemp(prefix="pit-dl-")
+    try:
+        name = "PaintIt-%s-%s" % (uid, fmt[1].replace(" ", "")) if fmt[1] else "PaintIt-%s" % uid
+        with open(svgp, encoding="utf-8") as fh:
+            render_tiff(fh.read(), os.path.join(tmp, name + ".tiff"), dpi=300, page_mm=fmt[2], label="")
+        files = [name + ".tiff"]
+        if os.path.exists(os.path.join(d, "%s_preview.png" % uid)):
+            try:
+                cols = fulfillment.load_colors(uid)
+                if cols:
+                    fulfillment._compose_poster(uid, d, cols, (get_language() or "fr")[:2], simple=True,
+                                                out=os.path.join(tmp, "PaintIt-%s-poster.png" % uid))
+                    files.append("PaintIt-%s-poster.png" % uid)
+            except Exception:
+                logger.exception("Poster telechargement %s", uid)
+        zp = os.path.join(tmp, name + ".zip")
+        with zipfile.ZipFile(zp, "w", zipfile.ZIP_DEFLATED) as z:
+            for f in files:
+                z.write(os.path.join(tmp, f), f)
+        fh = open(zp, "rb")              # fichier ouvert : le dossier temporaire peut etre efface tout de suite
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    resp = FileResponse(fh, as_attachment=True, filename=name + ".zip", content_type="application/zip")
+    resp["Cache-Control"] = "private, no-store"
+    resp["X-Robots-Tag"] = "noindex"
+    return resp
 
 
 def paint_delete(request, uid):
@@ -2665,6 +2766,7 @@ def gallery_buy_success(request):
         if m:
             if _grant_gallery(request, m, verified):
                 _digital_receipt(verified, uid, m.title, sess)
+            _grant_download(request, uid)
             return redirect(reverse("studio:digipaint", args=[uid]) + "?bought=1")
     return redirect("studio:digipaint", uid=uid)
 

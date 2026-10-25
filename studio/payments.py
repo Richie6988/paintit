@@ -68,7 +68,7 @@ def create_checkout_session(order, shipping, request):
     return session.url
 
 
-def create_digital_session(uid, request, amount_eur=0.99, email=None):
+def create_digital_session(uid, request, amount_eur=0.99, email=None, download=False):
     """Checkout Stripe pour deverrouiller une toile numerique (0,99 EUR)."""
     stripe.api_key = settings.STRIPE_SECRET_KEY
     session = stripe.checkout.Session.create(
@@ -86,7 +86,8 @@ def create_digital_session(uid, request, amount_eur=0.99, email=None):
             },
         }],
         success_url=request.build_absolute_uri(
-            reverse("studio:paint_unlock_success")) + "?uid=" + uid + "&sid={CHECKOUT_SESSION_ID}",
+            reverse("studio:paint_unlock_success")) + "?uid=" + uid + ("&dl=1" if download else "")
+            + "&sid={CHECKOUT_SESSION_ID}",
         cancel_url=request.build_absolute_uri(reverse("studio:digipaint", args=[uid])),
     )
     return session.url

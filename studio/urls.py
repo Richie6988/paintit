@@ -63,6 +63,7 @@ urlpatterns = [
     path("play/<str:uid>/delete/", views.paint_delete, name="paint_delete"),
     path("play/<str:uid>/unlock/", views.paint_unlock, name="paint_unlock"),
     path("play/<str:uid>/confirm/", views.paint_confirm, name="paint_confirm"),
+    path("play/<str:uid>/download/", views.paint_download, name="paint_download"),
     path("print/<str:uid>/", views.print_page, name="print_page"),
     path("print/<str:uid>/order/", views.print_place, name="print_place"),
     path("print/<str:uid>/notify/", views.print_notify, name="print_notify"),

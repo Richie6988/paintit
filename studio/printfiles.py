@@ -107,44 +107,52 @@ def render_pdf(svg, out_path, label=""):
     return out_path
 
 
-def render_tiff(svg, out_path, dpi=600, label=""):
+def render_tiff(svg, out_path, dpi=600, label="", page_mm=None, pad_mm=None):
+    """TIFF de la toile numerotee.
+    - fournisseur (defaut) : taille reelle + marge blanche PAD_MM + n° de commande au-dessus ;
+    - `page_mm=(L, H)` : toile ajustee (contain, centree) dans une page de ce format (telechargement client)."""
     import numpy as np
     import cv2
     from PIL import Image, ImageDraw, ImageFont
     w, h, paths, texts = parse_template(svg)
+    if page_mm:
+        PW, PH = float(page_mm[0]), float(page_mm[1])
+        s = min(PW / w, PH / h)
+        ox, oy = (PW - w * s) / 2, (PH - h * s) / 2
+    else:
+        P = PAD_MM if pad_mm is None else pad_mm
+        PW, PH, s, ox, oy = w + 2 * P, h + 2 * P, 1.0, P, P
     # plafond memoire : on reduit le dpi pour les tres grands formats
-    P = PAD_MM
-    mp = ((w + 2 * P) / 25.4 * dpi) * ((h + 2 * P) / 25.4 * dpi) / 1e6
+    mp = (PW / 25.4 * dpi) * (PH / 25.4 * dpi) / 1e6
     if mp > MAX_MEGAPIXELS:
         dpi = int(dpi * (MAX_MEGAPIXELS / mp) ** 0.5)
     k = dpi / 25.4                                   # px par mm
-    W, H = int(round((w + 2 * P) * k)), int(round((h + 2 * P) * k))
+    W, H = int(round(PW * k)), int(round(PH * k))
     img = np.full((H, W), 255, np.uint8)
     SH = 4                                           # precision sub-pixel (1/16 px)
     thick = max(1, int(round(LINE_MM * k)))
+    off = np.array([ox, oy], np.float64)
     for pts, closed in paths:
-        arr = ((np.array(pts, np.float64) + P) * k * (1 << SH)).round().astype(np.int32).reshape(-1, 1, 2)
+        arr = ((np.array(pts, np.float64) * s + off) * k * (1 << SH)).round().astype(np.int32).reshape(-1, 1, 2)
         cv2.polylines(img, [arr], closed, LINE_GREY, thick, cv2.LINE_AA, SH)
     pil = Image.fromarray(img, "L")
     draw = ImageDraw.Draw(pil)
     fp = _font_path()
     cache = {}
-    for x, y, fs, t in texts:
-        px = max(6, int(round(fs * k)))
+
+    def font(px):
         if px not in cache:
             try:
                 cache[px] = ImageFont.truetype(fp, px) if fp else ImageFont.load_default(px)
             except Exception:
                 cache[px] = ImageFont.load_default()
-        draw.text(((x + P) * k, (y + P) * k), t, font=cache[px], fill=NUM_GREY, anchor="ms",
+        return cache[px]
+    for x, y, fs, t in texts:
+        px = max(6, int(round(fs * s * k)))
+        draw.text(((x * s + ox) * k, (y * s + oy) * k), t, font=font(px), fill=NUM_GREY, anchor="ms",
                   stroke_width=max(1, int(round(px * HALO))), stroke_fill=255)
     if label:
-        lpx = int(round(LABEL_MM * k))
-        try:
-            lf = ImageFont.truetype(fp, lpx) if fp else ImageFont.load_default(lpx)
-        except Exception:
-            lf = ImageFont.load_default()
-        draw.text((P * k, (P - LABEL_GAP_MM) * k), label, font=lf, fill=0, anchor="ls")
+        draw.text((ox * k, (oy - LABEL_GAP_MM) * k), label, font=font(int(round(LABEL_MM * k))), fill=0, anchor="ls")
     pil.save(out_path, format="TIFF", compression="tiff_lzw", dpi=(dpi, dpi))
     return out_path, dpi, (W, H)
 

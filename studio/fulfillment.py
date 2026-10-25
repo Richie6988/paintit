@@ -103,14 +103,17 @@ def _paste(dst, rgba, x, y):
         roi[:] = rgba[:, :, :3]
 
 
-def _compose_poster(uid, d, colors, lang):
+def _compose_poster(uid, d, colors, lang, simple=False, out=None):
+    """Poster A4 (apercu + palette + bandeau). `simple` : version du telechargement client, sans n° de commande
+    ni bandeau de remise (logo seul)."""
     S = POSTER_STR.get(lang, POSTER_STR["en"])
     prev = cv2.imread(os.path.join(d, f"{uid}_preview.png"))
     img = np.full((A4_H, A4_W, 3), 255, np.uint8)
     mid = A4_H // 2
 
     # Tout en haut : n° de commande (rapprochement colis / toile chez le fournisseur).
-    cv2.putText(img, uid, (MARGIN, MARGIN + 10), DUP, 1.6, (20, 20, 20), 3, cv2.LINE_AA)
+    if not simple:
+        cv2.putText(img, uid, (MARGIN, MARGIN + 10), DUP, 1.6, (20, 20, 20), 3, cv2.LINE_AA)
     # Haut : apercu (contain).
     top = MARGIN + 50
     box_w, box_h = A4_W - 2 * MARGIN, mid - top - 30
@@ -154,22 +157,24 @@ def _compose_poster(uid, d, colors, lang):
         _paste(img, cv2.resize(logo, (lw, lh), interpolation=cv2.INTER_AREA),
                MARGIN, strip_top + (STRIP_H - lh) // 2)
 
-    q = _qr(f"{settings.PBN_DISCOUNT_URL}?id={uid}", STRIP_H - 90)
-    qh = q.shape[0] if q is not None else 0
-    qx = A4_W - MARGIN - qh
-    if q is not None:
-        img[strip_top + 40:strip_top + 40 + qh, qx:qx + qh] = q
-    right = qx - 40
-    lines = [(S["disc"], DUP, 1.5, 3, (30, 30, 30), 90),
-             (S["sub"], FONT, 0.95, 2, (70, 70, 70), 150),
-             (S["scan"], FONT, 0.8, 2, (120, 120, 120), 200),
-             (S["code"] + uid, FONT, 1.0, 2, (30, 30, 30), 260)]
-    for txt, font, sc, th, color, dy in lines:
-        (tw, _), _ = cv2.getTextSize(txt, font, sc, th)
-        cv2.putText(img, txt, (right - tw, strip_top + dy), font, sc, color, th, cv2.LINE_AA)
+    if not simple:     # bandeau remise fidelite (kit physique uniquement)
+        q = _qr(f"{settings.PBN_DISCOUNT_URL}?id={uid}", STRIP_H - 90)
+        qh = q.shape[0] if q is not None else 0
+        qx = A4_W - MARGIN - qh
+        if q is not None:
+            img[strip_top + 40:strip_top + 40 + qh, qx:qx + qh] = q
+        right = qx - 40
+        lines = [(S["disc"], DUP, 1.5, 3, (30, 30, 30), 90),
+                 (S["sub"], FONT, 0.95, 2, (70, 70, 70), 150),
+                 (S["scan"], FONT, 0.8, 2, (120, 120, 120), 200),
+                 (S["code"] + uid, FONT, 1.0, 2, (30, 30, 30), 260)]
+        for txt, font, sc, th, color, dy in lines:
+            (tw, _), _ = cv2.getTextSize(txt, font, sc, th)
+            cv2.putText(img, txt, (right - tw, strip_top + dy), font, sc, color, th, cv2.LINE_AA)
 
-    out = os.path.join(d, f"{uid}_poster.png")
+    out = out or os.path.join(d, f"{uid}_poster.png")
     cv2.imwrite(out, img)
+    return out
 
 
 from .printfiles import PAD_MM

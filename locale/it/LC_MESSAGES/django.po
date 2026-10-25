@@ -1981,3 +1981,52 @@ msgstr "con telaio"
 
 msgid "sans cadre"
 msgstr "senza telaio"
+
+msgid "Toile digitale jouable"
+msgstr "Tela digitale giocabile"
+
+msgid "Télécharger ma toile"
+msgstr "Scarica la mia tela"
+
+msgid ""
+"Toile numérotée haute définition (TIFF) au format de votre choix + poster "
+"des couleurs, à imprimer vous-même. Inclut la toile digitale jouable."
+msgstr ""
+"Tela numerata in alta definizione (TIFF) nel formato che preferisci + poster"
+" dei colori, da stampare da te. Include la tela digitale giocabile."
+
+msgid "Paiement indisponible pour le moment, réessayez dans un instant."
+msgstr "Pagamento non disponibile al momento, riprova tra un istante."
+
+msgid "Télécharger ma toile à imprimer"
+msgstr "Scarica la mia tela da stampare"
+
+msgid ""
+"Toile numérotée haute définition (TIFF) + poster des couleurs, à imprimer "
+"vous-même. Choisissez le format :"
+msgstr ""
+"Tela numerata in alta definizione (TIFF) + poster dei colori, da stampare da"
+" te. Scegli il formato:"
+
+msgid "Télécharger (ZIP)"
+msgstr "Scarica (ZIP)"
+
+msgid ""
+"Préparation du fichier… le téléchargement démarre dans quelques secondes."
+msgstr "Preparazione del file… il download parte tra pochi secondi."
+
+msgid ""
+"Achetez la toile pour la télécharger en haute définition au format de votre "
+"choix, avec son poster des couleurs."
+msgstr ""
+"Acquista la tela per scaricarla in alta definizione nel formato che "
+"preferisci, con il poster dei colori."
+
+msgid "Acheter la toile"
+msgstr "Acquista la tela"
+
+msgid "Acheter et télécharger"
+msgstr "Acquista e scarica"
+
+msgid "Trop de téléchargements en peu de temps. Réessayez plus tard."
+msgstr "Troppi download in poco tempo. Riprova più tardi."
