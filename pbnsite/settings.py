@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -85,8 +86,15 @@ MIDDLEWARE = [
 
 # --- Base de donnees : SQLite par defaut, Postgres via DATABASE_URL ---
 DATABASES = {
-    "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}
+    # SQLite partage par plusieurs workers gunicorn, les threads de generation et le service WebSocket :
+    # attente de verrou longue + transactions IMMEDIATE (pas de « database is locked » sur upgrade lecture->ecriture),
+    # mode WAL active a la connexion (studio.apps) -> lectures et ecriture en parallele.
+    "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3",
+                "OPTIONS": {"timeout": 30}}
 }
+import django as _dj
+if _dj.VERSION >= (5, 1) and "test" not in sys.argv[1:2]:     # tests : transaction englobante par cas
+    DATABASES["default"]["OPTIONS"]["transaction_mode"] = "IMMEDIATE"
 if os.environ.get("DATABASE_URL"):
     try:
         import dj_database_url

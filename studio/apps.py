@@ -10,6 +10,22 @@ class StudioConfig(AppConfig):
         except Exception:
             pass
         self._protect_admin_login()
+        self._sqlite_concurrency()
+
+    @staticmethod
+    def _sqlite_concurrency():
+        """SQLite en mode WAL : les lectures ne bloquent plus l'ecriture (plusieurs workers + threads de generation).
+        Sans effet sur PostgreSQL."""
+        from django.db.backends.signals import connection_created
+
+        def setup(sender, connection, **kw):
+            if connection.vendor == "sqlite":
+                with connection.cursor() as c:
+                    c.execute("PRAGMA journal_mode=WAL;")
+                    c.execute("PRAGMA synchronous=NORMAL;")
+                    c.execute("PRAGMA busy_timeout=30000;")
+
+        connection_created.connect(setup, weak=False, dispatch_uid="paintit_sqlite_wal")
 
     @staticmethod
     def _protect_admin_login():

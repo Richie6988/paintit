@@ -81,5 +81,21 @@
   document.addEventListener('click',function(e){if(d.open&&!d.contains(e.target))d.open=false;});
   document.addEventListener('keydown',function(e){if(e.key==='Escape')d.open=false;});})();</script>
 <script src="{% static 'studio/js/dialog.js' %}"></script>
+<script>
+/* Double-clic sur un bouton d'envoi : un seul envoi (pas de 2e generation ni de requetes en double). Les formulaires
+   geres en JS (fetch, preventDefault) ne sont pas concernes ; le retour arriere (cache navigateur) reinitialise. */
+(function(){
+  document.addEventListener('submit', function(e){
+    var f = e.target;
+    if (e.defaultPrevented || (f.method || '').toLowerCase() !== 'post') return;
+    if (f.dataset.sent) { e.preventDefault(); return; }
+    f.dataset.sent = '1';
+    setTimeout(function(){ delete f.dataset.sent; }, 10000);
+  });
+  window.addEventListener('pageshow', function(){
+    document.querySelectorAll('form[data-sent]').forEach(function(f){ delete f.dataset.sent; });
+  });
+})();
+</script>
 </body>
 </html>
