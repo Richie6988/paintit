@@ -372,7 +372,7 @@ def digipaint(request, uid):
                    "share_url": settings.SITE_URL + (reverse("studio:digipaint", args=[uid]) if uid.startswith("gal-") else "/"),
                    "can_dl": can_download(request, uid), "dl_formats": [(i, l) for i, l, _ in download_formats(uid)],
                    "dl_buy": buy["url"] if buy else "",
-                   "kit_from": __import__("studio.landings", fromlist=["x"]).facts((get_language() or "fr")[:2])["price"]})
+                   "kit_from": __import__("studio.landings", fromlist=["x"]).facts((get_language() or "fr")[:2])["price_eur"]})
 
 
 _FILL_RX = None
@@ -539,11 +539,19 @@ def preview(request):
         order["zones"] = _count_zones(order.get("uid", ""))
         request.session["order"] = order
     level = difficulty_level(order.get("zones"), colors)
+    from . import currency as fx       # prix dans la devise du visiteur (memes valeurs que chez Stripe)
+    cur = fx.for_request(request)
+    for fm in formats:
+        fm["lp"] = fx.local(fm["price"], cur)
+        fm["lf"] = round(fx.local(fm["price"] + fm["frame"], cur) - fm["lp"], 2) if fm["frame"] is not None else None
+    sym, before = fx.CURRENCIES.get(cur, ("€", False))
+    money_js = {"sym": sym, "before": before, "dec": "." if before or (get_language() or "fr")[:2] == "en" else ","}
     return render(request, "studio/preview.html",
                   {"order": order, "brushes_price": p.brushes_price, "formats": formats, "level": level,
                    "gen_ratio": gen_ratio, "gen_w": gw, "gen_h": gh,
                    "current_format": current_format, "framed": bool(order.get("framed")),
-                   "dl_price": "0,99" if (get_language() or "fr")[:2] != "en" else "0.99",
+                   "base_local": fx.order_amounts(order, cur)["canvas"], "bp_local": fx.local(p.brushes_price, cur),
+                   "money_js": money_js,
                    "frame_any": any(fm["frame"] is not None for fm in formats),
                    "brushes_available": p.av_brushes})
 
@@ -941,7 +949,8 @@ def _digital_receipt(email, uid, title, sess, lang=None):
     try:
         amount = (sess.get("amount_total") or 0) / 100.0 if sess else 0.0
         emails.send_digital_receipt(email, uid, title, amount,
-                                    lang or ((sess or {}).get("locale") or "") or get_language() or "fr")
+                                    lang or ((sess or {}).get("locale") or "") or get_language() or "fr",
+                                    cur=((sess or {}).get("currency") or "eur"))
     except Exception:
         logger.exception("Confirmation achat numerique %s", uid)
 
@@ -1346,7 +1355,9 @@ def delivery(request):
     else:
         form = DeliveryForm()
     msg = request.session.pop("delivery_msg", None)
-    return render(request, "studio/delivery.html", {"form": form, "order": order, "msg": msg})
+    from . import currency as fx
+    return render(request, "studio/delivery.html", {"form": form, "order": order, "msg": msg,
+                                                    "amt": fx.order_amounts(order, fx.for_request(request))})
 
 
 def _discount_for(order, applied):
@@ -1392,8 +1403,10 @@ def checkout(request):
     discount, total = _discount_for(order, applied)
     msg = request.session.pop("discount_msg", None)
     pr = Pricing.get()
+    from . import currency as fx
     return render(request, "studio/checkout.html", {
         "order": order, "shipping": shipping, "discount": discount, "total": total,
+        "amt": fx.order_amounts({**order, "discount": discount}, fx.for_request(request)),
         "msg": msg, "stripe": payments.stripe_live(),
         "prefill_code": request.session.get("prefill_code", ""),
         "delivery_min": pr.delivery_days_min, "delivery_max": pr.delivery_days_max,
@@ -1521,6 +1534,7 @@ def _upsert_order(o, shipping, status, supplier_ref=None):
         "difficulty": o.get("difficulty", "auto"),
         "brushes": bool(o.get("brushes")), "brushes_amount": o.get("brushes_amount", 0.0),
         "framed": bool(o.get("framed")),
+        "currency": o.get("currency") or "EUR", "amounts": o.get("amounts") or {},
         "price": o["price"], "cost": supplier.estimate_cost(o, shipping),
         "discount_code": d["code"] if d else None, "discount_amount": d["amount"] if d else 0.0,
         "total": o.get("total", o["price"]),
@@ -1657,6 +1671,9 @@ def place_order(request):
         request.session["discount_msg"] = {"kind": "err", "text": _("Merci d'accepter les conditions générales de vente.")}
         return redirect("studio:checkout")
     o = dict(order); o["discount"] = discount; o["total"] = total
+    from . import currency as fx       # montants dans la devise du client = ce que Stripe debite
+    o["currency"] = fx.for_request(request)
+    o["amounts"] = fx.order_amounts(o, o["currency"])
     o["lang"] = (get_language() or o.get("lang", "fr"))[:2]   # langue du process (achat)
     o["ad_ref"] = request.session.get("ad_ref", "")             # A/B marketing : pub d'origine
 
@@ -1666,14 +1683,14 @@ def place_order(request):
             url = payments.create_checkout_session(o, shipping, request)
         except Exception as exc:
             return render(request, "studio/checkout.html", {
-                "order": order, "shipping": shipping, "discount": discount, "total": total,
+                "order": order, "shipping": shipping, "discount": discount, "total": total, "amt": o["amounts"],
                 "stripe": True, "msg": {"kind": "err", "text": f"Stripe indisponible : {exc}"}})
         return redirect(url)
 
     if not payments.demo_allowed():   # prod sans Stripe : on ne livre JAMAIS sans paiement
         logger.error("Commande refusee : Stripe non configure (STRIPE_SECRET_KEY)")
         return render(request, "studio/checkout.html", {
-            "order": order, "shipping": shipping, "discount": discount, "total": total,
+            "order": order, "shipping": shipping, "discount": discount, "total": total, "amt": o["amounts"],
             "stripe": False, "msg": {"kind": "err", "text": _("Paiement momentanément indisponible, merci de réessayer plus tard.")}})
     # Demo (dev uniquement) : pas de paiement reel -> on honore la commande maintenant.
     o, manifest, supplier_result = _fulfill(o, shipping)
@@ -1684,7 +1701,7 @@ def place_order(request):
     return render(request, "studio/confirmation.html", {
         "referral_code": _rc, "referral_percent": int(round(Pricing.get().referral_rate*100)),
         "order": o, "shipping": shipping, "discount": o["discount"], "total": o["total"],
-        "supplier": supplier_result, "manifest": manifest, "uid": o["uid"],
+        "amt": o.get("amounts") or {}, "supplier": supplier_result, "manifest": manifest, "uid": o["uid"],
     })
 
 
@@ -1716,7 +1733,7 @@ def _order_from_row(r):
             "width_cm": r.width_cm, "height_cm": r.height_cm, "colors": r.colors,
             "difficulty": r.difficulty, "brushes": r.brushes, "brushes_amount": r.brushes_amount,
             "framed": r.framed, "canvas_price": canvas, "price": r.price, "discount": discount, "total": r.total,
-            "lang": r.lang}
+            "lang": r.lang, "currency": r.currency or "EUR", "amounts": r.amounts or {}}
 
 
 def _ensure_fulfilled(uid, why=""):
@@ -1756,7 +1773,7 @@ def pay_success(request):
     return render(request, "studio/confirmation.html", {
         "referral_code": _rc, "referral_percent": int(round(Pricing.get().referral_rate*100)),
         "order": o, "shipping": _shipping_from_row(r), "discount": o["discount"],
-        "total": o["total"], "supplier": {"status": "ok", "supplier_ref": r.supplier_ref},
+        "total": o["total"], "amt": o.get("amounts") or {}, "supplier": {"status": "ok", "supplier_ref": r.supplier_ref},
         "manifest": {"files": ["order.json", f"{uid}_template.svg", f"{uid}_poster.png"]},
         "uid": uid})
 
@@ -1787,9 +1804,12 @@ def stripe_webhook(request):
         elif uid:
             r = Order.objects.filter(uid=uid).first()
             paid = (obj.get("amount_total") or 0) / 100.0
-            if r and r.status == Order.PENDING and paid + 0.01 < float(r.total or 0):
-                logger.error("Montant Stripe %.2f < total commande %.2f (%s)", paid, r.total, uid)
-                _order_note(r, "ALERTE : montant paye %.2f EUR < total %.2f EUR, non traitee" % (paid, r.total))
+            cur = (obj.get("currency") or "eur").upper()
+            due = float((r.amounts or {}).get("total") or r.total or 0) if r and r.currency == cur and cur != "EUR" \
+                else float(r.total or 0) if r else 0.0
+            if r and r.status == Order.PENDING and (paid + 0.01 < due or cur != (r.currency or "EUR")):
+                logger.error("Montant Stripe %.2f %s < total commande %.2f %s (%s)", paid, cur, due, r.currency, uid)
+                _order_note(r, "ALERTE : montant paye %.2f %s < total %.2f %s, non traitee" % (paid, cur, due, r.currency))
             else:
                 _ensure_fulfilled(uid, "(webhook Stripe)")
     elif etype in ("charge.refunded", "charge.dispute.created"):
@@ -1806,16 +1826,19 @@ def stripe_webhook(request):
             from . import ledger
             kind = meta.get("kind") or ("kit" if r else "digital")
             refunds = ((obj.get("refunds") or {}).get("data")) or []
+            from .currency import to_eur
+            cur = obj.get("currency") or "eur"
             for rf in refunds:
-                ledger.record_refund(rf.get("id"), (rf.get("amount") or 0) / 100.0, uid=uid or "", kind=kind,
+                ledger.record_refund(rf.get("id"), to_eur((rf.get("amount") or 0) / 100.0, cur), uid=uid or "", kind=kind,
                                      payment_intent=obj.get("payment_intent") or "")
             if not refunds:
                 ledger.record_refund("%s-%s" % (obj.get("id"), obj.get("amount_refunded")),
-                                     (obj.get("amount_refunded") or 0) / 100.0, uid=uid or "", kind=kind,
+                                     to_eur((obj.get("amount_refunded") or 0) / 100.0, cur), uid=uid or "", kind=kind,
                                      payment_intent=obj.get("payment_intent") or "")
         if r:
             label = "Remboursement Stripe" if etype == "charge.refunded" else "LITIGE Stripe ouvert"
-            _order_note(r, "%s : %.2f EUR" % (label, (obj.get("amount_refunded") or obj.get("amount") or 0) / 100.0))
+            _order_note(r, "%s : %.2f %s" % (label, (obj.get("amount_refunded") or obj.get("amount") or 0) / 100.0,
+                                              (obj.get("currency") or "eur").upper()))
     return HttpResponse(status=200)
 
 

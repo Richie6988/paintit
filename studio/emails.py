@@ -102,10 +102,14 @@ def send_order_confirmation(order, shipping):
     uid = order["uid"]
     d = order.get("discount")
     lang = (order.get("lang") or "en")[:2]
-    money = lambda x: ("%.2f" % float(x or 0)) if lang == "en" else ("%.2f" % float(x or 0)).replace(".", ",")
-    brushes_amt = order.get("brushes_amount", 0.0)
-    canvas = money(order["price"] - brushes_amt)
-    total = money(order.get("total", order["price"]))
+    from .currency import fmt as _fmt
+    am = order.get("amounts") or {}
+    cur = am.get("cur") or order.get("currency") or "EUR"
+    money = lambda x: _fmt(x, cur, lang)          # montants dans la devise payee par le client
+    brushes_amt = am.get("brushes", order.get("brushes_amount", 0.0)) if order.get("brushes") else 0.0
+    canvas = money(am.get("canvas", order["price"] - order.get("brushes_amount", 0.0)))
+    total = money(am.get("total", order.get("total", order["price"])))
+    disc_amt = am.get("discount", (order.get("discount") or {}).get("amount", 0))
     orient = T["orient"].get(order.get("orientation", ""), order.get("orientation", ""))
     if order.get("framed"):
         orient += ", " + {"fr": "avec cadre", "en": "framed", "de": "mit Rahmen", "es": "con marco",
@@ -119,14 +123,14 @@ def send_order_confirmation(order, shipping):
         T["confirmed"] % {"uid": uid}, "",
         "%s : %s (%s), %s %s" % (T["product"], order["format_label"], orient,
                                  order["colors"], T["colors"]),
-        "%s : %s EUR" % (T["subtotal"], canvas),
+        "%s : %s" % (T["subtotal"], canvas),
     ]
     if brushes_amt:
-        lines.append("%s : +%s EUR" % (T["brushes"], money(brushes_amt)))
+        lines.append("%s : +%s" % (T["brushes"], money(brushes_amt)))
     if d:
-        lines.append("%s (%s) : -%s EUR" % (T["discount"], d["code"], money(d["amount"])))
+        lines.append("%s (%s) : -%s" % (T["discount"], d["code"], money(disc_amt)))
     lines += ["%s : %s" % (T["shipping"], T["free"]),
-              "%s : %s EUR" % (T["total"], total), "",
+              "%s : %s" % (T["total"], total), "",
               "%s :" % T["deliver_to"], shipping.get("full_name", ""),
               shipping.get("address1", "") + addr2,
               "%s %s (%s)" % (shipping.get("postal_code", ""), shipping.get("city", ""),
@@ -135,10 +139,10 @@ def send_order_confirmation(order, shipping):
     text = "\n".join(lines)
 
     d_row = ('<tr><td style="padding:6px 0;color:#5b647a">%s (%s)</td>'
-             '<td align="right" style="padding:6px 0">-%s &euro;</td></tr>'
-             % (T["discount"], d["code"], money(d["amount"]))) if d else ""
+             '<td align="right" style="padding:6px 0">-%s</td></tr>'
+             % (T["discount"], d["code"], money(disc_amt))) if d else ""
     b_row = ('<tr><td style="padding:6px 0;color:#5b647a">%s</td>'
-             '<td align="right" style="padding:6px 0">+%s &euro;</td></tr>'
+             '<td align="right" style="padding:6px 0">+%s</td></tr>'
              % (T["brushes"], money(brushes_amt))) if brushes_amt else ""
 
     html = (
@@ -160,13 +164,13 @@ def send_order_confirmation(order, shipping):
         '<tr><td style="padding:6px 0;color:#5b647a">%(product)s</td>'
         '<td align="right" style="padding:6px 0">%(fmt)s (%(orient)s), %(colors)s %(clabel)s</td></tr>'
         '<tr><td style="padding:6px 0;color:#5b647a">%(subtotal)s</td>'
-        '<td align="right" style="padding:6px 0">%(canvas)s &euro;</td></tr>'
+        '<td align="right" style="padding:6px 0">%(canvas)s</td></tr>'
         '%(brow)s%(drow)s'
         '<tr><td style="padding:6px 0;color:#5b647a">%(shipping)s</td>'
         '<td align="right" style="padding:6px 0;color:#237a3e;font-weight:bold">%(free)s</td></tr>'
         '<tr><td style="padding:10px 0 0;border-top:1px solid #e2e8f2;font-weight:bold">%(total_l)s</td>'
         '<td align="right" style="padding:10px 0 0;border-top:1px solid #e2e8f2;font-weight:bold">'
-        '%(total)s &euro;</td></tr></table></td></tr>'
+        '%(total)s</td></tr></table></td></tr>'
         '<tr><td style="padding:8px 28px 4px;color:#5b647a;font-size:13px;line-height:1.5">'
         '<b style="color:#12224f">%(deliver_to)s</b><br>%(name)s<br>%(addr1)s%(addr2)s<br>'
         '%(postal)s %(city)s (%(country)s)<br>%(phone_l)s : %(phone)s</td></tr>'
@@ -455,7 +459,7 @@ DIGITAL_STR = {
 }
 
 
-def send_digital_receipt(email, uid, title, amount, lang="fr"):
+def send_digital_receipt(email, uid, title, amount, lang="fr", cur="EUR"):
     """Confirmation d'achat d'une toile numerique (galerie ou deblocage DigiPaint)."""
     from django.conf import settings as st
     if not email:
@@ -466,7 +470,8 @@ def send_digital_receipt(email, uid, title, amount, lang="fr"):
     name = title or uid
     play = "%s/paint/%s/" % (site, uid)
     thumb = "%s/preview/img/%s/preview/" % (site, uid)
-    price = ("%.2f €" % float(amount)).replace(".", "," if (lang or "fr")[:2] != "en" else ".")
+    from .currency import fmt as _fmt
+    price = _fmt(amount, (cur or "EUR").upper(), lang)
     text = "%s,\n\n%s\n\n%s\n%s : %s\n%s : %s\n%s : %s\n\n%s\n\n%s" % (
         T["hi"], T["intro"], name, T["paid"], price, T["ref"], uid, T["play"], play, T["note"], T["team"])
     html = (

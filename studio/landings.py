@@ -457,7 +457,7 @@ def facts(lang="fr"):
         price = price[:-3]
     if lang != "en":
         price = price.replace(".", ",")
-    return {"price": price,
+    return {"price": price, "price_eur": base,
             "formats": ", ".join(labels) or "30×40 à 50×70 cm",
             "format_min": labels[0] if labels else "30×40 cm",
             "colors": ", ".join(str(n) for n in cols) or "24, 36, 48",

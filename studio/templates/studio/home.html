@@ -1,5 +1,5 @@
 {% extends "studio/base.html" %}
-{% load static i18n %}
+{% load static i18n paintit %}
 {% block jsonld %}<script type="application/ld+json">{{ ld_product }}</script>{% endblock %}
 {% block title %}PaintIt · {% trans "Peinture par numéros personnalisée à partir de votre photo" %}{% endblock %}
 {% block meta_description %}{% trans "Peinture par numéros depuis votre photo. Aperçu et jeu en ligne gratuits avant d'acheter, kit complet livré gratuitement. Dès 4 ans." %}{% endblock %}
@@ -68,13 +68,13 @@
     {% for m in library_preview %}
     <a class="lib-tile" href="{% url 'studio:digipaint' m.uid %}">
       <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="" loading="lazy">
-      {% if m.price and m.price > 0 %}<span class="g-price">{{ m.price|floatformat:2 }}&nbsp;&euro;</span>{% endif %}
+      {% if m.price and m.price > 0 %}<span class="g-price">{% money m.price %}</span>{% endif %}
     </a>
     {% endfor %}
     {% for m in library_preview %}
     <a class="lib-tile" href="{% url 'studio:digipaint' m.uid %}" aria-hidden="true">
       <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="" loading="lazy">
-      {% if m.price and m.price > 0 %}<span class="g-price">{{ m.price|floatformat:2 }}&nbsp;&euro;</span>{% endif %}
+      {% if m.price and m.price > 0 %}<span class="g-price">{% money m.price %}</span>{% endif %}
     </a>
     {% endfor %}
   </div></div>

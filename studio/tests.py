@@ -1184,7 +1184,7 @@ class CatalogueVisibilityAndPurchaseTests(TestCase):
         self.assertFalse(views._grant_gallery_to(self.m, "buyer@x.fr"))                   # 2e passage : deja attribuee
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("Rose", mail.outbox[0].subject)
-        self.assertIn("4,90 €", mail.outbox[0].body)
+        self.assertIn("4,90\u00a0€", mail.outbox[0].body)
 
 
 class ActivityTests(TestCase):
@@ -1832,3 +1832,71 @@ class CanvasDownloadTests(TestCase):
         from PIL import Image
         im = Image.open(io.BytesIO(z.read([n for n in names if n.endswith(".tiff")][0])))
         self.assertEqual(im.size, (round(400 / 25.4 * 300), round(500 / 25.4 * 300)))   # 40x50 cm a 300 dpi
+
+
+@override_settings(MEDIA_ROOT=MEDIA, STRIPE_SECRET_KEY="")
+class LocalCurrencyTests(TestCase):
+    """Visiteur US : prix affiches en $ (arrondi .90), meme montant debite, compta en EUR ; robots en EUR."""
+    def setUp(self):
+        from django.core.cache import cache
+        from studio import currency
+        cache.set(currency.CACHE_KEY, {"EUR": 1.0, "USD": 1.10, "GBP": 0.85, "NZD": 1.80}, 3600)
+
+    def test_rounding_and_order_amounts(self):
+        from studio import currency as fx
+        self.assertEqual(fx.local(49.9, "USD"), 54.9)          # 54.89 -> 54.90
+        self.assertEqual(fx.local(42.9, "USD"), 47.9)          # 47.19 -> 47.90
+        self.assertEqual(fx.local(0.99, "USD"), 1.09)
+        self.assertEqual(fx.local(42.9, "EUR"), 42.9)
+        a = fx.order_amounts({"canvas_price": 42.9, "price": 45.9, "brushes": True, "brushes_amount": 3.0,
+                              "discount": {"rate": 0.15}}, "USD")
+        self.assertEqual((a["canvas"], a["brushes"]), (47.9, 3.39))                  # 3,30 $ -> 3,39 $
+        self.assertEqual(a["subtotal"], 51.29)
+        self.assertEqual(a["total"], round(51.29 - round(51.29 * 0.15, 2), 2))
+        for eur in (0.5, 0.99, 3.0, 4.6, 12.0, 34.9, 109.9):                           # jamais sous le prix converti
+            for c in ("USD", "GBP", "NZD"):
+                self.assertGreaterEqual(fx.local(eur, c) + 1e-9, round(eur * fx.rates()[c], 2))
+        self.assertEqual(fx.fmt(54.9, "USD", "fr"), "$54.90")
+        self.assertEqual(fx.fmt(54.9, "EUR", "fr"), "54,90\u00a0€")
+        self.assertEqual(fx.to_eur(55.0, "usd"), 50.0)
+
+    def test_visitor_currency(self):
+        from studio import currency as fx
+        r = self.client.get("/play/", HTTP_CF_IPCOUNTRY="US", HTTP_USER_AGENT="Mozilla/5.0")
+        self.assertEqual(self.client.session.get("cur"), "USD")
+        self.client.get("/play/?cur=EUR", HTTP_USER_AGENT="Mozilla/5.0")
+        self.assertEqual(self.client.session.get("cur"), "EUR")                    # choix manuel garde
+        from django.test import Client
+        bot = Client()
+        bot.get("/play/", HTTP_CF_IPCOUNTRY="US", HTTP_USER_AGENT="Googlebot/2.1")
+        self.assertIsNone(bot.session.get("cur"))                                   # robots : euros, rien de memorise
+
+
+@override_settings(MEDIA_ROOT=MEDIA, STRIPE_SECRET_KEY="sk_test_x")
+class LocalCurrencyCheckoutTests(TestCase):
+    def test_us_customer_charged_in_usd(self):
+        from django.core.cache import cache
+        from studio import currency, payments
+        cache.set(currency.CACHE_KEY, {"EUR": 1.0, "USD": 1.10, "GBP": 0.85, "NZD": 1.80}, 3600)
+        s = self.client.session
+        s["cur"] = "USD"
+        s["order"] = {"uid": "USD00000-0001", "colors": 24, "width_cm": 40, "height_cm": 50, "orientation": "portrait",
+                      "format_label": "40 x 50 cm", "canvas_price": 42.9, "price": 42.9, "brushes": False,
+                      "brushes_amount": 0.0}
+        s["shipping"] = {"full_name": "John Doe", "email": "j@x.com", "phone_code": "+1", "phone": "2125550100",
+                         "address1": "1 Main St", "address2": "", "postal_code": "10001", "city": "New York",
+                         "country": "Etats-Unis"}
+        s.save()
+        page = self.client.get("/checkout/")
+        self.assertContains(page, "$47.90")
+        seen = {}
+
+        def fake_create(**kw):
+            seen.update(kw["line_items"][0]["price_data"])
+            return mock.Mock(url="https://stripe.test/pay")
+        with mock.patch.object(payments.stripe.checkout.Session, "create", side_effect=fake_create):
+            r = self.client.post("/checkout/place/", {"accept_cgv": "on"})
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual((seen["currency"], seen["unit_amount"]), ("usd", 4790))
+        o = Order.objects.get(uid="USD00000-0001")
+        self.assertEqual((o.currency, o.amounts["total"], o.total), ("USD", 47.9, 42.9))   # compta : EUR

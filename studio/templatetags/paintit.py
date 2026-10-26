@@ -17,3 +17,28 @@ def paintit_kpis():
         "unanswered": ContactMessage.objects.filter(answered=False).count(),
         "discounts": Discount.objects.filter(active=True).count(),
     }
+
+
+@register.simple_tag(takes_context=True)
+def money(context, eur):
+    """Prix catalogue en EUR -> affiche dans la devise du visiteur (meme arrondi que le paiement Stripe)."""
+    from django.utils.translation import get_language
+    from studio import currency as fx
+    cur = context.get("CUR") or "EUR"
+    return fx.fmt(fx.local(eur, cur), cur, get_language())
+
+
+@register.simple_tag(takes_context=True)
+def money_local(context, amount, cur=None):
+    """Montant deja exprime dans la devise (recapitulatif de commande)."""
+    from django.utils.translation import get_language
+    from studio import currency as fx
+    return fx.fmt(amount, cur or context.get("CUR") or "EUR", get_language())
+
+
+@register.filter
+def safe_json(value):
+    """Valeur Python -> litteral JSON sur pour un <script>."""
+    import json
+    from django.utils.safestring import mark_safe
+    return mark_safe(json.dumps(value).replace("<", "\\u003c"))

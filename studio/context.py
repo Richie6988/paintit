@@ -113,3 +113,15 @@ def _company():
             out = {}
         cache.set("site_company", out, 300)
     return out
+
+
+def currency(request):
+    """Devise du visiteur pour l'affichage des prix ({% money %})."""
+    from . import currency as fx
+    if request.path.startswith(("/admin", "/admin-hub", "/wc-api", "/wp-json", "/api/")):
+        return {"CUR": "EUR"}                      # ERP / connecteurs : toujours en euros
+    menu = [("EUR", "€ EUR"), ("USD", "$ USD"), ("GBP", "£ GBP"), ("NZD", "NZ$ NZD")]
+    try:
+        return {"CUR": fx.for_request(request), "CUR_MENU": menu}
+    except Exception:
+        return {"CUR": "EUR", "CUR_MENU": menu}

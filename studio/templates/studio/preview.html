@@ -1,5 +1,5 @@
 {% extends "studio/base.html" %}
-{% load i18n l10n static %}
+{% load i18n l10n static paintit %}
 {% block title %}{% trans "Aperçu" %} · PaintIt{% endblock %}
 {% block content %}
 <section class="panel wide" id="protected">
@@ -57,20 +57,20 @@
       <div class="fmt-opts">
         {% for fm in formats %}
         <label class="fmt-opt">
-          <input type="radio" name="kit_format" value="{{ fm.id }}" data-price="{{ fm.price|unlocalize }}" data-frame="{% if fm.frame is not None %}{{ fm.frame|unlocalize }}{% endif %}" data-w="{{ fm.w|unlocalize }}" data-h="{{ fm.h|unlocalize }}" {% if fm.id == current_format %}checked{% endif %}>
-          <span class="fmt-card"><b>{{ fm.label }}</b><em class="fmt-p">{{ fm.price|floatformat:2 }} &euro;</em></span>
+          <input type="radio" name="kit_format" value="{{ fm.id }}" data-price="{{ fm.lp|unlocalize }}" data-frame="{% if fm.lf is not None %}{{ fm.lf|unlocalize }}{% endif %}" data-w="{{ fm.w|unlocalize }}" data-h="{{ fm.h|unlocalize }}" {% if fm.id == current_format %}checked{% endif %}>
+          <span class="fmt-card"><b>{{ fm.label }}</b><em class="fmt-p">{% money_local fm.lp %}</em></span>
         </label>
         {% endfor %}
       </div>
       <small class="fmt-note">{% trans "Votre toile est ajustée au format choisi lors de la préparation de votre commande." %}</small>
     </div>
     {% endif %}
-    <div class="price-line">{% trans "Prix" %} : <b id="ptotal">{{ order.canvas_price|floatformat:2 }}</b> &euro;
+    <div class="price-line">{% trans "Prix" %} : <b id="ptotal">{% money_local base_local %}</b>
       <small>{% trans "livraison offerte" %}</small></div>
     {% if brushes_available %}
     <label class="check">
       <input type="checkbox" name="brushes" id="brushes" {% if order.brushes %}checked{% endif %}>
-      <span>{% blocktrans with p=brushes_price %}Ajouter un set de pinceaux (+{{ p }} &euro;){% endblocktrans %}</span>
+      {% money_local bp_local as bpl %}<span>{% blocktrans with p=bpl %}Ajouter un set de pinceaux (+{{ p }}){% endblocktrans %}</span>
     </label>
     {% else %}<span></span>{% endif %}
     <button class="cta" data-cta="Aperçu · Je commande" type="submit">{% trans "Je commande" %}</button>
@@ -81,7 +81,7 @@
       <span>{% trans "Testez-la en peignant quelques zones en ligne, gratuitement : vous voyez le rendu réel avant de passer commande." %}</span></div>
     <div class="do-acts">
       <a class="digibtn" href="{% url 'studio:digipaint' order.uid %}">{% trans "Tester ma toile" %}</a>
-      <button type="button" class="digibtn dl" id="dlBuy" data-cta="Aperçu · Télécharger ma toile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>{% trans "Télécharger ma toile" %} · {{ dl_price }}&nbsp;&euro;</button>
+      <button type="button" class="digibtn dl" id="dlBuy" data-cta="Aperçu · Télécharger ma toile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>{% trans "Télécharger ma toile" %} · {% money 0.99 %}</button>
     </div>
     <small class="do-note">{% trans "Toile numérotée haute définition (TIFF) au format de votre choix + poster des couleurs, à imprimer vous-même. Inclut la toile digitale jouable." %}</small>
   </div>
@@ -131,10 +131,10 @@
   (function () {
     var z = document.getElementById('protected');
     if (z) ['contextmenu','dragstart','selectstart'].forEach(function(ev){ z.addEventListener(ev, function(e){e.preventDefault();}); });
-    var base = {{ order.canvas_price|unlocalize }}, bp = {{ brushes_price|unlocalize }};
+    var base = {{ base_local|unlocalize }}, bp = {{ bp_local|unlocalize }}, MJ = {{ money_js|safe_json }};
     var cb = document.getElementById('brushes'), t = document.getElementById('ptotal');
     var fmts = document.querySelectorAll('input[name=kit_format]'), frames = document.querySelectorAll('input[name=framed]');
-    function fx(n){ return n.toFixed(2).replace('.', ','); }
+    function fx(n){ var s = n.toFixed(2).replace('.', MJ.dec); return MJ.before ? MJ.sym + s : s + '\u00a0' + MJ.sym; }
     function framed(){ var f = document.querySelector('input[name=framed]:checked'); return !!f && f.value === '1'; }
     function upd(){
       var fr = framed(), price = base;
@@ -152,7 +152,7 @@
         price = parseFloat(sel.dataset.price) + (fr && fprice !== null ? fprice : 0);
         fmts.forEach(function(r){   // prix de chaque format selon la finition choisie
           var f = r.dataset.frame === '' ? null : parseFloat(r.dataset.frame), em = r.parentNode.querySelector('.fmt-p');
-          if (em) em.textContent = fx(parseFloat(r.dataset.price) + (fr && f !== null ? f : 0)) + ' \u20ac';
+          if (em) em.textContent = fx(parseFloat(r.dataset.price) + (fr && f !== null ? f : 0));
         });
       }
       if (t) t.textContent = fx(price + (cb && cb.checked ? bp : 0));

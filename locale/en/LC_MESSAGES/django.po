@@ -2035,3 +2035,15 @@ msgid ""
 msgstr ""
 "The drawing is fitted to the size without distortion. On small sizes "
 "(postcard, A6) the numbers are very small: ideal as a keepsake or gift."
+
+#, python-format
+msgid "Devise"
+msgstr "Currency"
+
+#, python-format
+msgid "dès %(p)s"
+msgstr "from %(p)s"
+
+#, python-format
+msgid "Ajouter un set de pinceaux (+%(p)s)"
+msgstr "Add a brush set (+%(p)s)"

@@ -134,6 +134,7 @@ TEMPLATES = [{
         "django.template.context_processors.i18n",
         "studio.context.assets",
         "studio.context.erp_nav",
+        "studio.context.currency",
     ]},
 }]
 

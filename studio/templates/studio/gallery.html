@@ -1,5 +1,5 @@
 {% extends "studio/base.html" %}
-{% load i18n %}
+{% load i18n paintit %}
 {% block title %}{% trans "Testez notre jeu de peinture par numéros en ligne" %} · PaintIt{% endblock %}
 {% block meta_description %}{% trans "Peignez gratuitement un modèle en ligne et découvrez la précision de notre algorithme avant de créer votre propre toile à partir de votre photo." %}{% endblock %}
 {% block jsonld %}{% if models %}<script type="application/ld+json">{{ ld_list }}</script>{% endif %}<script type="application/ld+json">{{ ld_crumb }}</script>{% endblock %}
@@ -48,7 +48,7 @@
             <img src="{% url 'studio:order_image' m.uid 'preview' %}" alt="{{ m.art_caption|default:m.title }}" loading="lazy">
             {% if m.art_caption %}<span class="g-art">{{ m.art_caption }}</span>{% endif %}
             {% if m.price and m.price > 0 %}
-              <span class="g-price">{{ m.price|floatformat:2 }}&nbsp;&euro;</span>
+              <span class="g-price">{% money m.price %}</span>
               <span class="g-cta g-buy">{% trans "Essai 5 min" %}</span>
             {% else %}
               <span class="g-cta g-free">Free</span>

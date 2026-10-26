@@ -2078,3 +2078,15 @@ msgstr ""
 "Die Zeichnung wird unverzerrt an das Format angepasst. Bei kleinen Formaten "
 "(Postkarte, A6) sind die Zahlen sehr klein: ideal als Andenken oder "
 "Geschenk."
+
+#, python-format
+msgid "Devise"
+msgstr "Währung"
+
+#, python-format
+msgid "dès %(p)s"
+msgstr "ab %(p)s"
+
+#, python-format
+msgid "Ajouter un set de pinceaux (+%(p)s)"
+msgstr "Pinselset hinzufügen (+%(p)s)"

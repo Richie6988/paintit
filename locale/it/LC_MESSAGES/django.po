@@ -2059,3 +2059,15 @@ msgid ""
 msgstr ""
 "Il disegno si adatta al formato senza deformarsi. Nei formati piccoli "
 "(cartolina, A6) i numeri sono molto piccoli: ideale come ricordo o regalo."
+
+#, python-format
+msgid "Devise"
+msgstr "Valuta"
+
+#, python-format
+msgid "dès %(p)s"
+msgstr "da %(p)s"
+
+#, python-format
+msgid "Ajouter un set de pinceaux (+%(p)s)"
+msgstr "Aggiungi un set di pennelli (+%(p)s)"

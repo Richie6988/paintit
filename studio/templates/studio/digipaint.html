@@ -1,4 +1,4 @@
-{% load static i18n %}
+{% load static i18n paintit %}
 <!doctype html>
 <html lang="{{ LANGUAGE_CODE }}"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -374,7 +374,7 @@
   <p id="dlWait" hidden style="color:var(--muted);font-size:.85rem;margin:8px 0 0">{% trans "Préparation du fichier… le téléchargement démarre dans quelques secondes." %}</p>
   {% else %}
   <p style="color:var(--muted)">{% trans "Achetez la toile pour la télécharger en haute définition au format de votre choix, avec son poster des couleurs." %}</p>
-  <button type="button" class="btn pri" id="dlPay" style="width:100%;justify-content:center;font:inherit;font-weight:700;padding:10px">{% if dl_buy %}{% trans "Acheter la toile" %}{% else %}{% trans "Acheter et télécharger" %} · 0,99&nbsp;&euro;{% endif %}</button>
+  <button type="button" class="btn pri" id="dlPay" style="width:100%;justify-content:center;font:inherit;font-weight:700;padding:10px">{% if dl_buy %}{% trans "Acheter la toile" %}{% else %}{% trans "Acheter et télécharger" %} · {% money 0.99 %}{% endif %}</button>
   {% endif %}
   <button type="button" class="btn" id="dlClose" style="width:100%;justify-content:center;margin-top:10px">{% trans "Fermer" %}</button>
 </div></div>
@@ -431,7 +431,7 @@
   <ul class="kit-pts">
     <li>{% trans "Cette toile imprimée et numérotée, avec ses peintures prêtes à l'emploi et le poster de référence." %}</li>
     <li>{% trans "Livrée chez vous ou directement chez un proche : une idée cadeau unique." %}</li>
-    <li>{% trans "Livraison offerte" %}{% if kit_from %} · {% blocktrans with p=kit_from %}dès {{ p }} €{% endblocktrans %}{% endif %}</li>
+    <li>{% trans "Livraison offerte" %}{% if kit_from %} · {% money kit_from as kfp %}{% blocktrans with p=kfp %}dès {{ p }}{% endblocktrans %}{% endif %}</li>
   </ul>
   <a class="kitbtn" href="{{ kit_url }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>{% trans "Commander le kit" %}</a>
   <button class="btn" id="kitClose" type="button" style="display:flex;justify-content:center;width:100%;box-sizing:border-box;margin-top:10px;font-size:.92rem;font-weight:700;padding:10px">{% trans "Continuer à jouer" %}</button>
@@ -440,11 +440,11 @@
   {% if buy %}
   <h2>{% trans "Vous avez aimé ce modèle ?" %}</h2>
   <p>{% trans "Votre essai de 5 minutes est terminé. Achetez ce modèle pour le terminer et le garder dans « Mes toiles » : votre progression est conservée." %}</p>
-  <a class="btn pri" id="pwBuy" href="{{ buy.url }}" style="display:flex;width:100%;box-sizing:border-box;justify-content:center;font-size:.92rem;font-weight:700;padding:10px;white-space:normal">{% trans "Acheter et continuer" %} · {{ buy.price|floatformat:2 }}&nbsp;&euro;</a>
+  <a class="btn pri" id="pwBuy" href="{{ buy.url }}" style="display:flex;width:100%;box-sizing:border-box;justify-content:center;font-size:.92rem;font-weight:700;padding:10px;white-space:normal">{% trans "Acheter et continuer" %} · {% money buy.price %}</a>
   {% else %}
   <h2>{% trans "Sauvegardez votre toile" %}</h2>
   <p>{% trans "Vous jouez depuis 5 minutes. Sauvegardez cette toile dans « Mes toiles » pour continuer à la peindre quand vous voulez." %}</p>
-  <button class="btn pri" id="pwPay" style="width:100%;justify-content:center;font:inherit;font-size:.92rem;font-weight:700;padding:10px;white-space:normal">{% trans "Sauvegarder et continuer" %} · 0,99&nbsp;&euro;</button>
+  <button class="btn pri" id="pwPay" style="width:100%;justify-content:center;font:inherit;font-size:.92rem;font-weight:700;padding:10px;white-space:normal">{% trans "Sauvegarder et continuer" %} · {% money 0.99 %}</button>
   {% endif %}
   <p style="font-size:.72rem;margin:8px 0 0;opacity:.75">{% trans "Accès immédiat : en payant, vous renoncez au droit de rétractation." %} <a href="/cgv/" target="_blank" style="color:inherit">{% trans "CGV" %}</a></p>
   <a class="kitbtn" href="{{ kit_url }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>{% trans "Ou commander le kit à peindre" %}</a>
