@@ -1938,3 +1938,69 @@ class BuyWithoutCodeTests(TestCase):
         self.assertTrue(DigitalCanvas.objects.filter(email="buyer@x.com", uid=uid).exists())
         self.assertFalse(self.client.session.get("verified_email"))             # galerie de l'e-mail : code requis
         self.assertEqual(self.client.get("/play/%s/get/" % uid).status_code, 200)
+
+
+@override_settings(MEDIA_ROOT=MEDIA, STRIPE_SECRET_KEY="sk_test_x")
+class DownloadRightsMatrixTests(TestCase):
+    """Telechargement = toile ACHETEE, pour tout le monde (equipe comprise). Chaque cas : bouton du jeu + URL directe."""
+    def setUp(self):
+        import os
+        for uid in ("RIGHTS00-0001", "gal-rights"):
+            d = os.path.join(MEDIA, "orders", uid)
+            os.makedirs(d, exist_ok=True)
+            open(os.path.join(d, "%s_template.svg" % uid), "w").write(
+                '<svg viewBox="0 0 300 400"><path d="M 0 0 L 300 0 L 300 400 L 0 400 Z"/></svg>')
+            open(os.path.join(d, "%s_digipaint.svg" % uid), "w").write('<svg><path class="z"/></svg>')
+        DigitalCanvas.objects.create(email="__library__", uid="gal-rights", title="R", price=4.9, source="library",
+                                     colors=24, orientation="portrait", width_cm=30, height_cm=40)
+        self.free = DigitalCanvas.objects.create(email="__library__", uid="gal-free", title="F", price=0,
+                                                 source="library", colors=24, orientation="portrait",
+                                                 width_cm=30, height_cm=40)
+
+    def _check(self, uid, allowed, msg):
+        game = self.client.get("/play/%s/" % uid)
+        if game.status_code == 200:
+            self.assertEqual('id="dlGo"' in game.content.decode(), allowed, msg + " (bouton du jeu)")
+        r = self.client.get("/play/%s/download/" % uid)
+        self.assertEqual(r.status_code == 200, allowed, msg + " (URL directe)")
+        self.assertEqual(self.client.get("/play/%s/get/" % uid).status_code == 200, allowed, msg + " (page)")
+
+    def _session(self, **kw):
+        s = self.client.session
+        for k, v in kw.items():
+            s[k] = v
+        s.save()
+
+    def test_matrix(self):
+        from django.contrib.auth.models import User
+        from studio.models import LedgerEntry
+        from django.utils import timezone
+        uid = "RIGHTS00-0001"
+        self._check(uid, False, "visiteur, toile en essai")
+        self._session(order={"uid": uid})
+        self._check(uid, False, "apercu de commande non payee")
+        self._session(verified_email="a@b.fr")
+        DigitalCanvas.objects.create(email="a@b.fr", uid=uid, source="digital", colors=24, orientation="portrait",
+                                     width_cm=30, height_cm=40)
+        self._check(uid, False, "1re toile gratuite (jamais payee)")
+        self._check("gal-rights", False, "modele payant en essai")
+        LedgerEntry.objects.create(date=timezone.now(), kind="sale", source="gallery", uid="gal-rights",
+                                   email="other@x.fr", amount=4.9)
+        self._check("gal-rights", False, "modele paye par QUELQU'UN D'AUTRE")
+        User.objects.create_superuser("boss", "b@x.fr", "pw-Secret-123")
+        self.client.login(username="boss", password="pw-Secret-123")
+        self._session(verified_email="a@b.fr", order={"uid": uid})
+        self._check(uid, False, "equipe (admin) en essai")
+        # --- cas autorises
+        LedgerEntry.objects.create(date=timezone.now(), kind="sale", source="digital", uid=uid, email="a@b.fr", amount=0.99)
+        self._check(uid, True, "achat enregistre pour cet e-mail")
+        self.client.logout()
+        self._session(dl_uids=["gal-rights"])
+        self._check("gal-rights", True, "paye sur cet appareil (retour Stripe)")
+        o = make_order(uid="KITPAID0-0001", status=Order.SHIPPED)
+        import os, shutil
+        shutil.copytree(os.path.join(MEDIA, "orders", uid), os.path.join(MEDIA, "orders", o.uid), dirs_exist_ok=True)
+        for n in os.listdir(os.path.join(MEDIA, "orders", o.uid)):
+            os.rename(os.path.join(MEDIA, "orders", o.uid, n), os.path.join(MEDIA, "orders", o.uid, n.replace(uid, o.uid)))
+        self._session(verified_email="jane@example.com")
+        self._check(o.uid, True, "kit commande par ce client")

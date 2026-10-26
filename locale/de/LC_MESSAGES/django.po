@@ -2112,3 +2112,6 @@ msgstr ""
 
 msgid "Continuer vers le paiement"
 msgstr "Weiter zur Zahlung"
+
+msgid "Langue et devise"
+msgstr "Sprache und Währung"

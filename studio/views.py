@@ -984,7 +984,7 @@ def paint_buy(request, uid):
     dl = request.GET.get("dl") == "1"
     page = reverse("studio:paint_download_page", args=[uid])
     verified = request.session.get("verified_email") or None       # sinon Stripe demande l'e-mail
-    if dl and can_download(request, uid, staff=False):     # deja payee par ce client : pas de second paiement
+    if dl and can_download(request, uid):     # deja payee par ce client : pas de second paiement
         return redirect(page)
     if payments.stripe_live():
         try:
@@ -1019,11 +1019,11 @@ def _grant_download(request, uid):
     request.session["dl_uids"] = (dl + [uid])[-60:]
 
 
-def can_download(request, uid, staff=True):
+def can_download(request, uid):
     """Telecharger les fichiers imprimables : toile ACHETEE (jeu 0,99 €, modele payant, ou kit commande).
-    Les toiles seulement jouees / offertes passent par l'achat. `staff=False` : l'equipe passe aussi par le
-    paiement (test du parcours depuis l'apercu)."""
-    if (staff and request.user.is_staff) or uid in request.session.get("dl_uids", []):
+    Les toiles seulement jouees / offertes / en essai passent par l'achat. Meme regle pour l'equipe : elle teste
+    le vrai parcours (les fichiers des commandes restent disponibles dans l'ERP)."""
+    if uid in request.session.get("dl_uids", []):        # paye sur cet appareil (retour Stripe)
         return True
     v = (request.session.get("verified_email") or "").strip()
     if not v:

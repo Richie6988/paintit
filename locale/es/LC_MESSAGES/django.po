@@ -2079,3 +2079,6 @@ msgstr ""
 
 msgid "Continuer vers le paiement"
 msgstr "Continuar al pago"
+
+msgid "Langue et devise"
+msgstr "Idioma y moneda"

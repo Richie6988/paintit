@@ -774,6 +774,8 @@ main{overflow-x:clip}
 .langdd-menu a:hover{background:#f1f5ff}
 .langdd-menu a.active{background:#eef3ff;color:#2f6bf2 !important}
 .langdd-menu a b{margin-left:auto;color:#2f6bf2}
+.langdd-sep{margin:6px 4px 2px;padding:8px 6px 4px;border-top:1px solid #e6eaf2;font-size:.7rem;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;color:#7a849a}
 /* Drapeaux dessines (les emoji drapeaux s'affichent en lettres sous Windows) */
 .langdd summary .globe{opacity:.9}
 .flag{display:inline-block;width:20px;height:14px;border-radius:3px;flex:0 0 auto;box-shadow:0 0 0 1px rgba(18,34,79,.12)}

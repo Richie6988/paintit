@@ -2068,3 +2068,6 @@ msgstr ""
 
 msgid "Continuer vers le paiement"
 msgstr "Continue to payment"
+
+msgid "Langue et devise"
+msgstr "Language and currency"
