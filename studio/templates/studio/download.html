@@ -1,0 +1,14 @@
+{% extends "studio/base.html" %}
+{% load i18n static %}
+{% block title %}{% trans "Télécharger ma toile" %} · PaintIt{% endblock %}
+{% block meta_robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block content %}
+<section class="card" style="max-width:560px;margin:24px auto">
+  {% if request.GET.bought %}<p class="ok-note">{% trans "Paiement confirmé, merci ! Choisissez le format puis téléchargez votre toile." %}</p>{% endif %}
+  <h1 style="margin-top:0">{% trans "Télécharger ma toile" %}</h1>
+  <img src="{% url 'studio:order_image' uid 'preview' %}" alt="" style="max-width:100%;max-height:260px;display:block;margin:0 auto 16px;border-radius:12px">
+  <div class="dl-page">{% include "studio/_dl_form.html" %}</div>
+  <a href="{% url 'studio:digipaint' uid %}" class="ghost" style="display:block;text-align:center;margin-top:16px">{% trans "Peindre la toile en ligne" %} →</a>
+</section>
+<style>.dl-page select{border:1px solid #d5dbe6}.dl-page .kitbtn{display:flex;align-items:center;border-radius:999px;color:#fff;font-weight:700;text-decoration:none;background:linear-gradient(120deg,#e8455f,#f08a3c)}</style>
+{% endblock %}

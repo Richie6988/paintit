@@ -358,20 +358,7 @@
 {% if dl_formats %}<div class="paywall" id="dlsheet"><div class="pw-card">
   <h2>{% trans "Télécharger ma toile" %}</h2>
   {% if can_dl %}
-  <p style="color:var(--muted)">{% trans "Toile numérotée haute définition (TIFF) + poster des couleurs, à imprimer vous-même. Choisissez le format :" %}</p>
-  <label style="display:block;text-align:left;font-size:.85rem;color:var(--muted);margin:0 0 4px">{% trans "Format" %}</label>
-  <select id="dlFmt" style="width:100%;height:42px;border-radius:10px;font:inherit;padding:0 10px">{% for i, l in dl_formats %}<option value="{{ i }}">{{ l }}</option>{% endfor %}</select>
-  <label style="display:block;text-align:left;font-size:.85rem;color:var(--muted);margin:10px 0 4px">{% trans "Marge blanche autour du dessin" %}</label>
-  <select id="dlMargin" style="width:100%;height:42px;border-radius:10px;font:inherit;padding:0 10px">
-    <option value="0">{% trans "Sans marge (bord à bord)" %}</option>
-    <option value="5" selected>{% trans "5 mm · imprimante de bureau (recommandé)" %}</option>
-    <option value="10">10 mm</option>
-    <option value="20">{% trans "2 cm · pour encadrer sous passe-partout" %}</option>
-    <option value="40">{% trans "4 cm · pour tendre la toile sur un châssis" %}</option>
-  </select>
-  <p style="color:var(--muted);font-size:.78rem;margin:8px 0 0;text-align:left">{% trans "Le dessin est ajusté au format sans être déformé. Sur les petits formats (carte postale, A6), les numéros sont très petits : idéal en souvenir ou en cadeau." %}</p>
-  <a class="kitbtn" id="dlGo" href="{% url 'studio:paint_download' uid %}" style="display:flex;justify-content:center;height:44px;margin-top:12px">{% trans "Télécharger (ZIP)" %}</a>
-  <p id="dlWait" hidden style="color:var(--muted);font-size:.85rem;margin:8px 0 0">{% trans "Préparation du fichier… le téléchargement démarre dans quelques secondes." %}</p>
+  {% include "studio/_dl_form.html" %}
   {% else %}
   <p style="color:var(--muted)">{% trans "Achetez la toile pour la télécharger en haute définition au format de votre choix, avec son poster des couleurs." %}</p>
   <button type="button" class="btn pri" id="dlPay" style="width:100%;justify-content:center;font:inherit;font-weight:700;padding:10px">{% if dl_buy %}{% trans "Acheter la toile" %}{% else %}{% trans "Acheter et télécharger" %} · {% money 0.99 %}{% endif %}</button>
@@ -384,12 +371,6 @@
   function open(){ sh.classList.add('show'); }
   if (b) b.addEventListener('click', open);
   document.getElementById('dlClose').addEventListener('click', function(){ sh.classList.remove('show'); });
-  var go = document.getElementById('dlGo'), fmt = document.getElementById('dlFmt'), base = go ? go.getAttribute('href') : '';
-  var mg = document.getElementById('dlMargin');
-  function setHref(){ if (go) go.href = base + '?f=' + encodeURIComponent(fmt.value) + '&m=' + encodeURIComponent(mg ? mg.value : 5); }
-  if (fmt) { fmt.addEventListener('change', setHref); if (mg) mg.addEventListener('change', setHref); setHref(); }
-  if (go) go.addEventListener('click', function(){ var w = document.getElementById('dlWait'); w.hidden = false;
-    setTimeout(function(){ w.hidden = true; }, 15000); });
   var pay = document.getElementById('dlPay');
   if (pay) pay.addEventListener('click', function(){
     {% if dl_buy %}location.href = "{{ dl_buy|escapejs }}"; return;{% endif %}
@@ -398,7 +379,8 @@
           headers: {'X-CSRFToken': '{{ csrf_token }}'}})
       .then(function(r){ return r.json(); }).then(function(d){ if (d && d.redirect) location.href = d.redirect; });
   });
-  {% if request.GET.dl and can_dl %}open(); if (go) go.click();{% endif %}
+  sh.addEventListener('click', function(e){ if (e.target === sh) sh.classList.remove('show'); });   // clic a cote = fermer
+  {% if request.GET.dl %}open();{% endif %}
 })();
 </script>
 {% endif %}

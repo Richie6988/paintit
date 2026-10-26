@@ -1810,7 +1810,10 @@ class CanvasDownloadTests(TestCase):
         self.assertContains(page, 'id="dlPay"')                                # bouton d'achat, pas de lien
         s = self.client.session; s["dl_uids"] = [self.uid]; s.save()            # achat confirme dans la session
         r = self.client.post("/play/%s/confirm/" % self.uid, {"dl": "1"})
-        self.assertIn("dl=1", r.json()["redirect"])                             # deja achetee : pas de 2e paiement
+        self.assertIn("/play/%s/get/" % self.uid, r.json()["redirect"])          # deja payee : page de telechargement
+        pg = self.client.get("/play/%s/get/" % self.uid)
+        self.assertContains(pg, 'id="dlFmt"')
+        self.assertNotContains(pg, 'id="board"')                                 # pas le jeu
         page = self.client.get("/play/%s/" % self.uid)
         self.assertContains(page, 'id="dlGo"')
         self.assertContains(page, "40 x 50 cm")

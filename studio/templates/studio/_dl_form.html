@@ -1,0 +1,26 @@
+{% load i18n %}{# Choix du format + marge, puis telechargement (jeu et page apres achat) #}
+  <p style="color:var(--muted)">{% trans "Toile numérotée haute définition (TIFF) + poster des couleurs, à imprimer vous-même. Choisissez le format :" %}</p>
+  <label style="display:block;text-align:left;font-size:.85rem;color:var(--muted);margin:0 0 4px">{% trans "Format" %}</label>
+  <select id="dlFmt" style="width:100%;height:42px;border-radius:10px;font:inherit;padding:0 10px">{% for i, l in dl_formats %}<option value="{{ i }}">{{ l }}</option>{% endfor %}</select>
+  <label style="display:block;text-align:left;font-size:.85rem;color:var(--muted);margin:10px 0 4px">{% trans "Marge blanche autour du dessin" %}</label>
+  <select id="dlMargin" style="width:100%;height:42px;border-radius:10px;font:inherit;padding:0 10px">
+    <option value="0">{% trans "Sans marge (bord à bord)" %}</option>
+    <option value="5" selected>{% trans "5 mm · imprimante de bureau (recommandé)" %}</option>
+    <option value="10">10 mm</option>
+    <option value="20">{% trans "2 cm · pour encadrer sous passe-partout" %}</option>
+    <option value="40">{% trans "4 cm · pour tendre la toile sur un châssis" %}</option>
+  </select>
+  <p style="color:var(--muted);font-size:.78rem;margin:8px 0 0;text-align:left">{% trans "Le dessin est ajusté au format sans être déformé. Sur les petits formats (carte postale, A6), les numéros sont très petits : idéal en souvenir ou en cadeau." %}</p>
+  <a class="kitbtn" id="dlGo" href="{% url 'studio:paint_download' uid %}" style="display:flex;justify-content:center;height:44px;margin-top:12px">{% trans "Télécharger (ZIP)" %}</a>
+  <p id="dlWait" hidden style="color:var(--muted);font-size:.85rem;margin:8px 0 0">{% trans "Préparation du fichier… le téléchargement démarre dans quelques secondes." %}</p>
+<script>
+(function(){
+  var go = document.getElementById('dlGo'), fmt = document.getElementById('dlFmt'), mg = document.getElementById('dlMargin');
+  if (!go || !fmt) return;
+  var base = go.getAttribute('href');
+  function setHref(){ go.href = base + '?f=' + encodeURIComponent(fmt.value) + '&m=' + encodeURIComponent(mg ? mg.value : 5); }
+  fmt.addEventListener('change', setHref); if (mg) mg.addEventListener('change', setHref); setHref();
+  go.addEventListener('click', function(){ var w = document.getElementById('dlWait'); w.hidden = false;
+    setTimeout(function(){ w.hidden = true; }, 15000); });
+})();
+</script>

@@ -2071,3 +2071,12 @@ msgstr "da %(p)s"
 #, python-format
 msgid "Ajouter un set de pinceaux (+%(p)s)"
 msgstr "Aggiungi un set di pennelli (+%(p)s)"
+
+msgid ""
+"Paiement confirmé, merci ! Choisissez le format puis téléchargez votre "
+"toile."
+msgstr ""
+"Pagamento confermato, grazie! Scegli il formato e scarica la tua tela."
+
+msgid "Peindre la toile en ligne"
+msgstr "Dipingi la tela online"

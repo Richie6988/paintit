@@ -961,9 +961,9 @@ def paint_confirm(request, uid):
     if request.method != "POST":
         return JsonResponse({"ok": False}, status=405)
     dl = request.POST.get("dl") == "1" or request.GET.get("dl") == "1"
-    game = reverse("studio:digipaint", args=[uid]) + "?dl=1"
-    if dl and can_download(request, uid):          # deja achetee : pas de second paiement
-        return JsonResponse({"ok": True, "redirect": game})
+    page = reverse("studio:paint_download_page", args=[uid])
+    if dl and can_download(request, uid, staff=False):   # deja payee par ce client : pas de second paiement
+        return JsonResponse({"ok": True, "redirect": page})
     if payments.stripe_live():
         try:
             url = payments.create_digital_session(
@@ -977,7 +977,7 @@ def paint_confirm(request, uid):
     # Demo (dev uniquement) : pas de paiement reel -> credit immediat.
     _credit_digital(request, uid)
     _grant_download(request, uid)
-    return JsonResponse({"ok": True, "redirect": game} if dl else {"ok": True})
+    return JsonResponse({"ok": True, "redirect": page + "?bought=1"} if dl else {"ok": True})
 
 
 def paint_unlock_success(request):
@@ -988,7 +988,9 @@ def paint_unlock_success(request):
     if sess:
         _credit_digital(request, uid, sess)
         _grant_download(request, uid)
-        return redirect(reverse("studio:digipaint", args=[uid]) + "?bought=1" + ("&dl=1" if request.GET.get("dl") else ""))
+        if request.GET.get("dl"):        # achat depuis « Télécharger ma toile » : page de telechargement, pas le jeu
+            return redirect(reverse("studio:paint_download_page", args=[uid]) + "?bought=1")
+        return redirect(reverse("studio:digipaint", args=[uid]) + "?bought=1")
     return redirect("studio:digipaint", uid=uid)
 
 
@@ -997,10 +999,11 @@ def _grant_download(request, uid):
     request.session["dl_uids"] = (dl + [uid])[-60:]
 
 
-def can_download(request, uid):
+def can_download(request, uid, staff=True):
     """Telecharger les fichiers imprimables : toile ACHETEE (jeu 0,99 €, modele payant, ou kit commande).
-    Les toiles seulement jouees / offertes passent par l'achat."""
-    if request.user.is_staff or uid in request.session.get("dl_uids", []):
+    Les toiles seulement jouees / offertes passent par l'achat. `staff=False` : l'equipe passe aussi par le
+    paiement (test du parcours depuis l'apercu)."""
+    if (staff and request.user.is_staff) or uid in request.session.get("dl_uids", []):
         return True
     v = (request.session.get("verified_email") or "").strip()
     if not v:
@@ -1044,6 +1047,16 @@ def download_formats(uid):
     first = same or [("orig", "%s · %d x %d cm" % (_("Toile"), nat[0] // 10, nat[1] // 10), (w, h))]
     paper = [(k, l.replace("Carte postale", str(_("Carte postale"))), orient(mm)) for k, l, mm in PAPER_FORMATS]
     return first + paper + [f for f in canvas if f not in same]
+
+
+def paint_download_page(request, uid):
+    """Apres achat depuis l'apercu : choix du format puis telechargement (le jeu ne s'ouvre pas)."""
+    if "/" in uid or uid.startswith(".") or not os.path.exists(
+            os.path.join(settings.MEDIA_ROOT, "orders", uid, "%s_template.svg" % uid)):
+        raise Http404
+    if not can_download(request, uid):
+        return redirect(reverse("studio:digipaint", args=[uid]) + "?dl=1")
+    return render(request, "studio/download.html", {"uid": uid, "dl_formats": [(i, l) for i, l, _ in download_formats(uid)]})
 
 
 def paint_download(request, uid):
