@@ -341,7 +341,8 @@ def digipaint(request, uid):
     room = room if room and room.uid == uid else None
     if lib and not room:
         verified = request.session.get("verified_email")
-        owns = bool(verified) and DigitalCanvas.objects.filter(email=verified, uid=uid).exists()
+        owns = (bool(verified) and DigitalCanvas.objects.filter(email=verified, uid=uid).exists()) \
+            or uid in request.session.get("dl_uids", [])     # achete sur cet appareil (e-mail saisi dans Stripe)
         if lib.hidden and not owns and not request.user.is_staff:
             return redirect("studio:gallery")          # retire temporairement : seuls ses joueurs y ont acces
         if float(lib.price or 0) > 0 and not owns:
@@ -758,7 +759,6 @@ def paint_portal(request):
     canvases += [c for c in own if c.uid not in seen]
     return render(request, "studio/portal.html", {
         "verified_email": verified, "canvases": canvases,
-        "buying": bool(request.session.get("buy_pending")) and not verified,
         "free_used": free_used, "credits": request.session.get("paid_credits", 0),
     })
 
@@ -917,14 +917,14 @@ def paint_unlock(request, uid):
 
 
 def _credit_digital(request, uid, sess=None):
-    """Enregistre/deverrouille la toile numerique dans la galerie de l'utilisateur."""
-    verified = request.session.get("verified_email", "")
-    if _record_digital(uid, verified, request.session.get("order") or {}) and sess:
-        _digital_receipt(verified, uid, "", sess)
+    """Enregistre/deverrouille la toile numerique : rangee sous l'e-mail de l'acheteur, utilisable tout de suite
+    sur cet appareil (session)."""
+    email = _buyer_email(request, sess)
+    if _record_digital(uid, email, request.session.get("order") or {}) and sess and email:
+        _digital_receipt(email, uid, "", sess)
     request.session["free_used"] = True
-    if verified:
-        uids = request.session.get("my_uids", [])
-        if uid not in uids: uids.append(uid); request.session["my_uids"] = uids[-60:]
+    uids = request.session.get("my_uids", [])
+    if uid not in uids: uids.append(uid); request.session["my_uids"] = uids[-60:]
 
 
 def _record_digital(uid, verified, o):
@@ -957,11 +957,14 @@ def _digital_receipt(email, uid, title, sess, lang=None):
         logger.exception("Confirmation achat numerique %s", uid)
 
 
-def _identify_first(request, next_path):
-    """Meme regle pour tous les achats numeriques : e-mail verifie AVANT le paiement (la toile est rangee dans
-    « Mes toiles » de cet e-mail, recu et re-telechargement sur tous ses appareils). -> URL d'identification."""
-    request.session["buy_pending"] = next_path
-    return reverse("studio:paint_portal") + "?buy=1"
+def _buyer_email(request, sess=None):
+    """E-mail de l'acheteur : e-mail verifie de la session, sinon celui saisi dans Stripe (sous sa responsabilite).
+    Sert a ranger la toile achetee et a envoyer le recu ; il ne connecte PAS a « Mes toiles » (code requis)."""
+    v = request.session.get("verified_email") if request is not None else ""
+    if v:
+        return v
+    s = sess or {}
+    return ((s.get("customer_details") or {}).get("email") or s.get("customer_email") or "").strip()
 
 
 def paint_confirm(request, uid):
@@ -974,15 +977,13 @@ def paint_confirm(request, uid):
 
 
 def paint_buy(request, uid):
-    """Achat de la toile numerique (0,99 €, ou equivalent en devise) : e-mail verifie -> Stripe -> retour.
+    """Achat de la toile numerique (0,99 €, ou equivalent en devise) : Stripe (qui demande l'e-mail) -> retour.
     `dl=1` : achat pour telecharger -> page de telechargement apres paiement."""
     if "/" in uid or uid.startswith(".") or not os.path.isdir(os.path.join(settings.MEDIA_ROOT, "orders", uid)):
         raise Http404
     dl = request.GET.get("dl") == "1"
     page = reverse("studio:paint_download_page", args=[uid])
-    verified = request.session.get("verified_email")
-    if not verified:
-        return redirect(_identify_first(request, reverse("studio:paint_buy", args=[uid]) + ("?dl=1" if dl else "")))
+    verified = request.session.get("verified_email") or None       # sinon Stripe demande l'e-mail
     if dl and can_download(request, uid, staff=False):     # deja payee par ce client : pas de second paiement
         return redirect(page)
     if payments.stripe_live():
@@ -1826,13 +1827,14 @@ def stripe_webhook(request):
         kind = meta.get("kind", "kit")
         from . import ledger
         ledger.record_from_session(obj)
+        buyer = meta.get("email") or _buyer_email(None, obj)
         if uid and kind == "digital":
-            if _record_digital(uid, meta.get("email", ""), {}) and meta.get("email"):
-                _digital_receipt(meta["email"], uid, "", obj, meta.get("lang"))
+            if _record_digital(uid, buyer, {}) and buyer:
+                _digital_receipt(buyer, uid, "", obj, meta.get("lang"))
         elif uid and kind == "gallery":
             m = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
-            if m and meta.get("email") and _grant_gallery_to(m, meta["email"]):
-                _digital_receipt(meta["email"], uid, m.title, obj, meta.get("lang"))
+            if m and buyer and _grant_gallery_to(m, buyer):
+                _digital_receipt(buyer, uid, m.title, obj, meta.get("lang"))
         elif uid:
             r = Order.objects.filter(uid=uid).first()
             paid = (obj.get("amount_total") or 0) / 100.0
@@ -2811,10 +2813,9 @@ def gallery_buy(request, uid):
     price = float(m.price or 0)
     if price <= 0:
         return redirect("studio:digipaint", uid=uid)
-    verified = request.session.get("verified_email")
-    if not verified:
-        return redirect(_identify_first(request, reverse("studio:gallery_buy", args=[uid])))
-    if DigitalCanvas.objects.filter(email=verified, uid=uid).exists():
+    verified = request.session.get("verified_email") or None      # sinon Stripe demande l'e-mail
+    if (verified and DigitalCanvas.objects.filter(email=verified, uid=uid).exists()) \
+            or uid in request.session.get("dl_uids", []):
         return redirect("studio:digipaint", uid=uid)   # deja possede
     if payments.stripe_live():
         try:
@@ -2824,19 +2825,22 @@ def gallery_buy(request, uid):
             return JsonResponse({"error": "paiement indisponible"}, status=502)
     if not payments.demo_allowed():
         return JsonResponse({"error": "paiement indisponible"}, status=503)
-    _grant_gallery(request, m, verified)               # demo (dev) : credit immediat
+    if verified:                                       # demo (dev) : credit immediat
+        _grant_gallery(request, m, verified)
+    _grant_download(request, uid)
     return redirect("studio:digipaint", uid=uid)
 
 
 def gallery_buy_success(request):
     uid = request.GET.get("uid", ""); sid = request.GET.get("sid", "")
-    verified = request.session.get("verified_email")
-    sess = payments.paid_session(sid, uid=uid, kind="gallery") if uid and verified else None
+    sess = payments.paid_session(sid, uid=uid, kind="gallery") if uid else None
     if sess:
         m = DigitalCanvas.objects.filter(email="__library__", uid=uid).first()
+        email = _buyer_email(request, sess)
+        if m and email:
+            if _grant_gallery(request, m, email):
+                _digital_receipt(email, uid, m.title, sess)
         if m:
-            if _grant_gallery(request, m, verified):
-                _digital_receipt(verified, uid, m.title, sess)
             _grant_download(request, uid)
             return redirect(reverse("studio:digipaint", args=[uid]) + "?bought=1")
     return redirect("studio:digipaint", uid=uid)

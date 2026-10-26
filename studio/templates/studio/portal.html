@@ -11,7 +11,6 @@
     </div>
   </div>
 
-  {% if buying %}<p class="ok-note" style="margin:0 0 12px">{% trans "Pour finaliser votre achat, indiquez votre e-mail : votre toile y sera rattachée (reçu, « Mes toiles » et téléchargement sur tous vos appareils). Vous passerez ensuite au paiement sécurisé." %}</p>{% endif %}
   <div class="verifybar" id="verifybar">
     {% if verified_email %}
       <span>&#10003; {% trans "Galerie liée à" %} <b>{{ verified_email }}</b></span>
@@ -23,7 +22,7 @@
       </form>
       <form class="vf-row" id="codeForm" style="display:none" onsubmit="return false">
         <input type="text" id="veCode" placeholder="{% trans 'Code à 6 chiffres' %}" inputmode="numeric" autocomplete="one-time-code">
-        <button class="cta" id="veVerify" type="submit">{% if buying %}{% trans "Continuer vers le paiement" %}{% else %}{% trans "Voir ma galerie" %}{% endif %}</button>
+        <button class="cta" id="veVerify" type="submit">{% trans "Voir ma galerie" %}</button>
       </form>
       <em class="hint" id="veHint">{% trans "Saisissez votre e-mail : vous recevrez un code pour retrouver vos toiles sur tous vos appareils." %}</em>
       <script>
@@ -53,7 +52,6 @@
     {% endif %}
   </div>
 
-  {% if not buying %}
   <div id="grid" class="models-grid">
     <a class="add-card" href="{% url 'studio:paint_new' %}" title="{% trans 'Créer un design' %}">
       <span class="plus">+</span>
@@ -77,13 +75,12 @@
     {% endfor %}
   </div>
   <p id="empty" class="sub" {% if canvases %}hidden{% endif %}>{% trans "Aucune toile pour l'instant." %}</p>
-  {% endif %}
 
 </section>
 <script>
 (function(){
   var CSRF="{{ csrf_token }}", VERIFIED={% if verified_email %}true{% else %}false{% endif %};
-  var grid=document.getElementById('grid'); if(!grid)return;      // etape d'achat : pas de grille
+  var grid=document.getElementById('grid');
   try{var done=JSON.parse(localStorage.getItem('PIT_DONE')||'{}');var gm={};try{gm=JSON.parse(localStorage.getItem('PIT_GAME')||'{}');}catch(e){}
     document.querySelectorAll('.model-card[data-uid]').forEach(function(card){var uid=card.dataset.uid;
       if(done[uid]){card.classList.add('shiny');card.insertAdjacentHTML('beforeend','<span class="shiny-badge"><svg viewBox="0 0 24 24" fill="#e0a400"><path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6z"/></svg></span>');}

@@ -108,7 +108,6 @@ class NoDemoInProdTests(TestCase):
     def test_paint_confirm_refuses_without_stripe(self):
         import os
         os.makedirs(os.path.join(MEDIA, "orders", "XYZ"), exist_ok=True)
-        s = self.client.session; s["verified_email"] = "a@b.fr"; s.save()
         r = self.client.post("/play/XYZ/confirm/")
         r = self.client.get(r.json()["redirect"])                   # etape de paiement : jamais de credit gratuit
         self.assertEqual(r.status_code, 503)
@@ -1814,10 +1813,7 @@ class CanvasDownloadTests(TestCase):
         self.assertContains(page, 'id="dlPay"')                                # bouton d'achat, pas de lien
         r = self.client.post("/play/%s/confirm/" % self.uid, {"dl": "1"})
         self.assertEqual(r.json()["redirect"], "/play/%s/pay/?dl=1" % self.uid)
-        r = self.client.get("/play/%s/pay/?dl=1" % self.uid)                   # pas d'e-mail : identification d'abord
-        self.assertEqual(r["Location"], "/paint/?buy=1")
-        self.assertContains(self.client.get("/paint/"), "Continuer vers le paiement")
-        s = self.client.session; s["dl_uids"] = [self.uid]; s["verified_email"] = "a@b.fr"; s.save()
+        s = self.client.session; s["dl_uids"] = [self.uid]; s.save()            # paye sur cet appareil
         r = self.client.get("/play/%s/pay/?dl=1" % self.uid)                   # deja payee : page de telechargement
         self.assertEqual(r["Location"], "/play/%s/get/" % self.uid)
         pg = self.client.get("/play/%s/get/" % self.uid)
@@ -1912,3 +1908,33 @@ class LocalCurrencyCheckoutTests(TestCase):
         self.assertEqual((seen["currency"], seen["unit_amount"]), ("usd", 4790))
         o = Order.objects.get(uid="USD00000-0001")
         self.assertEqual((o.currency, o.amounts["total"], o.total), ("USD", 47.9, 42.9))   # compta : EUR
+
+
+@override_settings(MEDIA_ROOT=MEDIA, STRIPE_SECRET_KEY="sk_test_x",
+                   EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class BuyWithoutCodeTests(TestCase):
+    """Pas de code avant de payer : Stripe demande l'e-mail ; la toile y est rangee, sans ouvrir « Mes toiles »."""
+    def test_digital_purchase_uses_stripe_email(self):
+        import os
+        from studio import payments
+        uid = "NOCODE00-0001"
+        os.makedirs(os.path.join(MEDIA, "orders", uid), exist_ok=True)
+        open(os.path.join(MEDIA, "orders", uid, "%s_template.svg" % uid), "w").write(
+            '<svg viewBox="0 0 300 400"><path d="M 0 0 L 300 0 L 300 400 L 0 400 Z"/></svg>')
+        seen = {}
+
+        def fake_create(**kw):
+            seen.update(kw)
+            return mock.Mock(url="https://stripe.test/pay")
+        with mock.patch.object(payments.stripe.checkout.Session, "create", side_effect=fake_create):
+            r = self.client.get("/play/%s/pay/?dl=1" % uid)
+        self.assertEqual(r["Location"], "https://stripe.test/pay")              # directement Stripe
+        self.assertIsNone(seen.get("customer_email"))                            # Stripe demande l'e-mail
+        sess = {"payment_status": "paid", "metadata": {"uid": uid, "kind": "digital"}, "amount_total": 99,
+                "currency": "eur", "customer_details": {"email": "buyer@x.com"}}
+        with mock.patch.object(payments, "paid_session", return_value=sess):
+            r = self.client.get("/paint/unlock-success/?uid=%s&sid=cs_1&dl=1" % uid)
+        self.assertEqual(r["Location"], "/play/%s/get/?bought=1" % uid)
+        self.assertTrue(DigitalCanvas.objects.filter(email="buyer@x.com", uid=uid).exists())
+        self.assertFalse(self.client.session.get("verified_email"))             # galerie de l'e-mail : code requis
+        self.assertEqual(self.client.get("/play/%s/get/" % uid).status_code, 200)
