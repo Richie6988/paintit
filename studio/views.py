@@ -1002,8 +1002,17 @@ def can_download(request, uid):
             or Order.objects.filter(uid=uid, customer_email__iexact=v, status__in=Order.PAID_STATUSES).exists())
 
 
+# Formats papier proposes au telechargement (portrait, mm) ; les formats du kit (toile) s'y ajoutent.
+PAPER_FORMATS = [("cp", "Carte postale 10 x 15 cm", (100, 150)), ("a6", "A6 · 10,5 x 14,8 cm", (105, 148)),
+                 ("a5", "A5 · 14,8 x 21 cm", (148, 210)), ("a4", "A4 · 21 x 29,7 cm", (210, 297)),
+                 ("letter", "US Letter · 21,6 x 27,9 cm", (216, 279)), ("a3", "A3 · 29,7 x 42 cm", (297, 420)),
+                 ("a2", "A2 · 42 x 59,4 cm", (420, 594)), ("a1", "A1 · 59,4 x 84,1 cm", (594, 841))]
+DL_MARGINS = (0, 5, 10, 20, 40)      # marge blanche (mm) : 5 mm = imprimante de bureau, 40 mm = bord pour chassis
+
+
 def download_formats(uid):
-    """Formats proposes au telechargement (meme orientation que la toile) : [(id, libelle, (L, H) mm)]."""
+    """Formats proposes au telechargement, orientes comme la toile : [(cle, libelle, (L, H) mm)].
+    Taille d'origine en tete (choix par defaut), puis formats papier (carte postale -> A1), puis formats toile."""
     from .models import KitFormat
     d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
     try:
@@ -1013,15 +1022,19 @@ def download_formats(uid):
     except (OSError, AttributeError, ValueError):
         return []
     land = w > h
-    out = []
+
+    def orient(mm):
+        a, b = sorted(mm)
+        return (b, a) if land else (a, b)
+    canvas = []
     for kf in KitFormat.objects.filter(available=True):
-        a, b = sorted((kf.width_cm, kf.height_cm))
-        fw, fh = (b, a) if land else (a, b)
-        out.append((kf.id, "%d x %d cm" % (fw, fh), (fw * 10, fh * 10)))
-    nat = (int(round(w / 10)), int(round(h / 10)))
-    same = [f for f in out if f[2] == (nat[0] * 10, nat[1] * 10)]
-    # taille d'origine de la toile en tete (choix par defaut), puis les autres formats
-    return (same or [(0, "%d x %d cm" % nat, (w, h))]) + [f for f in out if f not in same]
+        fw, fh = orient((kf.width_cm * 10, kf.height_cm * 10))
+        canvas.append(("t%d" % kf.id, "%s · %d x %d cm" % (_("Toile"), fw // 10, fh // 10), (fw, fh)))
+    nat = (int(round(w / 10)) * 10, int(round(h / 10)) * 10)
+    same = [f for f in canvas if f[2] == nat]
+    first = same or [("orig", "%s · %d x %d cm" % (_("Toile"), nat[0] // 10, nat[1] // 10), (w, h))]
+    paper = [(k, l.replace("Carte postale", str(_("Carte postale"))), orient(mm)) for k, l, mm in PAPER_FORMATS]
+    return first + paper + [f for f in canvas if f not in same]
 
 
 def paint_download(request, uid):
@@ -1039,18 +1052,22 @@ def paint_download(request, uid):
     if security.rate_limited("dl:" + security.client_ip(request), 30, 3600):
         return HttpResponse(_("Trop de téléchargements en peu de temps. Réessayez plus tard."), status=429)
     fmts = download_formats(uid)
+    key = request.GET.get("f") or (fmts[0][0] if fmts else "")
+    fmt = next((f for f in fmts if f[0] == key), fmts[0] if fmts else ("", "", None))
     try:
-        fid = int(request.GET.get("f", fmts[0][0] if fmts else 0))
+        margin = int(request.GET.get("m", 5))
     except ValueError:
-        fid = 0
-    fmt = next((f for f in fmts if f[0] == fid), fmts[0] if fmts else (0, "", None))
+        margin = 5
+    margin = margin if margin in DL_MARGINS else 5
     from .printfiles import render_tiff
     from . import fulfillment
     tmp = tempfile.mkdtemp(prefix="pit-dl-")
     try:
-        name = "PaintIt-%s-%s" % (uid, fmt[1].replace(" ", "")) if fmt[1] else "PaintIt-%s" % uid
+        size = "%gx%gcm" % (fmt[2][0] / 10, fmt[2][1] / 10) if fmt[2] else ""
+        name = "-".join(x for x in ("PaintIt", uid, fmt[0] if fmt[0] in dict((k, 1) for k, _l, _m in PAPER_FORMATS) else "",
+                                    size) if x)
         with open(svgp, encoding="utf-8") as fh:
-            render_tiff(fh.read(), os.path.join(tmp, name + ".tiff"), dpi=300, page_mm=fmt[2], label="")
+            render_tiff(fh.read(), os.path.join(tmp, name + ".tiff"), dpi=300, page_mm=fmt[2], margin_mm=margin)
         files = [name + ".tiff"]
         if os.path.exists(os.path.join(d, "%s_preview.png" % uid)):
             try:

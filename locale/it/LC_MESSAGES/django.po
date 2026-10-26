@@ -2030,3 +2030,32 @@ msgstr "Acquista e scarica"
 
 msgid "Trop de téléchargements en peu de temps. Réessayez plus tard."
 msgstr "Troppi download in poco tempo. Riprova più tardi."
+
+msgid "Toile"
+msgstr "Tela"
+
+msgid "Carte postale"
+msgstr "Cartolina"
+
+msgid "Marge blanche autour du dessin"
+msgstr "Margine bianco intorno al disegno"
+
+msgid "Sans marge (bord à bord)"
+msgstr "Senza margine (al vivo)"
+
+msgid "5 mm · imprimante de bureau (recommandé)"
+msgstr "5 mm · stampante di casa (consigliato)"
+
+msgid "2 cm · pour encadrer sous passe-partout"
+msgstr "2 cm · per incorniciare con passe-partout"
+
+msgid "4 cm · pour tendre la toile sur un châssis"
+msgstr "4 cm · per tendere la tela su un telaio"
+
+msgid ""
+"Le dessin est ajusté au format sans être déformé. Sur les petits formats "
+"(carte postale, A6), les numéros sont très petits : idéal en souvenir ou en "
+"cadeau."
+msgstr ""
+"Il disegno si adatta al formato senza deformarsi. Nei formati piccoli "
+"(cartolina, A6) i numeri sono molto piccoli: ideale come ricordo o regalo."

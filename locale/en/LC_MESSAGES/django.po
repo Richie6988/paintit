@@ -2006,3 +2006,32 @@ msgstr "Buy and download"
 
 msgid "Trop de téléchargements en peu de temps. Réessayez plus tard."
 msgstr "Too many downloads in a short time. Please try again later."
+
+msgid "Toile"
+msgstr "Canvas"
+
+msgid "Carte postale"
+msgstr "Postcard"
+
+msgid "Marge blanche autour du dessin"
+msgstr "White margin around the drawing"
+
+msgid "Sans marge (bord à bord)"
+msgstr "No margin (edge to edge)"
+
+msgid "5 mm · imprimante de bureau (recommandé)"
+msgstr "5 mm · home printer (recommended)"
+
+msgid "2 cm · pour encadrer sous passe-partout"
+msgstr "2 cm · for framing with a mat"
+
+msgid "4 cm · pour tendre la toile sur un châssis"
+msgstr "4 cm · to stretch the canvas on a frame"
+
+msgid ""
+"Le dessin est ajusté au format sans être déformé. Sur les petits formats "
+"(carte postale, A6), les numéros sont très petits : idéal en souvenir ou en "
+"cadeau."
+msgstr ""
+"The drawing is fitted to the size without distortion. On small sizes "
+"(postcard, A6) the numbers are very small: ideal as a keepsake or gift."

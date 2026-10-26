@@ -1814,12 +1814,20 @@ class CanvasDownloadTests(TestCase):
         page = self.client.get("/play/%s/" % self.uid)
         self.assertContains(page, 'id="dlGo"')
         self.assertContains(page, "40 x 50 cm")
-        fid = [f for f in page.context["dl_formats"] if f[1] == "40 x 50 cm"][0][0]
+        self.assertContains(page, "A4 · 21 x 29,7 cm")
+        self.assertEqual(page.context["dl_formats"][0][1], "Toile · 30 x 40 cm")       # taille d'origine par defaut
+        fid = [f for f in page.context["dl_formats"] if f[1] == "Toile · 40 x 50 cm"][0][0]
+        a4 = self.client.get(url, {"f": "a4", "m": "10"})
+        from PIL import Image
+        za = zipfile.ZipFile(io.BytesIO(b"".join(a4.streaming_content)))
+        ta = Image.open(io.BytesIO(za.read([n for n in za.namelist() if n.endswith(".tiff")][0])))
+        self.assertEqual(ta.size, (round(210 / 25.4 * 300), round(297 / 25.4 * 300)))
+        self.assertEqual(ta.convert("L").getpixel((20, ta.size[1] // 2)), 255)          # marge blanche
         r = self.client.get(url, {"f": fid})
         self.assertEqual(r.status_code, 200)
         z = zipfile.ZipFile(io.BytesIO(b"".join(r.streaming_content)))
         names = z.namelist()
-        self.assertTrue(any(n.endswith("40x50cm.tiff") for n in names))
+        self.assertTrue(any(n.endswith("40x50cm.tiff") for n in names), names)
         self.assertTrue(any(n.endswith("poster.png") for n in names))
         from PIL import Image
         im = Image.open(io.BytesIO(z.read([n for n in names if n.endswith(".tiff")][0])))

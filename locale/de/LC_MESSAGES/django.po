@@ -2048,3 +2048,33 @@ msgstr "Kaufen und herunterladen"
 
 msgid "Trop de téléchargements en peu de temps. Réessayez plus tard."
 msgstr "Zu viele Downloads in kurzer Zeit. Bitte später erneut versuchen."
+
+msgid "Toile"
+msgstr "Leinwand"
+
+msgid "Carte postale"
+msgstr "Postkarte"
+
+msgid "Marge blanche autour du dessin"
+msgstr "Weißer Rand um die Zeichnung"
+
+msgid "Sans marge (bord à bord)"
+msgstr "Ohne Rand (randlos)"
+
+msgid "5 mm · imprimante de bureau (recommandé)"
+msgstr "5 mm · Heimdrucker (empfohlen)"
+
+msgid "2 cm · pour encadrer sous passe-partout"
+msgstr "2 cm · zum Rahmen mit Passepartout"
+
+msgid "4 cm · pour tendre la toile sur un châssis"
+msgstr "4 cm · zum Aufspannen auf einen Keilrahmen"
+
+msgid ""
+"Le dessin est ajusté au format sans être déformé. Sur les petits formats "
+"(carte postale, A6), les numéros sont très petits : idéal en souvenir ou en "
+"cadeau."
+msgstr ""
+"Die Zeichnung wird unverzerrt an das Format angepasst. Bei kleinen Formaten "
+"(Postkarte, A6) sind die Zahlen sehr klein: ideal als Andenken oder "
+"Geschenk."

@@ -2018,3 +2018,32 @@ msgstr "Comprar y descargar"
 
 msgid "Trop de téléchargements en peu de temps. Réessayez plus tard."
 msgstr "Demasiadas descargas en poco tiempo. Inténtalo más tarde."
+
+msgid "Toile"
+msgstr "Lienzo"
+
+msgid "Carte postale"
+msgstr "Postal"
+
+msgid "Marge blanche autour du dessin"
+msgstr "Margen blanco alrededor del dibujo"
+
+msgid "Sans marge (bord à bord)"
+msgstr "Sin margen (a sangre)"
+
+msgid "5 mm · imprimante de bureau (recommandé)"
+msgstr "5 mm · impresora doméstica (recomendado)"
+
+msgid "2 cm · pour encadrer sous passe-partout"
+msgstr "2 cm · para enmarcar con paspartú"
+
+msgid "4 cm · pour tendre la toile sur un châssis"
+msgstr "4 cm · para tensar el lienzo en un bastidor"
+
+msgid ""
+"Le dessin est ajusté au format sans être déformé. Sur les petits formats "
+"(carte postale, A6), les numéros sont très petits : idéal en souvenir ou en "
+"cadeau."
+msgstr ""
+"El dibujo se ajusta al formato sin deformarse. En formatos pequeños (postal,"
+" A6) los números son muy pequeños: ideal como recuerdo o regalo."

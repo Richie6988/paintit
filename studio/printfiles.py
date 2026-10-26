@@ -107,17 +107,19 @@ def render_pdf(svg, out_path, label=""):
     return out_path
 
 
-def render_tiff(svg, out_path, dpi=600, label="", page_mm=None, pad_mm=None):
+def render_tiff(svg, out_path, dpi=600, label="", page_mm=None, pad_mm=None, margin_mm=0):
     """TIFF de la toile numerotee.
     - fournisseur (defaut) : taille reelle + marge blanche PAD_MM + n° de commande au-dessus ;
-    - `page_mm=(L, H)` : toile ajustee (contain, centree) dans une page de ce format (telechargement client)."""
+    - `page_mm=(L, H)` : toile ajustee (contain, centree) dans une page de ce format, en laissant `margin_mm`
+      de blanc sur chaque bord (telechargement client : imprimante de bureau, bord pour chassis...)."""
     import numpy as np
     import cv2
     from PIL import Image, ImageDraw, ImageFont
     w, h, paths, texts = parse_template(svg)
     if page_mm:
         PW, PH = float(page_mm[0]), float(page_mm[1])
-        s = min(PW / w, PH / h)
+        m = max(0.0, min(float(margin_mm or 0), min(PW, PH) / 4))     # jamais plus d'un quart de la page
+        s = min((PW - 2 * m) / w, (PH - 2 * m) / h)
         ox, oy = (PW - w * s) / 2, (PH - h * s) / 2
     else:
         P = PAD_MM if pad_mm is None else pad_mm
