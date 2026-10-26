@@ -2056,3 +2056,15 @@ msgstr ""
 
 msgid "Peindre la toile en ligne"
 msgstr "Paint the canvas online"
+
+msgid ""
+"Pour finaliser votre achat, indiquez votre e-mail : votre toile y sera "
+"rattachée (reçu, « Mes toiles » et téléchargement sur tous vos appareils). "
+"Vous passerez ensuite au paiement sécurisé."
+msgstr ""
+"To complete your purchase, enter your email: your canvas will be linked to "
+"it (receipt, “My canvases” and download on all your devices). You will then "
+"go to the secure payment."
+
+msgid "Continuer vers le paiement"
+msgstr "Continue to payment"

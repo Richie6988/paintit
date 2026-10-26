@@ -2100,3 +2100,15 @@ msgstr ""
 
 msgid "Peindre la toile en ligne"
 msgstr "Das Bild online malen"
+
+msgid ""
+"Pour finaliser votre achat, indiquez votre e-mail : votre toile y sera "
+"rattachée (reçu, « Mes toiles » et téléchargement sur tous vos appareils). "
+"Vous passerez ensuite au paiement sécurisé."
+msgstr ""
+"Um Ihren Kauf abzuschließen, geben Sie Ihre E-Mail an: Ihr Bild wird damit "
+"verknüpft (Beleg, „Meine Bilder“ und Download auf allen Geräten). Danach "
+"geht es zur sicheren Zahlung."
+
+msgid "Continuer vers le paiement"
+msgstr "Weiter zur Zahlung"

@@ -106,7 +106,11 @@ class PaymentTests(TestCase):
 @override_settings(MEDIA_ROOT=MEDIA, STRIPE_SECRET_KEY="", DEBUG=False)
 class NoDemoInProdTests(TestCase):
     def test_paint_confirm_refuses_without_stripe(self):
+        import os
+        os.makedirs(os.path.join(MEDIA, "orders", "XYZ"), exist_ok=True)
+        s = self.client.session; s["verified_email"] = "a@b.fr"; s.save()
         r = self.client.post("/play/XYZ/confirm/")
+        r = self.client.get(r.json()["redirect"])                   # etape de paiement : jamais de credit gratuit
         self.assertEqual(r.status_code, 503)
         self.assertFalse(DigitalCanvas.objects.exists())
 
@@ -1808,9 +1812,14 @@ class CanvasDownloadTests(TestCase):
         page = self.client.get("/play/%s/" % self.uid)
         self.assertContains(page, 'id="dlBtn"')
         self.assertContains(page, 'id="dlPay"')                                # bouton d'achat, pas de lien
-        s = self.client.session; s["dl_uids"] = [self.uid]; s.save()            # achat confirme dans la session
         r = self.client.post("/play/%s/confirm/" % self.uid, {"dl": "1"})
-        self.assertIn("/play/%s/get/" % self.uid, r.json()["redirect"])          # deja payee : page de telechargement
+        self.assertEqual(r.json()["redirect"], "/play/%s/pay/?dl=1" % self.uid)
+        r = self.client.get("/play/%s/pay/?dl=1" % self.uid)                   # pas d'e-mail : identification d'abord
+        self.assertEqual(r["Location"], "/paint/?buy=1")
+        self.assertContains(self.client.get("/paint/"), "Continuer vers le paiement")
+        s = self.client.session; s["dl_uids"] = [self.uid]; s["verified_email"] = "a@b.fr"; s.save()
+        r = self.client.get("/play/%s/pay/?dl=1" % self.uid)                   # deja payee : page de telechargement
+        self.assertEqual(r["Location"], "/play/%s/get/" % self.uid)
         pg = self.client.get("/play/%s/get/" % self.uid)
         self.assertContains(pg, 'id="dlFmt"')
         self.assertNotContains(pg, 'id="board"')                                 # pas le jeu

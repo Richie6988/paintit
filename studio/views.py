@@ -758,6 +758,7 @@ def paint_portal(request):
     canvases += [c for c in own if c.uid not in seen]
     return render(request, "studio/portal.html", {
         "verified_email": verified, "canvases": canvases,
+        "buying": bool(request.session.get("buy_pending")) and not verified,
         "free_used": free_used, "credits": request.session.get("paid_credits", 0),
     })
 
@@ -855,8 +856,9 @@ def paint_verify_code(request):
         return JsonResponse({"error": "code"}, status=400)
     EmailCode.objects.filter(email=email).delete()       # usage unique
     request.session["verified_email"] = email
-    _bp = request.session.pop("buy_pending", None)
-    return JsonResponse({"ok": True, "redirect": ("/play/buy/%s/" % _bp) if _bp else "/paint/"})
+    _bp = request.session.pop("buy_pending", None)          # achat en attente : on le reprend la ou il en etait
+    nxt = _bp if (_bp or "").startswith("/") else (("/play/buy/%s/" % _bp) if _bp else "/paint/")
+    return JsonResponse({"ok": True, "redirect": nxt})
 
 
 def paint_logout(request):
@@ -955,29 +957,46 @@ def _digital_receipt(email, uid, title, sess, lang=None):
         logger.exception("Confirmation achat numerique %s", uid)
 
 
+def _identify_first(request, next_path):
+    """Meme regle pour tous les achats numeriques : e-mail verifie AVANT le paiement (la toile est rangee dans
+    « Mes toiles » de cet e-mail, recu et re-telechargement sur tous ses appareils). -> URL d'identification."""
+    request.session["buy_pending"] = next_path
+    return reverse("studio:paint_portal") + "?buy=1"
+
+
 def paint_confirm(request, uid):
-    """Mur de paiement 'pour continuer' (0,99 EUR). Stripe si configure, sinon demo immediat.
-    `dl=1` : achat depuis « Télécharger ma toile » -> apres paiement, le jeu ouvre le telechargement."""
+    """Boutons d'achat numerique (jeu : « Sauvegarder », apercu / jeu : « Télécharger ma toile ») -> URL suivante :
+    identification par e-mail si besoin, puis paiement (paint_buy)."""
     if request.method != "POST":
         return JsonResponse({"ok": False}, status=405)
     dl = request.POST.get("dl") == "1" or request.GET.get("dl") == "1"
+    return JsonResponse({"ok": True, "redirect": reverse("studio:paint_buy", args=[uid]) + ("?dl=1" if dl else "")})
+
+
+def paint_buy(request, uid):
+    """Achat de la toile numerique (0,99 €, ou equivalent en devise) : e-mail verifie -> Stripe -> retour.
+    `dl=1` : achat pour telecharger -> page de telechargement apres paiement."""
+    if "/" in uid or uid.startswith(".") or not os.path.isdir(os.path.join(settings.MEDIA_ROOT, "orders", uid)):
+        raise Http404
+    dl = request.GET.get("dl") == "1"
     page = reverse("studio:paint_download_page", args=[uid])
-    if dl and can_download(request, uid, staff=False):   # deja payee par ce client : pas de second paiement
-        return JsonResponse({"ok": True, "redirect": page})
+    verified = request.session.get("verified_email")
+    if not verified:
+        return redirect(_identify_first(request, reverse("studio:paint_buy", args=[uid]) + ("?dl=1" if dl else "")))
+    if dl and can_download(request, uid, staff=False):     # deja payee par ce client : pas de second paiement
+        return redirect(page)
     if payments.stripe_live():
         try:
-            url = payments.create_digital_session(
-                uid, request, email=request.session.get("verified_email") or None, download=dl)
-            return JsonResponse({"ok": True, "redirect": url})
-        except Exception as exc:
+            return redirect(payments.create_digital_session(uid, request, email=verified, download=dl))
+        except Exception:
             logger.exception("Stripe digital session %s", uid)
-            return JsonResponse({"ok": False, "error": str(exc)}, status=502)
+            return render(request, "studio/download.html", {"uid": uid, "pay_error": True, "dl_formats": []}, status=502)
     if not payments.demo_allowed():
-        return JsonResponse({"ok": False, "error": "paiement indisponible"}, status=503)
+        return render(request, "studio/download.html", {"uid": uid, "pay_error": True, "dl_formats": []}, status=503)
     # Demo (dev uniquement) : pas de paiement reel -> credit immediat.
     _credit_digital(request, uid)
     _grant_download(request, uid)
-    return JsonResponse({"ok": True, "redirect": page + "?bought=1"} if dl else {"ok": True})
+    return redirect((page if dl else reverse("studio:digipaint", args=[uid])) + "?bought=1")
 
 
 def paint_unlock_success(request):
@@ -2794,8 +2813,7 @@ def gallery_buy(request, uid):
         return redirect("studio:digipaint", uid=uid)
     verified = request.session.get("verified_email")
     if not verified:
-        request.session["buy_pending"] = uid          # on l'achete apres identification
-        return redirect("studio:paint_portal")
+        return redirect(_identify_first(request, reverse("studio:gallery_buy", args=[uid])))
     if DigitalCanvas.objects.filter(email=verified, uid=uid).exists():
         return redirect("studio:digipaint", uid=uid)   # deja possede
     if payments.stripe_live():
