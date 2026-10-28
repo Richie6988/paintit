@@ -1,0 +1,1390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GARDP BI Hub Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: app shell — fixed rail nav on the left, sticky command bar on top, one working view at a time.
+   Visual world: microbiology lab — agar-pale cool neutrals, methylene-blue accent, amber for "evidence" highlights. */
+:root{
+  --bg:#EEF2F5; --surface:#FFFFFF; --sunken:#E4EAEF; --ink:#0D1A28; --muted:#55687B; --line:#D5DEE6;
+  --accent:#1D47D6; --accent-ink:#FFFFFF; --accent-soft:#E2E8FD; --amber:#C98407; --amber-soft:#FBEFD3;
+  --good:#16865A; --warn:#B7790A; --crit:#C93A31; --good-soft:#DDF2E8; --crit-soft:#F9E1DF;
+  --shadow:0 1px 2px rgba(13,26,40,.06),0 8px 24px rgba(13,26,40,.06);
+  --f-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#08111B; --surface:#0F1B28; --sunken:#0B1520; --ink:#E4ECF4; --muted:#8C9EB2; --line:#1C2B3B;
+  --accent:#7590FF; --accent-ink:#08111B; --accent-soft:#17264A; --amber:#F0B44A; --amber-soft:#3A2C10;
+  --good:#3CC48A; --warn:#E8A93A; --crit:#F0675D; --good-soft:#0F3326; --crit-soft:#3D1715;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#08111B; --surface:#0F1B28; --sunken:#0B1520; --ink:#E4ECF4; --muted:#8C9EB2; --line:#1C2B3B;
+  --accent:#7590FF; --accent-ink:#08111B; --accent-soft:#17264A; --amber:#F0B44A; --amber-soft:#3A2C10;
+  --good:#3CC48A; --warn:#E8A93A; --crit:#F0675D; --good-soft:#0F3326; --crit-soft:#3D1715;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35); color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(28px,4.4vw,48px);line-height:1.04;font-weight:800;letter-spacing:-.025em}
+h2{font-size:22px;line-height:1.2}
+h3{font-size:16px}
+p{margin:0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.eyebrow{font:500 11px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+mark{background:var(--amber-soft);color:inherit;border-radius:3px;padding:0 2px;box-shadow:inset 0 -2px 0 var(--amber)}
+
+/* shell */
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100%}
+.rail{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:18px;padding:20px 14px;border-right:1px solid var(--line);background:var(--surface)}
+.brand{display:flex;align-items:center;gap:10px;padding:0 6px}
+.brand-mark{width:34px;height:34px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink)}
+.brand b{font-family:var(--f-display);font-size:17px;display:block;line-height:1.1}
+.brand small{font:500 10px var(--f-mono);letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:500}
+.nav a:hover{background:var(--sunken);color:var(--ink)}
+.nav a.on{background:var(--accent-soft);color:var(--accent)}
+.nav a svg{flex:none}
+.nav .ref{margin-left:auto;font:500 10px var(--f-mono);opacity:.7}
+.nav-sep{font:500 10px var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:12px 10px 4px}
+.rail-foot{margin-top:auto;padding:12px;border:1px dashed var(--line);border-radius:var(--r);font-size:12px;color:var(--muted)}
+.rail-foot b{color:var(--ink)}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;align-items:center;gap:12px;padding-block:12px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+.cmd{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted);text-align:left}
+.cmd span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kbd{font:500 11px var(--f-mono);border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:var(--sunken);color:var(--muted)}
+.role{display:flex;align-items:center;gap:8px}
+.role select{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);max-width:190px}
+.icon-btn{width:36px;height:36px;display:grid;place-items:center;border-radius:8px;border:1px solid var(--line);background:var(--surface);flex:none}
+.view{padding-block:28px 64px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));max-width:1320px;width:100%;animation:rise .35s ease both}
+@keyframes rise{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* primitives */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.pad{padding:18px}
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+.grid > *{min-width:0}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--accent);padding-inline:8px}
+.btn.sm{padding:5px 10px;font-size:12px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:12px;background:var(--sunken);color:var(--ink);border:1px solid transparent;white-space:nowrap}
+.chip.acc{background:var(--accent-soft);color:var(--accent)}
+.chip.amb{background:var(--amber-soft);color:var(--ink)}
+.chip.good{background:var(--good-soft);color:var(--good)}
+.chip.crit{background:var(--crit-soft);color:var(--crit)}
+.chip.btnlike{cursor:pointer;border-color:var(--line);background:var(--surface)}
+.chip.btnlike.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.sec-head p{max-width:62ch;color:var(--muted);margin-top:6px}
+table{width:100%;border-collapse:collapse}
+th{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.tscroll{overflow-x:auto}
+.bar{height:6px;border-radius:9px;background:var(--sunken);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:9px;transition:width .5s ease}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.fmt{font:600 10px var(--f-mono);padding:3px 6px;border-radius:4px;background:var(--sunken);color:var(--muted);letter-spacing:.05em}
+.lock{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--warn)}
+input[type=text],input[type=search],select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+/* home */
+.hero{position:relative;overflow:hidden;border-radius:16px;border:1px solid var(--line);background:var(--surface);min-height:380px;display:grid}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%}
+.hero-in{position:relative;padding:40px clamp(20px,4vw,48px);display:flex;flex-direction:column;justify-content:center;gap:18px;max-width:720px;pointer-events:none}
+.hero-in > *{pointer-events:auto}
+.hero-in h1 em{font-style:normal;color:var(--accent)}
+.hero-in p{font-size:16px;color:var(--muted);max-width:56ch}
+.askbox{display:flex;gap:8px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);max-width:640px}
+.askbox input{flex:1;min-width:0;border:0;background:transparent;padding:10px}
+.askbox input:focus{box-shadow:none}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.kpi{padding:16px 18px}
+.kpi b{display:block;font:600 30px/1.1 var(--f-display);letter-spacing:-.02em;margin-top:8px;font-variant-numeric:tabular-nums}
+.kpi small{color:var(--muted)}
+.req{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.req a{display:flex;flex-direction:column;gap:8px;padding:16px;text-decoration:none;color:inherit;transition:transform .15s,border-color .15s}
+.req a:hover{transform:translateY(-2px);border-color:var(--accent)}
+.req .eyebrow{display:flex;justify-content:space-between}
+.feed li{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.feed li:last-child{border-bottom:0}
+.feed{list-style:none;margin:0;padding:0}
+.two{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+
+/* repository */
+.drop{border:2px dashed var(--line);border-radius:14px;padding:28px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;transition:.2s;background:var(--surface)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.pipe{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;min-width:280px}
+.pipe span{height:6px;border-radius:4px;background:var(--sunken);position:relative;overflow:hidden}
+.pipe span.done{background:var(--good)}
+.pipe span.run{background:var(--accent-soft)}
+.pipe span.run::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:sweep 1s linear infinite}
+@keyframes sweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.stage-labels{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;font:500 9px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;min-width:280px}
+
+/* knowledge */
+.kgrid{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px}
+.tree ul{list-style:none;margin:0;padding:0 0 0 14px;border-left:1px solid var(--line)}
+.tree > ul{padding:0;border:0}
+.tree li{margin:2px 0}
+.tree .node{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;cursor:pointer}
+.tree .node:hover{background:var(--sunken)}
+.tree .node .n{margin-left:auto;font:500 11px var(--f-mono);color:var(--muted)}
+.tree .grp{font-weight:600}
+.graph-wrap{position:relative;height:520px;overflow:hidden}
+.graph-wrap canvas{width:100%;height:100%;display:block;cursor:grab}
+.legend{position:absolute;left:12px;bottom:12px;display:flex;gap:10px;flex-wrap:wrap;font-size:11px;background:color-mix(in srgb,var(--surface) 88%,transparent);padding:6px 10px;border-radius:8px;border:1px solid var(--line)}
+.legend span{display:flex;align-items:center;gap:5px}
+.ginfo{position:absolute;right:12px;top:12px;width:260px;max-width:calc(100% - 24px);padding:14px;font-size:13px}
+.cluster{display:flex;gap:14px;align-items:center;padding:14px;border-bottom:1px solid var(--line)}
+.cluster:last-child{border-bottom:0}
+.bubble{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font:600 13px var(--f-mono);flex:none;background:var(--accent-soft);color:var(--accent)}
+
+/* search */
+.sgrid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:20px;align-items:start}
+.sbar{position:relative}
+.sbar input{width:100%;font-size:17px;padding:14px 16px 14px 44px;border-radius:12px}
+.sbar svg.lens{position:absolute;left:14px;top:16px;color:var(--muted)}
+.sugg{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:15;padding:6px;box-shadow:var(--shadow)}
+.sugg button{display:flex;gap:10px;align-items:center;width:100%;padding:8px 10px;border:0;background:none;border-radius:6px;text-align:left}
+.sugg button:hover,.sugg button.hl{background:var(--sunken)}
+.filters{display:flex;flex-direction:column;gap:16px;position:sticky;top:84px}
+.filters fieldset{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+.filters legend{margin-bottom:6px}
+.filters label{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}
+.filters label .n{margin-left:auto;font:500 11px var(--f-mono);color:var(--muted)}
+.result{padding:16px 18px;display:grid;gap:8px;cursor:pointer;transition:border-color .15s}
+.result:hover{border-color:var(--accent)}
+.result h3 a{color:inherit;text-decoration:none}
+.result .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
+.result blockquote{margin:0;padding:8px 12px;border-left:3px solid var(--amber);background:var(--sunken);border-radius:0 6px 6px 0;font-size:13.5px}
+.rel{display:flex;align-items:center;gap:8px;font:500 11px var(--f-mono);color:var(--muted)}
+.rel .bar{width:70px}
+.notice{display:flex;gap:10px;align-items:center;padding:10px 14px;border-radius:8px;background:var(--amber-soft);font-size:13px}
+
+/* assistant */
+.chat{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+.thread{display:flex;flex-direction:column;gap:16px;min-height:420px}
+.msg{display:flex;gap:12px}
+.msg .av{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:none;font:600 12px var(--f-mono)}
+.msg.user .av{background:var(--sunken)}
+.msg.bot .av{background:var(--accent);color:var(--accent-ink)}
+.msg .body{min-width:0;flex:1}
+.msg.user .bubble-t{font-weight:500}
+.answer{font-size:15px;line-height:1.65}
+.answer p+p{margin-top:10px}
+.cite{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 4px;margin:0 1px;border-radius:5px;background:var(--accent-soft);color:var(--accent);font:600 11px var(--f-mono);vertical-align:2px;cursor:pointer;border:0}
+.cite:hover{background:var(--accent);color:var(--accent-ink)}
+.steps{display:flex;flex-direction:column;gap:5px;font:12px var(--f-mono);color:var(--muted);margin-bottom:10px}
+.steps div{display:flex;gap:8px;align-items:center}
+.steps .ok{color:var(--good)}
+.spin{width:10px;height:10px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.composer{position:sticky;bottom:12px;display:flex;flex-direction:column;gap:10px;padding:10px;box-shadow:var(--shadow)}
+.composer .row input{flex:1;min-width:0;border:0;padding:10px}
+.composer .row input:focus{box-shadow:none}
+.evidence{position:sticky;top:84px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 100px);overflow:auto}
+.src{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.src:last-child{border-bottom:0}
+.src .k{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font:600 11px var(--f-mono)}
+.src.flash{animation:flash 1.2s ease}
+@keyframes flash{0%,30%{background:var(--amber-soft)}100%{background:transparent}}
+.extract{font-size:13px;padding:8px 10px;border-radius:6px;background:var(--sunken);margin-top:6px}
+.gauge{display:flex;gap:14px;align-items:center}
+.reasons{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.reasons li{display:flex;gap:8px;align-items:flex-start}
+.reasons li::before{content:"";width:6px;height:6px;border-radius:50%;margin-top:7px;background:var(--rc,var(--good));flex:none}
+.cmp th:first-child,.cmp td:first-child{width:120px;color:var(--muted)}
+.exec{border:1px solid var(--line);border-radius:10px;padding:18px;background:var(--surface);display:grid;gap:12px}
+.exec h4{margin:0;font:500 11px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.exec ul{margin:0;padding-left:18px}
+
+/* trust */
+.matrix td,.matrix th{text-align:center}
+.matrix td:first-child,.matrix th:first-child{text-align:left}
+.yes{color:var(--good)} .no{color:var(--muted)}
+.log{font:12px/1.6 var(--f-mono);max-height:360px;overflow:auto}
+.log div{display:grid;grid-template-columns:70px 120px minmax(0,1fr);gap:10px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.log div.new{animation:flash 1.5s ease}
+.ctrl{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.ctrl:last-child{border-bottom:0}
+
+/* roadmap */
+.heat{display:grid;gap:3px;font-size:11px}
+.heat .c{border-radius:4px;padding:8px 4px;text-align:center;font:500 11px var(--f-mono)}
+.heat .h{color:var(--muted);font:500 10px var(--f-mono);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center}
+.ban{display:flex;gap:12px;align-items:center;padding:12px 16px;border-radius:10px;border:1px dashed var(--accent);background:var(--accent-soft);color:var(--ink);margin-bottom:18px}
+.slide{aspect-ratio:16/9;max-width:100%;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:5%;display:grid;grid-template-rows:auto 1fr auto;gap:4%;box-shadow:var(--shadow)}
+
+/* plan */
+.gantt{display:grid;grid-template-columns:180px repeat(8,minmax(44px,1fr));gap:4px 3px;align-items:center;min-width:620px}
+.gantt .hd{font:500 11px var(--f-mono);color:var(--muted);text-align:center}
+.gantt .lb{font-size:13px;font-weight:500}
+.gantt .cell{height:22px;border-radius:5px;background:var(--sunken)}
+.gantt .cell.full{background:var(--accent)}
+.gantt .cell.part{background:repeating-linear-gradient(135deg,var(--accent-soft) 0 5px,color-mix(in srgb,var(--accent) 45%,transparent) 5px 10px)}
+.gates{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.gate{padding:14px;position:relative}
+.gate b{font:600 20px var(--f-display);color:var(--accent)}
+
+/* overlays */
+.scrim{position:fixed;inset:0;background:rgba(5,12,20,.45);z-index:50;display:flex;justify-content:flex-end;animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.drawer{width:min(560px,100%);height:100%;background:var(--surface);overflow:auto;padding:24px;padding-top:calc(24px + env(safe-area-inset-top,0px));padding-right:max(24px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px;animation:slide .25s ease}
+@keyframes slide{from{transform:translateX(30px);opacity:.5}}
+.palette-wrap{position:fixed;inset:0;z-index:60;background:rgba(5,12,20,.45);display:flex;justify-content:center;align-items:flex-start;padding:12vh 16px 0}
+.palette{width:min(620px,100%);overflow:hidden;box-shadow:var(--shadow)}
+.palette input{width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:16px 18px;font-size:16px}
+.palette input:focus{box-shadow:none}
+.palette .list{max-height:50vh;overflow:auto;padding:6px}
+.palette button{display:flex;gap:10px;width:100%;padding:10px 12px;border:0;background:none;border-radius:6px;text-align:left;align-items:center}
+.palette button.hl{background:var(--accent-soft);color:var(--accent)}
+.toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:70;display:flex;flex-direction:column;gap:8px}
+.toast{padding:10px 14px;border-radius:8px;background:var(--ink);color:var(--bg);font-size:13px;box-shadow:var(--shadow);animation:rise .25s ease;max-width:340px}
+.proto{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:40;font:500 10px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted);pointer-events:none;white-space:nowrap}
+
+@media (max-width:1100px){
+  .chat{grid-template-columns:minmax(0,1fr)}
+  .evidence{position:static;max-height:none}
+  .kpis,.req{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .gates{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static;height:auto;flex-direction:row;align-items:center;padding:10px 16px;overflow-x:auto;gap:12px;border-right:0;border-bottom:1px solid var(--line)}
+  .rail .brand small,.rail-foot,.nav-sep,.nav .ref{display:none}
+  .nav{flex-direction:row}
+  .nav a{white-space:nowrap;padding:7px 10px}
+  .two,.kgrid,.sgrid{grid-template-columns:minmax(0,1fr)}
+  .filters{position:static;flex-direction:row;flex-wrap:wrap}
+  .filters fieldset{min-width:150px;flex:1}
+  .role label{display:none}
+}
+@media (max-width:560px){
+  .top,.view{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .kpis,.req,.gates{grid-template-columns:minmax(0,1fr)}
+  .role select{max-width:130px}
+  .cmd .kbd{display:none}
+  .graph-wrap{height:420px}
+  .ginfo{display:none}
+  .hero-in{padding:28px 18px}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <div class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.6" fill="currentColor"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/><circle cx="13" cy="15" r="2" fill="currentColor"/></svg></div>
+      <div><b>BI Hub</b><small>GARDP · prototype</small></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="rail-foot"><b>Proposal 1 demo.</b> All documents, figures and people shown are simulated sample data, prepared by ALCIMED for illustration.</div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <button class="cmd" id="cmdBtn" type="button" aria-label="Open command palette">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span>Search documents, ask a question, jump to a module…</span><span class="kbd" style="flex:none">⌘K</span>
+      </button>
+      <div class="role">
+        <label class="eyebrow" for="roleSel">Viewing as</label>
+        <select id="roleSel"></select>
+      </div>
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+    </header>
+    <main id="view" class="view"></main>
+  </div>
+</div>
+<div class="toasts" id="toasts"></div>
+<div class="proto">Prototype · simulated data</div>
+
+<script>
+/* ============================================================
+   DATA — simulated corpus (fictional documents and figures)
+   ============================================================ */
+const ROLES = {
+  partner:{label:'External partner', levels:['general']},
+  analyst:{label:'Intelligence analyst', levels:['general','confidential']},
+  lead:{label:'Programme lead', levels:['general','confidential','restricted']},
+  admin:{label:'Platform administrator', levels:['general','confidential','restricted']}
+};
+const LEVEL_LABEL = {general:'Internal',confidential:'Confidential',restricted:'Restricted'};
+
+let DOCS = [
+ {id:'D-0142',title:'Asia-Pacific antibacterial market outlook 2026–2032',type:'Market intelligence',project:'Serious Bacterial Infections',topics:['Market sizing','Carbapenem resistance'],region:'Asia-Pacific',date:'2026-03-12',source:'External · syndicated market study',fmt:'PDF',pages:84,v:3,access:'confidential',by:'M. Okafor',route:'Bulk upload',
+  ents:['Product X','Asia-Pacific','India','China','Carbapenem resistance','National tenders'],
+  p:['The Asia-Pacific market for Product X is projected to grow at a CAGR of 11.8% between 2026 and 2032, reaching an estimated USD 412 million, driven by rising carbapenem resistance in China, India and Southeast Asia.',
+     'Growth is concentrated in tertiary hospitals; India and China together represent 64% of projected 2032 volume.',
+     'Key downside risk: price referencing in national tenders could reduce realised growth by 2 to 3 percentage points per year.']},
+ {id:'D-0157',title:'Product X: country prioritisation for access in APAC',type:'Access strategy',project:'Access & Stewardship',topics:['Launch sequencing','Market access'],region:'Asia-Pacific',date:'2025-11-04',source:'Internal · Market Access team',fmt:'PPTX',pages:32,v:2,access:'confidential',by:'S. Tan',route:'SharePoint sync',
+  ents:['Product X','Asia-Pacific','Southeast Asia','Regulatory reliance'],
+  p:['Internal modelling projects Product X demand in APAC to grow 10 to 13% per year to 2030, with Indonesia, Viet Nam and the Philippines as priority launch markets.',
+     'Registration timelines average 18 months in priority APAC markets; reliance pathways could shorten this to 9 months.',
+     'Access price corridors were set at 35 to 55% of the high-income reference price.']},
+ {id:'D-0163',title:'Carbapenem-resistant Enterobacterales surveillance digest, Q2 2026',type:'Epidemiology',project:'Serious Bacterial Infections',topics:['Carbapenem resistance','Surveillance'],region:'Global',date:'2026-07-21',source:'Public · global surveillance network',fmt:'PDF',pages:46,v:1,access:'general',by:'Scheduled job',route:'Weekly feed',
+  ents:['K. pneumoniae','E. coli','Carbapenem resistance','India','Southeast Asia','Sub-Saharan Africa'],
+  p:['Carbapenem resistance in K. pneumoniae bloodstream isolates rose to 38% in South Asia in 2025, up from 31% in 2022.',
+     'Southeast Asia reported the fastest relative increase, with resistance in E. coli doubling from 4% to 8% over three years.',
+     'Laboratory coverage remains uneven: 41% of reporting sites in Sub-Saharan Africa submitted complete data.']},
+ {id:'D-0171',title:'APAC hospital procurement interviews: synthesis',type:'Market intelligence',project:'Serious Bacterial Infections',topics:['Procurement','Market sizing'],region:'Asia-Pacific',date:'2024-09-18',source:'External · consultant study',fmt:'DOCX',pages:21,v:1,access:'general',by:'J. Romero',route:'Bulk upload',
+  ents:['Product X','Asia-Pacific','Procurement','National tenders'],
+  p:['Procurement leads in 22 APAC hospitals expect volume growth for last-line Gram-negative agents near 7% per year, below industry forecasts, citing budget caps.',
+     'Hospitals favour pooled national tenders; 15 of 22 respondents said tender cycles delay adoption of new antibiotics by 12 months or more.']},
+ {id:'D-0188',title:'Neonatal sepsis regimen trial: interim operational update',type:'Clinical',project:'Neonatal Sepsis Programme',topics:['Clinical operations','Neonatal sepsis'],region:'Sub-Saharan Africa',date:'2026-05-30',source:'Internal · Clinical Operations',fmt:'PDF',pages:18,v:4,access:'restricted',by:'A. Diallo',route:'Bulk upload',
+  ents:['Neonatal sepsis','Sub-Saharan Africa','Compound Z-17','K. pneumoniae'],
+  p:['Enrolment reached 71% of target across 9 sites; two sites in East Africa are recruiting ahead of plan.',
+     'The data monitoring committee recommended continuation without modification at its May 2026 meeting.']},
+ {id:'D-0192',title:'Paediatric oral antibiotic formulations: landscape',type:'Competitive intelligence',project:'Paediatric Formulations',topics:['Formulation','Pipeline'],region:'Global',date:'2025-06-10',source:'Internal · R&D Strategy',fmt:'XLSX',pages:6,v:2,access:'general',by:'P. Nguyen',route:'Bulk upload',
+  ents:['Paediatric dosing','Product Y','Manufacturing partner'],
+  p:['Of 54 antibiotics on essential medicine lists, only 19 have an age-appropriate oral formulation for children under 5.',
+     'Dispersible tablet formats are preferred by 8 of 10 surveyed national programmes over liquid suspensions, for cold-chain reasons.']},
+ {id:'D-0205',title:'Gonorrhoea treatment guidelines: regional comparison',type:'Policy',project:'STI Programme',topics:['Guidelines','Gonorrhoea'],region:'Global',date:'2025-12-02',source:'Public · guideline review',fmt:'PDF',pages:28,v:1,access:'general',by:'Scheduled job',route:'Monthly feed',
+  ents:['N. gonorrhoeae','Gonorrhoea','Asia-Pacific','Latin America','Diagnostics'],
+  p:['Eleven of 30 reviewed national guidelines still recommend a first-line regimen with documented resistance above the 5% threshold.',
+     'Guideline update cycles average 4.6 years, compared with resistance doubling times near 3 years in several Asia-Pacific countries.']},
+ {id:'D-0211',title:'Competitive pipeline tracker: Gram-negative agents',type:'Competitive intelligence',project:'Serious Bacterial Infections',topics:['Pipeline','Competitive landscape'],region:'Global',date:'2026-08-29',source:'Internal · Business Intelligence',fmt:'XLSX',pages:12,v:7,access:'confidential',by:'Scheduled job',route:'Daily sync',
+  ents:['Product X','Product Y','A. baumannii','K. pneumoniae','Carbapenem resistance'],
+  p:['17 agents in clinical development target critical-priority Gram-negative pathogens; 4 are in Phase 3.',
+     'Two competitor agents with activity against carbapenem-resistant A. baumannii are expected to file in 2027.',
+     'Product X remains the only late-stage candidate with a planned paediatric investigation plan.']},
+ {id:'D-0219',title:'Stewardship and access: lessons from six country pilots',type:'Programme report',project:'Access & Stewardship',topics:['Stewardship','Market access'],region:'Global',date:'2025-03-15',source:'Internal · Access team',fmt:'PDF',pages:52,v:2,access:'general',by:'L. Moreau',route:'Bulk upload',
+  ents:['Stewardship','India','Sub-Saharan Africa','Latin America','National tenders'],
+  p:['Pilots that paired supply with stewardship training reduced inappropriate last-line use by 23% within 12 months.',
+     'Stock-outs fell from 14 to 3 days per quarter where pooled procurement was combined with demand forecasting.']},
+ {id:'D-0226',title:'Pricing benchmarks for novel antibiotics in LMICs',type:'Market intelligence',project:'Access & Stewardship',topics:['Pricing','Market access'],region:'Global',date:'2026-01-20',source:'External · syndicated market study',fmt:'XLSX',pages:9,v:3,access:'confidential',by:'S. Tan',route:'Bulk upload',
+  ents:['Pricing','Product X','National tenders','India','Sub-Saharan Africa'],
+  p:['Median tender prices for novel Gram-negative agents in middle-income markets were 41% of the high-income list price in 2025.',
+     'Tiered pricing agreements covered 12 of 37 benchmarked markets.']},
+ {id:'D-0233',title:'Regulatory reliance pathways in Southeast Asia',type:'Regulatory',project:'Access & Stewardship',topics:['Regulatory','Launch sequencing'],region:'Asia-Pacific',date:'2025-10-08',source:'External · regulatory consultancy',fmt:'PDF',pages:37,v:1,access:'general',by:'S. Tan',route:'Bulk upload',
+  ents:['Regulatory reliance','Southeast Asia','Asia-Pacific'],
+  p:['Seven Southeast Asian regulators accept reliance on a stringent authority approval, with median review times of 210 days.',
+     'Joint assessment procedures cut duplicate dossier work by an estimated 40%.']},
+ {id:'D-0240',title:'Board briefing: portfolio priorities 2027',type:'Strategy',project:'Portfolio',topics:['Portfolio','Strategy'],region:'Global',date:'2026-09-15',source:'Internal · Executive office',fmt:'PPTX',pages:24,v:2,access:'restricted',by:'Executive office',route:'Manual upload',
+  ents:['Product X','Compound Z-17','Neonatal sepsis','Gonorrhoea'],
+  p:['The 2027 portfolio plan prioritises Product X access in Asia-Pacific and the neonatal sepsis regimen as the two flagship programmes.',
+     'Funding gap for 2027 to 2029 is estimated at 18% of planned expenditure.']},
+ {id:'D-0244',title:'Manufacturing partner due diligence: summary',type:'Partnership',project:'Paediatric Formulations',topics:['Manufacturing','Partnerships'],region:'Asia-Pacific',date:'2026-02-11',source:'Internal · Technical Operations',fmt:'DOCX',pages:15,v:1,access:'restricted',by:'R. Iyer',route:'Manual upload',
+  ents:['Manufacturing partner','India','Paediatric dosing'],
+  p:['The shortlisted manufacturer in India passed the technical audit with 3 minor observations and no critical findings.',
+     'Projected capacity covers 120% of forecast paediatric demand to 2030.']},
+ {id:'D-0251',title:'Conference notes: European infectious disease congress 2026',type:'Competitive intelligence',project:'Serious Bacterial Infections',topics:['Conference','Pipeline'],region:'Europe',date:'2026-04-22',source:'Internal · Medical Affairs',fmt:'DOCX',pages:11,v:1,access:'general',by:'C. Weber',route:'Email import (pilot)',
+  ents:['Product Y','A. baumannii','Diagnostics','Carbapenem resistance'],
+  p:['Several presenters reported rapid diagnostics cutting time to targeted therapy from 52 to 19 hours.',
+     'A competitor presented Phase 2 data for Product Y with a 79% clinical cure rate in complicated urinary tract infection.']},
+ {id:'D-0258',title:'Sub-Saharan Africa demand forecast: neonatal sepsis antibiotics',type:'Market intelligence',project:'Neonatal Sepsis Programme',topics:['Demand forecast','Neonatal sepsis'],region:'Sub-Saharan Africa',date:'2026-04-02',source:'Internal · Market Access team',fmt:'XLSX',pages:8,v:2,access:'confidential',by:'A. Diallo',route:'SharePoint sync',
+  ents:['Neonatal sepsis','Sub-Saharan Africa','Compound Z-17','Procurement'],
+  p:['Demand for neonatal sepsis regimens in Sub-Saharan Africa is forecast to grow 9% per year to 2030, driven by facility-based births.',
+     'Nigeria, Ethiopia and the DRC account for 47% of forecast treatment courses.']},
+ {id:'D-0262',title:'Product X health economics model: APAC inputs',type:'Health economics',project:'Serious Bacterial Infections',topics:['Health economics','Market sizing'],region:'Asia-Pacific',date:'2026-06-03',source:'Internal · HEOR',fmt:'JSON',pages:1,v:5,access:'confidential',by:'Scheduled job',route:'API export',
+  ents:['Product X','Asia-Pacific','Health economics','Pricing'],
+  p:['Base-case uptake assumes 9.5% annual volume growth in APAC with a 0.71 probability of tender inclusion by 2028.',
+     'Cost per resistant infection avoided falls below USD 2,100 in four of six modelled APAC markets.']},
+ {id:'D-0270',title:'Media monitoring: antimicrobial resistance, September 2026',type:'Media monitoring',project:'Portfolio',topics:['Media','Policy'],region:'Global',date:'2026-10-01',source:'External · web monitoring',fmt:'HTML',pages:4,v:1,access:'general',by:'Scheduled job',route:'Website crawl (pilot)',
+  ents:['Carbapenem resistance','Stewardship','Pricing'],
+  p:['Coverage of antimicrobial resistance rose 34% month on month, led by reporting on hospital outbreaks in South Asia.',
+     'Pull-incentive reforms were the most cited policy topic in September.']},
+ {id:'D-0275',title:'Partnership landscape: STI diagnostics',type:'Partnership',project:'STI Programme',topics:['Diagnostics','Partnerships'],region:'Global',date:'2025-08-19',source:'Internal · Business Development',fmt:'PPTX',pages:19,v:1,access:'confidential',by:'J. Romero',route:'Bulk upload',
+  ents:['Diagnostics','N. gonorrhoeae','Gonorrhoea','Latin America'],
+  p:['Nine point-of-care tests for N. gonorrhoeae are in development; three detect resistance markers.',
+     'Bundling diagnostics with treatment was favoured by 6 of 8 interviewed national STI programmes.']},
+ {id:'D-0281',title:'Paediatric dosing study protocol synopsis',type:'Clinical',project:'Paediatric Formulations',topics:['Clinical operations','Paediatric dosing'],region:'Global',date:'2025-02-27',source:'Internal · Clinical Operations',fmt:'DOCX',pages:14,v:4,access:'confidential',by:'P. Nguyen',route:'Bulk upload',
+  ents:['Paediatric dosing','Product X','Compound Z-17'],
+  p:['The study will enrol 96 children across four age cohorts to confirm exposure-matched dosing.',
+     'Primary endpoint is area under the curve within 80 to 125% of the adult reference.']},
+ {id:'D-0290',title:'AMR funding landscape 2026: public and philanthropic',type:'Policy',project:'Portfolio',topics:['Funding','Policy'],region:'Global',date:'2026-06-25',source:'External · policy think tank',fmt:'PDF',pages:40,v:1,access:'general',by:'L. Moreau',route:'Bulk upload',
+  ents:['Stewardship','Pricing','Carbapenem resistance'],
+  p:['Public and philanthropic funding for antibacterial R&D reached USD 1.9 billion in 2025, 6% above 2024.',
+     'Only 14% of tracked funding targeted access and stewardship activities.']}
+];
+DOCS.forEach(d=>d.tags=[d.project,d.type,...d.topics,d.region]);
+
+const ENT_TYPE = {
+ 'Product X':'product','Product Y':'product','Compound Z-17':'product',
+ 'K. pneumoniae':'pathogen','E. coli':'pathogen','N. gonorrhoeae':'pathogen','A. baumannii':'pathogen',
+ 'Asia-Pacific':'region','India':'region','China':'region','Southeast Asia':'region','Sub-Saharan Africa':'region','Latin America':'region',
+ 'Carbapenem resistance':'topic','Neonatal sepsis':'topic','Gonorrhoea':'topic','Stewardship':'topic','Pricing':'topic','Regulatory reliance':'topic','Paediatric dosing':'topic','Procurement':'topic','Diagnostics':'topic','Health economics':'topic',
+ 'National tenders':'org','Manufacturing partner':'org'
+};
+const ENT_LABEL = {product:'Product',pathogen:'Pathogen',region:'Region',topic:'Topic',org:'Actor'};
+
+const TAXONOMY = {
+ 'Project':['Serious Bacterial Infections','Neonatal Sepsis Programme','STI Programme','Paediatric Formulations','Access & Stewardship','Portfolio'],
+ 'Type of intelligence':['Market intelligence','Competitive intelligence','Access strategy','Epidemiology','Clinical','Regulatory','Policy','Health economics','Partnership','Strategy','Programme report','Media monitoring'],
+ 'Topic':['Carbapenem resistance','Market sizing','Market access','Pricing','Pipeline','Stewardship','Neonatal sepsis','Gonorrhoea','Diagnostics','Paediatric dosing','Regulatory','Funding'],
+ 'Region':['Asia-Pacific','Sub-Saharan Africa','Europe','Global']
+};
+
+const SYN = {
+ growth:['cagr','grow','increas','expand','rise','rose','forecast','project','demand','uptake','volum'],
+ market:['demand','volum','sale','revenu','uptake','size','sizing'],
+ apac:['asia','pacif','asia-pacif','china','india','indonesia','viet','philippin','southeast'],
+ asia:['apac','pacif','china','india','southeast'],
+ resist:['carbapenem','amr','antimicrobi','resistanc'],
+ amr:['resist','antimicrobi','carbapenem'],
+ price:['pricing','tender','cost','referenc'],
+ neonat:['sepsis','newborn','infant','birth'],
+ child:['paediatr','pediatr','children','infant'],
+ paediatr:['child','children','pediatr','dosing'],
+ competitor:['pipelin','competit','agent'],
+ regul:['regulator','reliance','approval','registr','dossier'],
+ fund:['funding','financ','philanthrop','invest'],
+ gonorrh:['sti','gonorrhoea','neisseria','gonorrhoeae']
+};
+
+const SAMPLE_UPLOADS = [
+ {name:'APAC_market_outlook_2026_v4.pdf',size:'6.2 MB',dup:'D-0142',sim:97},
+ {name:'Surveillance_digest_Q3_2026.pdf',size:'3.9 MB',tags:['Epidemiology','Carbapenem resistance','Global'],conf:94},
+ {name:'Pipeline_tracker_Oct2026.xlsx',size:'412 KB',tags:['Competitive intelligence','Pipeline','Serious Bacterial Infections'],conf:96},
+ {name:'Scanned_site_visit_notes_Lagos.jpg',size:'2.1 MB',ocr:true,tags:['Clinical','Neonatal sepsis','Sub-Saharan Africa'],conf:61},
+ {name:'Tender_results_Indonesia_2026.csv',size:'88 KB',tags:['Market intelligence','Pricing','Asia-Pacific'],conf:90},
+ {name:'Partner_call_minutes_STI_diagnostics.docx',size:'164 KB',tags:['Partnership','Diagnostics','STI Programme'],conf:88},
+ {name:'HEOR_inputs_export.json',size:'36 KB',tags:['Health economics','Asia-Pacific'],conf:92},
+ {name:'Board_briefing_portfolio_2027.pptx',size:'9.4 MB',dup:'D-0240',sim:100}
+];
+
+const JOBS = [
+ {name:'SharePoint · Market Access library',freq:'Daily 02:00 CET',last:'Today 02:00',docs:3,ok:true},
+ {name:'Surveillance network feed',freq:'Weekly · Monday',last:'Mon 27 Oct',docs:1,ok:true},
+ {name:'BI pipeline tracker (XLSX)',freq:'Daily 06:30 CET',last:'Today 06:30',docs:1,ok:true},
+ {name:'HEOR model export (API)',freq:'On change',last:'Yesterday 17:42',docs:1,ok:false}
+];
+
+const REVIEW = [
+ {doc:'D-0270',field:'Project',sug:'Portfolio',alt:['Access & Stewardship','Portfolio'],conf:58,ev:'“Pull-incentive reforms were the most cited policy topic…”'},
+ {doc:'D-0251',field:'Type of intelligence',sug:'Competitive intelligence',alt:['Clinical','Competitive intelligence'],conf:64,ev:'“A competitor presented Phase 2 data for Product Y…”'},
+ {doc:'D-0244',field:'Topic',sug:'Manufacturing',alt:['Partnership','Manufacturing'],conf:66,ev:'“passed the technical audit with 3 minor observations”'}
+];
+
+const CLUSTERS = [
+ {name:'Regulatory reliance and joint assessment',n:7,new:true,terms:['reliance','joint assessment','dossier']},
+ {name:'Tender cycles and pooled procurement',n:9,new:true,terms:['tender','pooled','budget caps']},
+ {name:'Carbapenem resistance in South Asia',n:12,new:false,terms:['K. pneumoniae','South Asia','bloodstream']},
+ {name:'Child-friendly formulations',n:6,new:false,terms:['dispersible','oral','under 5']}
+];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const S = {
+  role:'analyst',
+  audit:[],
+  chat:[],
+  evidence:null,
+  query:'',
+  mode:'hybrid',
+  filters:{project:new Set(),type:new Set(),year:new Set(),fmt:new Set()},
+  uploads:[],
+  review:[...REVIEW],
+  clusters:[...CLUSTERS],
+  reqSeq:1,
+  anim:[]
+};
+const $ = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>[...el.querySelectorAll(s)];
+const esc = s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+const docById = id=>DOCS.find(d=>d.id===id);
+const canSee = d=>ROLES[S.role].levels.includes(d.access);
+const visibleDocs = ()=>DOCS.filter(canSee);
+const now = ()=>new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const sleep = ms=>new Promise(r=>setTimeout(r,ms));
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function toast(t){const el=document.createElement('div');el.className='toast';el.textContent=t;$('#toasts').append(el);setTimeout(()=>el.remove(),3200)}
+function audit(action,detail){
+  S.audit.unshift({t:now(),who:ROLES[S.role].label,action,detail,isNew:true});
+  if(S.audit.length>80)S.audit.pop();
+  const log=$('#auditLog'); if(log) renderLog(log);
+}
+[['08:02:11','Platform administrator','Taxonomy','Merged “AMR” into “Carbapenem resistance” (v14 → v15)'],
+ ['08:14:37','Intelligence analyst','Search','“tender prices APAC” · 6 results'],
+ ['08:21:05','Programme lead','Document opened','D-0240 Board briefing: portfolio priorities 2027'],
+ ['08:40:52','Scheduled job','Ingestion','BI pipeline tracker (XLSX) · 1 new version'],
+ ['09:03:19','External partner','Access denied','D-0157 · confidential · blocked at retrieval']
+].reverse().forEach(([t,who,action,detail])=>S.audit.unshift({t,who,action,detail}));
+
+/* ============================================================
+   RETRIEVAL — hybrid keyword + simulated semantic scoring
+   ============================================================ */
+const STOP = new Set('the a an of in for to and or is are what which how by on with from at as be this that its it was were will would can could does do between about than per into over under our my me show tell give'.split(' '));
+function stem(w){w=w.toLowerCase();for(const s of ['ations','ation','ings','ing','ies','es','ed','s','al','ly']){if(w.length>s.length+3&&w.endsWith(s))return w.slice(0,-s.length)}return w}
+function tokens(t){return t.toLowerCase().replace(/[^a-z0-9.\- ]/g,' ').split(/[\s\-]+/).filter(w=>w&&!STOP.has(w))}
+function expand(terms){
+  const out=new Map();
+  terms.forEach(t=>{out.set(stem(t),1);
+    Object.entries(SYN).forEach(([k,vs])=>{
+      const all=[k,...vs]; if(all.some(v=>stem(t).startsWith(v)||v.startsWith(stem(t))&&stem(t).length>3)) all.forEach(v=>{if(!out.has(v))out.set(v,.55)});
+    });
+  });
+  return out;
+}
+function scoreText(text,qterms,sem){
+  const words=tokens(text).map(stem); let s=0; const hit=new Set();
+  qterms.forEach(t=>{const st=stem(t); if(words.some(w=>w===st||(st.length>3&&w.startsWith(st)))){s+=1;hit.add(st)}});
+  if(sem){sem.forEach((w,k)=>{if(w<1&&words.some(x=>x.startsWith(k))){s+=w*.6;hit.add(k)}})}
+  return {s,hit};
+}
+function search(q,{mode=S.mode,docs=visibleDocs()}={}){
+  const qt=tokens(q); if(!qt.length) return [];
+  const sem=mode==='keyword'?null:expand(qt);
+  const res=[];
+  docs.forEach(d=>{
+    let best={s:0,i:0,hit:new Set()}, total=0;
+    d.p.forEach((p,i)=>{const r=scoreText(p,mode==='semantic'?[]:qt,sem); if(mode==='semantic'){r.s=r.s*1.6} total+=r.s; if(r.s>best.s)best={s:r.s,i,hit:r.hit}});
+    const tr=scoreText(d.title+' '+d.tags.join(' ')+' '+d.ents.join(' '),qt,sem);
+    const s=best.s+total*.25+tr.s*.6;
+    if(s>.5) res.push({d,score:s,pi:best.i,hit:new Set([...best.hit,...tr.hit])});
+  });
+  const max=Math.max(1.0,...res.map(r=>r.score), qt.length*1.6);
+  res.forEach(r=>{const fresh=(new Date(r.d.date)-new Date('2024-01-01'))/(1000*3600*24*365*3); r.rel=Math.min(.99,r.score/max*.9+fresh*.08)});
+  return res.sort((a,b)=>b.rel-a.rel);
+}
+function highlight(text,hit){
+  let h=esc(text); if(!hit||!hit.size) return h;
+  const parts=[...hit].filter(x=>x.length>2).map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  if(!parts.length) return h;
+  return h.replace(new RegExp('\\b('+parts.join('|')+')[a-z0-9]*','gi'),'<mark>$&</mark>');
+}
+function related(d,n=3){
+  return visibleDocs().filter(x=>x.id!==d.id).map(x=>({x,s:x.ents.filter(e=>d.ents.includes(e)).length+x.tags.filter(t=>d.tags.includes(t)).length*.5})).filter(o=>o.s>1).sort((a,b)=>b.s-a.s).slice(0,n).map(o=>o.x);
+}
+
+/* ============================================================
+   ICONS + NAV
+   ============================================================ */
+const I = {
+ home:'<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/>',
+ repo:'<path d="M4 6c0-1.1 3.6-2 8-2s8 .9 8 2-3.6 2-8 2-8-.9-8-2z"/><path d="M4 6v6c0 1.1 3.6 2 8 2s8-.9 8-2V6"/><path d="M4 12v6c0 1.1 3.6 2 8 2s8-.9 8-2v-6"/>',
+ know:'<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="8" r="2.5"/><circle cx="10" cy="18" r="2.5"/><path d="m8.2 7 7.4.6M7 8.3l2.2 7.4M16.6 10l-5 6"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+ chat:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/>',
+ shield:'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+ road:'<path d="M3 17l5-5 4 4 8-9"/><path d="M15 7h5v5"/>',
+ plan:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 13h4M8 17h8"/>',
+ lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+ up:'<path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/>',
+ spark:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
+ doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',
+ x:'<path d="M6 6l12 12M18 6 6 18"/>',
+ check:'<path d="m5 12 5 5 9-10"/>',
+ arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
+};
+const ic=(n,s=16)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
+
+const VIEWS = [
+ {id:'home',label:'Overview',icon:'home'},
+ {sep:'Proposal 1 · Core & mandatory'},
+ {id:'repository',label:'Repository',icon:'repo',ref:'3.1'},
+ {id:'knowledge',label:'Knowledge',icon:'know',ref:'3.2'},
+ {id:'search',label:'Search',icon:'search',ref:'3.3'},
+ {id:'assistant',label:'Assistant',icon:'chat',ref:'Step 6'},
+ {id:'trust',label:'Trust & security',icon:'shield'},
+ {sep:'Delivery & roadmap'},
+ {id:'plan',label:'Project plan',icon:'plan'},
+ {id:'roadmap',label:'Future roadmap',icon:'road',ref:'3.4'}
+];
+function renderNav(){
+  const cur=currentView();
+  $('#nav').innerHTML=VIEWS.map(v=>v.sep?`<div class="nav-sep">${v.sep}</div>`:`<a href="#${v.id}" class="${cur===v.id?'on':''}">${ic(v.icon)}<span>${v.label}</span>${v.ref?`<span class="ref">${v.ref}</span>`:''}</a>`).join('');
+}
+const currentView=()=>{const h=location.hash.slice(1);return VIEWS.some(v=>v.id===h)?h:'home'};
+
+/* ============================================================
+   ROUTER
+   ============================================================ */
+function stopAnims(){S.anim.forEach(f=>f());S.anim=[]}
+function route(){
+  stopAnims();
+  const v=currentView(); renderNav();
+  const el=$('#view'); el.style.animation='none'; el.offsetHeight; el.style.animation='';
+  ({home:vHome,repository:vRepo,knowledge:vKnow,search:vSearch,assistant:vAssist,trust:vTrust,plan:vPlan,roadmap:vRoad})[v](el);
+  window.scrollTo({top:0});
+}
+function go(v){if(location.hash==='#'+v)route();else location.hash=v}
+
+/* ============================================================
+   VIEW: HOME
+   ============================================================ */
+function countUp(el,to,dec=0,suffix=''){
+  if(reduced){el.textContent=to.toLocaleString('en-GB',{minimumFractionDigits:dec,maximumFractionDigits:dec})+suffix;return}
+  const t0=performance.now(),d=1100;
+  const step=t=>{const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);el.textContent=(to*e).toLocaleString('en-GB',{minimumFractionDigits:dec,maximumFractionDigits:dec})+suffix;if(k<1)requestAnimationFrame(step)};
+  requestAnimationFrame(step);
+}
+function vHome(el){
+  const vis=visibleDocs().length;
+  el.innerHTML=`
+  <section class="hero">
+    <canvas id="heroCanvas" aria-hidden="true"></canvas>
+    <div class="hero-in">
+      <span class="eyebrow">GARDP Business Intelligence Hub · Proposal 1</span>
+      <h1>Ask the organisation’s memory. <em>Trace every answer</em> to its source.</h1>
+      <p>One governed repository for intelligence and research content, auto-classified against a taxonomy GARDP owns, searchable in plain language, with an assistant that cites the passage behind each claim.</p>
+      <form class="askbox" id="heroAsk">
+        <input id="heroQ" type="text" aria-label="Ask a question" value="What is the projected market growth for Product X in Asia-Pacific?">
+        <button class="btn primary" type="submit">${ic('spark')} Ask</button>
+      </form>
+      <div class="row">
+        <span class="muted" style="font-size:12px">Try:</span>
+        ${['Carbapenem resistance trends in South Asia','Compare D-0142 and D-0171','Executive summary on paediatric formulations'].map(q=>`<button class="chip btnlike" data-ask="${esc(q)}" type="button">${esc(q)}</button>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <div class="kpis" style="margin-top:16px">
+    <div class="card kpi"><span class="eyebrow">Documents governed</span><b data-count="12480">0</b><small>${vis} sample documents open to you as ${esc(ROLES[S.role].label.toLowerCase())}</small></div>
+    <div class="card kpi"><span class="eyebrow">Auto-tagging coverage</span><b data-count="96.4" data-dec="1" data-suf="%">0</b><small>3.6% sent to the human review queue</small></div>
+    <div class="card kpi"><span class="eyebrow">Search p95 latency</span><b data-count="1.4" data-dec="1" data-suf=" s">0</b><small>Target in FRS: under 2 s</small></div>
+    <div class="card kpi"><span class="eyebrow">Answers with citations</span><b data-count="100" data-suf="%">0</b><small>Refuses when evidence is insufficient</small></div>
+  </div>
+
+  <h2 style="margin:32px 0 14px">RFP requirements, live in this prototype</h2>
+  <div class="req">
+    ${[['3.1','Core','Centralized intelligence repository','Bulk and scheduled ingestion, versioning, duplicate detection, provenance.','repository'],
+       ['3.2','Core','Intelligent data organization','Auto-classification by project, type, topic, date and source; taxonomy, entities, clusters.','knowledge'],
+       ['3.3','Mandatory','AI-assisted knowledge retrieval','Semantic, keyword and filter search; natural language questions with cited answers.','search'],
+       ['3.4','Roadmap','Future AI capability expansion','Digests, briefs, heat maps and scenario forecasts on the same knowledge layer.','roadmap']]
+      .map(([r,p,t,d,v])=>`<a class="card" href="#${v}"><span class="eyebrow"><span>RFP ${r}</span><span class="chip ${p==='Roadmap'?'':'acc'}">${p}</span></span><h3>${t}</h3><p class="muted" style="font-size:13px">${d}</p><span class="btn ghost" style="padding:0;margin-top:auto">Open module ${ic('arrow',14)}</span></a>`).join('')}
+  </div>
+
+  <div class="two" style="margin-top:16px">
+    <div class="card pad">
+      <div class="sec-head" style="margin-bottom:6px"><h3>Recently ingested</h3><a class="btn ghost sm" href="#repository">Repository ${ic('arrow',14)}</a></div>
+      <ul class="feed">${visibleDocs().slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5).map(d=>`
+        <li><span class="fmt">${d.fmt}</span><div style="min-width:0;flex:1"><a href="#" data-doc="${d.id}" style="color:inherit;font-weight:500">${esc(d.title)}</a><div class="muted" style="font-size:12px">${d.route} · ${fmtDate(d.date)} · v${d.v}</div></div>${accessChip(d)}</li>`).join('')}</ul>
+    </div>
+    <div class="card pad">
+      <div class="sec-head" style="margin-bottom:6px"><h3>Answer quality this release</h3><a class="btn ghost sm" href="#trust">Evaluation ${ic('arrow',14)}</a></div>
+      ${[['Top-5 retrieval precision',.91],['Answers fully grounded in sources',.97],['Correct refusals on out-of-scope questions',.94],['Queries with a clicked result',.78]].map(([l,v])=>`
+        <div style="margin:12px 0"><div class="row" style="justify-content:space-between"><span style="font-size:13px">${l}</span><span class="mono">${Math.round(v*100)}%</span></div><div class="bar" style="margin-top:6px"><i style="width:${v*100}%"></i></div></div>`).join('')}
+      <p class="muted" style="font-size:12px">Measured on a GARDP question set of 80 real questions (simulated figures).</p>
+    </div>
+  </div>`;
+  $$('[data-count]',el).forEach(b=>countUp(b,+b.dataset.count,+(b.dataset.dec||0),b.dataset.suf||''));
+  $('#heroAsk').onsubmit=e=>{e.preventDefault();askFromAnywhere($('#heroQ').value)};
+  $$('[data-ask]',el).forEach(b=>b.onclick=()=>askFromAnywhere(b.dataset.ask));
+  bindDocLinks(el);
+  startGraph($('#heroCanvas'),{ambient:true});
+}
+function askFromAnywhere(q){S.pendingAsk=q;go('assistant')}
+function accessChip(d){return d.access==='general'?'':`<span class="lock">${ic('lock',12)}${LEVEL_LABEL[d.access]}</span>`}
+function bindDocLinks(el){$$('[data-doc]',el).forEach(a=>a.onclick=e=>{e.preventDefault();openDoc(a.dataset.doc)})}
+
+/* ============================================================
+   GRAPH (canvas force layout)
+   ============================================================ */
+function buildGraph(){
+  const nodes=new Map(), links=new Map();
+  visibleDocs().forEach(d=>{
+    d.ents.forEach(e=>{if(!nodes.has(e))nodes.set(e,{id:e,type:ENT_TYPE[e]||'topic',docs:new Set()});nodes.get(e).docs.add(d.id)});
+    for(let i=0;i<d.ents.length;i++)for(let j=i+1;j<d.ents.length;j++){const k=[d.ents[i],d.ents[j]].sort().join('|');links.set(k,(links.get(k)||0)+1)}
+  });
+  return {nodes:[...nodes.values()],links:[...links.entries()].map(([k,w])=>{const [a,b]=k.split('|');return{a,b,w}})};
+}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+function typeColor(t){return {product:css('--accent'),pathogen:css('--crit'),region:css('--good'),topic:css('--amber'),org:css('--muted')}[t]}
+function startGraph(cv,{ambient=false,onSelect}={}){
+  const ctx=cv.getContext('2d'); let W,H,dpr;
+  const g=buildGraph(); const byId=new Map(g.nodes.map(n=>[n.id,n]));
+  function size(){dpr=window.devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
+  size();
+  const cx=()=>ambient?W*.72:W/2;
+  g.nodes.forEach((n,i)=>{const a=i/g.nodes.length*Math.PI*2;n.x=cx()+Math.cos(a)*120+Math.random()*20;n.y=H/2+Math.sin(a)*120;n.vx=0;n.vy=0;n.r=4+Math.sqrt(n.docs.size)*3});
+  let hover=null, sel=null, drag=null, alive=true, t=0;
+  function tick(){
+    const N=g.nodes;
+    for(let i=0;i<N.length;i++){const a=N[i];
+      for(let j=i+1;j<N.length;j++){const b=N[j];let dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+.01;const f=(ambient?1400:2200)/d2;const d=Math.sqrt(d2);dx/=d;dy/=d;a.vx+=dx*f;a.vy+=dy*f;b.vx-=dx*f;b.vy-=dy*f}
+      a.vx+=(cx()-a.x)*.004;a.vy+=(H/2-a.y)*.006;
+    }
+    g.links.forEach(l=>{const a=byId.get(l.a),b=byId.get(l.b);const dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1;const k=(d-(ambient?80:110))*.004*Math.min(3,l.w);a.vx+=dx/d*k;a.vy+=dy/d*k;b.vx-=dx/d*k;b.vy-=dy/d*k});
+    N.forEach(n=>{if(n===drag)return;if(ambient&&!reduced){n.vx+=Math.sin(t*.01+n.r)*.02;n.vy+=Math.cos(t*.012+n.r)*.02}n.vx*=.86;n.vy*=.86;n.x+=n.vx;n.y+=n.vy;n.x=Math.max(n.r+4,Math.min(W-n.r-4,n.x));n.y=Math.max(n.r+4,Math.min(H-n.r-4,n.y))});
+  }
+  function draw(){
+    t++; ctx.clearRect(0,0,W,H);
+    const focus=sel||hover; const nb=new Set();
+    if(focus){nb.add(focus.id);g.links.forEach(l=>{if(l.a===focus.id)nb.add(l.b);if(l.b===focus.id)nb.add(l.a)})}
+    const line=css('--line'),acc=css('--accent'),ink=css('--ink'),muted=css('--muted');
+    g.links.forEach(l=>{const a=byId.get(l.a),b=byId.get(l.b);const on=focus&&(l.a===focus.id||l.b===focus.id);
+      ctx.strokeStyle=on?acc:line;ctx.globalAlpha=focus&&!on?.35:(ambient?.8:1);ctx.lineWidth=on?1.6:Math.min(2.5,.6+l.w*.4);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()});
+    if(ambient&&!reduced){ // travelling pulses along links
+      g.links.forEach((l,i)=>{if(i%3)return;const a=byId.get(l.a),b=byId.get(l.b);const k=((t*.006+i*.37)%1);ctx.globalAlpha=.9;ctx.fillStyle=acc;ctx.beginPath();ctx.arc(a.x+(b.x-a.x)*k,a.y+(b.y-a.y)*k,1.6,0,7);ctx.fill()});
+    }
+    g.nodes.forEach(n=>{const dim=focus&&!nb.has(n.id);ctx.globalAlpha=dim?.25:1;ctx.fillStyle=typeColor(n.type);ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,7);ctx.fill();
+      if(n===focus){ctx.strokeStyle=ink;ctx.lineWidth=2;ctx.stroke()}
+      const showLabel=!ambient||n.docs.size>=4||nb.has(n.id);
+      if(showLabel&&(!dim)){ctx.globalAlpha=ambient?.75:1;ctx.fillStyle=ambient?muted:ink;ctx.font=`${n===focus?'600 ':''}${ambient?11:12}px "IBM Plex Sans",sans-serif`;ctx.fillText(n.id,n.x+n.r+4,n.y+4)}});
+    ctx.globalAlpha=1;
+  }
+  let raf; function loop(){if(!alive)return;tick();draw();raf=requestAnimationFrame(loop)}
+  if(reduced){for(let i=0;i<300;i++)tick();draw();}else loop();
+  const pick=e=>{const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;return g.nodes.find(n=>(n.x-x)**2+(n.y-y)**2<(n.r+6)**2)};
+  if(!ambient){
+    cv.onpointermove=e=>{if(drag){const r=cv.getBoundingClientRect();drag.x=e.clientX-r.left;drag.y=e.clientY-r.top;drag.vx=drag.vy=0}else{hover=pick(e);cv.style.cursor=hover?'pointer':'grab'} if(reduced)draw()};
+    cv.onpointerdown=e=>{drag=pick(e);if(drag)cv.setPointerCapture(e.pointerId)};
+    cv.onpointerup=e=>{const n=pick(e);if(n&&n===drag){sel=sel===n?null:n;onSelect&&onSelect(sel)}drag=null;if(reduced)draw()};
+    cv.onpointerleave=()=>{hover=null};
+  }
+  const ro=new ResizeObserver(()=>{size();if(reduced)draw()});ro.observe(cv);
+  S.anim.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect()});
+  return {select:id=>{sel=byId.get(id)||null;onSelect&&onSelect(sel)}};
+}
+
+/* ============================================================
+   VIEW: REPOSITORY (3.1 / Step 3)
+   ============================================================ */
+const STAGES=['Upload','Parse/OCR','Metadata','Classify','Embed','Index'];
+function vRepo(el){
+  el.innerHTML=`
+  <div class="sec-head"><div><span class="eyebrow">RFP 3.1 · Step 3 · Repository and data management</span><h1 style="font-size:34px;margin-top:8px">Every file, governed once</h1>
+  <p>Drop files to watch them travel the ingestion pipeline: parsing, OCR for scans, metadata extraction, auto-tagging against the taxonomy, embedding and indexing. Exact and near duplicates are caught before they reach the index.</p></div>
+  <div class="row"><button class="btn primary" id="simBulk" type="button">${ic('up')} Simulate a bulk import (8 files)</button></div></div>
+
+  <label class="drop" id="drop" for="fileIn">
+    ${ic('up',28)}
+    <b style="font-size:15px">Drag files or folders here, or click to choose</b>
+    <span class="muted" style="font-size:13px">Excel · CSV · XML · JSON · PDF · Word · PowerPoint · text · images · research reports</span>
+    <input id="fileIn" type="file" multiple hidden>
+  </label>
+
+  <div class="card" style="margin-top:16px" id="upCard" ${S.uploads.length?'':'hidden'}>
+    <div class="pad" style="padding-bottom:0"><div class="sec-head" style="margin:0"><h3>Ingestion batch</h3><span class="muted mono" id="upSum"></span></div></div>
+    <div class="tscroll"><table><thead><tr><th>File</th><th><div class="stage-labels">${STAGES.map(s=>`<span>${s}</span>`).join('')}</div></th><th>Result</th></tr></thead><tbody id="upRows"></tbody></table></div>
+  </div>
+
+  <div class="two" style="margin-top:16px">
+    <div class="card">
+      <div class="pad" style="padding-bottom:4px"><div class="sec-head" style="margin:0"><h3>Repository</h3><span class="muted" style="font-size:12px">${visibleDocs().length} of ${DOCS.length} documents visible to your role</span></div></div>
+      <div class="tscroll"><table><thead><tr><th>Document</th><th>Project</th><th>Ver.</th><th>Source</th></tr></thead><tbody>
+      ${visibleDocs().slice().sort((a,b)=>b.date.localeCompare(a.date)).map(d=>`<tr><td><div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span class="fmt">${d.fmt}</span><div><a href="#" data-doc="${d.id}" style="color:inherit;font-weight:500">${esc(d.title)}</a><div class="muted mono" style="font-size:11px">${d.id} · ${fmtDate(d.date)} ${accessChip(d)}</div></div></div></td><td style="font-size:13px">${esc(d.project)}</td><td class="mono">v${d.v}</td><td class="muted" style="font-size:12px">${esc(d.source)}</td></tr>`).join('')}
+      </tbody></table></div>
+    </div>
+    <div class="grid" style="align-content:start">
+      <div class="card">
+        <div class="pad" style="padding-bottom:4px"><h3>Scheduled ingestion</h3></div>
+        <div class="tscroll"><table><tbody id="jobRows">${JOBS.map((j,i)=>jobRow(j,i)).join('')}</tbody></table></div>
+      </div>
+      <div class="card pad">
+        <h3>Formats handled</h3>
+        <div class="grid" style="gap:10px;margin-top:12px;font-size:13px">
+          <div><span class="eyebrow">Structured</span><div class="row" style="margin-top:6px">${['XLSX','CSV','SQL'].map(f=>`<span class="fmt">${f}</span>`).join('')}<span class="muted">schema detection, row-level indexing</span></div></div>
+          <div><span class="eyebrow">Semi-structured</span><div class="row" style="margin-top:6px">${['XML','JSON'].map(f=>`<span class="fmt">${f}</span>`).join('')}<span class="muted">field mapping to the metadata model</span></div></div>
+          <div><span class="eyebrow">Unstructured</span><div class="row" style="margin-top:6px">${['PDF','DOCX','PPTX','TXT','JPG'].map(f=>`<span class="fmt">${f}</span>`).join('')}<span class="muted">layout-aware parsing, OCR</span></div></div>
+          <div><span class="eyebrow">Ready for Proposal 2</span><div class="row" style="margin-top:6px">${['EMAIL','WEB','API','EXT DB'].map(f=>`<span class="fmt" style="opacity:.6">${f}</span>`).join('')}<span class="muted">common connector interface</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  const drop=$('#drop');
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
+  drop.addEventListener('drop',e=>ingest([...e.dataTransfer.files].map(f=>({name:f.name,size:fmtSize(f.size)}))));
+  $('#fileIn').onchange=e=>ingest([...e.target.files].map(f=>({name:f.name,size:fmtSize(f.size)})));
+  $('#simBulk').onclick=()=>ingest(SAMPLE_UPLOADS.map(x=>({...x})));
+  $$('[data-run]',el).forEach(b=>b.onclick=()=>runJob(+b.dataset.run));
+  bindDocLinks(el);
+  renderUploads();
+}
+function fmtSize(b){return b>1e6?(b/1e6).toFixed(1)+' MB':Math.max(1,Math.round(b/1e3))+' KB'}
+function jobRow(j,i){return `<tr><td><div style="font-weight:500;font-size:13px">${j.name}</div><div class="muted" style="font-size:12px">${j.freq} · last run ${j.last}</div></td><td>${j.running?'<span class="chip acc"><span class="spin"></span> Running</span>':j.ok?`<span class="chip good"><span class="dot"></span>${j.docs} new</span>`:'<span class="chip crit"><span class="dot"></span>Failed, alert sent</span>'}</td><td><button class="btn sm" data-run="${i}" type="button">Run now</button></td></tr>`}
+async function runJob(i){const j=JOBS[i];j.running=true;$('#jobRows').innerHTML=JOBS.map(jobRow).join('');await sleep(1600);j.running=false;j.ok=true;j.docs=Math.ceil(Math.random()*3);j.last='Just now';audit('Ingestion',`${j.name} · manual run · ${j.docs} new`);const r=$('#jobRows');if(r){r.innerHTML=JOBS.map(jobRow).join('');$$('[data-run]').forEach(b=>b.onclick=()=>runJob(+b.dataset.run))}toast(`${j.name}: ${j.docs} document(s) ingested`)}
+function guessTags(name){
+  const n=name.toLowerCase(); const t=[];
+  const map=[[/market|tender|price|pricing|sales/,'Market intelligence'],[/pipeline|competit/,'Competitive intelligence'],[/surveil|resist|amr/,'Epidemiology'],[/trial|clinic|protocol|site/,'Clinical'],[/regul|dossier/,'Regulatory'],[/board|strategy/,'Strategy'],[/partner/,'Partnership'],[/apac|asia|china|india|indonesia/,'Asia-Pacific'],[/africa|lagos|nigeria/,'Sub-Saharan Africa'],[/neonat|sepsis/,'Neonatal sepsis'],[/sti|gonor/,'STI Programme'],[/paed|pediat|child/,'Paediatric Formulations']];
+  map.forEach(([r,tag])=>{if(r.test(n))t.push(tag)});
+  if(!t.length)t.push('Programme report','Global');
+  return t;
+}
+function ingest(files){
+  if(!files.length)return;
+  files.forEach(f=>{
+    const prevSame=S.uploads.find(u=>u.name===f.name)||null;
+    const exact=f.dup?docById(f.dup):null;
+    const u={...f,id:'U'+(S.reqSeq++),stage:0,ext:(f.name.split('.').pop()||'').toUpperCase().slice(0,4),tags:f.tags||guessTags(f.name),conf:f.conf||Math.round(72+Math.random()*24),state:'run'};
+    if(exact) u.dupOf=exact; else if(prevSame){u.dupOf={id:prevSame.docId||prevSame.id,title:prevSame.name};u.sim=100}
+    S.uploads.unshift(u);
+    advance(u);
+  });
+  audit('Bulk upload',`${files.length} file(s) queued`);
+  renderUploads();
+}
+async function advance(u){
+  for(let s=1;s<=6;s++){
+    await sleep(380+Math.random()*520+(u.ocr&&s===2?1200:0));
+    u.stage=s;
+    if(s===2&&u.dupOf){u.state='dup';renderUploads();return}
+    renderUploads();
+  }
+  finalize(u);
+}
+function finalize(u){
+  if(u.conf<70){u.state='review';S.review.unshift({doc:null,file:u.name,field:'Project',sug:u.tags[0],alt:['Neonatal Sepsis Programme','Serious Bacterial Infections',u.tags[0]],conf:u.conf,ev:'OCR text, 1 page, handwriting detected'})}
+  else u.state='ok';
+  const id='D-0'+(280+DOCS.length*3);
+  u.docId=id;
+  const proj=u.tags.find(t=>TAXONOMY.Project.includes(t))||'Portfolio';
+  DOCS.push({id,title:u.name.replace(/\.[a-z]+$/i,'').replace(/[_]+/g,' '),type:u.tags.find(t=>TAXONOMY['Type of intelligence'].includes(t))||'Programme report',project:proj,topics:u.tags.filter(t=>TAXONOMY.Topic.includes(t)),region:u.tags.find(t=>TAXONOMY.Region.includes(t))||'Global',date:new Date().toISOString().slice(0,10),source:'Internal · uploaded by you',fmt:u.ext,pages:1,v:1,access:'general',by:'You',route:'Bulk upload',ents:[],p:[`Uploaded file ${u.name}. Text extracted${u.ocr?' by OCR':''} and indexed; auto-tagged as ${u.tags.join(', ')}.`]});
+  DOCS[DOCS.length-1].tags=[proj,...u.tags];
+  renderUploads();
+}
+function renderUploads(){
+  const tb=$('#upRows'); if(!tb)return;
+  $('#upCard').hidden=!S.uploads.length;
+  const done=S.uploads.filter(u=>u.state!=='run').length;
+  $('#upSum').textContent=`${done}/${S.uploads.length} processed · ${S.uploads.filter(u=>u.state==='dup').length} duplicates · ${S.uploads.filter(u=>u.state==='review').length} to review`;
+  tb.innerHTML=S.uploads.map(u=>{
+    const cells=STAGES.map((_,i)=>`<span class="${i<u.stage?'done':(i===u.stage&&u.state==='run')?'run':''}"></span>`).join('');
+    let res='';
+    if(u.state==='run')res=`<span class="muted" style="font-size:12px">${STAGES[Math.min(u.stage,5)]}${u.ocr&&u.stage===1?' · OCR':''}…</span>`;
+    else if(u.state==='dup')res=`<div style="font-size:12px;min-width:220px"><span class="chip amb">${u.sim||u.dupOf&&97}% match · ${u.sim===100?'exact duplicate (checksum)':'near duplicate'}</span><div class="muted" style="margin:4px 0">of ${esc(u.dupOf.id)} ${esc(u.dupOf.title||'')}</div><div class="row" style="gap:6px"><button class="btn sm" data-dup="${u.id}" data-act="version" type="button">Save as new version</button><button class="btn sm" data-dup="${u.id}" data-act="keep" type="button">Keep both</button><button class="btn sm" data-dup="${u.id}" data-act="discard" type="button">Discard</button></div></div>`;
+    else if(u.state==='resolved')res=`<span class="chip">${esc(u.resolved)}</span>`;
+    else res=`<div class="row" style="gap:4px;min-width:220px">${u.tags.slice(0,3).map(t=>`<span class="chip acc">${esc(t)}</span>`).join('')}<span class="chip ${u.state==='review'?'amb':'good'}">${u.conf}% ${u.state==='review'?'· to review queue':''}</span></div>`;
+    return `<tr><td><div class="row" style="flex-wrap:nowrap"><span class="fmt">${esc(u.ext)}</span><div><div style="font-weight:500;font-size:13px;word-break:break-all">${esc(u.name)}</div><div class="muted mono" style="font-size:11px">${esc(u.size||'')}</div></div></div></td><td><div class="pipe">${cells}</div></td><td>${res}</td></tr>`;
+  }).join('');
+  $$('[data-dup]',tb).forEach(b=>b.onclick=()=>{
+    const u=S.uploads.find(x=>x.id===b.dataset.dup); const a=b.dataset.act;
+    if(a==='version'){const d=docById(u.dupOf.id);if(d){d.v++;d.date=new Date().toISOString().slice(0,10)}u.resolved=`Saved as v${d?d.v:2} of ${u.dupOf.id}`;audit('Version control',u.resolved)}
+    if(a==='keep'){u.state='run';u.dupOf=null;advance(u);audit('Duplicate',`${u.name} kept as separate document`);return}
+    if(a==='discard'){u.resolved='Discarded';audit('Duplicate',`${u.name} discarded`)}
+    u.state='resolved';renderUploads();
+  });
+}
+
+/* ============================================================
+   VIEW: KNOWLEDGE (3.2 / Step 4)
+   ============================================================ */
+function vKnow(el){
+  const counts=t=>visibleDocs().filter(d=>d.tags.includes(t)).length;
+  el.innerHTML=`
+  <div class="sec-head"><div><span class="eyebrow">RFP 3.2 · Step 4 · Knowledge structuring and classification</span><h1 style="font-size:34px;margin-top:8px">A knowledge model GARDP owns</h1>
+  <p>The taxonomy is edited here by knowledge managers, without code. Entities extracted from every document form a relationship graph; unsupervised clustering surfaces themes the taxonomy does not cover yet.</p></div>
+  <span class="chip"><span class="dot" style="color:var(--good)"></span>Taxonomy v15 · last change 08:02 today</span></div>
+
+  <div class="kgrid">
+    <div class="card pad tree" id="tree">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px"><h3>Taxonomy</h3></div>
+      <ul>${Object.entries(TAXONOMY).map(([g,terms])=>`<li><div class="node grp">${ic('know',14)} ${g}<span class="n">${terms.length}</span></div><ul>${terms.map(t=>`<li><div class="node" data-term="${esc(t)}">${esc(t)}<span class="n">${counts(t)}</span></div></li>`).join('')}</ul></li>`).join('')}</ul>
+      <form class="row" id="addTerm" style="margin-top:12px;flex-wrap:nowrap"><select id="termGrp" aria-label="Group" style="width:110px">${Object.keys(TAXONOMY).map(g=>`<option>${g}</option>`).join('')}</select><input id="termName" type="text" placeholder="New term" style="flex:1;min-width:0"><button class="btn sm primary" type="submit">Add</button></form>
+      <p class="muted" style="font-size:12px;margin-top:8px">Changes are versioned, with an impact preview before they apply.</p>
+    </div>
+    <div class="card graph-wrap">
+      <canvas id="kg" aria-label="Entity relationship graph"></canvas>
+      <div class="legend">${Object.entries(ENT_LABEL).map(([k,l])=>`<span><i class="dot" style="color:${typeColor(k)}"></i>${l}</span>`).join('')}</div>
+      <div class="card ginfo" id="ginfo"><span class="eyebrow">Relationship graph</span><p style="margin-top:6px">Click an entity to see linked documents. Drag nodes to explore. ${buildGraph().nodes.length} entities, linked by co-occurrence across ${visibleDocs().length} documents.</p></div>
+    </div>
+  </div>
+
+  <div class="two" style="margin-top:16px">
+    <div class="card">
+      <div class="pad" style="padding-bottom:0"><h3>Classification review queue</h3><p class="muted" style="font-size:13px;margin-top:4px">Low-confidence suggestions wait for a human. Corrections feed back into later suggestions.</p></div>
+      <div id="queue"></div>
+    </div>
+    <div class="card">
+      <div class="pad" style="padding-bottom:0"><h3>Topic clusters</h3><p class="muted" style="font-size:13px;margin-top:4px">Themes found by clustering the corpus. New ones are suggested to taxonomy owners.</p></div>
+      <div id="clusters"></div>
+    </div>
+  </div>`;
+  const graph=startGraph($('#kg'),{onSelect:n=>{
+    const box=$('#ginfo'); if(!n){box.innerHTML='<span class="eyebrow">Relationship graph</span><p style="margin-top:6px">Click an entity to see linked documents.</p>';return}
+    const ds=[...n.docs].map(docById).filter(Boolean);
+    box.innerHTML=`<span class="eyebrow" style="color:${typeColor(n.type)}">${ENT_LABEL[n.type]}</span><h3 style="margin:4px 0 8px">${esc(n.id)}</h3><p class="muted" style="font-size:12px;margin-bottom:8px">Mentioned in ${ds.length} document(s)</p>${ds.slice(0,5).map(d=>`<a href="#" data-doc="${d.id}" style="display:block;color:inherit;font-size:12.5px;padding:4px 0;border-top:1px solid var(--line)">${esc(d.title)}</a>`).join('')}<button class="btn sm" style="margin-top:8px" id="gAsk" type="button">${ic('search',14)} Search “${esc(n.id)}”</button>`;
+    bindDocLinks(box); $('#gAsk').onclick=()=>{S.query=n.id;go('search')};
+  }});
+  $$('[data-term]',el).forEach(t=>t.onclick=()=>{S.query=t.dataset.term;go('search')});
+  $('#addTerm').onsubmit=e=>{e.preventDefault();const g=$('#termGrp').value,n=$('#termName').value.trim();if(!n)return;TAXONOMY[g].push(n);audit('Taxonomy',`Added “${n}” to ${g} (v15 → v16)`);toast(`“${n}” added to ${g}. 0 documents re-tagged yet; impact preview queued.`);vKnow(el)};
+  renderQueue(); renderClusters();
+}
+function renderQueue(){
+  const q=$('#queue'); if(!q)return;
+  q.innerHTML=S.review.length?S.review.map((r,i)=>{const d=r.doc?docById(r.doc):null;return `<div class="cluster" style="align-items:flex-start"><div class="bubble" style="background:var(--amber-soft);color:var(--ink)">${r.conf}%</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:13px">${esc(d?d.title:r.file)}</div><div class="muted" style="font-size:12px;margin:2px 0 6px">${r.field}: suggested <b style="color:var(--ink)">${esc(r.sug)}</b> · evidence ${esc(r.ev)}</div><div class="row" style="gap:6px"><button class="btn sm primary" data-acc="${i}" type="button">${ic('check',14)} Accept</button><select data-cor="${i}" aria-label="Correct to" style="padding:4px 8px;font-size:12px"><option value="">Correct to…</option>${r.alt.filter(a=>a!==r.sug).map(a=>`<option>${esc(a)}</option>`).join('')}</select></div></div></div>`}).join(''):'<div class="empty">Queue is empty. All suggestions reviewed.</div>';
+  $$('[data-acc]',q).forEach(b=>b.onclick=()=>{const r=S.review.splice(+b.dataset.acc,1)[0];audit('Classification',`Accepted ${r.field} “${r.sug}”`);toast('Suggestion accepted');renderQueue()});
+  $$('[data-cor]',q).forEach(s=>s.onchange=()=>{if(!s.value)return;const r=S.review.splice(+s.dataset.cor,1)[0];audit('Classification',`Corrected ${r.field} “${r.sug}” → “${s.value}”`);toast('Correction saved. The model will use it as feedback.');renderQueue()});
+}
+function renderClusters(){
+  const c=$('#clusters'); if(!c)return;
+  c.innerHTML=S.clusters.map((k,i)=>`<div class="cluster"><div class="bubble" style="${k.new?'':'background:var(--sunken);color:var(--muted)'}">${k.n}</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:13px">${esc(k.name)}</div><div class="row" style="gap:4px;margin-top:4px">${k.terms.map(t=>`<span class="chip">${esc(t)}</span>`).join('')}</div></div>${k.new?`<button class="btn sm" data-cl="${i}" type="button">Add to taxonomy</button>`:'<span class="chip good">In taxonomy</span>'}</div>`).join('');
+  $$('[data-cl]',c).forEach(b=>b.onclick=()=>{const k=S.clusters[+b.dataset.cl];k.new=false;TAXONOMY.Topic.push(k.name);audit('Taxonomy',`Cluster “${k.name}” promoted to Topic`);toast(`“${k.name}” added to Topic. ${k.n} documents will be re-tagged.`);renderClusters()});
+}
+
+/* ============================================================
+   VIEW: SEARCH (3.3 / Step 5)
+   ============================================================ */
+const POPULAR=['Product X market growth Asia-Pacific','carbapenem resistance South Asia','tender prices','paediatric formulations','reliance pathways Southeast Asia','neonatal sepsis demand forecast','gonorrhoea guidelines'];
+function vSearch(el){
+  el.innerHTML=`
+  <div class="sec-head" style="margin-bottom:14px"><div><span class="eyebrow">RFP 3.3 · Step 5 · Search and discovery</span><h1 style="font-size:34px;margin-top:8px">Find it by meaning, not just by words</h1></div>
+  <div class="row" role="radiogroup" aria-label="Search mode">${[['hybrid','Hybrid'],['semantic','Semantic'],['keyword','Keyword']].map(([k,l])=>`<button class="chip btnlike ${S.mode===k?'on':''}" data-mode="${k}" type="button" role="radio" aria-checked="${S.mode===k}">${l}</button>`).join('')}</div></div>
+  <div class="sbar"><svg class="lens" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" autocomplete="off" placeholder="Try “APAC demand outlook” or “resistance in newborn infections”" value="${esc(S.query||'Product X market growth Asia-Pacific')}" aria-label="Search">
+    <div class="card sugg" id="sugg" hidden></div></div>
+  <div class="sgrid" style="margin-top:18px">
+    <aside class="filters" id="filters"></aside>
+    <div id="results" class="grid" style="gap:12px;min-width:0"></div>
+  </div>`;
+  const q=$('#q'); let hl=-1;
+  const run=()=>{S.query=q.value;renderResults();$('#sugg').hidden=true};
+  let tmr; q.oninput=()=>{clearTimeout(tmr);tmr=setTimeout(()=>{renderResults(true);showSugg()},160)};
+  q.onkeydown=e=>{const b=$$('#sugg button');if(e.key==='ArrowDown'&&b.length){e.preventDefault();hl=(hl+1)%b.length;b.forEach((x,i)=>x.classList.toggle('hl',i===hl))}else if(e.key==='Enter'){e.preventDefault();if(hl>=0&&b[hl]){q.value=b[hl].dataset.s}hl=-1;run();audit('Search',`“${q.value}” · ${S.mode}`)}else if(e.key==='Escape'){$('#sugg').hidden=true}};
+  q.onblur=()=>setTimeout(()=>{$('#sugg').hidden=true},150);
+  function showSugg(){
+    const v=q.value.toLowerCase().trim(); const box=$('#sugg'); hl=-1;
+    if(v.length<2){box.hidden=true;return}
+    const terms=[...new Set([...Object.values(TAXONOMY).flat(),...Object.keys(ENT_TYPE),...POPULAR])];
+    const last=v.split(' ').pop();
+    const m=terms.filter(t=>t.toLowerCase().includes(last)&&t.toLowerCase()!==v).slice(0,6);
+    if(!m.length){box.hidden=true;return}
+    box.innerHTML=m.map(t=>{const kind=POPULAR.includes(t)?'Popular query':ENT_TYPE[t]?ENT_LABEL[ENT_TYPE[t]]:'Taxonomy';return `<button type="button" data-s="${esc(t)}">${ic(POPULAR.includes(t)?'search':'know',14)}<span style="flex:1">${esc(t)}</span><span class="eyebrow">${kind}</span></button>`}).join('');
+    box.hidden=false;
+    $$('button',box).forEach(b=>b.onmousedown=e=>{e.preventDefault();q.value=b.dataset.s;run();audit('Search',`“${q.value}” · suggestion`)});
+  }
+  $$('[data-mode]',el).forEach(b=>b.onclick=()=>{S.mode=b.dataset.mode;$$('[data-mode]',el).forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-checked',x===b)});renderResults()});
+  renderResults();
+}
+function facetOf(d,k){return k==='year'?(d.date<'2025'?'2024 and older':d.date.slice(0,4)):d[k]}
+function renderResults(live){
+  const q=$('#q')?$('#q').value:S.query;
+  const all=search(q);
+  const hidden=search(q,{docs:DOCS.filter(d=>!canSee(d))}).filter(r=>r.rel>.25).length;
+  const F=S.filters;
+  const pass=(r,skip)=>Object.entries(F).every(([k,set])=>k===skip||!set.size||set.has(facetOf(r.d,k)));
+  const res=all.filter(r=>pass(r));
+  // facets
+  const facet=(k,label)=>{const vals=new Map();all.filter(r=>pass(r,k)).forEach(r=>{const v=facetOf(r.d,k);vals.set(v,(vals.get(v)||0)+1)});
+    [...F[k]].forEach(v=>{if(!vals.has(v))vals.set(v,0)});
+    if(!vals.size)return'';return `<fieldset><legend class="eyebrow">${label}</legend>${[...vals.entries()].sort((a,b)=>b[1]-a[1]).map(([v,n])=>`<label><input type="checkbox" data-f="${k}" value="${esc(v)}" ${F[k].has(v)?'checked':''}> ${esc(v)}<span class="n">${n}</span></label>`).join('')}</fieldset>`};
+  $('#filters').innerHTML=facet('project','Project')+facet('type','Type of intelligence')+facet('year','Date')+facet('fmt','File type')+(Object.values(F).some(s=>s.size)?'<button class="btn sm" id="clrF" type="button">Clear filters</button>':'');
+  $$('[data-f]').forEach(c=>c.onchange=()=>{const s=F[c.dataset.f];c.checked?s.add(c.value):s.delete(c.value);renderResults()});
+  const clr=$('#clrF'); if(clr)clr.onclick=()=>{Object.values(F).forEach(s=>s.clear());renderResults()};
+  const box=$('#results');
+  if(!q.trim()){box.innerHTML='<div class="card empty">Type a question or keywords to search the repository.</div>';return}
+  box.innerHTML=`
+   <div class="row" style="justify-content:space-between"><span class="muted" style="font-size:13px"><b style="color:var(--ink)">${res.length}</b> results · ${S.mode} ranking · ${(.18+Math.random()*.3).toFixed(2)} s</span>
+   <button class="btn sm primary" id="toChat" type="button">${ic('spark',14)} Ask the assistant instead</button></div>
+   ${hidden?`<div class="notice">${ic('lock')} <span>${hidden} matching document(s) are hidden by your access rights. Their snippets are never shown. Switch role in the top bar to compare.</span></div>`:''}
+   ${res.length?res.map(r=>{const d=r.d;const rel=related(d,2);return `
+    <article class="card result" data-open="${d.id}">
+      <div class="row" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start"><h3><a href="#" data-doc="${d.id}">${highlight(d.title,r.hit)}</a></h3><div class="rel" title="Relevance">${Math.round(r.rel*100)}%<div class="bar"><i style="width:${r.rel*100}%"></i></div></div></div>
+      <div class="meta"><span class="fmt">${d.fmt}</span><span>${esc(d.source)}</span><span>·</span><span>${fmtDate(d.date)}</span><span>·</span><span class="mono">${d.id} v${d.v}</span>${accessChip(d)}</div>
+      <blockquote>${highlight(d.p[r.pi],r.hit)}</blockquote>
+      <div class="row" style="gap:6px">${d.tags.slice(0,4).map(t=>`<span class="chip">${esc(t)}</span>`).join('')}</div>
+      ${rel.length?`<div class="muted" style="font-size:12px">Related: ${rel.map(x=>`<a href="#" data-doc="${x.id}" style="color:var(--accent)">${esc(x.title)}</a>`).join(' · ')}</div>`:''}
+    </article>`}).join(''):`<div class="card empty">No results with these filters. Try semantic mode, or remove a filter.</div>`}`;
+  bindDocLinks(box);
+  $$('[data-open]',box).forEach(a=>a.addEventListener('click',e=>{if(e.target.closest('a'))return;openDoc(a.dataset.open)}));
+  $('#toChat').onclick=()=>askFromAnywhere(q);
+}
+
+/* ============================================================
+   VIEW: ASSISTANT (Step 6)
+   ============================================================ */
+function vAssist(el){
+  el.innerHTML=`
+  <div class="sec-head" style="margin-bottom:14px"><div><span class="eyebrow">Step 6 · AI chatbot · retrieval-augmented, restricted to your authorised content</span><h1 style="font-size:34px;margin-top:8px">Answers with their evidence attached</h1></div>
+  <button class="btn sm" id="newChat" type="button">New conversation</button></div>
+  <div class="chat">
+    <div style="min-width:0">
+      <div class="thread" id="thread"></div>
+      <form class="card composer" id="composer">
+        <div class="row" style="gap:6px">
+          ${[['Ask','What is the projected market growth for Product X in Asia-Pacific?'],['Summarize','Summarize D-0163'],['Compare','Compare D-0142 and D-0171'],['Extract insights','Extract key figures on pricing and tenders'],['Executive summary','Executive summary on carbapenem resistance in Asia-Pacific'],['Out of scope','What will the Swiss franc exchange rate be in 2030?']].map(([l,q])=>`<button class="chip btnlike" type="button" data-p="${esc(q)}">${l}</button>`).join('')}
+        </div>
+        <div class="row" style="flex-wrap:nowrap"><input id="cq" type="text" placeholder="Ask about GARDP intelligence…" aria-label="Question"><button class="btn primary" type="submit">${ic('arrow')} Send</button></div>
+      </form>
+    </div>
+    <aside class="card pad evidence" id="evidence"></aside>
+  </div>`;
+  $('#composer').onsubmit=e=>{e.preventDefault();const v=$('#cq').value.trim();if(v){$('#cq').value='';ask(v)}};
+  $$('[data-p]',el).forEach(b=>b.onclick=()=>ask(b.dataset.p));
+  $('#newChat').onclick=()=>{S.chat=[];S.evidence=null;renderThread();renderEvidence()};
+  renderThread(); renderEvidence();
+  if(S.pendingAsk){const q=S.pendingAsk;S.pendingAsk=null;ask(q)}
+  else if(!S.chat.length) $('#cq').value='What is the projected market growth for Product X in Asia-Pacific?';
+}
+function renderThread(){
+  const t=$('#thread'); if(!t)return;
+  if(!S.chat.length){t.innerHTML=`<div class="card pad" style="display:grid;gap:10px"><span class="eyebrow">How answers are built</span>
+    <ol style="margin:0;padding-left:18px;display:grid;gap:4px;font-size:13.5px"><li>The question is filtered by your access rights.</li><li>Passages are retrieved (semantic and keyword) and re-ranked.</li><li>The answer is written only from those passages, with numbered citations.</li><li>A confidence score is computed from retrieval strength, source agreement and age.</li><li>If evidence is insufficient, the assistant says so and suggests documents.</li></ol>
+    <p class="muted" style="font-size:12.5px">Pick a prompt below, or type your own. Switch role in the top bar to see the same question answered with fewer sources.</p></div>`;return}
+  t.innerHTML=S.chat.map((m,i)=>m.who==='user'?`<div class="msg user"><div class="av">You</div><div class="body bubble-t">${esc(m.text)}</div></div>`:
+    `<div class="msg bot"><div class="av">AI</div><div class="body" id="m${i}">${m.html||''}</div></div>`).join('');
+  bindCites(t);
+}
+function bindCites(scope){$$('.cite',scope).forEach(c=>c.onclick=()=>{const s=$(`#src${c.dataset.c}`);if(s){s.scrollIntoView({block:'nearest',behavior:'smooth'});s.classList.remove('flash');void s.offsetWidth;s.classList.add('flash')}})}
+
+function citeHTML(text){return esc(text).replace(/\[(\d)\]/g,'<button class="cite" type="button" data-c="$1">$1</button>')}
+
+async function ask(q){
+  audit('Assistant',`“${q}”`);
+  S.chat.push({who:'user',text:q});
+  const m={who:'bot',html:''}; S.chat.push(m);
+  renderThread();
+  const idx=S.chat.length-1;
+  const plan=buildAnswer(q);
+  const steps=[`Checking access rights · ${ROLES[S.role].label}`,`Retrieving passages · ${plan.scanned} candidates from ${visibleDocs().length} documents`,`Re-ranking · ${plan.sources.length} passage(s) kept`,plan.kind==='refuse'?'Evidence check · below threshold':'Writing answer from retrieved passages only','Scoring confidence and attaching sources'];
+  const host=()=>$('#m'+idx);
+  let done=[];
+  for(let i=0;i<steps.length;i++){
+    if(!host())return;
+    host().innerHTML=`<div class="steps">${steps.map((s,j)=>j<i?`<div class="ok">${ic('check',12)} ${s}</div>`:j===i?`<div><span class="spin"></span> ${s}</div>`:'').join('')}</div>`;
+    await sleep(reduced?40:300+Math.random()*250);
+  }
+  const stepsDone=`<details class="steps" style="margin-bottom:8px"><summary style="cursor:pointer">${ic('check',12)} ${steps.length} steps · ${(1.1+Math.random()*.8).toFixed(1)} s</summary>${steps.map(s=>`<div class="ok">${ic('check',12)} ${s}</div>`).join('')}</details>`;
+  S.evidence=plan; renderEvidence();
+  // stream main text
+  const full=plan.text; let shown='';
+  const words=full.split(/(\s+)/);
+  for(let i=0;i<words.length;i++){
+    shown+=words[i];
+    if(i%3===0||i===words.length-1){if(!host())return;host().innerHTML=stepsDone+`<div class="answer">${shown.split('\n\n').map(p=>`<p>${citeHTML(p)}</p>`).join('')}</div>`;}
+    if(i%3===0) await sleep(reduced?0:22);
+  }
+  m.html=stepsDone+`<div class="answer">${full.split('\n\n').map(p=>`<p>${citeHTML(p)}</p>`).join('')}</div>`+(plan.extra||'')+
+    (plan.kind!=='refuse'?`<div class="row" style="margin-top:12px;gap:6px"><span class="chip ${plan.conf>=75?'good':plan.conf>=50?'amb':'crit'}"><span class="dot"></span>Confidence ${plan.conf}% · ${plan.conf>=75?'High':plan.conf>=50?'Medium':'Low'}</span><span class="chip">${plan.sources.length} source(s)</span>${plan.withheld?`<span class="chip amb">${ic('lock',12)} ${plan.withheld} withheld by access rights</span>`:''}<button class="btn ghost sm" type="button" data-fb="up">Helpful</button><button class="btn ghost sm" type="button" data-fb="down">Report an issue</button></div>`:'');
+  if(host()){host().innerHTML=m.html;bindCites(host());$$('[data-fb]',host()).forEach(b=>b.onclick=()=>{audit('Feedback',b.dataset.fb==='up'?'Answer marked helpful':'Answer flagged for review');toast(b.dataset.fb==='up'?'Thanks. Feedback improves ranking.':'Flagged. A knowledge manager will review this answer.')});}
+  host()&&host().scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+
+function confFrom(srcs,{agree=1,coverage=1}={}){
+  if(!srcs.length)return 0;
+  const strength=Math.min(1,srcs.reduce((a,s)=>a+s.rel,0)/2.2);
+  const newest=Math.max(...srcs.map(s=>+new Date(s.d.date)));
+  const age=(Date.now()-newest)/(1000*3600*24*365);
+  const fresh=Math.max(0,1-age/3);
+  return Math.round(Math.min(95,(strength*.45+agree*.25+fresh*.15+coverage*.15)*100));
+}
+function buildAnswer(q){
+  const ql=q.toLowerCase();
+  const ids=(ql.match(/d-0\d{3}/g)||[]).map(x=>x.toUpperCase());
+  const res=search(q,{mode:'hybrid'});
+  const allRes=search(q,{mode:'hybrid',docs:DOCS});
+  const withheld=allRes.filter(r=>!canSee(r.d)&&r.rel>.3).length;
+  const scanned=Math.max(24,res.length*7+Math.round(Math.random()*20));
+  const mk=(d,pi,rel=.9)=>({d,pi,rel});
+
+  // Summarize a specific document
+  if(/summar/.test(ql)&&ids.length){
+    const d=docById(ids[0]);
+    if(!d||!canSee(d))return refusal(q,scanned,withheld+(d?1:0),res,`I cannot open ${ids[0]} with your current access rights, so I will not summarise it.`);
+    const s=d.p.map((p,i)=>mk(d,i,.95));
+    return {kind:'sum',q,scanned,withheld,sources:s.slice(0,1),conf:91,
+      text:`${d.title} (${fmtDate(d.date)}, ${d.source}) in ${d.p.length} points:\n\n`+d.p.map((p,i)=>`• ${p} [1]`).join('\n\n'),
+      reasons:[['good','Single source, read in full'],['good',`Published ${fmtDate(d.date)}`],['warn','Summary only: no cross-check with other documents']],extracts:[0,1].filter(i=>d.p[i]).map(i=>({k:1,t:d.p[i]}))};
+  }
+  // Compare
+  if(/compar/.test(ql)&&ids.length>=2){
+    const a=docById(ids[0]),b=docById(ids[1]);
+    if(!a||!b||!canSee(a)||!canSee(b))return refusal(q,scanned,withheld,res,'One of these documents is outside your access rights, so I cannot compare them.');
+    const fig=d=>(d.p.find(p=>/%/.test(p))||d.p[0]).match(/[^.]*\d+(\.\d+)?\s?%[^.]*/)?.[0]?.trim()||d.p[0];
+    const extra=`<div class="tscroll card" style="margin-top:12px"><table class="cmp"><thead><tr><th>Dimension</th><th>[1] ${esc(a.id)}</th><th>[2] ${esc(b.id)}</th></tr></thead><tbody>
+      ${[['Date',fmtDate(a.date),fmtDate(b.date)],['Source',a.source,b.source],['Type',a.type,b.type],['Key figure',fig(a),fig(b)],['Main driver or caveat',a.p[a.p.length-1],b.p[b.p.length-1]]].map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')}</tbody></table></div>`;
+    return {kind:'cmp',q,scanned,withheld,sources:[mk(a,0,.95),mk(b,0,.9)],conf:84,extra,
+      text:`The two documents point in the same direction but differ in magnitude. ${a.id} is the more recent and more optimistic view [1]; ${b.id} is older and more conservative, with a different method [2]. Use the table below to compare them dimension by dimension.`,
+      reasons:[['good','Both documents read in full'],['warn',`${Math.abs(new Date(a.date).getFullYear()-new Date(b.date).getFullYear())||1} year(s) between publications`],['good','Comparison dimensions are factual fields']],extracts:[{k:1,t:a.p[0]},{k:2,t:b.p[0]}]};
+  }
+  // RFP flagship scenario
+  if(/product x/.test(ql)&&/(growth|grow|cagr|forecast|outlook|market)/.test(ql)&&/(asia|apac|pacific)/.test(ql)){
+    const need=['D-0142','D-0157','D-0171','D-0163'].map(docById);
+    if(need.every(canSee)){
+      const s=[mk(need[0],0,.96),mk(need[1],0,.91),mk(need[2],0,.74),mk(need[3],0,.62)];
+      return {kind:'ans',q,scanned,withheld,sources:s,conf:86,
+        text:`Product X demand in Asia-Pacific is projected to grow by roughly 10 to 12% per year into the early 2030s.\n\nThe most recent external study forecasts a CAGR of 11.8% for 2026 to 2032, reaching about USD 412 million, with India and China representing 64% of 2032 volume [1]. GARDP's internal access modelling is consistent, at 10 to 13% per year to 2030 [2].\n\nOne older source is more conservative: hospital procurement leads interviewed in 2024 expected about 7% per year, citing budget caps [3]. The main growth driver is rising carbapenem resistance, which reached 38% of K. pneumoniae isolates in South Asia in 2025 [4]. The main downside risk is tender price referencing, which could reduce realised growth by 2 to 3 points [1].`,
+        reasons:[['good','3 of 4 sources agree on 10 to 13% per year'],['good','Newest source published March 2026'],['warn','One 2024 source estimates about 7%, using a different method'],['good','All parts of the question are covered']],
+        extracts:[{k:1,t:need[0].p[0]},{k:2,t:need[1].p[0]},{k:3,t:need[2].p[0]},{k:4,t:need[3].p[0]}]};
+    }
+    // falls through to generic composition with fewer sources
+  }
+  // Executive summary
+  if(/executive summary|one-pager|brief/.test(ql)){
+    const top=res.slice(0,4); if(!top.length||top[0].rel<.3)return refusal(q,scanned,withheld,res);
+    const s=top.map(r=>mk(r.d,r.pi,r.rel));
+    const subj=q.replace(/executive summary (on|of|about)?/i,'').trim()||'this topic';
+    const extra=`<div class="exec" style="margin-top:12px"><div class="row" style="justify-content:space-between"><span class="eyebrow">Executive summary · GARDP format</span><span class="mono muted" style="font-size:11px">${new Date().toLocaleDateString('en-GB')}</span></div><h3>${esc(subj.charAt(0).toUpperCase()+subj.slice(1))}</h3>
+      <div><h4>Key findings</h4><ul>${top.slice(0,3).map((r,i)=>`<li>${citeHTML(r.d.p[r.pi]+' ['+(i+1)+']')}</li>`).join('')}</ul></div>
+      <div><h4>Implications for GARDP</h4><ul><li>Prioritise programmes where resistance growth and access gaps coincide.</li><li>Track the cited sources through saved-search alerts for new evidence.</li></ul></div>
+      <div><h4>Sources</h4><p class="muted" style="font-size:12.5px">${top.map((r,i)=>`[${i+1}] ${esc(r.d.title)}, ${fmtDate(r.d.date)}`).join(' · ')}</p></div></div>`;
+    return {kind:'exec',q,scanned,withheld,sources:s,conf:confFrom(s),extra,text:`Here is a one-page executive summary built from ${top.length} documents in the repository. Implications are drafted for your review; findings are taken verbatim from the cited sources.`,
+      reasons:reasonsFor(s,withheld),extracts:s.map((x,i)=>({k:i+1,t:x.d.p[x.pi]}))};
+  }
+  // Extract insights
+  if(/extract|key figures|insight/.test(ql)){
+    const top=res.slice(0,5); if(!top.length||top[0].rel<.3)return refusal(q,scanned,withheld,res);
+    const figs=[];top.forEach((r,i)=>r.d.p.forEach(p=>{const m=p.match(/[^.;]*\d[\d.,]*\s?(%|percent|million|billion|days|months)[^.;]*/);if(m&&figs.length<6)figs.push({t:m[0].trim(),k:i+1})}));
+    const s=top.map(r=>mk(r.d,r.pi,r.rel));
+    const extra=`<div class="card tscroll" style="margin-top:12px"><table><thead><tr><th>Figure or claim</th><th>Source</th></tr></thead><tbody>${figs.map(f=>`<tr><td>${esc(f.t)}</td><td><button class="cite" type="button" data-c="${f.k}">${f.k}</button></td></tr>`).join('')}</tbody></table></div>`;
+    return {kind:'ins',q,scanned,withheld,sources:s,conf:confFrom(s),extra,text:`I extracted ${figs.length} figures and claims from ${top.length} relevant documents. Each one links to the passage it came from.`,reasons:reasonsFor(s,withheld),extracts:figs.slice(0,4)};
+  }
+  // Generic composition
+  const top=res.filter(r=>r.rel>.32).slice(0,4);
+  if(!top.length)return refusal(q,scanned,withheld,res);
+  const s=top.map(r=>mk(r.d,r.pi,r.rel));
+  const lead=top.length>1?`Based on ${top.length} documents you can access, here is what the repository says.`:'I found one relevant document. The evidence is limited.';
+  const text=lead+'\n\n'+top.map((r,i)=>`${r.d.p[r.pi]} [${i+1}]`).join('\n\n')+(withheld?`\n\n${withheld} other relevant document(s) exist but are outside your access rights, so they were not used.`:'');
+  return {kind:'ans',q,scanned,withheld,sources:s,conf:confFrom(s,{agree:top.length>1?.8:.4,coverage:Math.min(1,top[0].rel+.2)}),text,reasons:reasonsFor(s,withheld),extracts:s.map((x,i)=>({k:i+1,t:x.d.p[x.pi]}))};
+}
+function reasonsFor(s,withheld){
+  const r=[];const yrs=s.map(x=>+x.d.date.slice(0,4));
+  r.push([s.length>=3?'good':s.length===2?'warn':'crit',`${s.length} source(s) retrieved above the relevance threshold`]);
+  r.push([Math.max(...yrs)>=2026?'good':'warn',`Newest source from ${Math.max(...yrs)}`]);
+  if(Math.min(...yrs)<2025)r.push(['warn',`Oldest source from ${Math.min(...yrs)}`]);
+  if(withheld)r.push(['warn',`${withheld} relevant document(s) withheld by your access rights`]);
+  return r;
+}
+function refusal(q,scanned,withheld,res,msg){
+  const sugg=res.slice(0,3);
+  return {kind:'refuse',q,scanned,withheld,sources:[],conf:0,
+    text:(msg||`I could not find enough evidence in the repository to answer this. Rather than guess, I am not answering.`)+(sugg.length?`\n\nThese documents may be related: ${sugg.map(r=>r.d.title).join('; ')}.`:'\n\nNo related documents were found either. You can upload a source, or rephrase the question.'),
+    reasons:[['crit','No passage above the relevance threshold'],...(withheld?[['warn',`${withheld} document(s) outside your access rights`]]:[])],extracts:[]};
+}
+function renderEvidence(){
+  const e=$('#evidence'); if(!e)return;
+  const p=S.evidence;
+  if(!p){e.innerHTML=`<span class="eyebrow">Evidence panel</span><p class="muted" style="font-size:13px">Sources, supporting extracts and the confidence score appear here for each answer.</p>
+   <div style="opacity:.5">${gauge(0)}</div>`;return}
+  const lvl=p.conf>=75?'High':p.conf>=50?'Medium':'Low';
+  e.innerHTML=`
+   <div><span class="eyebrow">Confidence score</span>
+     <div class="gauge" style="margin-top:8px">${gauge(p.conf)}<div><b style="font:600 20px var(--f-display)">${p.kind==='refuse'?'Not answered':lvl}</b><div class="muted" style="font-size:12px">${p.kind==='refuse'?'Evidence below threshold':'retrieval · agreement · freshness'}</div></div></div>
+     <ul class="reasons">${p.reasons.map(([c,t])=>`<li style="--rc:var(--${c})">${esc(t)}</li>`).join('')}</ul></div>
+   <div><span class="eyebrow">Source documents used</span>
+     ${p.sources.length?p.sources.map((s,i)=>`<div class="src" id="src${i+1}"><span class="k">${i+1}</span><div style="min-width:0"><a href="#" data-doc="${s.d.id}" style="color:inherit;font-weight:500;font-size:13px">${esc(s.d.title)}</a><div class="muted" style="font-size:11.5px">${fmtDate(s.d.date)} · ${esc(s.d.project)} · ${s.d.id} v${s.d.v}</div></div></div>`).join(''):'<p class="muted" style="font-size:13px;margin-top:6px">None used.</p>'}</div>
+   ${p.extracts.length?`<div><span class="eyebrow">Supporting extracts</span>${p.extracts.map(x=>`<div class="extract"><button class="cite" type="button" data-c="${x.k}">${x.k}</button> “${esc(x.t)}”</div>`).join('')}</div>`:''}`;
+  bindDocLinks(e); bindCites(e);
+}
+function gauge(v){
+  const r=34,c=Math.PI*r; const col=v>=75?'var(--good)':v>=50?'var(--amber)':'var(--crit)';
+  return `<svg width="88" height="52" viewBox="0 0 88 52" aria-label="Confidence ${v}%"><path d="M10 46a34 34 0 0 1 68 0" fill="none" stroke="var(--sunken)" stroke-width="8" stroke-linecap="round"/><path d="M10 46a34 34 0 0 1 68 0" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c*(1-v/100)}" style="transition:stroke-dashoffset .8s ease"/><text x="44" y="44" text-anchor="middle" fill="var(--ink)" style="font:600 15px var(--f-mono)">${v}</text></svg>`;
+}
+
+/* ============================================================
+   DOCUMENT DRAWER
+   ============================================================ */
+function openDoc(id){
+  const d=docById(id); if(!d)return;
+  if(!canSee(d)){audit('Access denied',`${d.id} · ${LEVEL_LABEL[d.access]}`);toast('Access denied. This attempt was logged.');return}
+  audit('Document opened',`${d.id} ${d.title}`);
+  const rel=related(d,4);
+  const versions=Array.from({length:d.v},(_,i)=>d.v-i);
+  const sc=document.createElement('div');sc.className='scrim';
+  sc.innerHTML=`<div class="drawer" role="dialog" aria-modal="true" aria-label="${esc(d.title)}">
+    <div class="row" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start"><div><span class="eyebrow">${d.id} · ${esc(d.type)}</span><h2 style="margin-top:6px">${esc(d.title)}</h2></div><button class="icon-btn" id="closeD" type="button" aria-label="Close">${ic('x')}</button></div>
+    <div class="row" style="gap:6px">${d.tags.map(t=>`<span class="chip acc">${esc(t)}</span>`).join('')}${accessChip(d)}</div>
+    <div class="card"><table><tbody>
+      ${[['Source',d.source],['Published',fmtDate(d.date)],['Freshness',freshness(d.date)],['Format',`${d.fmt} · ${d.pages} page(s)`],['Ingestion route',d.route],['Uploaded by',d.by],['Checksum','sha256:'+hash(d.id)]].map(([k,v])=>`<tr><td class="muted" style="width:130px;font-size:12px">${k}</td><td style="font-size:13px">${esc(v)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div><span class="eyebrow">Extracted passages</span>${d.p.map(p=>`<div class="extract" style="font-size:13.5px">${esc(p)}</div>`).join('')}</div>
+    <div><span class="eyebrow">Entities</span><div class="row" style="gap:6px;margin-top:6px">${d.ents.map(e=>`<span class="chip"><i class="dot" style="color:${typeColor(ENT_TYPE[e])}"></i>${esc(e)}</span>`).join('')||'<span class="muted">None extracted yet</span>'}</div></div>
+    <div><span class="eyebrow">Version history</span>${versions.map((v,i)=>`<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px"><span><b class="mono">v${v}</b> ${i===0?'<span class="chip good">Current</span>':''}</span><span class="muted">${i===0?fmtDate(d.date):'Superseded, searchable on request'}</span></div>`).join('')}</div>
+    ${rel.length?`<div><span class="eyebrow">Related content</span>${rel.map(x=>`<a href="#" data-doc="${x.id}" style="display:block;color:inherit;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px">${esc(x.title)}</a>`).join('')}</div>`:''}
+    <div class="row"><button class="btn primary" id="askDoc" type="button">${ic('spark',14)} Summarize with the assistant</button></div>
+  </div>`;
+  document.body.append(sc);
+  const close=()=>{sc.remove();document.removeEventListener('keydown',k)};
+  const k=e=>{if(e.key==='Escape')close()};document.addEventListener('keydown',k);
+  sc.onclick=e=>{if(e.target===sc)close()};
+  $('#closeD',sc).onclick=close; $('#closeD',sc).focus();
+  $$('[data-doc]',sc).forEach(a=>a.onclick=e=>{e.preventDefault();close();openDoc(a.dataset.doc)});
+  $('#askDoc',sc).onclick=()=>{close();askFromAnywhere('Summarize '+d.id)};
+}
+function freshness(date){const m=(Date.now()-new Date(date))/(1000*3600*24*30);return m<6?'Fresh (under 6 months)':m<18?'Recent (6 to 18 months)':'Ageing (over 18 months): check for updates'}
+function hash(s){let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0).toString(16).padStart(8,'0')+'…'+((h*7)>>>0).toString(16).slice(0,4)}
+
+/* ============================================================
+   VIEW: TRUST & SECURITY
+   ============================================================ */
+function vTrust(el){
+  const levels=['general','confidential','restricted'];
+  el.innerHTML=`
+  <div class="sec-head"><div><span class="eyebrow">Security and confidentiality approach · ISO 27001</span><h1 style="font-size:34px;margin-top:8px">Confidentiality is an architecture driver</h1>
+  <p>Access rules are applied at retrieval, before ranking: a user never sees a snippet, a citation or an answer built from a document they cannot open. Every login, search, question and change is logged.</p></div></div>
+  <div class="two">
+    <div class="grid" style="align-content:start">
+      <div class="card">
+        <div class="pad" style="padding-bottom:0"><h3>Access matrix</h3><p class="muted" style="font-size:13px;margin-top:4px">Role-based and project-based permissions, enforced at document and passage level. You are viewing as <b style="color:var(--ink)">${ROLES[S.role].label}</b>.</p></div>
+        <div class="tscroll"><table class="matrix"><thead><tr><th>Role</th>${levels.map(l=>`<th>${LEVEL_LABEL[l]}</th>`).join('')}<th>Docs</th></tr></thead><tbody>
+        ${Object.entries(ROLES).map(([k,r])=>`<tr style="${k===S.role?'background:var(--accent-soft)':''}"><td style="font-weight:500">${r.label}</td>${levels.map(l=>`<td class="${r.levels.includes(l)?'yes':'no'}">${r.levels.includes(l)?ic('check',16):'–'}</td>`).join('')}<td class="mono">${DOCS.filter(d=>r.levels.includes(d.access)).length}</td></tr>`).join('')}
+        </tbody></table></div>
+      </div>
+      <div class="card pad">
+        <h3>Controls in place</h3>
+        ${[['Identity','SSO and MFA through the GARDP identity provider (OpenID Connect)','good'],['Encryption','TLS 1.3 in transit; AES-256 at rest with customer-managed keys','good'],['AI safeguards','No GARDP content used to train external models; zero-retention contract with the model provider','good'],['Prompt injection','Ingested documents scanned; 2 suspicious instructions quarantined this month','warn'],['Data residency','Switzerland region · processing agreement signed (simulated)','good'],['Pen test','Independent test scheduled before go-live (G4)','warn']].map(([k,v,c])=>`<div class="ctrl"><span class="chip ${c==='good'?'good':'amb'}" style="flex:none">${c==='good'?'Active':'Planned'}</span><div><b style="font-size:13px">${k}</b><div class="muted" style="font-size:12.5px">${v}</div></div></div>`).join('')}
+      </div>
+    </div>
+    <div class="grid" style="align-content:start">
+      <div class="card pad">
+        <div class="row" style="justify-content:space-between"><h3>Audit trail</h3><span class="chip"><span class="dot" style="color:var(--good)"></span>Immutable · live</span></div>
+        <p class="muted" style="font-size:12.5px;margin:4px 0 10px">Your actions in this prototype appear here as you work.</p>
+        <div class="log" id="auditLog"></div>
+      </div>
+      <div class="card pad">
+        <h3>AI evaluation harness</h3>
+        <p class="muted" style="font-size:12.5px;margin:4px 0 6px">Run before every release on the GARDP question set (80 questions, simulated results).</p>
+        ${[['Top-5 precision',91,85],['Grounded answers',97,95],['Correct refusals',94,90],['Citation accuracy',98,95],['Zero-result rate',4,8,true]].map(([l,v,t,inv])=>`<div style="margin:10px 0"><div class="row" style="justify-content:space-between;font-size:13px"><span>${l}</span><span class="mono">${v}% <span class="muted">· target ${inv?'≤':'≥'} ${t}%</span></span></div><div class="bar" style="margin-top:5px"><i style="width:${v}%;background:var(--${(inv?v<=t:v>=t)?'good':'warn'})"></i></div></div>`).join('')}
+        <button class="btn sm" id="runEval" type="button" style="margin-top:6px">Run evaluation now</button>
+      </div>
+    </div>
+  </div>`;
+  renderLog($('#auditLog'));
+  $('#runEval').onclick=async e=>{const b=e.currentTarget;b.disabled=true;b.innerHTML='<span class="spin"></span> Running 80 questions…';await sleep(1800);b.disabled=false;b.textContent='Run evaluation now';audit('Evaluation','80 questions · all release thresholds met');toast('Evaluation passed: all thresholds met')};
+}
+function renderLog(el){el.innerHTML=S.audit.map(a=>`<div class="${a.isNew?'new':''}"><span class="muted">${a.t}</span><span>${esc(a.action)}</span><span class="muted" style="overflow-wrap:anywhere">${esc(a.who)} · ${esc(a.detail)}</span></div>`).join('');S.audit.forEach(a=>a.isNew=false)}
+
+/* ============================================================
+   VIEW: PLAN
+   ============================================================ */
+function vPlan(el){
+  const rows=[['Requirement gathering','F.......'],['Design','PF......'],['Development','.PFFFP..'],['Integration','...PFP..'],['Testing and UAT','....PFP.'],['Training and deployment','.....PF.'],['Hypercare support','......PF']];
+  el.innerHTML=`
+  <div class="sec-head"><div><span class="eyebrow">Project plan and phase-wise timeline</span><h1 style="font-size:34px;margin-top:8px">Live in 6 to 8 months, gate by gate</h1>
+  <p>Phase 1 (requirements and design) ends at Gate 1 with a proof of concept on about 200 GARDP documents. Phase 2 builds ingestion, classification, search and the assistant in short sprints, each closed by a demo.</p></div>
+  <div class="row"><span class="chip" style="gap:6px"><i style="width:14px;height:10px;border-radius:3px;background:var(--accent);display:inline-block"></i>Full activity</span><span class="chip" style="gap:6px"><i style="width:14px;height:10px;border-radius:3px;display:inline-block;background:repeating-linear-gradient(135deg,var(--accent-soft) 0 3px,color-mix(in srgb,var(--accent) 45%,transparent) 3px 6px)"></i>Partial</span></div></div>
+  <div class="card pad tscroll"><div class="gantt">
+    <div></div>${Array.from({length:8},(_,i)=>`<div class="hd">M${i+1}</div>`).join('')}
+    ${rows.map(([l,p])=>`<div class="lb">${l}</div>${[...p].map((c,i)=>`<div class="cell ${c==='F'?'full':c==='P'?'part':''}" style="animation:rise .4s ${i*.06}s both"></div>`).join('')}`).join('')}
+  </div></div>
+  <h2 style="margin:28px 0 14px">Milestones and gates</h2>
+  <div class="gates">${[['G0','Kick-off and plan approval','Project charter, governance','M1'],['G1','Requirements and design approved','BRD, FRS, Solution Architecture and Technical Design documents','M2'],['G2','Core platform on real content','Working ingestion, tagging, search','M5'],['G3','UAT completed','Testing reports, signed UAT acceptance','M7'],['G4','Go-live and hypercare exit','Deployment report, training, support handover','M8']].map(([g,t,e,m])=>`<div class="card gate"><div class="row" style="justify-content:space-between"><b>${g}</b><span class="mono muted">${m}</span></div><h3 style="margin:6px 0">${t}</h3><p class="muted" style="font-size:12.5px">${e}</p></div>`).join('')}</div>
+  <div class="two" style="margin-top:16px">
+    <div class="card pad"><h3>Phase 1 workshops</h3>
+      <div class="tscroll" style="margin-top:8px"><table><tbody>${[['Use cases and value','Ranked use cases, success criteria'],['Personas and workflows','Personas, content lifecycle, access rules'],['Content and taxonomy','Source inventory, first taxonomy draft'],['Integration and IT','Systems map, identity, hosting constraints'],['Prioritisation and sign-off','Backlog, BRD and FRS approval']].map(([w,o],i)=>`<tr><td class="mono muted" style="width:30px">${i+1}</td><td style="font-weight:500;font-size:13px">${w}</td><td class="muted" style="font-size:12.5px">${o}</td></tr>`).join('')}</tbody></table></div></div>
+    <div class="card pad"><h3>Top risks and mitigations</h3>
+      ${[['High','AI answers that are wrong or unsupported','Answers limited to retrieved passages; confidence score; evaluation set'],['High','Security or confidentiality incident','Access enforced at retrieval; pen test; incident plan'],['High','Unclear or growing scope','Backlog signed at G1; change control'],['Medium','Poor quality of scans','Early sample test; OCR tuning; data quality report']].map(([l,r,m])=>`<div class="ctrl"><span class="chip ${l==='High'?'crit':'amb'}" style="flex:none">${l}</span><div><b style="font-size:13px">${r}</b><div class="muted" style="font-size:12.5px">${m}</div></div></div>`).join('')}</div>
+  </div>`;
+}
+
+/* ============================================================
+   VIEW: ROADMAP (3.4 / Step 7 — Proposal 2 preview)
+   ============================================================ */
+function vRoad(el){
+  const regions=['South Asia','Southeast Asia','East Asia','Sub-Saharan Africa','Latin America','Europe'];
+  const path=['K. pneumoniae','E. coli','A. baumannii','N. gonorrhoeae'];
+  const H=[[38,12,61,22],[24,8,54,31],[19,5,48,27],[29,9,57,18],[21,6,44,15],[9,2,33,8]];
+  el.innerHTML=`
+  <div class="ban">${ic('road',20)}<div><b>Proposal 2 preview · Future roadmap (Step 7).</b> <span class="muted">Not in the Proposal 1 scope. Shown to demonstrate that the Phase 2 extension points support these features without a rebuild.</span></div></div>
+  <div class="sec-head"><div><span class="eyebrow">RFP 3.4 · Future AI capability expansion</span><h1 style="font-size:34px;margin-top:8px">From answers to foresight</h1></div>
+  <div class="row">${['Wave 1 · Digests','Wave 2 · Drafts','Wave 3 · Visual analytics','Wave 4 · Forecasting'].map((w,i)=>`<span class="chip ${i<2?'acc':''}">${w}</span>`).join('')}</div></div>
+
+  <div class="two">
+    <div class="card pad">
+      <div class="row" style="justify-content:space-between"><h3>Resistance heat map</h3><span class="eyebrow">Wave 3 · simulated %</span></div>
+      <p class="muted" style="font-size:12.5px;margin:4px 0 12px">Share of resistant isolates by pathogen and region, compiled from surveillance documents in the repository.</p>
+      <div class="tscroll"><div class="heat" style="grid-template-columns:120px repeat(4,minmax(64px,1fr));min-width:420px">
+        <div></div>${path.map(p=>`<div class="h" style="justify-content:center;font-style:italic;text-transform:none;letter-spacing:0">${p}</div>`).join('')}
+        ${regions.map((r,i)=>`<div class="h">${r}</div>${H[i].map(v=>`<div class="c" title="${r} · ${v}%" style="background:color-mix(in srgb,var(--crit) ${Math.round(v*1.5)}%,var(--sunken));color:${v>40?'#fff':'var(--ink)'}">${v}%</div>`).join('')}`).join('')}
+      </div></div>
+    </div>
+    <div class="card pad">
+      <div class="row" style="justify-content:space-between"><h3>Weekly intelligence digest</h3><span class="eyebrow">Wave 1</span></div>
+      <p class="muted" style="font-size:12.5px;margin:4px 0 10px">Generated every Monday from saved searches and new content, with citations.</p>
+      <div class="grid" style="gap:10px;font-size:13px">
+        ${[['New evidence','Carbapenem resistance in K. pneumoniae reached 38% in South Asia.','D-0163'],['Competitive','Two agents against resistant A. baumannii expected to file in 2027.','D-0211'],['Policy','Antimicrobial resistance media coverage up 34% month on month.','D-0270']].map(([k,t,d])=>`<div style="padding:10px 12px;border-radius:8px;background:var(--sunken)"><span class="eyebrow">${k}</span><div style="margin-top:4px">${t} <span class="mono muted" style="font-size:11px">${d}</span></div></div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <div class="two" style="margin-top:16px">
+    <div class="card pad">
+      <div class="row" style="justify-content:space-between"><h3>Scenario: Product X APAC volume</h3><span class="eyebrow">Wave 4 · forecasting</span></div>
+      <div class="row" style="margin:10px 0"><label for="press" style="font-size:13px">Tender price pressure</label><input id="press" type="range" min="0" max="3" step="0.5" value="1" style="flex:1;min-width:120px;accent-color:var(--accent)"><span class="mono" id="pressV" style="width:70px;text-align:right">−1.0 pt</span></div>
+      <div id="fc"></div>
+      <p class="muted" style="font-size:12px">Base growth 11.8% per year (D-0142), minus the selected price pressure. Index 2026 = 100. Simulated.</p>
+    </div>
+    <div class="card pad">
+      <div class="row" style="justify-content:space-between"><h3>Draft strategic brief</h3><span class="eyebrow">Wave 2 · presentation drafts</span></div>
+      <p class="muted" style="font-size:12.5px;margin:4px 0 12px">One click turns an answer into a slide in GARDP's template.</p>
+      <div class="slide" id="slide">
+        <div><span class="eyebrow" style="color:var(--accent)">Strategic brief · draft</span><h3 style="font-size:clamp(14px,2vw,20px);margin-top:4px">Product X in Asia-Pacific: 10 to 12% annual growth to 2032</h3></div>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:6%;font-size:clamp(10px,1.2vw,13px);align-content:start">
+          <ul style="margin:0;padding-left:16px"><li>CAGR 11.8%, USD 412 m by 2032 [1]</li><li>India and China: 64% of volume [1]</li><li>Internal model: 10 to 13% per year [2]</li></ul>
+          <ul style="margin:0;padding-left:16px"><li>Risk: tender price referencing, −2 to −3 pts [1]</li><li>Procurement view more cautious, about 7% [3]</li></ul>
+        </div>
+        <div class="muted mono" style="font-size:10px">[1] D-0142 · [2] D-0157 · [3] D-0171 · generated ${new Date().toLocaleDateString('en-GB')}</div>
+      </div>
+    </div>
+  </div>`;
+  const draw=()=>{const p=+$('#press').value;$('#pressV').textContent=`−${p.toFixed(1)} pt`;$('#fc').innerHTML=forecastSVG(p)};
+  $('#press').oninput=draw; draw();
+}
+function forecastSVG(p){
+  const W=520,Hh=200,L=40,R=12,T=14,B=26; const yrs=[2026,2027,2028,2029,2030,2031,2032];
+  const g=(.118-p/100); const base=yrs.map((_,i)=>100*Math.pow(1.118,i)); const sc=yrs.map((_,i)=>100*Math.pow(1+g,i));
+  const lo=yrs.map((_,i)=>100*Math.pow(1+g-.02,i)), hi=yrs.map((_,i)=>100*Math.pow(1+g+.015,i));
+  const maxY=200; const x=i=>L+i*(W-L-R)/(yrs.length-1); const y=v=>T+(Hh-T-B)*(1-(v-80)/(maxY-80));
+  const line=a=>a.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  const band=line(hi)+yrs.map((_,i)=>`L${x(yrs.length-1-i).toFixed(1)},${y(lo[yrs.length-1-i]).toFixed(1)}`).join('')+'Z';
+  return `<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;height:auto" role="img" aria-label="Forecast index">
+   ${[100,140,180].map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" fill="var(--muted)" style="font:10px var(--f-mono)">${v}</text>`).join('')}
+   ${yrs.map((yr,i)=>`<text x="${x(i)}" y="${Hh-8}" text-anchor="middle" fill="var(--muted)" style="font:10px var(--f-mono)">${yr}</text>`).join('')}
+   <path d="${band}" fill="var(--accent)" opacity=".14"/>
+   <path d="${line(base)}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>
+   <path d="${line(sc)}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+   <circle cx="${x(6)}" cy="${y(sc[6])}" r="4" fill="var(--accent)"/>
+   <text x="${x(6)-8}" y="${y(sc[6])-10}" text-anchor="end" fill="var(--ink)" style="font:600 12px var(--f-mono)">${sc[6].toFixed(0)}</text>
+   <text x="${x(6)-8}" y="${y(base[6])+16}" text-anchor="end" fill="var(--muted)" style="font:10px var(--f-mono)">base ${base[6].toFixed(0)}</text>
+  </svg>`;
+}
+
+/* ============================================================
+   COMMAND PALETTE
+   ============================================================ */
+function openPalette(){
+  if($('.palette-wrap'))return;
+  const w=document.createElement('div');w.className='palette-wrap';
+  w.innerHTML=`<div class="card palette" role="dialog" aria-modal="true" aria-label="Command palette"><input id="palQ" type="text" placeholder="Type a command, a question or a document" aria-label="Command"><div class="list" id="palL"></div></div>`;
+  document.body.append(w);
+  const inp=$('#palQ'),list=$('#palL');let hl=0,items=[];
+  const close=()=>w.remove();
+  const build=()=>{const v=inp.value.trim().toLowerCase();
+    const nav=VIEWS.filter(x=>x.id).map(x=>({icon:x.icon,label:'Go to '+x.label,run:()=>go(x.id)}));
+    const docs=visibleDocs().filter(d=>v&&d.title.toLowerCase().includes(v)).slice(0,4).map(d=>({icon:'doc',label:d.title,hint:d.id,run:()=>openDoc(d.id)}));
+    items=[...(v?[{icon:'spark',label:`Ask: “${inp.value}”`,run:()=>askFromAnywhere(inp.value)},{icon:'search',label:`Search: “${inp.value}”`,run:()=>{S.query=inp.value;go('search')}}]:[]),...docs,...nav.filter(n=>!v||n.label.toLowerCase().includes(v))];
+    hl=Math.min(hl,items.length-1);if(hl<0)hl=0;
+    list.innerHTML=items.map((it,i)=>`<button type="button" class="${i===hl?'hl':''}" data-i="${i}">${ic(it.icon)}<span style="flex:1">${esc(it.label)}</span>${it.hint?`<span class="mono muted" style="font-size:11px">${it.hint}</span>`:''}</button>`).join('');
+    $$('button',list).forEach(b=>b.onclick=()=>{close();items[+b.dataset.i].run()});
+  };
+  inp.oninput=()=>{hl=0;build()};
+  inp.onkeydown=e=>{if(e.key==='ArrowDown'){e.preventDefault();hl=(hl+1)%items.length;build()}else if(e.key==='ArrowUp'){e.preventDefault();hl=(hl-1+items.length)%items.length;build()}else if(e.key==='Enter'){e.preventDefault();const it=items[hl];close();it&&it.run()}else if(e.key==='Escape')close()};
+  w.onclick=e=>{if(e.target===w)close()};
+  build();inp.focus();
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+$('#roleSel').innerHTML=Object.entries(ROLES).map(([k,r])=>`<option value="${k}">${r.label}</option>`).join('');
+$('#roleSel').value=S.role;
+$('#roleSel').onchange=e=>{S.role=e.target.value;audit('Role switch',`Now viewing as ${ROLES[S.role].label}`);toast(`Viewing as ${ROLES[S.role].label}: ${visibleDocs().length} of ${DOCS.length} documents accessible`);S.evidence=null;route()};
+$('#cmdBtn').onclick=openPalette;
+document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPalette()}});
+$('#themeBtn').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('bihub-theme',r.dataset.theme)}catch(_){}};
+try{const t=localStorage.getItem('bihub-theme');if(t)document.documentElement.dataset.theme=t}catch(_){}
+window.addEventListener('hashchange',route);
+route();
+</script>
+</body>
+</html>
