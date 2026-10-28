@@ -119,21 +119,22 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 
 /* home */
-.hero{position:relative;overflow:hidden;border-radius:16px;border:1px solid var(--line);background:var(--surface);min-height:380px;display:grid}
-.hero canvas{position:absolute;inset:0;width:100%;height:100%}
-.hero-in{position:relative;padding:40px clamp(20px,4vw,48px);display:flex;flex-direction:column;justify-content:center;gap:18px;max-width:720px;pointer-events:none}
+.hero{border-radius:16px;border:1px solid var(--line);background:var(--surface)}
+.hero-in{position:relative;padding:40px clamp(20px,4vw,48px);display:flex;flex-direction:column;justify-content:center;gap:18px;max-width:760px;pointer-events:none}
 .hero-in > *{pointer-events:auto}
 .hero-in h1 em{font-style:normal;color:var(--accent)}
 .hero-in p{font-size:16px;color:var(--muted);max-width:56ch}
 .askbox{display:flex;gap:8px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);max-width:640px}
 .askbox input{flex:1;min-width:0;border:0;background:transparent;padding:10px}
 .askbox input:focus{box-shadow:none}
-.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.kpis > div + div{border-left:1px solid var(--line)}
 .kpi{padding:16px 18px}
-.kpi b{display:block;font:600 30px/1.1 var(--f-display);letter-spacing:-.02em;margin-top:8px;font-variant-numeric:tabular-nums}
+.kpi{padding:18px 22px}
+.kpi b{display:block;font:600 28px/1.1 var(--f-display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .kpi small{color:var(--muted)}
 .req{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-.req a{display:flex;flex-direction:column;gap:8px;padding:16px;text-decoration:none;color:inherit;transition:transform .15s,border-color .15s}
+.req a{display:flex;flex-direction:column;gap:6px;padding:16px;text-decoration:none;color:inherit;transition:transform .15s,border-color .15s}
 .req a:hover{transform:translateY(-2px);border-color:var(--accent)}
 .req .eyebrow{display:flex;justify-content:space-between}
 .feed li{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start}
@@ -153,7 +154,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .stage-labels{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;font:500 9px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;min-width:280px}
 
 /* knowledge */
-.kgrid{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px}
+.kgrid{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px;align-items:start}
+.ents{display:grid;gap:16px}
+.ents .row{gap:6px;margin-top:8px}
 .tree ul{list-style:none;margin:0;padding:0 0 0 14px;border-left:1px solid var(--line)}
 .tree > ul{padding:0;border:0}
 .tree li{margin:2px 0}
@@ -161,11 +164,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .tree .node:hover{background:var(--sunken)}
 .tree .node .n{margin-left:auto;font:500 11px var(--f-mono);color:var(--muted)}
 .tree .grp{font-weight:600}
-.graph-wrap{position:relative;height:520px;overflow:hidden}
-.graph-wrap canvas{width:100%;height:100%;display:block;cursor:grab}
-.legend{position:absolute;left:12px;bottom:12px;display:flex;gap:10px;flex-wrap:wrap;font-size:11px;background:color-mix(in srgb,var(--surface) 88%,transparent);padding:6px 10px;border-radius:8px;border:1px solid var(--line)}
-.legend span{display:flex;align-items:center;gap:5px}
-.ginfo{position:absolute;right:12px;top:12px;width:260px;max-width:calc(100% - 24px);padding:14px;font-size:13px}
 .cluster{display:flex;gap:14px;align-items:center;padding:14px;border-bottom:1px solid var(--line)}
 .cluster:last-child{border-bottom:0}
 .bubble{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font:600 13px var(--f-mono);flex:none;background:var(--accent-soft);color:var(--accent)}
@@ -271,12 +269,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .palette button.hl{background:var(--accent-soft);color:var(--accent)}
 .toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:70;display:flex;flex-direction:column;gap:8px}
 .toast{padding:10px 14px;border-radius:8px;background:var(--ink);color:var(--bg);font-size:13px;box-shadow:var(--shadow);animation:rise .25s ease;max-width:340px}
-.proto{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:40;font:500 10px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted);pointer-events:none;white-space:nowrap}
 
 @media (max-width:1100px){
   .chat{grid-template-columns:minmax(0,1fr)}
   .evidence{position:static;max-height:none}
-  .kpis,.req{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .req{grid-template-columns:repeat(2,minmax(0,1fr))}
   .gates{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media (max-width:900px){
@@ -292,13 +289,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 }
 @media (max-width:560px){
   .top,.view{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-  .kpis,.req,.gates{grid-template-columns:minmax(0,1fr)}
+  .req,.gates{grid-template-columns:minmax(0,1fr)}
+  .kpis{grid-template-columns:minmax(0,1fr)}
+  .kpis > div + div{border-left:0;border-top:1px solid var(--line)}
   .role select{max-width:130px}
   .cmd .kbd{display:none}
-  .graph-wrap{height:420px}
-  .ginfo{display:none}
   .hero-in{padding:28px 18px}
-  .hero canvas{opacity:.3}
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
@@ -329,7 +325,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
   </div>
 </div>
 <div class="toasts" id="toasts"></div>
-<div class="proto">Prototype · simulated data</div>
 
 <script>
 /* ============================================================
@@ -620,7 +615,8 @@ function renderNav(){
   const cur=currentView();
   $('#nav').innerHTML=VIEWS.map(v=>v.sep?`<div class="nav-sep">${v.sep}</div>`:`<a href="#${v.id}" class="${cur===v.id?'on':''}">${ic(v.icon)}<span>${v.label}</span>${v.ref?`<span class="ref">${v.ref}</span>`:''}</a>`).join('');
 }
-const currentView=()=>{const h=location.hash.slice(1);return VIEWS.some(v=>v.id===h)?h:'home'};
+let CUR=(()=>{const h=location.hash.slice(1);return VIEWS.some(v=>v.id===h)?h:'home'})();
+const currentView=()=>CUR;
 
 /* ============================================================
    ROUTER
@@ -633,7 +629,7 @@ function route(){
   ({home:vHome,repository:vRepo,knowledge:vKnow,search:vSearch,assistant:vAssist,trust:vTrust,plan:vPlan,roadmap:vRoad})[v](el);
   window.scrollTo({top:0});
 }
-function go(v){if(location.hash==='#'+v)route();else location.hash=v}
+function go(v){CUR=VIEWS.some(x=>x.id===v)?v:'home';try{history.replaceState(null,'','#'+CUR)}catch(_){}route()}
 
 /* ============================================================
    VIEW: HOME
@@ -645,123 +641,62 @@ function countUp(el,to,dec=0,suffix=''){
   requestAnimationFrame(step);
 }
 function vHome(el){
-  const vis=visibleDocs().length;
+  const recent=visibleDocs().slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,4);
   el.innerHTML=`
   <section class="hero">
-    <canvas id="heroCanvas" aria-hidden="true"></canvas>
     <div class="hero-in">
       <div class="cobrand"><img class="logo-gardp" src="${$('#logoGardp').src}" alt="GARDP" width="150"><span class="x">×</span><img class="logo-alc" src="${$('#logoAlc').src}" alt="Alcimed" width="48" height="48"><span class="eyebrow">Business Intelligence Hub · Proposal 1</span></div>
       <h1>Ask the organisation’s memory. <em>Trace every answer</em> to its source.</h1>
-      <p>One governed repository for intelligence and research content, auto-classified against a taxonomy GARDP owns, searchable in plain language, with an assistant that cites the passage behind each claim.</p>
+      <p>One governed repository, auto-classified against GARDP’s taxonomy, searchable in plain language, with an assistant that cites its sources.</p>
       <form class="askbox" id="heroAsk">
         <input id="heroQ" type="text" aria-label="Ask a question" value="What is the projected market growth for Product X in Asia-Pacific?">
         <button class="btn primary" type="submit">${ic('spark')} Ask</button>
       </form>
       <div class="row">
-        <span class="muted" style="font-size:12px">Try:</span>
         ${['Carbapenem resistance trends in South Asia','Compare D-0142 and D-0171','Executive summary on paediatric formulations'].map(q=>`<button class="chip btnlike" data-ask="${esc(q)}" type="button">${esc(q)}</button>`).join('')}
       </div>
+      <p class="muted" style="font-size:12px">Prototype with simulated data.</p>
     </div>
   </section>
 
-  <div class="kpis" style="margin-top:16px">
-    <div class="card kpi"><span class="eyebrow">Documents governed</span><b data-count="12480">0</b><small>${vis} sample documents open to you as ${esc(ROLES[S.role].label.toLowerCase())}</small></div>
-    <div class="card kpi"><span class="eyebrow">Auto-tagging coverage</span><b data-count="96.4" data-dec="1" data-suf="%">0</b><small>3.6% sent to the human review queue</small></div>
-    <div class="card kpi"><span class="eyebrow">Search p95 latency</span><b data-count="1.4" data-dec="1" data-suf=" s">0</b><small>Target in FRS: under 2 s</small></div>
-    <div class="card kpi"><span class="eyebrow">Answers with citations</span><b data-count="100" data-suf="%">0</b><small>Refuses when evidence is insufficient</small></div>
+  <div class="card kpis" style="margin-top:16px">
+    <div class="kpi"><span class="eyebrow">Documents governed</span><b data-count="12480">0</b></div>
+    <div class="kpi"><span class="eyebrow">Auto-tagged</span><b data-count="96" data-suf="%">0</b></div>
+    <div class="kpi"><span class="eyebrow">Answers with sources</span><b data-count="100" data-suf="%">0</b></div>
   </div>
 
-  <h2 style="margin:32px 0 14px">RFP requirements, live in this prototype</h2>
-  <div class="req">
-    ${[['3.1','Core','Centralized intelligence repository','Bulk and scheduled ingestion, versioning, duplicate detection, provenance.','repository'],
-       ['3.2','Core','Intelligent data organization','Auto-classification by project, type, topic, date and source; taxonomy, entities, clusters.','knowledge'],
-       ['3.3','Mandatory','AI-assisted knowledge retrieval','Semantic, keyword and filter search; natural language questions with cited answers.','search'],
-       ['3.4','Roadmap','Future AI capability expansion','Digests, briefs, heat maps and scenario forecasts on the same knowledge layer.','roadmap']]
-      .map(([r,p,t,d,v])=>`<a class="card" href="#${v}"><span class="eyebrow"><span>RFP ${r}</span><span class="chip ${p==='Roadmap'?'':'acc'}">${p}</span></span><h3>${t}</h3><p class="muted" style="font-size:13px">${d}</p><span class="btn ghost" style="padding:0;margin-top:auto">Open module ${ic('arrow',14)}</span></a>`).join('')}
+  <div class="req" style="margin-top:16px">
+    ${[['3.1','Repository','Ingest, version, deduplicate','repository'],
+       ['3.2','Knowledge','Taxonomy, entities, auto-tagging','knowledge'],
+       ['3.3','Search & assistant','Ask in plain language, get cited answers','assistant'],
+       ['3.4','Roadmap','Digests, briefs, forecasts','roadmap']]
+      .map(([r,t,d,v])=>`<a class="card" href="#${v}"><span class="eyebrow">RFP ${r}</span><h3>${t}</h3><p class="muted" style="font-size:13px">${d}</p></a>`).join('')}
   </div>
 
-  <div class="two" style="margin-top:16px">
-    <div class="card pad">
-      <div class="sec-head" style="margin-bottom:6px"><h3>Recently ingested</h3><a class="btn ghost sm" href="#repository">Repository ${ic('arrow',14)}</a></div>
-      <ul class="feed">${visibleDocs().slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5).map(d=>`
-        <li><span class="fmt">${d.fmt}</span><div style="min-width:0;flex:1"><a href="#" data-doc="${d.id}" style="color:inherit;font-weight:500">${esc(d.title)}</a><div class="muted" style="font-size:12px">${d.route} · ${fmtDate(d.date)} · v${d.v}</div></div>${accessChip(d)}</li>`).join('')}</ul>
-    </div>
-    <div class="card pad">
-      <div class="sec-head" style="margin-bottom:6px"><h3>Answer quality this release</h3><a class="btn ghost sm" href="#trust">Evaluation ${ic('arrow',14)}</a></div>
-      ${[['Top-5 retrieval precision',.91],['Answers fully grounded in sources',.97],['Correct refusals on out-of-scope questions',.94],['Queries with a clicked result',.78]].map(([l,v])=>`
-        <div style="margin:12px 0"><div class="row" style="justify-content:space-between"><span style="font-size:13px">${l}</span><span class="mono">${Math.round(v*100)}%</span></div><div class="bar" style="margin-top:6px"><i style="width:${v*100}%"></i></div></div>`).join('')}
-      <p class="muted" style="font-size:12px">Measured on a GARDP question set of 80 real questions (simulated figures).</p>
-    </div>
+  <div class="card pad" style="margin-top:16px">
+    <div class="sec-head" style="margin-bottom:6px"><h3>Recently ingested</h3><a class="btn ghost sm" href="#repository">Repository ${ic('arrow',14)}</a></div>
+    <ul class="feed">${recent.map(d=>`
+      <li><span class="fmt">${d.fmt}</span><div style="min-width:0;flex:1"><a href="#" data-doc="${d.id}" style="color:inherit;font-weight:500">${esc(d.title)}</a><div class="muted" style="font-size:12px">${fmtDate(d.date)} · v${d.v}</div></div>${accessChip(d)}</li>`).join('')}</ul>
   </div>`;
   $$('[data-count]',el).forEach(b=>countUp(b,+b.dataset.count,+(b.dataset.dec||0),b.dataset.suf||''));
   $('#heroAsk').onsubmit=e=>{e.preventDefault();askFromAnywhere($('#heroQ').value)};
   $$('[data-ask]',el).forEach(b=>b.onclick=()=>askFromAnywhere(b.dataset.ask));
   bindDocLinks(el);
-  startGraph($('#heroCanvas'),{ambient:true});
 }
 function askFromAnywhere(q){S.pendingAsk=q;go('assistant')}
 function accessChip(d){return d.access==='general'?'':`<span class="lock">${ic('lock',12)}${LEVEL_LABEL[d.access]}</span>`}
 function bindDocLinks(el){$$('[data-doc]',el).forEach(a=>a.onclick=e=>{e.preventDefault();openDoc(a.dataset.doc)})}
 
 /* ============================================================
-   GRAPH (canvas force layout)
+   ENTITIES
    ============================================================ */
-function buildGraph(){
-  const nodes=new Map(), links=new Map();
-  visibleDocs().forEach(d=>{
-    d.ents.forEach(e=>{if(!nodes.has(e))nodes.set(e,{id:e,type:ENT_TYPE[e]||'topic',docs:new Set()});nodes.get(e).docs.add(d.id)});
-    for(let i=0;i<d.ents.length;i++)for(let j=i+1;j<d.ents.length;j++){const k=[d.ents[i],d.ents[j]].sort().join('|');links.set(k,(links.get(k)||0)+1)}
-  });
-  return {nodes:[...nodes.values()],links:[...links.entries()].map(([k,w])=>{const [a,b]=k.split('|');return{a,b,w}})};
+function entityIndex(){
+  const m=new Map();
+  visibleDocs().forEach(d=>d.ents.forEach(e=>{if(!m.has(e))m.set(e,{id:e,type:ENT_TYPE[e]||'topic',docs:new Set()});m.get(e).docs.add(d.id)}));
+  return [...m.values()].sort((a,b)=>b.docs.size-a.docs.size);
 }
 function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
 function typeColor(t){return {product:css('--accent'),pathogen:css('--crit'),region:css('--good'),topic:css('--amber'),org:css('--muted')}[t]}
-function startGraph(cv,{ambient=false,onSelect}={}){
-  const ctx=cv.getContext('2d'); let W,H,dpr;
-  const g=buildGraph(); const byId=new Map(g.nodes.map(n=>[n.id,n]));
-  function size(){dpr=window.devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
-  size();
-  const cx=()=>ambient?W*.72:W/2;
-  g.nodes.forEach((n,i)=>{const a=i/g.nodes.length*Math.PI*2;n.x=cx()+Math.cos(a)*120+Math.random()*20;n.y=H/2+Math.sin(a)*120;n.vx=0;n.vy=0;n.r=4+Math.sqrt(n.docs.size)*3});
-  let hover=null, sel=null, drag=null, alive=true, t=0;
-  function tick(){
-    const N=g.nodes;
-    for(let i=0;i<N.length;i++){const a=N[i];
-      for(let j=i+1;j<N.length;j++){const b=N[j];let dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+.01;const f=(ambient?1400:2200)/d2;const d=Math.sqrt(d2);dx/=d;dy/=d;a.vx+=dx*f;a.vy+=dy*f;b.vx-=dx*f;b.vy-=dy*f}
-      a.vx+=(cx()-a.x)*.004;a.vy+=(H/2-a.y)*.006;
-    }
-    g.links.forEach(l=>{const a=byId.get(l.a),b=byId.get(l.b);const dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1;const k=(d-(ambient?80:110))*.004*Math.min(3,l.w);a.vx+=dx/d*k;a.vy+=dy/d*k;b.vx-=dx/d*k;b.vy-=dy/d*k});
-    N.forEach(n=>{if(n===drag)return;if(ambient&&!reduced){n.vx+=Math.sin(t*.01+n.r)*.02;n.vy+=Math.cos(t*.012+n.r)*.02}n.vx*=.86;n.vy*=.86;n.x+=n.vx;n.y+=n.vy;n.x=Math.max(n.r+4,Math.min(W-n.r-4,n.x));n.y=Math.max(n.r+4,Math.min(H-n.r-4,n.y))});
-  }
-  function draw(){
-    t++; ctx.clearRect(0,0,W,H);
-    const focus=sel||hover; const nb=new Set();
-    if(focus){nb.add(focus.id);g.links.forEach(l=>{if(l.a===focus.id)nb.add(l.b);if(l.b===focus.id)nb.add(l.a)})}
-    const line=css('--line'),acc=css('--accent'),ink=css('--ink'),muted=css('--muted');
-    g.links.forEach(l=>{const a=byId.get(l.a),b=byId.get(l.b);const on=focus&&(l.a===focus.id||l.b===focus.id);
-      ctx.strokeStyle=on?acc:line;ctx.globalAlpha=focus&&!on?.35:(ambient?.8:1);ctx.lineWidth=on?1.6:Math.min(2.5,.6+l.w*.4);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()});
-    if(ambient&&!reduced){ // travelling pulses along links
-      g.links.forEach((l,i)=>{if(i%3)return;const a=byId.get(l.a),b=byId.get(l.b);const k=((t*.006+i*.37)%1);ctx.globalAlpha=.9;ctx.fillStyle=acc;ctx.beginPath();ctx.arc(a.x+(b.x-a.x)*k,a.y+(b.y-a.y)*k,1.6,0,7);ctx.fill()});
-    }
-    g.nodes.forEach(n=>{const dim=focus&&!nb.has(n.id);ctx.globalAlpha=dim?.25:1;ctx.fillStyle=typeColor(n.type);ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,7);ctx.fill();
-      if(n===focus){ctx.strokeStyle=ink;ctx.lineWidth=2;ctx.stroke()}
-      const showLabel=!ambient||n.docs.size>=4||nb.has(n.id);
-      if(showLabel&&(!dim)){ctx.globalAlpha=ambient?.75:1;ctx.fillStyle=ambient?muted:ink;ctx.font=`${n===focus?'600 ':''}${ambient?11:12}px "IBM Plex Sans",sans-serif`;ctx.fillText(n.id,n.x+n.r+4,n.y+4)}});
-    ctx.globalAlpha=1;
-  }
-  let raf; function loop(){if(!alive)return;tick();draw();raf=requestAnimationFrame(loop)}
-  if(reduced){for(let i=0;i<300;i++)tick();draw();}else loop();
-  const pick=e=>{const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;return g.nodes.find(n=>(n.x-x)**2+(n.y-y)**2<(n.r+6)**2)};
-  if(!ambient){
-    cv.onpointermove=e=>{if(drag){const r=cv.getBoundingClientRect();drag.x=e.clientX-r.left;drag.y=e.clientY-r.top;drag.vx=drag.vy=0}else{hover=pick(e);cv.style.cursor=hover?'pointer':'grab'} if(reduced)draw()};
-    cv.onpointerdown=e=>{drag=pick(e);if(drag)cv.setPointerCapture(e.pointerId)};
-    cv.onpointerup=e=>{const n=pick(e);if(n&&n===drag){sel=sel===n?null:n;onSelect&&onSelect(sel)}drag=null;if(reduced)draw()};
-    cv.onpointerleave=()=>{hover=null};
-  }
-  const ro=new ResizeObserver(()=>{size();if(reduced)draw()});ro.observe(cv);
-  S.anim.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect()});
-  return {select:id=>{sel=byId.get(id)||null;onSelect&&onSelect(sel)}};
-}
 
 /* ============================================================
    VIEW: REPOSITORY (3.1 / Step 3)
@@ -890,7 +825,7 @@ function vKnow(el){
   const counts=t=>visibleDocs().filter(d=>d.tags.includes(t)).length;
   el.innerHTML=`
   <div class="sec-head"><div><span class="eyebrow">RFP 3.2 · Step 4 · Knowledge structuring and classification</span><h1 style="font-size:34px;margin-top:8px">A knowledge model GARDP owns</h1>
-  <p>The taxonomy is edited here by knowledge managers, without code. Entities extracted from every document form a relationship graph; unsupervised clustering surfaces themes the taxonomy does not cover yet.</p></div>
+  <p>The taxonomy is edited here by knowledge managers, without code. Entities are extracted from every document, and clustering surfaces themes the taxonomy does not cover yet.</p></div>
   <span class="chip"><span class="dot" style="color:var(--good)"></span>Taxonomy v15 · last change 08:02 today</span></div>
 
   <div class="kgrid">
@@ -900,10 +835,10 @@ function vKnow(el){
       <form class="row" id="addTerm" style="margin-top:12px;flex-wrap:nowrap"><select id="termGrp" aria-label="Group" style="width:110px">${Object.keys(TAXONOMY).map(g=>`<option>${g}</option>`).join('')}</select><input id="termName" type="text" placeholder="New term" style="flex:1;min-width:0"><button class="btn sm primary" type="submit">Add</button></form>
       <p class="muted" style="font-size:12px;margin-top:8px">Changes are versioned, with an impact preview before they apply.</p>
     </div>
-    <div class="card graph-wrap">
-      <canvas id="kg" aria-label="Entity relationship graph"></canvas>
-      <div class="legend">${Object.entries(ENT_LABEL).map(([k,l])=>`<span><i class="dot" style="color:${typeColor(k)}"></i>${l}</span>`).join('')}</div>
-      <div class="card ginfo" id="ginfo"><span class="eyebrow">Relationship graph</span><p style="margin-top:6px">Click an entity to see linked documents. Drag nodes to explore. ${buildGraph().nodes.length} entities, linked by co-occurrence across ${visibleDocs().length} documents.</p></div>
+    <div class="card pad">
+      <h3>Extracted entities</h3>
+      <p class="muted" style="font-size:13px;margin:4px 0 14px">Recognised in each document and linked to a canonical record. Click one to search for it.</p>
+      <div class="ents">${Object.entries(ENT_LABEL).map(([k,l])=>{const es=entityIndex().filter(e=>e.type===k);return es.length?`<div><span class="eyebrow">${l}s</span><div class="row">${es.map(e=>`<button class="chip btnlike" type="button" data-ent="${esc(e.id)}"><i class="dot" style="color:${typeColor(k)}"></i>${esc(e.id)}<span class="mono muted">${e.docs.size}</span></button>`).join('')}</div></div>`:''}).join('')}</div>
     </div>
   </div>
 
@@ -917,12 +852,7 @@ function vKnow(el){
       <div id="clusters"></div>
     </div>
   </div>`;
-  const graph=startGraph($('#kg'),{onSelect:n=>{
-    const box=$('#ginfo'); if(!n){box.innerHTML='<span class="eyebrow">Relationship graph</span><p style="margin-top:6px">Click an entity to see linked documents.</p>';return}
-    const ds=[...n.docs].map(docById).filter(Boolean);
-    box.innerHTML=`<span class="eyebrow" style="color:${typeColor(n.type)}">${ENT_LABEL[n.type]}</span><h3 style="margin:4px 0 8px">${esc(n.id)}</h3><p class="muted" style="font-size:12px;margin-bottom:8px">Mentioned in ${ds.length} document(s)</p>${ds.slice(0,5).map(d=>`<a href="#" data-doc="${d.id}" style="display:block;color:inherit;font-size:12.5px;padding:4px 0;border-top:1px solid var(--line)">${esc(d.title)}</a>`).join('')}<button class="btn sm" style="margin-top:8px" id="gAsk" type="button">${ic('search',14)} Search “${esc(n.id)}”</button>`;
-    bindDocLinks(box); $('#gAsk').onclick=()=>{S.query=n.id;go('search')};
-  }});
+  $$('[data-ent]',el).forEach(t=>t.onclick=()=>{S.query=t.dataset.ent;go('search')});
   $$('[data-term]',el).forEach(t=>t.onclick=()=>{S.query=t.dataset.term;go('search')});
   $('#addTerm').onsubmit=e=>{e.preventDefault();const g=$('#termGrp').value,n=$('#termName').value.trim();if(!n)return;TAXONOMY[g].push(n);audit('Taxonomy',`Added “${n}” to ${g} (v15 → v16)`);toast(`“${n}” added to ${g}. 0 documents re-tagged yet; impact preview queued.`);vKnow(el)};
   renderQueue(); renderClusters();
@@ -1390,7 +1320,9 @@ $('#cmdBtn').onclick=openPalette;
 document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPalette()}});
 $('#themeBtn').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('bihub-theme',r.dataset.theme)}catch(_){}};
 try{const t=localStorage.getItem('bihub-theme');if(t)document.documentElement.dataset.theme=t}catch(_){}
-window.addEventListener('hashchange',route);
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h!==CUR&&VIEWS.some(v=>v.id===h)){CUR=h;route()}});
+// In-app links never rely on browser hash navigation (blocked in some embedded viewers)
+document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#"]');if(!a)return;const id=a.getAttribute('href').slice(1);if(VIEWS.some(v=>v.id===id)){e.preventDefault();go(id)}});
 route();
 </script>
 </body>
