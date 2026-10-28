@@ -53,11 +53,11 @@
       <a class="nav-cta" data-cta="Menu · Créer ma toile" href="{% url 'studio:upload' %}">{% trans "Créer ma toile" %}</a>
       {% get_current_language as LANG %}
       <details class="langdd" id="langform" data-current="{{ LANG }}">
-        <summary aria-label="{% trans "Langue et devise" %}"><svg class="globe" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>{{ LANG|upper }}{% for c, l in CUR_MENU %}{% if c == CUR %} · {{ l|slice:":1" }}{% endif %}{% endfor %}<svg viewBox="0 0 12 12" width="10" height="10"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></summary>
+        <summary aria-label="{% trans "Langue et devise" %}"><svg class="globe" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>{{ LANG|upper }}{% for c, l, sym in CUR_MENU %}{% if c == CUR %} · {{ sym }}{% endif %}{% endfor %}<svg viewBox="0 0 12 12" width="10" height="10"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></summary>
         <div class="langdd-menu" role="menu">
           {% for l in LANG_MENU %}<a role="menuitem" href="{{ l.url }}" hreflang="{{ l.code }}" lang="{{ l.code }}" class="{% if l.code == LANG %}active{% endif %}"><i class="flag flag-{{ l.code }}" aria-hidden="true"></i>{{ l.label }}{% if l.code == LANG %}<b>✓</b>{% endif %}</a>{% endfor %}
           {% if CUR_MENU %}<div class="langdd-sep">{% trans "Devise" %}</div>
-          {% for c, l in CUR_MENU %}<a role="menuitem" href="?cur={{ c }}" rel="nofollow" class="{% if c == CUR %}active{% endif %}">{{ l }}{% if c == CUR %}<b>✓</b>{% endif %}</a>{% endfor %}{% endif %}
+          {% for c, l, sym in CUR_MENU %}<a role="menuitem" href="?cur={{ c }}" rel="nofollow" class="{% if c == CUR %}active{% endif %}">{{ l }}{% if c == CUR %}<b>✓</b>{% endif %}</a>{% endfor %}{% endif %}
         </div>
       </details>
     </div>

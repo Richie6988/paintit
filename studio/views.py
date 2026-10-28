@@ -19,7 +19,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 
 from . import fulfillment, supplier, discounts, address, emails, payments, receipts, jobs, genqueue, security
 from .forms import UploadForm, DeliveryForm, ContactForm, FORMATS, dimensions
-from .models import Order, OrderEvent, Pricing, DigitalCanvas, EmailCode, CompanyInfo
+from .models import Order, OrderEvent, Pricing, DigitalCanvas, EmailCode, CompanyInfo, finish_of
 from .pipeline import generate, compute_price, price_cfg
 
 PHASE_LABELS = {
@@ -514,11 +514,16 @@ def preview(request):
         a, b = sorted((kf.width_cm, kf.height_cm))
         return (b, a) if land else (a, b)
     formats = []
-    for kf in KitFormat.objects.filter(available=True):
+    for kf in KitFormat.objects.all():
         fw, fh = _oriented(kf)
-        formats.append({"id": kf.id, "label": "%d x %d cm" % (fw, fh), "w": fw, "h": fh,
-                        "ratio": round(fw / fh, 3), "price": round(float(kf.price) + p.color_price(colors), 2),
-                        "frame": round(float(kf.frame_price), 2) if kf.frame_available else None})
+        base = float(kf.price) + p.color_price(colors)
+        # prix complet (EUR) par finition proposee pour ce format : ck = toile seule (format « disponible »)
+        fin = {f: round(base + kf.finish_price(f), 2) for f in ("fk", "nk") if kf.finish_price(f) is not None}
+        if kf.available:
+            fin["ck"] = round(base, 2)
+        if fin:
+            formats.append({"id": kf.id, "label": "%d x %d cm" % (fw, fh), "w": fw, "h": fh,
+                            "ratio": round(fw / fh, 3), "fin": fin})
     gw, gh = order.get("gen_w") or order.get("width_cm"), order.get("gen_h") or order.get("height_cm")
     gen_ratio = round(float(gw) / float(gh), 3) if gw and gh else None
     current_format = next((fm["id"] for fm in formats
@@ -526,13 +531,16 @@ def preview(request):
                            and float(fm["h"]) == float(order.get("height_cm") or 0)),
                           (formats[0]["id"] if formats else None))
     # aligne le prix affiche sur le format courant
+    finish = finish_of(order)
     if formats:
         cf = next((fm for fm in formats if fm["id"] == current_format), formats[0])
-        if order.get("framed") and cf["frame"] is None:
-            order["framed"] = False                     # cadre plus propose pour ce format
-        order["canvas_price"] = round(cf["price"] + (cf["frame"] if order.get("framed") else 0), 2)
+        if finish not in cf["fin"]:                    # finition plus proposee pour ce format
+            finish = next(f for f in ("ck", "fk", "nk") if f in cf["fin"])
+        order["finish"] = finish
+        order.pop("framed", None)
+        order["canvas_price"] = cf["fin"][finish]
         order["width_cm"], order["height_cm"], order["format_label"] = cf["w"], cf["h"], cf["label"]
-        order["price"] = round(cf["price"] + order.get("brushes_amount", 0.0), 2)
+        order["price"] = round(order["canvas_price"] + order.get("brushes_amount", 0.0), 2)
         request.session["order"] = order
     # Difficulte reelle de CETTE toile (zones + couleurs), comme les etoiles de la page Jouer
     from .models import difficulty_level
@@ -542,18 +550,18 @@ def preview(request):
     level = difficulty_level(order.get("zones"), colors)
     from . import currency as fx       # prix dans la devise du visiteur (memes valeurs que chez Stripe)
     cur = fx.for_request(request)
-    for fm in formats:
-        fm["lp"] = fx.local(fm["price"], cur)
-        fm["lf"] = round(fx.local(fm["price"] + fm["frame"], cur) - fm["lp"], 2) if fm["frame"] is not None else None
+    for fm in formats:          # prix affiches dans la devise du visiteur, par finition (memes valeurs que Stripe)
+        fm["loc"] = {f: fx.local(v, cur) for f, v in fm["fin"].items()}
     sym, before = fx.CURRENCIES.get(cur, ("€", False))
-    money_js = {"sym": sym, "before": before, "dec": "." if before or (get_language() or "fr")[:2] == "en" else ","}
+    money_js = {"sym": sym, "before": before, "dec": "." if before or (get_language() or "fr")[:2] == "en" else ",",
+                "dp": fx.decimals(cur)}
     return render(request, "studio/preview.html",
                   {"order": order, "brushes_price": p.brushes_price, "formats": formats, "level": level,
                    "gen_ratio": gen_ratio, "gen_w": gw, "gen_h": gh,
-                   "current_format": current_format, "framed": bool(order.get("framed")),
+                   "current_format": current_format, "finish": finish,
+                   "finishes": [f for f in ("ck", "fk", "nk") if any(f in fm["fin"] for fm in formats)],
                    "base_local": fx.order_amounts(order, cur)["canvas"], "bp_local": fx.local(p.brushes_price, cur),
                    "money_js": money_js,
-                   "frame_any": any(fm["frame"] is not None for fm in formats),
                    "brushes_available": p.av_brushes})
 
 
@@ -602,19 +610,22 @@ def set_options(request):
         p = Pricing.get()
         from .models import KitFormat
         fmt_id = request.POST.get("kit_format")
-        kf = KitFormat.objects.filter(id=fmt_id, available=True).first() if fmt_id else None
+        kf = KitFormat.objects.filter(id=fmt_id).first() if fmt_id else None
         if not kf:      # format courant (pas de changement de format dans le formulaire)
-            a, b = sorted((int(order.get("width_cm") or 40), int(order.get("height_cm") or 50)))
-            kf = KitFormat.objects.filter(width_cm=a, height_cm=b, available=True).first()
-        if kf:
-            a, b = sorted((kf.width_cm, kf.height_cm))
-            fw, fh = (b, a) if order.get("orientation") == "paysage" else (a, b)
-            order["width_cm"], order["height_cm"] = fw, fh
-            order["format_label"] = "%d x %d cm" % (fw, fh)
-            framed = request.POST.get("framed") == "1" and kf.frame_available
-            order["framed"] = framed
-            order["canvas_price"] = round(float(kf.price) + p.color_price(order.get("colors", 24))
-                                          + (float(kf.frame_price) if framed else 0), 2)
+            a, b = sorted((int(float(order.get("width_cm") or 40)), int(float(order.get("height_cm") or 50))))
+            kf = KitFormat.objects.filter(width_cm=a, height_cm=b).first()
+        finish = request.POST.get("finish") if request.POST.get("finish") in ("ck", "fk", "nk") else "ck"
+        offered = kf and (kf.available if finish == "ck" else kf.finish_price(finish) is not None)
+        if not offered:     # format / finition non proposes (formulaire modifie) : retour a l'apercu
+            return redirect("studio:preview")
+        a, b = sorted((kf.width_cm, kf.height_cm))
+        fw, fh = (b, a) if order.get("orientation") == "paysage" else (a, b)
+        order["width_cm"], order["height_cm"] = fw, fh
+        order["format_label"] = "%d x %d cm" % (fw, fh)
+        order["finish"] = finish
+        order.pop("framed", None)
+        order["canvas_price"] = round(float(kf.price) + p.color_price(order.get("colors", 24))
+                                      + kf.finish_price(finish), 2)
         brushes = bool(request.POST.get("brushes")) and p.av_brushes
         bp = p.brushes_price if brushes else 0.0
         order["brushes"] = brushes
@@ -949,7 +960,8 @@ def _record_digital(uid, verified, o):
 def _digital_receipt(email, uid, title, sess, lang=None):
     """E-mail de confirmation d'achat (une seule fois : appele par celui qui cree la toile, webhook ou retour)."""
     try:
-        amount = (sess.get("amount_total") or 0) / 100.0 if sess else 0.0
+        from .currency import from_minor
+        amount = from_minor(sess.get("amount_total"), sess.get("currency")) if sess else 0.0
         emails.send_digital_receipt(email, uid, title, amount,
                                     lang or ((sess or {}).get("locale") or "") or get_language() or "fr",
                                     cur=((sess or {}).get("currency") or "eur"))
@@ -1566,7 +1578,7 @@ def _upsert_order(o, shipping, status, supplier_ref=None):
         "width_cm": o["width_cm"], "height_cm": o["height_cm"], "colors": o["colors"],
         "difficulty": o.get("difficulty", "auto"),
         "brushes": bool(o.get("brushes")), "brushes_amount": o.get("brushes_amount", 0.0),
-        "framed": bool(o.get("framed")),
+        "finish": finish_of(o),
         "currency": o.get("currency") or "EUR", "amounts": o.get("amounts") or {},
         "price": o["price"], "cost": supplier.estimate_cost(o, shipping),
         "discount_code": d["code"] if d else None, "discount_amount": d["amount"] if d else 0.0,
@@ -1765,7 +1777,7 @@ def _order_from_row(r):
     return {"uid": r.uid, "format_label": r.format_label, "orientation": r.orientation,
             "width_cm": r.width_cm, "height_cm": r.height_cm, "colors": r.colors,
             "difficulty": r.difficulty, "brushes": r.brushes, "brushes_amount": r.brushes_amount,
-            "framed": r.framed, "canvas_price": canvas, "price": r.price, "discount": discount, "total": r.total,
+            "finish": r.finish, "canvas_price": canvas, "price": r.price, "discount": discount, "total": r.total,
             "lang": r.lang, "currency": r.currency or "EUR", "amounts": r.amounts or {}}
 
 
@@ -1837,8 +1849,9 @@ def stripe_webhook(request):
                 _digital_receipt(buyer, uid, m.title, obj, meta.get("lang"))
         elif uid:
             r = Order.objects.filter(uid=uid).first()
-            paid = (obj.get("amount_total") or 0) / 100.0
+            from .currency import from_minor
             cur = (obj.get("currency") or "eur").upper()
+            paid = from_minor(obj.get("amount_total"), cur)
             due = float((r.amounts or {}).get("total") or r.total or 0) if r and r.currency == cur and cur != "EUR" \
                 else float(r.total or 0) if r else 0.0
             if r and r.status == Order.PENDING and (paid + 0.01 < due or cur != (r.currency or "EUR")):
@@ -1860,19 +1873,20 @@ def stripe_webhook(request):
             from . import ledger
             kind = meta.get("kind") or ("kit" if r else "digital")
             refunds = ((obj.get("refunds") or {}).get("data")) or []
-            from .currency import to_eur
+            from .currency import to_eur, from_minor
             cur = obj.get("currency") or "eur"
             for rf in refunds:
-                ledger.record_refund(rf.get("id"), to_eur((rf.get("amount") or 0) / 100.0, cur), uid=uid or "", kind=kind,
+                ledger.record_refund(rf.get("id"), to_eur(from_minor(rf.get("amount"), cur), cur), uid=uid or "", kind=kind,
                                      payment_intent=obj.get("payment_intent") or "")
             if not refunds:
                 ledger.record_refund("%s-%s" % (obj.get("id"), obj.get("amount_refunded")),
-                                     to_eur((obj.get("amount_refunded") or 0) / 100.0, cur), uid=uid or "", kind=kind,
+                                     to_eur(from_minor(obj.get("amount_refunded"), cur), cur), uid=uid or "", kind=kind,
                                      payment_intent=obj.get("payment_intent") or "")
         if r:
             label = "Remboursement Stripe" if etype == "charge.refunded" else "LITIGE Stripe ouvert"
-            _order_note(r, "%s : %.2f %s" % (label, (obj.get("amount_refunded") or obj.get("amount") or 0) / 100.0,
-                                              (obj.get("currency") or "eur").upper()))
+            from .currency import from_minor
+            _order_note(r, "%s : %.2f %s" % (label, from_minor(obj.get("amount_refunded") or obj.get("amount"),
+                                                               obj.get("currency")), (obj.get("currency") or "eur").upper()))
     return HttpResponse(status=200)
 
 
@@ -2196,15 +2210,17 @@ def shop_pricing(request):
     from .models import Supplier, CompanyInfo, KitFormat as _KF, supplier_color_count
     sup = Supplier.for_checkout("kit")
     if request.method == "POST" and request.POST.get("op") == "align" and sup:
-        if not any(sup.offer_get("formats", kf.key).get("on") for kf in _KF.objects.all()):
+        if not any(sup.offer_get("formats", kf.key).get("on") or sup.goods_cost(kf.key, 24, False, "nk") is not None
+                   for kf in _KF.objects.all()):
             messages.error(request, "L'offre de %s ne contient aucun format : saisissez-la d'abord sur sa fiche "
                                     "(Modifier → Offre & tarifs)." % sup.name)
             return redirect("studio:shop_pricing")
         # Disponibilites du Kit = ce que le fournisseur actif propose
         for kf in _KF.objects.all():
-            kf.available = bool(sup.offer_get("formats", kf.key).get("on"))
-            kf.frame_available = sup.goods_cost(kf.key, 24, False, True) is not None    # kit BK tarife chez lui
-            kf.save(update_fields=["available", "frame_available"])
+            kf.available = bool(sup.offer_get("formats", kf.key).get("on"))          # CK : toile seule
+            kf.fk_available = sup.goods_cost(kf.key, 24, False, "fk") is not None    # cadre a monter tarife
+            kf.nk_available = sup.goods_cost(kf.key, 24, False, "nk") is not None    # kit encadre tarife
+            kf.save(update_fields=["available", "fk_available", "nk_available"])
         for n in (12, 24, 36, 48):
             # 12 couleurs : proposees au client si le fournisseur fait 24 (chaque couleur en double)
             setattr(kit, "av_c%d" % n, bool(sup.offer_get("colors", supplier_color_count(n)).get("on")))
@@ -2223,8 +2239,9 @@ def shop_pricing(request):
                 kf.delete(); continue
             kf.price = f("fmt_price_%d" % kf.id, float(kf.price))
             kf.available = bb("fmt_av_%d" % kf.id)
-            kf.frame_price = f("fmt_frame_%d" % kf.id, float(kf.frame_price))
-            kf.frame_available = bb("fmt_frav_%d" % kf.id)
+            for fin in ("fk", "nk"):
+                setattr(kf, fin + "_price", f("fmt_%s_%d" % (fin, kf.id), float(getattr(kf, fin + "_price"))))
+                setattr(kf, fin + "_available", bb("fmt_%sav_%d" % (fin, kf.id)))
             kf.save()
         nw = request.POST.get("new_w"); nh = request.POST.get("new_h")
         if nw and nh:
@@ -2262,7 +2279,8 @@ def shop_pricing(request):
         for kf in kfs:
             d = sup.offer_get("formats", kf.key)
             kf.sup_on, kf.sup_cost = bool(d.get("on")), d.get("cost")
-            kf.sup_frame = sup.goods_cost(kf.key, 24, False, True)       # kit avec cadre (BK), 24 couleurs
+            kf.sup_fk = sup.goods_cost(kf.key, 24, False, "fk")          # achat cadre a monter (FK), 24 couleurs
+            kf.sup_nk = sup.goods_cost(kf.key, 24, False, "nk")          # achat kit encadre (NK), 24 couleurs
         for c in kit_colors:
             d = sup.offer_get("colors", c["key"])
             c["sup_on"], c["sup_cost"] = bool(d.get("on")), d.get("cost")
@@ -2905,8 +2923,15 @@ def _grid_save(sup, P):
         key = (P.get("z_key_%d" % i) or "").strip() or ("z%d" % i)
         while any(z["key"] == key for z in zones):
             key += "_"
-        zones.append({"key": key, "label": lbl, "countries": (P.get("z_countries_%d" % i) or "").upper().strip()[:200],
-                      "days": (P.get("z_days_%d" % i) or "").strip()[:30]})
+        z = {"key": key, "label": lbl, "countries": (P.get("z_countries_%d" % i) or "").upper().strip()[:200],
+             "days": (P.get("z_days_%d" % i) or "").strip()[:30]}
+        try:            # frais fixes de la zone (taxes, dedouanement : +6 $ pour l'Europe chez Yingsa)
+            fee = float((P.get("z_fee_%d" % i) or "0").replace(",", "."))
+        except ValueError:
+            fee = 0.0
+        if fee:
+            z["fee"] = round(fee, 2)
+        zones.append(z)
     prods = []
     for j in range(int(P.get("g_np") or 0) + 1):
         lbl = (P.get("p_label_%d" % j) or "").strip()[:60]

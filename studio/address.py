@@ -60,11 +60,11 @@ COUNTRIES = {
     "Nouvelle-Zelande": ("NZ", r"^\d{4}$"),
 }
 
-# Pays desservis par le fournisseur (en attendant sa liste complete) : UE + Etats-Unis + Royaume-Uni + Nouvelle-Zelande.
+# Pays desservis par le fournisseur : UE + Etats-Unis, Royaume-Uni, Canada, Australie, Japon, Nouvelle-Zelande.
 # Hors liste : pays absent du formulaire et commande refusee.
 EU = {"FR", "BE", "LU", "DE", "ES", "IT", "PT", "NL", "AT", "IE", "DK", "SE", "FI", "PL", "CZ", "GR", "SK", "SI",
       "HR", "HU", "RO", "BG", "CY", "MT", "EE", "LV", "LT"}
-SHIP_ISO = EU | {"US", "GB", "NZ"}
+SHIP_ISO = EU | {"US", "GB", "CA", "AU", "JP", "NZ"}
 
 
 def ships_to(country):

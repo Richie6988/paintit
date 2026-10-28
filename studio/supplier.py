@@ -23,14 +23,14 @@ EU = {"BE", "LU", "DE", "ES", "IT", "PT", "NL", "AT", "IE", "DK", "SE", "FI", "P
 def estimate_cost(order, shipping=None):
     """Cout de revient : offre du fournisseur Kit actif si elle tarife ce format, sinon estimation generique."""
     try:
-        from .models import Supplier
+        from .models import Supplier, finish_of
         from . import address
         sup = Supplier.for_checkout("kit")
         if sup:
             iso = (address.COUNTRIES.get((shipping or {}).get("country") or "France") or ("FR",))[0]
             from .models import format_key
             c = sup.order_cost(format_key(order["width_cm"], order["height_cm"]),
-                               int(order["colors"]), False, iso, framed=bool(order.get("framed")))
+                               int(order["colors"]), False, iso, finish=finish_of(order))
             if c is not None:
                 return c
     except Exception:

@@ -178,7 +178,12 @@ def _compose_poster(uid, d, colors, lang, simple=False, out=None):
 
 
 from .printfiles import PAD_MM
-from .models import supplier_color_count
+from .models import supplier_color_count, finish_of
+
+
+def _finish_label(f):
+    from .order_lines import finish_label
+    return finish_label(f)
 PAD_CM = PAD_MM / 10.0
 
 
@@ -195,7 +200,7 @@ def _supplier_sku(oi):
     from .models import format_key
     try:
         return sku_for(format_key(oi.get("width_cm"), oi.get("height_cm")), oi.get("colors_count") or 24,
-                       bool(oi.get("framed")))
+                       finish_of(oi))
     except Exception:
         return ""
 
@@ -231,7 +236,7 @@ def supplier_text(sj):
          "Size / 尺寸:            %s x %s cm (%s)" % (oi.get("width_cm"), oi.get("height_cm"), oi.get("orientation", "")),
          "Print file / 印刷尺寸:  %s (%g cm white border / %g厘米白边)" % (_print_size(oi), PAD_CM, PAD_CM),
          "Colors / 颜色数量:      %s" % oi.get("colors_count", ""),
-         "Finish / 款式:          %s" % ("Framed / 带框 (BK)" if oi.get("framed") else "Unframed / 无框 (WF)"),
+         "Finish / 款式:          %s" % _finish_label(finish_of(oi)),
          "SKU:                    %s" % (oi.get("sku") or _supplier_sku(oi)),
          "Files / 文件:           %s" % ", ".join((oi.get("files") or {}).values()),
          "", "CONSIGNEE / 收货人", "-" * 44,
@@ -582,7 +587,7 @@ def build(order, shipping):
             "format": order["format_label"], "orientation": order["orientation"],
             "width_cm": order["width_cm"], "height_cm": order["height_cm"],
             "colors_count": order["colors"], "brushes": bool(order.get("brushes")),
-            "framed": bool(order.get("framed")),
+            "finish": finish_of(order),
             "files": {
                 "template_svg": "%s_template.svg" % uid,
                 "template_tiff": "%s_template.tiff" % uid,
@@ -613,7 +618,7 @@ def build(order, shipping):
             "uid": uid, "created_at": oi["created_at"],
             "format": oi["format"], "orientation": oi["orientation"],
             "width_cm": oi["width_cm"], "height_cm": oi["height_cm"],
-            "colors_count": supplier_color_count(oi["colors_count"]), "framed": oi.get("framed", False),
+            "colors_count": supplier_color_count(oi["colors_count"]), "finish": finish_of(oi),
             "sku": _supplier_sku(oi),
             "files": {"template_tiff": "%s_template.tiff" % uid, "poster_png": "%s_poster.png" % uid},
         },

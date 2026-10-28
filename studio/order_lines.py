@@ -1,19 +1,20 @@
 """Contenu des commandes tel que le voit le fournisseur (MangoERP via le connecteur WooCommerce, Excel, API,
-e-mail) : SKU BK/WF, variante, proprietes de ligne (fichiers), remarque courte, prix d'achat."""
-from .models import supplier_color_count
+e-mail) : SKU CK/FK/NK, variante, proprietes de ligne (fichiers), remarque courte, prix d'achat."""
+from .models import FINISH_CODES, finish_of, supplier_color_count
 
 PRODUCT_TITLE = "PaintIt - Peinture par numéros personnalisée"
 
-FRAMED_PREFIX, UNFRAMED_PREFIX = "BK", "WF"      # codes du fournisseur : BK = kit avec cadre, WF = sans cadre
+# Libelles fournisseur (EN / 中文) des finitions : CK toile seule, FK chassis a monter, NK kit encadre
+FINISH_LABELS = {"ck": "Unframed kit / 无框 (CK)", "fk": "DIY frame kit / 自装框 (FK)", "nk": "Framed kit / 带框 (NK)"}
 
 
-def sku_for(fmt_key, colors, framed=False):
-    """SKU fournisseur : BK-40x50-24C (avec cadre) / WF-40x50-24C (sans cadre) ; 12 couleurs -> kit 24."""
-    return "%s-%s-%dC" % (FRAMED_PREFIX if framed else UNFRAMED_PREFIX, fmt_key, supplier_color_count(colors))
+def sku_for(fmt_key, colors, finish="ck"):
+    """SKU fournisseur : CK-40x50-24C / FK-40x50-24C / NK-30x40-24C ; 12 couleurs -> kit 24."""
+    return "%s-%s-%dC" % (FINISH_CODES.get(finish, "CK"), fmt_key, supplier_color_count(colors))
 
 
-def finish_label(framed):
-    return "Framed / 带框 (BK)" if framed else "Unframed / 无框 (WF)"
+def finish_label(finish):
+    return FINISH_LABELS.get(finish, FINISH_LABELS["ck"])
 
 
 def _split_name(full):
@@ -38,7 +39,7 @@ def variant_title(order):
     """Variante lisible par l'ERP : « 40x50 / 24 / WF »."""
     from .models import format_key
     return "%s / %d / %s" % (format_key(order.width_cm, order.height_cm), supplier_color_count(order.colors),
-                             FRAMED_PREFIX if order.framed else UNFRAMED_PREFIX)
+                             FINISH_CODES[finish_of(order)])
 
 
 def supplier_amounts(order, sup=None):
@@ -47,7 +48,7 @@ def supplier_amounts(order, sup=None):
     from .models import format_key, Supplier
     sup = sup or getattr(order, "supplier", None) or Supplier.for_checkout("kit")
     fmt = format_key(order.width_cm, order.height_cm)
-    canvas = (sup.goods_cost(fmt, order.colors, False, bool(getattr(order, "framed", False))) if sup else None) or 0.0
+    canvas = (sup.goods_cost(fmt, order.colors, False, finish_of(order)) if sup else None) or 0.0
     brushes = 0.0          # pinceaux : pas commandes au fournisseur (bonus PaintIt)
     return round(canvas, 2), brushes, round(canvas + brushes, 2)
 
@@ -63,7 +64,7 @@ def line_properties(order):
             ("All files / 全部文件", production_url(u)),
             ("Format", "%s (%s)" % (order.format_label, order.orientation)),
             ("Couleurs", str(supplier_color_count(order.colors))),
-            ("Finish / 款式", finish_label(order.framed)),
+            ("Finish / 款式", finish_label(finish_of(order))),
             ("Poster (print, put in parcel / 打印放入包裹)", file_url(u, "%s_poster.png" % u)),
             ("Toile numérotée (TIFF)", file_url(u, "%s_template.tiff" % u)),
             ("Order sheet / 订单 (TXT)", file_url(u, "%s_supplier.txt" % u)),
@@ -76,5 +77,5 @@ def _short_note(order):
     """Remarque courte (les ERP tronquent ou ignorent les remarques longues) : un seul lien vers tous les fichiers."""
     from .security import production_url
     return "PaintIt %s | %s, %s colors / 色, %s\nAll files / 全部文件: %s" % (
-        order.uid, order.format_label, supplier_color_count(order.colors), finish_label(order.framed),
+        order.uid, order.format_label, supplier_color_count(order.colors), finish_label(finish_of(order)),
         production_url(order.uid))

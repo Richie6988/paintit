@@ -2095,3 +2095,28 @@ msgstr "Continua al pagamento"
 
 msgid "Langue et devise"
 msgstr "Lingua e valuta"
+
+msgid "Cadre à monter"
+msgstr "Telaio da montare"
+
+msgid "châssis bois à assembler, toile à tendre"
+msgstr "telaio in legno da montare, tela da tendere"
+
+msgid "Encadrée"
+msgstr "Incorniciata"
+
+msgid "toile montée sur cadre rigide, prête à peindre"
+msgstr "tela montata su telaio rigido, pronta da dipingere"
+
+msgid "encadrée"
+msgstr "incorniciata"
+
+msgid "cadre à monter"
+msgstr "telaio da montare"
+
+msgid ""
+"Livraison : Union européenne, États-Unis, Royaume-Uni, Canada, Australie, "
+"Japon, Nouvelle-Zélande."
+msgstr ""
+"Spedizione: Unione Europea, Stati Uniti, Regno Unito, Canada, Australia, "
+"Giappone, Nuova Zelanda."

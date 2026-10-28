@@ -41,24 +41,26 @@
       {% if order.colors_list %}<div class="ci-chips">{% for c in order.colors_list %}<i style="background:{{ c.hex }}" title="{{ c.number }}"></i>{% endfor %}</div>{% endif %}
     </div>
     {% if formats %}
-    {% if frame_any %}
+    {% if finishes|length > 1 %}
     <div class="fmt-select">
       <span class="fmt-title">{% trans "Finition" %}</span>
       <div class="fmt-opts">
-        <label class="fmt-opt"><input type="radio" name="framed" value="0" {% if not framed %}checked{% endif %}>
-          <span class="fmt-card"><b>{% trans "Sans cadre" %}</b><em>{% trans "toile roulée" %}</em></span></label>
-        <label class="fmt-opt" id="frameOpt"><input type="radio" name="framed" value="1" {% if framed %}checked{% endif %}>
-          <span class="fmt-card"><b>{% trans "Avec cadre" %}</b><em>{% trans "tendue sur châssis bois, prête à peindre" %}</em></span></label>
+        {% if "ck" in finishes %}<label class="fmt-opt"><input type="radio" name="finish" value="ck" {% if finish == "ck" %}checked{% endif %}>
+          <span class="fmt-card"><b>{% trans "Sans cadre" %}</b><em>{% trans "toile roulée" %}</em></span></label>{% endif %}
+        {% if "fk" in finishes %}<label class="fmt-opt"><input type="radio" name="finish" value="fk" {% if finish == "fk" %}checked{% endif %}>
+          <span class="fmt-card"><b>{% trans "Cadre à monter" %}</b><em>{% trans "châssis bois à assembler, toile à tendre" %}</em></span></label>{% endif %}
+        {% if "nk" in finishes %}<label class="fmt-opt"><input type="radio" name="finish" value="nk" {% if finish == "nk" %}checked{% endif %}>
+          <span class="fmt-card"><b>{% trans "Encadrée" %}</b><em>{% trans "toile montée sur cadre rigide, prête à peindre" %}</em></span></label>{% endif %}
       </div>
     </div>
-    {% endif %}
+    {% else %}<input type="hidden" name="finish" value="{{ finish }}">{% endif %}
     <div class="fmt-select">
       <span class="fmt-title">{% trans "Choisissez le format" %}</span>
       <div class="fmt-opts">
         {% for fm in formats %}
         <label class="fmt-opt">
-          <input type="radio" name="kit_format" value="{{ fm.id }}" data-price="{{ fm.lp|unlocalize }}" data-frame="{% if fm.lf is not None %}{{ fm.lf|unlocalize }}{% endif %}" data-w="{{ fm.w|unlocalize }}" data-h="{{ fm.h|unlocalize }}" {% if fm.id == current_format %}checked{% endif %}>
-          <span class="fmt-card"><b>{{ fm.label }}</b><em class="fmt-p">{% money_local fm.lp %}</em></span>
+          <input type="radio" name="kit_format" value="{{ fm.id }}" data-fin="{{ fm.loc|safe_json|force_escape }}" data-w="{{ fm.w|unlocalize }}" data-h="{{ fm.h|unlocalize }}" {% if fm.id == current_format %}checked{% endif %}>
+          <span class="fmt-card"><b>{{ fm.label }}</b><em class="fmt-p"></em></span>
         </label>
         {% endfor %}
       </div>
@@ -133,32 +135,29 @@
     if (z) ['contextmenu','dragstart','selectstart'].forEach(function(ev){ z.addEventListener(ev, function(e){e.preventDefault();}); });
     var base = {{ base_local|unlocalize }}, bp = {{ bp_local|unlocalize }}, MJ = {{ money_js|safe_json }};
     var cb = document.getElementById('brushes'), t = document.getElementById('ptotal');
-    var fmts = document.querySelectorAll('input[name=kit_format]'), frames = document.querySelectorAll('input[name=framed]');
-    function fx(n){ var s = n.toFixed(2).replace('.', MJ.dec); return MJ.before ? MJ.sym + s : s + '\u00a0' + MJ.sym; }
-    function framed(){ var f = document.querySelector('input[name=framed]:checked'); return !!f && f.value === '1'; }
+    var fmts = document.querySelectorAll('input[name=kit_format]'), fins = document.querySelectorAll('input[name=finish]');
+    function fx(n){ var s = MJ.dp ? n.toFixed(MJ.dp).replace('.', MJ.dec) : Math.round(n).toLocaleString('en-US');
+                    return MJ.before ? MJ.sym + s : s + '\u00a0' + MJ.sym; }
+    function finish(){ var f = document.querySelector('input[name=finish]:checked') || document.querySelector('input[name=finish]');
+                       return f ? f.value : 'ck'; }
+    function fin(r){ try { return JSON.parse(r.dataset.fin || '{}'); } catch (e) { return {}; } }
     function upd(){
-      var fr = framed(), price = base;
-      fmts.forEach(function(r){    // avec cadre : seuls les formats proposes avec cadre restent choisissables
-        var off = fr && r.dataset.frame === '';
+      var f = finish(), price = base;
+      fmts.forEach(function(r){    // seuls les formats proposes dans la finition choisie restent choisissables
+        var p = fin(r)[f], off = p === undefined, em = r.parentNode.querySelector('.fmt-p');
         r.disabled = off; r.parentNode.style.opacity = off ? .4 : 1;
+        if (em) em.textContent = off ? '\u2014' : fx(p);      // prix complet du format dans cette finition
       });
       var sel = document.querySelector('input[name=kit_format]:checked');
       if (sel && sel.disabled) {
         var alt = Array.prototype.find.call(fmts, function(r){ return !r.disabled; });
         if (alt) { alt.checked = true; alt.dispatchEvent(new Event('change')); sel = alt; }
       }
-      if (sel) {
-        var fprice = sel.dataset.frame === '' ? null : parseFloat(sel.dataset.frame);
-        price = parseFloat(sel.dataset.price) + (fr && fprice !== null ? fprice : 0);
-        fmts.forEach(function(r){   // prix de chaque format selon la finition choisie
-          var f = r.dataset.frame === '' ? null : parseFloat(r.dataset.frame), em = r.parentNode.querySelector('.fmt-p');
-          if (em) em.textContent = fx(parseFloat(r.dataset.price) + (fr && f !== null ? f : 0));
-        });
-      }
+      if (sel && fin(sel)[f] !== undefined) price = fin(sel)[f];
       if (t) t.textContent = fx(price + (cb && cb.checked ? bp : 0));
     }
     fmts.forEach(function(r){ r.addEventListener('change', upd); });
-    frames.forEach(function(r){ r.addEventListener('change', upd); });
+    fins.forEach(function(r){ r.addEventListener('change', upd); });
     if (cb) cb.addEventListener('change', upd);
     upd();
   })();

@@ -89,7 +89,9 @@
       <tr><td class="prod"><input type="text" name="p_label_{{ grid.products|length }}" placeholder="＋ Produit"></td><td colspan="{{ grid.cols|length|add:grid.zones|length|add:3 }}" class="note">Nommez le produit, enregistrez, puis ajoutez ses tailles.</td></tr>
       </tbody>
       <tfoot><tr><td colspan="{{ grid.cols|length|add:2 }}" style="text-align:right;font-weight:700">Délai de livraison</td>
-        {% for z in grid.zones %}<td><input type="text" name="z_days_{{ forloop.counter0 }}" value="{{ z.days }}" placeholder="7-12 j"></td>{% endfor %}<td></td><td></td></tr></tfoot>
+        {% for z in grid.zones %}<td><input type="text" name="z_days_{{ forloop.counter0 }}" value="{{ z.days }}" placeholder="7-12 j"></td>{% endfor %}<td></td><td></td></tr>
+      <tr><td colspan="{{ grid.cols|length|add:2 }}" style="text-align:right;font-weight:700" title="Ajoutés à chaque livraison de la zone (taxes, dédouanement…)">Frais fixes par colis</td>
+        {% for z in grid.zones %}<td><input type="text" inputmode="decimal" name="z_fee_{{ forloop.counter0 }}" value="{% if z.fee %}{{ z.fee }}{% endif %}" placeholder="0"></td>{% endfor %}<td></td><td></td></tr></tfoot>
     </table></div>
     <div class="qg-foot">
       <label>Set de pinceaux (€, si facturé à part)<span style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="brushes_on" {% if offer_x.extras.brushes.on %}checked{% endif %} style="width:auto"><input type="text" name="brushes_cost" value="{{ offer_x.extras.brushes.cost|default_if_none:''|stringformat:'s' }}" placeholder="inclus"></span></label>

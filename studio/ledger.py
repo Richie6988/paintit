@@ -84,9 +84,9 @@ def record_from_session(sess):
     try:
         meta = sess.get("metadata") or {}
         det = sess.get("customer_details") or {}
-        from .currency import to_eur       # paiement en USD/GBP/NZD : compta en EUR (taux BCE du jour)
+        from .currency import to_eur, from_minor    # paiement en devise : compta en EUR (taux BCE du jour)
         return record_sale(meta.get("kind", "kit"), meta.get("uid") or sess.get("client_reference_id") or "",
-                           to_eur((sess.get("amount_total") or 0) / 100.0, sess.get("currency")),
+                           to_eur(from_minor(sess.get("amount_total"), sess.get("currency")), sess.get("currency")),
                            stripe_id=sess.get("payment_intent") or "",
                            email=det.get("email") or sess.get("customer_email") or meta.get("email") or "",
                            date=datetime.datetime.fromtimestamp(sess["created"], datetime.timezone.utc)

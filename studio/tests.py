@@ -398,7 +398,7 @@ class SupplierPaletteTests(TestCase):
             "color_specifications": [{"number": 1, "supplier_code": "A-01"},
                                      {"number": 2, "supplier_code": "B-07", "supplier_code_approx": True},
                                      {"number": 3, "hex": "#123456"}]})
-        for part in ("PAINTIT ORDER / 订单  AB12-CD34", "Marie Curie", "+33 612345678", "40 x 50 cm", "Unframed / 无框 (WF)", "WF-40x50-24C",
+        for part in ("PAINTIT ORDER / 订单  AB12-CD34", "Marie Curie", "+33 612345678", "40 x 50 cm", "Unframed kit / 无框 (CK)", "CK-40x50-24C",
                      "A-01", "B-07 *", "#123456", "closest code"):
             self.assertIn(part, txt)
         self.assertNotIn("price", txt.lower())
@@ -495,7 +495,7 @@ class WooConnectorTests(TestCase):
         self.assertEqual(r["X-WC-Total"], "1")
         o = r.json()["orders"][0]
         self.assertEqual((o["order_number"], o["status"]), (self.o.uid, "processing"))
-        self.assertEqual(o["line_items"][0]["sku"], "WF-40x50-24C")
+        self.assertEqual(o["line_items"][0]["sku"], "CK-40x50-24C")
         self.assertEqual(o["shipping_address"]["country"], "FR")
         self.assertTrue(any(m["key"] == "Fichiers (ZIP)" for m in o["line_items"][0]["meta"]))
         self.assertNotIn("cost", str(o))
@@ -551,6 +551,18 @@ class WooConnectorTests(TestCase):
         from studio.models import ConnectorLog
         self.assertTrue(ConnectorLog.objects.filter(supplier=self.sup, method="PUT").exists())
         self.assertNotIn(self.keys["cs"], " ".join(ConnectorLog.objects.values_list("query", flat=True)))
+        # MangoERP adresse aussi la commande par son NUMERO (uid) : lecture puis envoi du suivi
+        o3 = make_order(uid="99DF2278-0A70", status=Order.FULFILLED)
+        integrations.dispatch({"uid": o3.uid}, {}, sup=self.sup)
+        r = self.client.get("/wp-json/wc/v2/orders/%s" % o3.uid, self.auth)
+        self.assertEqual((r.status_code, r.json()["number"]), (200, o3.uid))
+        r = self.client.put("/wp-json/wc/v2/orders/%s?%s" % (o3.uid, urlencode(self.auth)),
+                            json.dumps({"status": "completed", "meta_data": [
+                                {"key": "_tracking_number", "value": "YT2629600705738403"},
+                                {"key": "_tracking_provider", "value": "YunExpress"}]}), content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        o3.refresh_from_db()
+        self.assertEqual((o3.status, o3.tracking_number, o3.carrier), (Order.SHIPPED, "YT2629600705738403", "YunExpress"))
         pv = self.client.get("/wp-json/wc-shipment-tracking/v3/orders/%d/shipment-trackings/providers" % self.o.pk,
                              self.auth).json()
         self.assertIn("YunExpress", pv["China"])
@@ -665,7 +677,7 @@ class TwelveColorsSupplierTests(TestCase):
         Order.objects.filter(pk=o.pk).update(colors=12)
         o.refresh_from_db()
         self.assertEqual(o.colors, 12)                                   # client inchange
-        self.assertEqual(shopify.sku_for("40x50", o.colors), "WF-40x50-24C")
+        self.assertEqual(shopify.sku_for("40x50", o.colors), "CK-40x50-24C")
         self.assertIn(("Couleurs", "24"), shopify.line_properties(o))
         specs = double_for_supplier([{"number": i, "supplier_code": str(i)} for i in range(1, 13)])
         self.assertEqual(len(specs), 24)
@@ -722,12 +734,14 @@ class SupplierGridTests(TestCase):
 
     def test_cost_from_grid(self):
         s = self.sup
-        # 40x50, 36 couleurs, UK : (9.5 + 8.5 + 1) USD * 0.92
-        self.assertEqual(s.order_cost("40x50", 36, country="GB"), round(19.0 * 0.92, 2))
-        self.assertEqual(s.order_cost("40x50", 48, country="NZ"), round((10.5 + 10.5 + 2) * 0.92, 2))
-        self.assertIsNone(s.order_cost("40x50", 24, country="FR"))       # livraison France non chiffree
+        # devis 2026 : 40x50 sans cadre, 24 couleurs, UK : (6,5 + 10) USD * 0,92
+        self.assertEqual(s.order_cost("40x50", 24, country="GB"), round(16.5 * 0.92, 2))
+        # France = zone Europe : produit + livraison + 6 $ de taxes et frais
+        self.assertEqual(s.order_cost("40x50", 24, country="FR"), round((6.5 + 12.5 + 6) * 0.92, 2))
+        self.assertIsNone(s.order_cost("40x50", 36, country="GB"))       # 36 couleurs : plus au devis
+        self.assertIsNone(s.order_cost("40x50", 24, country="JP"))       # Japon : livraison non chiffree
         self.assertIsNone(s.order_cost("60x80", 24, country="GB"))       # taille absente
-        self.assertEqual(s.goods_cost("40x50", 24), round(7.5 * 0.92, 2))
+        self.assertEqual(s.goods_cost("40x50", 24), round(6.5 * 0.92, 2))
         self.assertTrue(s.offer_get("formats", "40x50")["on"])
         self.assertFalse(s.offer_get("colors", 12)["on"])
 
@@ -745,7 +759,8 @@ class SupplierGridTests(TestCase):
         for c in v["cols"]:
             P.appendlist("g_cols", c)
         for i, z in enumerate(v["zones"]):
-            P.update({"z_key_%d" % i: z["key"], "z_label_%d" % i: z["label"], "z_countries_%d" % i: z["countries"]})
+            P.update({"z_key_%d" % i: z["key"], "z_label_%d" % i: z["label"], "z_countries_%d" % i: z["countries"],
+                      "z_fee_%d" % i: str(z.get("fee") or "")})
         for p in v["products"]:
             P.update({"p_key_%d" % p["j"]: p["key"], "p_label_%d" % p["j"]: p["label"]})
             for c, val in p["extras"]:
@@ -759,12 +774,13 @@ class SupplierGridTests(TestCase):
                     if val is not None:
                         P["r_ship_%d_%s" % (r["i"], zk)] = str(val)
         P.update({"r_size_%d" % v["n_rows"]: "40x40", "r_prod_%d" % v["n_rows"]: "unframed",
-                  "r_ship_%d_fr" % 0: "4.5"})                          # livraison France ajoutee sur 30x40
+                  "r_ship_%d_eu" % 0: "4.5"})                          # livraison Europe modifiee sur 30x40
         views._grid_save(self.sup, P)
         self.sup.refresh_from_db()
         self.assertEqual(self.sup.grid()["fx"], 0.9)
         self.assertEqual(len(self.sup.grid()["rows"]), v["n_rows"])     # ligne d'ajout vide / doublon ignores
-        self.assertEqual(self.sup.order_cost("30x40", 24, country="FR"), round((5.5 + 4.5) * 0.9, 2))
+        self.assertEqual(self.sup.grid()["zones"][0]["fee"], 6)          # frais Europe conserves a l'enregistrement
+        self.assertEqual(self.sup.order_cost("30x40", 24, country="FR"), round((4.5 + 4.5 + 6) * 0.9, 2))
 
 
 class LibraryVisualTests(TestCase):
@@ -1701,15 +1717,15 @@ class ShippingCountriesTests(TestCase):
         from studio import address
         from studio.forms import DeliveryForm
         names = [c for c, _ in DeliveryForm().fields["country"].choices]
-        for ok in ("France", "Etats-Unis", "Royaume-Uni", "Nouvelle-Zelande", "Croatie"):
+        for ok in ("France", "Etats-Unis", "Royaume-Uni", "Nouvelle-Zelande", "Croatie", "Canada", "Australie", "Japon"):
             self.assertIn(ok, names)
-        for ko in ("Suisse", "Canada", "Japon", "Maroc"):
+        for ko in ("Suisse", "Maroc", "Bresil"):
             self.assertNotIn(ko, names)
         base = {"full_name": "A B", "email": "a@b.fr", "phone_code": "+41", "phone": "791234567",
                 "address1": "1 rue", "postal_code": "1200", "city": "Geneve", "country": "Suisse"}
         self.assertFalse(DeliveryForm(base).is_valid())
         self.assertTrue(address.validate(base))
-        self.assertTrue(address.ships_to("Etats-Unis") and not address.ships_to("Japon"))
+        self.assertTrue(address.ships_to("Japon") and not address.ships_to("Maroc"))
 
 
 @override_settings(PARCELSAPP_API_KEY="pk", AFTERSHIP_API_KEY="")
@@ -1750,34 +1766,65 @@ class ParcelsappTrackingTests(TestCase):
 
 @override_settings(MEDIA_ROOT=MEDIA)
 class FrameOptionTests(TestCase):
-    """Avec cadre -> SKU BK + prix d'achat du produit cadre ; sans cadre -> WF ; jamais de ligne pinceaux."""
-    def test_framed_flow(self):
-        from studio import order_lines as shopify, woo_api, integrations
+    """3 finitions : CK (toile seule), FK (cadre a monter), NK (encadree) -> SKU, prix d'achat de la grille 2026,
+    prix client par format ; formats/finitions non proposes refuses ; jamais de ligne pinceaux."""
+    def setUp(self):
         from studio.models import Supplier, KitFormat
-        kf, _ = KitFormat.objects.update_or_create(width_cm=40, height_cm=50, defaults=dict(
-            price=34.9, frame_price=12, frame_available=True, available=True))
+        self.kf, _ = KitFormat.objects.update_or_create(width_cm=40, height_cm=50, defaults=dict(
+            price=34.9, available=True, fk_price=9.9, fk_available=True, nk_available=False))
+        self.k30, _ = KitFormat.objects.update_or_create(width_cm=30, height_cm=40, defaults=dict(
+            price=24.9, available=True, fk_available=True, nk_price=14.9, nk_available=True))
+        self.nk_only, _ = KitFormat.objects.update_or_create(width_cm=20, height_cm=20, defaults=dict(
+            price=14.9, available=False, fk_available=False, nk_price=10, nk_available=True))
         grid = dict(Supplier.GRID_TEMPLATE, currency="EUR", fx=1.0)
-        sup = Supplier.objects.create(name="Y", integration="woo", offer={"grid": grid})
-        keys = woo_api.generate_keys(sup)
-        o = make_order(uid="FRAME000-0001", status=Order.FULFILLED)
-        Order.objects.filter(pk=o.pk).update(framed=True, brushes=True, brushes_amount=3)
-        o.refresh_from_db()
-        self.assertTrue(integrations.dispatch({"uid": o.uid}, {}, sup=sup))
-        r = self.client.get("/wc-api/v3/orders", {"consumer_key": keys["ck"], "consumer_secret": keys["cs"]})
-        lines = r.json()["orders"][0]["line_items"]
-        self.assertEqual([l["sku"] for l in lines], ["BK-40x50-24C"])          # pas de ligne pinceaux
-        self.assertEqual(float(lines[0]["price"]), 8.8)                         # grille : DIY frame kit 40x50
-        self.assertEqual(shopify.supplier_amounts(o, sup)[1], 0.0)
-        self.assertIn(("Finish / 款式", "Framed / 带框 (BK)"), shopify.line_properties(o))
-        # parcours client : option cadre a l'apercu -> prix + cadre
+        self.sup = Supplier.objects.create(name="Y", integration="woo", offer={"grid": grid})
+
+    def test_supplier_side(self):
+        from studio import order_lines, woo_api, integrations
+        keys = woo_api.generate_keys(self.sup)
+        for finish, sku, unit in (("fk", "FK-40x50-24C", 8.0), ("ck", "CK-40x50-24C", 6.5)):
+            Order.objects.all().delete()
+            o = make_order(uid="FIN%s0000-0001" % finish.upper(), status=Order.FULFILLED)
+            Order.objects.filter(pk=o.pk).update(finish=finish, brushes=True, brushes_amount=3)
+            o.refresh_from_db()
+            self.assertTrue(integrations.dispatch({"uid": o.uid}, {}, sup=self.sup))
+            r = self.client.get("/wc-api/v3/orders", {"consumer_key": keys["ck"], "consumer_secret": keys["cs"]})
+            lines = r.json()["orders"][0]["line_items"]
+            self.assertEqual([l["sku"] for l in lines], [sku])                   # pas de ligne pinceaux
+            self.assertEqual(float(lines[0]["price"]), unit)                      # prix d'achat grille 2026
+        self.assertIn(("Finish / 款式", "Unframed kit / 无框 (CK)"), order_lines.line_properties(o))
+        # NK 30x40 : achat 7,50 ; livraison France = 15 + 6 (taxes et frais Europe) ; NK 40x50 non tarife
+        self.assertEqual(self.sup.goods_cost("30x40", 24, False, "nk"), 7.5)
+        self.assertEqual(self.sup.order_cost("30x40", 24, False, "FR", "nk"), 7.5 + 15 + 6)
+        self.assertIsNone(self.sup.goods_cost("40x50", 24, False, "nk"))
+        self.assertIsNone(self.sup.order_cost("30x40", 24, False, "JP", "ck"))       # zone non chiffree
+
+    def _order_session(self):
         s = self.client.session
         s["order"] = {"uid": "X", "colors": 24, "width_cm": 40, "height_cm": 50, "orientation": "portrait",
                       "format_label": "40 x 50 cm", "canvas_price": 42.9, "price": 42.9}
         s.save()
-        self.client.post("/preview/options/", {"kit_format": kf.id, "framed": "1"})
+
+    def test_customer_side(self):
+        from studio.models import Pricing
+        c24 = Pricing.get().color_price(24)
+        self._order_session()
+        page = self.client.get("/preview/")
+        self.assertEqual(page.context["finishes"], ["ck", "fk", "nk"])
+        self.assertContains(page, "Cadre à monter")
+        r = self.client.post("/preview/options/", {"kit_format": self.kf.id, "finish": "fk"})
+        self.assertEqual(r["Location"], "/delivery/")
         od = self.client.session["order"]
-        self.assertTrue(od["framed"])
-        self.assertAlmostEqual(od["canvas_price"], 34.9 + Pricing_color(24) + 12, places=2)
+        self.assertEqual(od["finish"], "fk")
+        self.assertAlmostEqual(od["canvas_price"], 34.9 + c24 + 9.9, places=2)
+        self.client.post("/preview/options/", {"kit_format": self.nk_only.id, "finish": "nk"})
+        self.assertAlmostEqual(self.client.session["order"]["canvas_price"], 14.9 + c24 + 10, places=2)
+        # finition non proposee pour ce format (formulaire modifie) : refus, retour a l'apercu
+        self._order_session()
+        r = self.client.post("/preview/options/", {"kit_format": self.kf.id, "finish": "nk"})
+        self.assertEqual(r["Location"], "/preview/")
+        r = self.client.post("/preview/options/", {"kit_format": self.nk_only.id, "finish": "ck"})
+        self.assertEqual(r["Location"], "/preview/")
 
 
 def Pricing_color(n):
@@ -1848,7 +1895,21 @@ class LocalCurrencyTests(TestCase):
     def setUp(self):
         from django.core.cache import cache
         from studio import currency
-        cache.set(currency.CACHE_KEY, {"EUR": 1.0, "USD": 1.10, "GBP": 0.85, "NZD": 1.80}, 3600)
+        cache.set(currency.CACHE_KEY, {"EUR": 1.0, "USD": 1.10, "GBP": 0.85, "NZD": 1.80, "CAD": 1.5, "AUD": 1.65,
+                                       "JPY": 165.0}, 3600)
+
+    def test_yen_has_no_decimals(self):
+        from studio import currency as fx
+        self.assertEqual(fx.local(42.9, "JPY"), 7090.0)              # 7078,5 -> ¥7,090
+        self.assertEqual(fx.local(0.99, "JPY"), 190.0)
+        self.assertEqual(fx.fmt(7090, "JPY", "fr"), "¥7,090")
+        self.assertEqual(fx.to_minor(7090, "JPY"), 7090)              # Stripe : yens entiers
+        self.assertEqual(fx.to_minor(47.9, "USD"), 4790)
+        self.assertEqual(fx.from_minor(7090, "jpy"), 7090)
+        a = fx.order_amounts({"canvas_price": 42.9, "price": 42.9, "discount": {"rate": 0.15}}, "JPY")
+        self.assertEqual((a["subtotal"], a["discount"], a["total"]), (7090.0, 1064.0, 6026.0))
+        r = self.client.get("/play/", HTTP_CF_IPCOUNTRY="CA", HTTP_USER_AGENT="Mozilla/5.0")
+        self.assertEqual(self.client.session.get("cur"), "CAD")
 
     def test_rounding_and_order_amounts(self):
         from studio import currency as fx
@@ -1885,7 +1946,8 @@ class LocalCurrencyCheckoutTests(TestCase):
     def test_us_customer_charged_in_usd(self):
         from django.core.cache import cache
         from studio import currency, payments
-        cache.set(currency.CACHE_KEY, {"EUR": 1.0, "USD": 1.10, "GBP": 0.85, "NZD": 1.80}, 3600)
+        cache.set(currency.CACHE_KEY, {"EUR": 1.0, "USD": 1.10, "GBP": 0.85, "NZD": 1.80, "CAD": 1.5, "AUD": 1.65,
+                                       "JPY": 165.0}, 3600)
         s = self.client.session
         s["cur"] = "USD"
         s["order"] = {"uid": "USD00000-0001", "colors": 24, "width_cm": 40, "height_cm": 50, "orientation": "portrait",
@@ -2004,3 +2066,23 @@ class DownloadRightsMatrixTests(TestCase):
             os.rename(os.path.join(MEDIA, "orders", o.uid, n), os.path.join(MEDIA, "orders", o.uid, n.replace(uid, o.uid)))
         self._session(verified_email="jane@example.com")
         self._check(o.uid, True, "kit commande par ce client")
+
+
+class YingsaGrid2026MigrationTests(TestCase):
+    def test_replaces_template_grid_keeps_fx(self):
+        import importlib
+        from django.apps import apps
+        from studio.models import Supplier
+        mig = importlib.import_module("studio.migrations.0077_yingsa_grid_2026")
+        old = {"currency": "USD", "fx": 0.88, "cols": [24, 36, 48],
+               "products": [{"key": "unframed", "kit": True}, {"key": "frame"}], "rows": [], "zones": []}
+        y = Supplier.objects.create(name="Yingsa Art", offer={"grid": old})
+        other = Supplier.objects.create(name="Autre", offer={"grid": {"products": [{"key": "toile"}]}})
+        mig.forward(apps, None)
+        y.refresh_from_db(); other.refresh_from_db()
+        self.assertEqual(y.grid()["fx"], 0.88)
+        self.assertEqual(y.offer["grid_previous"]["cols"], [24, 36, 48])
+        self.assertEqual(y.goods_cost("50x75", 24), round(9.5 * 0.88, 2))
+        self.assertEqual(y.grid_shipping("40x50", 24, "DE"), 12.5 + 6)           # Europe : +6 $ taxes et frais
+        self.assertEqual(y.grid_shipping("40x50", 24, "GB"), 10.0)
+        self.assertEqual(other.grid()["products"][0]["key"], "toile")             # autre devis : inchange

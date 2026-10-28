@@ -8,6 +8,22 @@ COLOR_COUNTS = (12, 24, 36, 48)
 SUPPLIER_MIN_COLORS = 24     # le fournisseur ne fait pas de kit 12 couleurs
 
 
+# Finitions du kit (codes du fournisseur Yingsa) : CK = toile seule (roulee), FK = chassis en bois a monter soi-meme,
+# NK = kit encadre (toile deja montee sur un cadre rigide). Cle produit correspondante dans la grille du devis.
+FINISHES = [("ck", "CK", "unframed"), ("fk", "FK", "diy_frame"), ("nk", "NK", "framed")]
+FINISH_CODES = {k: c for k, c, _p in FINISHES}
+FINISH_GRID = {k: p for k, _c, p in FINISHES}
+
+
+def finish_of(o):
+    """Finition d'une commande (modele Order ou dict de session) ; anciennes commandes « avec cadre » -> nk."""
+    f = (o.get("finish") if isinstance(o, dict) else getattr(o, "finish", "")) or ""
+    if f in FINISH_CODES:
+        return f
+    framed = o.get("framed") if isinstance(o, dict) else getattr(o, "framed", False)
+    return "nk" if framed else "ck"
+
+
 def supplier_color_count(n):
     """Nombre de couleurs cote FOURNISSEUR : 12 (offert au client) -> kit 24 avec chaque couleur en double.
     Le client ne voit aucun changement ; SKU, prix d'achat et fiches fournisseur utilisent ce nombre."""
@@ -153,7 +169,8 @@ class Order(models.Model):
     colors = models.IntegerField()
     difficulty = models.CharField(max_length=12, default="moyen")
     brushes = models.BooleanField(default=False)
-    framed = models.BooleanField("Avec cadre", default=False)
+    finish = models.CharField("Finition", max_length=2, default="ck",
+                              choices=[("ck", "Sans cadre (CK)"), ("fk", "Cadre à monter (FK)"), ("nk", "Encadrée (NK)")])
     # Devise du client : montants affiches et debites (Stripe) ; price/total restent en EUR (compta)
     currency = models.CharField("Devise du paiement", max_length=3, default="EUR")
     amounts = models.JSONField("Montants en devise", default=dict, blank=True)
@@ -514,9 +531,17 @@ class KitFormat(models.Model):
     height_cm = models.PositiveIntegerField("Hauteur (cm)", default=50)
     price = models.DecimalField("Prix (EUR)", max_digits=7, decimal_places=2, default=34.90)
     available = models.BooleanField("Disponible", default=True)
-    # Option « avec cadre » (toile tendue sur chassis bois, SKU fournisseur BK ; sans cadre = WF)
-    frame_price = models.DecimalField("Supplément cadre (EUR)", max_digits=7, decimal_places=2, default=12.00)
-    frame_available = models.BooleanField("Cadre disponible", default=True)
+    # Finitions (supplement au prix sans cadre) : FK = chassis bois a monter soi-meme, NK = kit encadre
+    fk_price = models.DecimalField("Supplément cadre à monter (EUR)", max_digits=7, decimal_places=2, default=9.90)
+    fk_available = models.BooleanField("Cadre à monter disponible", default=False)
+    nk_price = models.DecimalField("Supplément encadrée (EUR)", max_digits=7, decimal_places=2, default=12.00)
+    nk_available = models.BooleanField("Encadrée disponible", default=False)
+
+    def finish_price(self, finish):
+        """Supplement de la finition, ou None si elle n'est pas proposee pour ce format."""
+        if finish in ("fk", "nk"):
+            return float(getattr(self, finish + "_price")) if getattr(self, finish + "_available") else None
+        return 0.0
     sort = models.PositiveIntegerField("Ordre", default=0)
 
     class Meta:
@@ -609,29 +634,30 @@ class Supplier(models.Model):
         return fm
 
     # ---- Grille tarifaire (devis fournisseur) : offer["grid"]
-    # {"currency": "USD", "fx": 0.92 (EUR pour 1 unite), "cols": [24, 36, 48],
-    #  "zones": [{"key": "z1", "label": "UK", "countries": "GB", "days": "7-12"}],   countries : ISO2, "EU" ou "*"
-    #  "products": [{"key": "unframed", "label": "Unframe kit", "kit": true, "extra": {"36": 1, "48": 2}}],
-    #  "rows": [{"product": "unframed", "size": "30x40", "on": true, "price": {"24": 5.5}, "ship": {"z1": 6.5}}]}
+    # {"currency": "USD", "fx": 0.92 (EUR pour 1 unite), "cols": [24],
+    #  "zones": [{"key": "eu", "label": "Europe", "countries": "EU", "days": "6-15", "fee": 6}],   countries : ISO2,
+    #            "EU" ou "*" ; fee = frais fixes de la zone (taxes, dedouanement...)
+    #  "products": [{"key": "unframed", "label": "Unframe kit (CK)", "kit": true}],   cles : unframed / diy_frame / framed
+    #  "rows": [{"product": "unframed", "size": "30x40", "on": true, "price": {"24": 4.5}, "ship": {"eu": 10}}]}
+    # Devis Yingsa Arts 2026 (24 couleurs, livraison express ; 6-15 jours ouvres, production 1-3 jours).
     GRID_TEMPLATE = {
-        "currency": "USD", "fx": 0.92, "cols": [24, 36, 48],
-        "zones": [{"key": "fr", "label": "France", "countries": "FR", "days": ""},
-                  {"key": "eu", "label": "Union européenne", "countries": "EU", "days": ""},
-                  {"key": "uk", "label": "UK", "countries": "GB", "days": "7-12"},
-                  {"key": "us", "label": "USA", "countries": "US", "days": "7-12"},
-                  {"key": "nz", "label": "NZ", "countries": "NZ", "days": "7-12"}],
-        "products": [{"key": "unframed", "label": "Unframe kit", "kit": True, "extra": {"36": 1, "48": 2}},
-                     {"key": "frame", "label": "DIY frame kit", "kit": False, "extra": {"36": 1, "48": 2}}],
-        "rows": [{"product": "unframed", "size": sz, "on": True, "price": {"24": a, "36": b, "48": c},
-                  "ship": {"uk": u, "us": us, "nz": nz}} for sz, a, b, c, u, us, nz in (
-            ("30x40", 5.5, 7.5, 8.5, 6.5, 7.8, 7.8), ("40x40", 6.5, 8.5, 9.5, 8.0, 9.5, 9.5),
-            ("40x50", 7.5, 9.5, 10.5, 8.5, 10.5, 10.5), ("40x60", 8.0, 10.0, 11.0, 10.0, 11.0, 11.0),
-            ("50x50", 8.5, 10.5, 11.5, 11.0, 13.5, 12.5), ("50x60", 9.0, 11.0, 12.0, 12.0, 15.5, 14.0),
-            ("50x70", 9.5, 11.5, 12.5, 13.0, 17.0, 16.0), ("50x75", 10.5, 12.5, 13.5, 15.0, 19.0, 18.0))] +
-                [{"product": "frame", "size": sz, "on": True, "price": {"24": a, "36": b, "48": c},
-                  "ship": {"uk": u, "us": us, "nz": nz}} for sz, a, b, c, u, us, nz in (
-            ("30x40", 7.2, 9.2, 10.2, 10.8, 10.2, 7.8), ("40x40", 8.2, 10.2, 11.2, 12.0, 11.5, 9.5),
-            ("40x50", 8.8, 10.8, 11.8, 18.0, 15.5, 10.5))],
+        "currency": "USD", "fx": 0.92, "cols": [24],
+        "zones": [{"key": "eu", "label": "Europe (NL/FR…)", "countries": "EU", "days": "6-15", "fee": 6},
+                  {"key": "uk", "label": "UK", "countries": "GB", "days": "6-15"},
+                  {"key": "us", "label": "USA", "countries": "US", "days": "6-15"}],
+        "products": [{"key": "unframed", "label": "Unframe kit (CK)", "kit": True},
+                     {"key": "diy_frame", "label": "DIY frame (FK)", "kit": False},
+                     {"key": "framed", "label": "Framed kit (NK)", "kit": False}],
+        "rows": [{"product": prod, "size": sz, "on": True, "price": {"24": unit},
+                  "ship": {"eu": eu, "uk": uk, "us": us}} for prod, sz, unit, eu, uk, us in (
+            ("unframed", "30x40", 4.5, 10.0, 8.0, 12.0), ("unframed", "40x40", 5.5, 12.0, 9.5, 14.0),
+            ("unframed", "40x50", 6.5, 12.5, 10.0, 15.0), ("unframed", "40x60", 7.0, 13.5, 11.0, 16.0),
+            ("unframed", "50x50", 7.5, 13.5, 11.5, 16.0), ("unframed", "50x60", 8.0, 15.0, 12.0, 18.0),
+            ("unframed", "50x70", 9.0, 16.0, 13.0, 20.0), ("unframed", "50x75", 9.5, 17.0, 14.0, 22.0),
+            ("diy_frame", "30x40", 7.0, 12.0, 10.0, 15.0), ("diy_frame", "40x40", 7.5, 14.0, 12.0, 16.0),
+            ("diy_frame", "40x50", 8.0, 17.0, 14.0, 20.0),
+            ("framed", "20x20", 6.5, 13.0, 11.0, 16.0), ("framed", "30x40", 7.5, 15.0, 12.0, 18.0),
+            ("framed", "30x50", 8.0, 17.0, 13.0, 20.0))],
     }
 
     def grid(self):
@@ -673,7 +699,8 @@ class Supplier(models.Model):
         return self._num(r.get("price"), int(colors)) if r else None
 
     def grid_shipping(self, fmt_key, colors, iso2="FR", product=None):
-        """Livraison (devise du devis) : colonne de la zone + supplement couleurs du produit. None si non chiffree."""
+        """Livraison (devise du devis) : colonne de la zone + frais fixes de la zone (ex. +6 $ taxes et frais
+        pour l'Europe) + supplement couleurs du produit. None si non chiffree."""
         r = self.grid_row(fmt_key, product)
         z = self.grid_zone(iso2)
         if not r or not z:
@@ -682,7 +709,11 @@ class Supplier(models.Model):
         if base is None:
             return None
         prod = next((p for p in self.grid().get("products") or [] if p.get("key") == r.get("product")), {})
-        return base + (self._num(prod.get("extra"), int(colors)) or 0.0)
+        try:
+            fee = float(z.get("fee") or 0)
+        except (TypeError, ValueError):
+            fee = 0.0
+        return base + fee + (self._num(prod.get("extra"), int(colors)) or 0.0)
 
     def offer_get(self, group, key):
         if self.grid() and group in ("formats", "colors"):
@@ -703,21 +734,25 @@ class Supplier(models.Model):
         d = self.offer_get(group, key)
         return d.get("cost") if d.get("on") else None
 
-    def grid_frame_product(self):
-        """Produit « kit avec cadre » du devis (SKU BK) : cle contenant « frame », sinon 1er produit non-kit."""
-        prods = self.grid().get("products") or []
-        return next((p for p in prods if "frame" in str(p.get("key", "")).lower() and not p.get("kit")),
-                    next((p for p in prods if not p.get("kit")), None))
+    def _grid_product(self, finish="ck"):
+        """Produit du devis pour une finition : cle standard (unframed / diy_frame / framed) ; anciens devis :
+        CK = produit « kit », FK = « frame »."""
+        finish = finish if finish in FINISH_GRID else ("nk" if finish is True else "ck")
+        keys = {p.get("key") for p in self.grid().get("products") or []}
+        want = FINISH_GRID[finish]
+        if want in keys:
+            return want
+        if finish == "ck":
+            return (self.grid_kit_product() or {}).get("key")
+        return "frame" if finish == "fk" and "frame" in keys else None
 
-    def _grid_product(self, framed):
-        return ((self.grid_frame_product() if framed else self.grid_kit_product()) or {}).get("key")
-
-    def goods_cost(self, fmt_key, colors, brushes=False, framed=False):
+    def goods_cost(self, fmt_key, colors, brushes=False, finish="ck"):
         """Prix d'achat produit (EUR, hors livraison/taxes) ou None. Les pinceaux ne sont pas commandes au
         fournisseur (bonus PaintIt) : `brushes` n'ajoute que le cout eventuel saisi dans son offre."""
         colors = supplier_color_count(colors)
         if self.grid():
-            p = self.grid_goods(fmt_key, colors, self._grid_product(framed))
+            prod = self._grid_product(finish)
+            p = self.grid_goods(fmt_key, colors, prod) if prod else None
             if p is None:
                 return None
             g = p * self.grid_fx()
@@ -726,8 +761,8 @@ class Supplier(models.Model):
             if f is None:
                 return None
             g = f + (self.offer_cost("colors", colors) or 0.0)
-            if framed:
-                fr = self.offer_cost("extras", "frame")
+            if finish in ("fk", "nk"):
+                fr = self.offer_cost("extras", {"fk": "diy_frame", "nk": "framed"}[finish])
                 if fr is None:
                     return None
                 g += fr
@@ -738,16 +773,16 @@ class Supplier(models.Model):
         return {"vat_rate": float(t.get("vat_rate") or 0), "vat_recoverable": bool(t.get("vat_recoverable", True)),
                 "duties_rate": float(t.get("duties_rate") or 0), "customs_fee": float(t.get("customs_fee") or 0)}
 
-    def order_cost(self, fmt_key, colors, brushes=False, country="FR", framed=False):
+    def order_cost(self, fmt_key, colors, brushes=False, country="FR", finish="ck"):
         """Cout de revient d'une commande chez ce fournisseur (EUR) : produit + droits + livraison + frais
         (+ TVA fournisseur si non recuperable). None si le format, les couleurs ou la livraison ne sont pas tarifes."""
         colors = supplier_color_count(colors)
-        goods = self.goods_cost(fmt_key, colors, brushes, framed)
+        goods = self.goods_cost(fmt_key, colors, brushes, finish)
         if goods is None:
             return None
         sh = (self.offer or {}).get("shipping") or {}
         if self.grid():
-            ship = self.grid_shipping(fmt_key, colors, country, self._grid_product(framed))
+            ship = self.grid_shipping(fmt_key, colors, country, self._grid_product(finish))
             if ship is None:
                 return None
             ship *= self.grid_fx()

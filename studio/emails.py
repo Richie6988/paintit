@@ -111,9 +111,13 @@ def send_order_confirmation(order, shipping):
     total = money(am.get("total", order.get("total", order["price"])))
     disc_amt = am.get("discount", (order.get("discount") or {}).get("amount", 0))
     orient = T["orient"].get(order.get("orientation", ""), order.get("orientation", ""))
-    if order.get("framed"):
-        orient += ", " + {"fr": "avec cadre", "en": "framed", "de": "mit Rahmen", "es": "con marco",
-                          "it": "con telaio"}.get(lang, "framed")
+    from .models import finish_of
+    orient += ", " + {
+        "ck": {"fr": "sans cadre", "en": "unframed", "de": "ohne Rahmen", "es": "sin marco", "it": "senza telaio"},
+        "fk": {"fr": "cadre à monter", "en": "DIY frame", "de": "Rahmen zum Selbstaufbau", "es": "marco para montar",
+               "it": "telaio da montare"},
+        "nk": {"fr": "encadrée", "en": "framed", "de": "gerahmt", "es": "enmarcado", "it": "incorniciata"},
+    }[finish_of(order)].get(lang, "")
     addr2 = (", " + shipping["address2"]) if shipping.get("address2") else ""
     phone = ("%s %s" % (shipping.get("phone_code", ""), shipping.get("phone", ""))).strip()
 

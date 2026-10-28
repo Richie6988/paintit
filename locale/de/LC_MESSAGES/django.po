@@ -2115,3 +2115,28 @@ msgstr "Weiter zur Zahlung"
 
 msgid "Langue et devise"
 msgstr "Sprache und Währung"
+
+msgid "Cadre à monter"
+msgstr "Rahmen zum Selbstaufbau"
+
+msgid "châssis bois à assembler, toile à tendre"
+msgstr "Holzrahmen zum Zusammenbauen, Leinwand zum Spannen"
+
+msgid "Encadrée"
+msgstr "Gerahmt"
+
+msgid "toile montée sur cadre rigide, prête à peindre"
+msgstr "Leinwand auf festem Rahmen, malfertig"
+
+msgid "encadrée"
+msgstr "gerahmt"
+
+msgid "cadre à monter"
+msgstr "Rahmen zum Selbstaufbau"
+
+msgid ""
+"Livraison : Union européenne, États-Unis, Royaume-Uni, Canada, Australie, "
+"Japon, Nouvelle-Zélande."
+msgstr ""
+"Lieferung: Europäische Union, USA, Vereinigtes Königreich, Kanada, "
+"Australien, Japan, Neuseeland."

@@ -120,7 +120,7 @@ def currency(request):
     from . import currency as fx
     if request.path.startswith(("/admin", "/admin-hub", "/wc-api", "/wp-json", "/api/")):
         return {"CUR": "EUR"}                      # ERP / connecteurs : toujours en euros
-    menu = [("EUR", "€ EUR"), ("USD", "$ USD"), ("GBP", "£ GBP"), ("NZD", "NZ$ NZD")]
+    menu = [(c, "%s %s" % (fx.CURRENCIES[c][0], c), fx.CURRENCIES[c][0]) for c in fx.CURRENCIES]
     try:
         return {"CUR": fx.for_request(request), "CUR_MENU": menu}
     except Exception:

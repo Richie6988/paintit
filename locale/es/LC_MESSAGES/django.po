@@ -2082,3 +2082,28 @@ msgstr "Continuar al pago"
 
 msgid "Langue et devise"
 msgstr "Idioma y moneda"
+
+msgid "Cadre à monter"
+msgstr "Marco para montar"
+
+msgid "châssis bois à assembler, toile à tendre"
+msgstr "bastidor de madera para montar, lienzo para tensar"
+
+msgid "Encadrée"
+msgstr "Enmarcado"
+
+msgid "toile montée sur cadre rigide, prête à peindre"
+msgstr "lienzo montado en marco rígido, listo para pintar"
+
+msgid "encadrée"
+msgstr "enmarcado"
+
+msgid "cadre à monter"
+msgstr "marco para montar"
+
+msgid ""
+"Livraison : Union européenne, États-Unis, Royaume-Uni, Canada, Australie, "
+"Japon, Nouvelle-Zélande."
+msgstr ""
+"Envío: Unión Europea, Estados Unidos, Reino Unido, Canadá, Australia, Japón,"
+" Nueva Zelanda."

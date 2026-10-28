@@ -53,7 +53,7 @@ TRACK_KEYS = {
     "carrier": ["物流方式", "物流渠道", "承运商", "物流公司", "carrier", "shipping method", "logistics", "transporteur"],
 }
 
-DEFAULT_SKU = "{finish}-{format}-{colors}C"      # BK-40x50-24C (avec cadre) / WF-40x50-24C (sans cadre)
+DEFAULT_SKU = "{finish}-{format}-{colors}C"      # CK-40x50-24C / FK-40x50-24C / NK-30x40-24C
 
 
 def _norm(s):
@@ -101,18 +101,18 @@ def order_values(sup, order, sku_pattern=None):
     """Valeurs d'une commande (modele Order) pour chaque champ PaintIt."""
     from . import address
     from .security import file_url
-    from .models import format_key, supplier_color_count
+    from .models import format_key, supplier_color_count, FINISH_CODES, finish_of
     from . import order_lines as _shop
     fmt = format_key(order.width_cm, order.height_cm)
     pattern = sku_pattern or DEFAULT_SKU
     if "{finish}" not in pattern and pattern.startswith("PBN-"):
-        pattern = "{finish}-" + pattern[4:]          # ancien modele PBN- : remplace par le code BK / WF
+        pattern = "{finish}-" + pattern[4:]          # ancien modele PBN- : remplace par le code CK / FK / NK
     try:
         sku = pattern.format(format=fmt, colors=supplier_color_count(order.colors), brushes="",
-                             finish=_shop.FRAMED_PREFIX if order.framed else _shop.UNFRAMED_PREFIX)
+                             finish=FINISH_CODES[finish_of(order)])
     except (KeyError, IndexError, ValueError):
-        sku = _shop.sku_for(fmt, order.colors, order.framed)
-    cost = sup.goods_cost(fmt, order.colors, False, order.framed)      # pinceaux : non commandes au fournisseur
+        sku = _shop.sku_for(fmt, order.colors, finish_of(order))
+    cost = sup.goods_cost(fmt, order.colors, False, finish_of(order))      # pinceaux : non commandes au fournisseur
     # Meme contenu que si la commande arrivait de la boutique Shopify : SKU, titre produit et variante,
     # telephone international, proprietes de ligne (fichiers) -> le fournisseur traite les deux a l'identique.
     from .models import CompanyInfo

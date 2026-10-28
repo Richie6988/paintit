@@ -19,9 +19,26 @@ from django.core.cache import cache
 logger = logging.getLogger(__name__)
 
 # code -> (symbole, symbole avant le montant ?)
-CURRENCIES = {"EUR": ("€", False), "USD": ("$", True), "GBP": ("£", True), "NZD": ("NZ$", True)}
-COUNTRY_CURRENCY = {"US": "USD", "GB": "GBP", "NZ": "NZD"}
-DEFAULT_RATES = {"EUR": 1.0, "USD": 1.08, "GBP": 0.85, "NZD": 1.80}     # secours si la BCE est injoignable
+CURRENCIES = {"EUR": ("€", False), "USD": ("$", True), "GBP": ("£", True), "CAD": ("CA$", True),
+              "AUD": ("A$", True), "NZD": ("NZ$", True), "JPY": ("¥", True)}
+COUNTRY_CURRENCY = {"US": "USD", "GB": "GBP", "CA": "CAD", "AU": "AUD", "NZ": "NZD", "JP": "JPY"}
+DEFAULT_RATES = {"EUR": 1.0, "USD": 1.08, "GBP": 0.85, "CAD": 1.50, "AUD": 1.65, "NZD": 1.80,
+                 "JPY": 165.0}                                         # secours si la BCE est injoignable
+ZERO_DECIMAL = {"JPY"}           # pas de centimes (Stripe : montant en yens entiers)
+
+
+def decimals(cur):
+    return 0 if cur in ZERO_DECIMAL else 2
+
+
+def to_minor(amount, cur):
+    """Montant -> unite Stripe (centimes ; yens entiers pour le JPY)."""
+    return int(round(float(amount or 0) * (1 if cur.upper() in ZERO_DECIMAL else 100)))
+
+
+def from_minor(amount, cur):
+    """Unite Stripe -> montant (cents -> unites ; JPY inchange)."""
+    return float(amount or 0) / (1 if (cur or "eur").upper() in ZERO_DECIMAL else 100)
 ECB_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
 CACHE_KEY, SESSION_KEY = "fx:ecb", "cur"
 
@@ -33,7 +50,7 @@ def _fallback_path():
 def rates():
     """{code: unites pour 1 EUR}. BCE (cache 12 h) > dernier taux enregistre > valeurs par defaut."""
     r = cache.get(CACHE_KEY)
-    if r:
+    if r and all(c in r for c in CURRENCIES):
         return r
     r = None
     try:
@@ -54,15 +71,17 @@ def rates():
     if not r:
         try:
             with open(_fallback_path()) as fh:
-                r = json.load(fh)
+                r = {**DEFAULT_RATES, **json.load(fh)}          # devise ajoutee depuis : taux par defaut
         except (OSError, ValueError):
             r = dict(DEFAULT_RATES)
     cache.set(CACHE_KEY, r, 12 * 3600)
     return r
 
 
-def psych(v):
-    """Arrondi commercial vers le haut : 53,17 -> 53,90 ; petits montants : 1,08 -> 1,09."""
+def psych(v, cur="USD"):
+    """Arrondi commercial vers le haut : 53,17 -> 53,90 ; petits montants : 1,08 -> 1,09 ; yen : 7 123 -> 7 190."""
+    if cur in ZERO_DECIMAL:
+        return float(math.ceil(round((v + 10) / 100, 6)) * 100 - 10)
     if v >= 5:
         return round(math.ceil(v - 0.9 - 1e-9) + 0.9, 2)
     return round(math.ceil(round((v + 0.01) * 10, 6)) / 10 - 0.01, 2)
@@ -73,7 +92,7 @@ def local(eur, cur):
     eur = float(eur or 0)
     if cur == "EUR" or cur not in CURRENCIES or eur <= 0:
         return round(eur, 2)
-    return psych(eur * rates()[cur])
+    return psych(eur * rates()[cur], cur)
 
 
 def to_eur(amount, cur):
@@ -85,9 +104,12 @@ def to_eur(amount, cur):
 
 def fmt(amount, cur, lang="fr"):
     sym, before = CURRENCIES.get(cur, ("€", False))
-    s = "%.2f" % float(amount or 0)
-    if not (before or (lang or "fr")[:2] == "en"):
-        s = s.replace(".", ",")
+    if cur in ZERO_DECIMAL:
+        s = "{:,.0f}".format(float(amount or 0))           # ¥7,490
+    else:
+        s = "%.2f" % float(amount or 0)
+        if not (before or (lang or "fr")[:2] == "en"):
+            s = s.replace(".", ",")
     return ("%s%s" % (sym, s)) if before else ("%s %s" % (s, sym))
 
 
@@ -118,9 +140,10 @@ def order_amounts(order, cur):
     canvas_eur = float(order.get("canvas_price") or (float(order["price"]) - float(order.get("brushes_amount") or 0)))
     canvas = local(canvas_eur, cur)
     brushes = local(order.get("brushes_amount") or 0, cur) if order.get("brushes") else 0.0
-    sub = round(canvas + brushes, 2)
+    dp = decimals(cur)
+    sub = round(canvas + brushes, dp)
     d = order.get("discount") or None
     rate = float(d.get("rate") or 0) if d else 0.0
-    disc = round(sub * rate, 2)
+    disc = round(sub * rate, dp)
     return {"cur": cur, "canvas": canvas, "brushes": brushes, "subtotal": sub, "discount": disc,
-            "total": round(sub - disc, 2)}
+            "total": round(sub - disc, dp)}

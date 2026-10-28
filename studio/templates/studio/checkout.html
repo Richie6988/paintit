@@ -24,7 +24,7 @@
   </form>
 
   <div class="totals">
-    <div class="line"><span>{{ order.format_label }}, {{ order.colors }} {% trans "couleurs" %}{% if order.framed %}, {% trans "avec cadre" %}{% else %}, {% trans "sans cadre" %}{% endif %}</span><span></span></div>
+    <div class="line"><span>{{ order.format_label }}, {{ order.colors }} {% trans "couleurs" %}{% if order.finish == "nk" %}, {% trans "encadrée" %}{% elif order.finish == "fk" %}, {% trans "cadre à monter" %}{% else %}, {% trans "sans cadre" %}{% endif %}</span><span></span></div>
     <div class="line"><span>{% trans "Sous-total" %}</span><span>{% money_local amt.subtotal amt.cur %}</span></div>
     {% if discount %}<div class="line disc"><span>{% trans "Remise" %} ({{ discount.code }}, -{{ discount.percent }}%)</span><span>-{% money_local amt.discount amt.cur %}</span></div>{% endif %}
     <div class="line grand"><span>{% trans "Total" %}</span><span>{% money_local amt.total amt.cur %}</span></div>

@@ -2071,3 +2071,28 @@ msgstr "Continue to payment"
 
 msgid "Langue et devise"
 msgstr "Language and currency"
+
+msgid "Cadre à monter"
+msgstr "DIY frame"
+
+msgid "châssis bois à assembler, toile à tendre"
+msgstr "wooden frame to assemble, canvas to stretch"
+
+msgid "Encadrée"
+msgstr "Framed"
+
+msgid "toile montée sur cadre rigide, prête à peindre"
+msgstr "canvas mounted on a rigid frame, ready to paint"
+
+msgid "encadrée"
+msgstr "framed"
+
+msgid "cadre à monter"
+msgstr "DIY frame"
+
+msgid ""
+"Livraison : Union européenne, États-Unis, Royaume-Uni, Canada, Australie, "
+"Japon, Nouvelle-Zélande."
+msgstr ""
+"Shipping to: European Union, United States, United Kingdom, Canada, "
+"Australia, Japan, New Zealand."
