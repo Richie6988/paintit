@@ -546,9 +546,14 @@ class WooConnectorTests(TestCase):
         # commande hors perimetre
         other = Order.objects.get(uid="OTHER000-0000")
         self.assertEqual(self.client.get("/wc-api/v3/orders/%d" % other.pk, self.auth).status_code, 404)
-        Order.objects.filter(pk=other.pk).update(supplier=self.sup)     # rattachee mais jamais transmise via Woo
-        self.assertEqual(self.client.get("/wc-api/v3/orders/%d" % other.pk, self.auth).status_code, 404)
         from studio.models import ConnectorLog
+        self.assertIn("autre fournisseur", ConnectorLog.objects.filter(supplier=self.sup).first().note)
+        Order.objects.filter(pk=other.pk).update(supplier=self.sup)     # rattachee mais jamais transmise via Woo :
+        lst = self.client.get("/wc-api/v3/orders", self.auth).json()["orders"]   # pas dans la liste a produire...
+        self.assertNotIn("OTHER000-0000", [x["order_number"] for x in lst])
+        self.assertEqual(self.client.get("/wc-api/v3/orders/OTHER000-0000", self.auth).status_code, 200)  # ...mais lisible
+        self.assertIn("inconnue", (lambda: (self.client.get("/wc-api/v3/orders/NOPE0000-0000", self.auth),
+                                            ConnectorLog.objects.filter(supplier=self.sup).first().note)[1])())
         self.assertTrue(ConnectorLog.objects.filter(supplier=self.sup, method="PUT").exists())
         self.assertNotIn(self.keys["cs"], " ".join(ConnectorLog.objects.values_list("query", flat=True)))
         # MangoERP adresse aussi la commande par son NUMERO (uid) : lecture puis envoi du suivi

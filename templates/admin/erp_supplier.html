@@ -172,7 +172,7 @@ POST JSON to / 发送 JSON 到 {{ automation.callback }}
         </div>
         {% endif %}
         <details class="sf-more"{% if woo_test %} open{% endif %}><summary>Journal des appels de l'ERP</summary>
-          {% if woo_logs %}<table class="log" style="margin-top:8px">{% for l in woo_logs %}<tr><td class="gx-muted" style="white-space:nowrap">{{ l.at|date:"d/m H:i" }}</td><td><b>{{ l.method }}</b> {{ l.path }}{% if l.body %}<div class="gx-muted" style="word-break:break-all">{{ l.body|truncatechars:200 }}</div>{% endif %}</td>
+          {% if woo_logs %}<table class="log" style="margin-top:8px">{% for l in woo_logs %}<tr><td class="gx-muted" style="white-space:nowrap">{{ l.at|date:"d/m H:i" }}</td><td><b>{{ l.method }}</b> {{ l.path }}{% if l.query %}<span class="gx-muted" style="word-break:break-all"> ?{{ l.query|truncatechars:120 }}</span>{% endif %}{% if l.body %}<div class="gx-muted" style="word-break:break-all">{{ l.body|truncatechars:200 }}</div>{% endif %}</td>
             <td><span class="gx-chip {% if l.status < 300 %}ok{% else %}bad{% endif %}">{{ l.status }}</span></td><td class="gx-muted">{{ l.note }}</td></tr>{% endfor %}</table>
           {% else %}<p class="gx-muted">Aucun appel reçu.</p>{% endif %}</details>
 

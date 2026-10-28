@@ -236,6 +236,25 @@ def _parse_dt(v):
     return d if d.tzinfo else d.replace(tzinfo=dt_tz.utc)
 
 
+def _single(sup, ref):
+    """Commande demandee une a une par l'ERP (lecture, envoi du suivi) : id numerique OU numero de commande.
+    Toute commande payee rattachee a CE fournisseur (l'ERP la connait deja). -> (commande, raison si refus)."""
+    from .models import Order
+    if ref.isdigit():
+        o = Order.objects.filter(pk=int(ref)).first()
+    elif re.fullmatch(r"[A-Za-z0-9-]{4,40}", ref):
+        o = Order.objects.filter(uid__iexact=ref).first()
+    else:
+        return None, "id invalide"
+    if not o:
+        return None, "commande inconnue (%s)" % ref[:40]
+    if o.supplier_id != sup.pk:
+        return None, "commande rattachée à un autre fournisseur (%s)" % (o.supplier.name if o.supplier else "aucun")
+    if o.status not in Order.PAID_STATUSES + (Order.FAILED,):
+        return None, "commande au statut « %s »" % o.get_status_display()
+    return o, ""
+
+
 def _filter(request, sup, modern):
     from django.db.models import Q
     g = request.GET
@@ -446,15 +465,9 @@ def _route(request, sup, route, modern):
             {"X-WC-Total": str(total), "X-WC-TotalPages": str(pages)}
         return (data if modern else {"orders": data}), 200, h, "%d commande(s)" % len(data)
     # MangoERP appelle la commande par son id numerique OU par son numero (« 99DF2278-0A70 ») : les deux sont acceptes
-    ref = parts[1]
-    if ref.isdigit():
-        order = _scope(sup).filter(pk=int(ref)).first()
-    elif re.fullmatch(r"[A-Za-z0-9-]{4,40}", ref):
-        order = _scope(sup).filter(uid__iexact=ref).first()
-    else:
-        return None, 404, {}, "id invalide"
+    order, why = _single(sup, parts[1])
     if not order:
-        return None, 404, {}, "commande hors périmètre"
+        return None, 404, {}, why
     data = _body(request)
     if len(parts) == 2:
         if m in ("PUT", "POST", "PATCH"):
