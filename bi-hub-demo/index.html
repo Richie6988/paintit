@@ -16,6 +16,7 @@
   --accent:#1D47D6; --accent-ink:#FFFFFF; --accent-soft:#E2E8FD; --amber:#C98407; --amber-soft:#FBEFD3;
   --good:#16865A; --warn:#B7790A; --crit:#C93A31; --good-soft:#DDF2E8; --crit-soft:#F9E1DF;
   --shadow:0 1px 2px rgba(13,26,40,.06),0 8px 24px rgba(13,26,40,.06);
+  --gardp-navy:#1E2A44; --gardp-teal:#24A9B8; --gardp-teal-d:#156E80;
   --f-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
   --f-body:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
@@ -25,12 +26,12 @@
   --bg:#08111B; --surface:#0F1B28; --sunken:#0B1520; --ink:#E4ECF4; --muted:#8C9EB2; --line:#1C2B3B;
   --accent:#7590FF; --accent-ink:#08111B; --accent-soft:#17264A; --amber:#F0B44A; --amber-soft:#3A2C10;
   --good:#3CC48A; --warn:#E8A93A; --crit:#F0675D; --good-soft:#0F3326; --crit-soft:#3D1715;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35); color-scheme:dark}}
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35); --gardp-navy:#DCE6F2; --gardp-teal:#3CC3D2; --gardp-teal-d:#2A97A8; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#08111B; --surface:#0F1B28; --sunken:#0B1520; --ink:#E4ECF4; --muted:#8C9EB2; --line:#1C2B3B;
   --accent:#7590FF; --accent-ink:#08111B; --accent-soft:#17264A; --amber:#F0B44A; --amber-soft:#3A2C10;
   --good:#3CC48A; --warn:#E8A93A; --crit:#F0675D; --good-soft:#0F3326; --crit-soft:#3D1715;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35); color-scheme:dark}
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35); --gardp-navy:#DCE6F2; --gardp-teal:#3CC3D2; --gardp-teal-d:#2A97A8; color-scheme:dark}
 
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -52,8 +53,13 @@ mark{background:var(--amber-soft);color:inherit;border-radius:3px;padding:0 2px;
 .app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100%}
 .rail{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:18px;padding:20px 14px;border-right:1px solid var(--line);background:var(--surface)}
 .brand{display:flex;align-items:center;gap:10px;padding:0 6px}
-.brand-mark{width:34px;height:34px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink)}
-.brand b{font-family:var(--f-display);font-size:17px;display:block;line-height:1.1}
+.brand{flex-direction:column;align-items:flex-start;gap:6px}
+.gardp-logo{width:150px;height:34px;flex:none;overflow:visible}
+.gardp-word{font:300 31px "IBM Plex Sans","Helvetica Neue",sans-serif;letter-spacing:.06em;fill:var(--gardp-navy)}
+.brand-sub{display:flex;align-items:baseline;gap:8px;padding-left:2px}
+.brand b{font-family:var(--f-display);font-size:15px;display:block;line-height:1.1}
+.cobrand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cobrand .x{color:var(--muted);font:400 14px var(--f-mono)}
 .brand small{font:500 10px var(--f-mono);letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
 .nav{display:flex;flex-direction:column;gap:2px}
 .nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:500}
@@ -292,19 +298,37 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
   .graph-wrap{height:420px}
   .ginfo{display:none}
   .hero-in{padding:28px 18px}
+  .hero canvas{opacity:.3}
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="gardpMark">
+      <g stroke="var(--gardp-navy)" stroke-width="4.5" stroke-linecap="round"><path d="M17 17 6 11M17 17 24 6M17 17 6 27M17 17 17 28"/></g>
+      <circle cx="24" cy="6" r="4.6" fill="var(--gardp-teal-d)"/>
+      <circle cx="6" cy="11" r="4" fill="var(--gardp-navy)"/>
+      <circle cx="17" cy="17" r="5.4" fill="var(--gardp-teal)"/>
+      <circle cx="6" cy="27" r="4" fill="var(--gardp-navy)"/>
+      <circle cx="17" cy="28.5" r="3.6" fill="var(--gardp-navy)"/>
+      <circle cx="28" cy="28" r="4.4" fill="var(--gardp-teal-d)"/>
+    </g>
+    <g id="alcimedMark">
+      <circle cx="17" cy="17" r="17" fill="#FF0A47"/>
+      <text x="17" y="20.2" text-anchor="middle" textLength="25" lengthAdjust="spacingAndGlyphs" fill="#FFFFFF" style="font:800 9px 'Bricolage Grotesque','Avenir Next',sans-serif;letter-spacing:-.2px">Alcimed</text>
+    </g>
+  </defs>
+</svg>
 <div class="app">
   <aside class="rail">
     <div class="brand">
-      <div class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.6" fill="currentColor"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/><circle cx="13" cy="15" r="2" fill="currentColor"/></svg></div>
-      <div><b>BI Hub</b><small>GARDP · prototype</small></div>
+      <svg class="gardp-logo" viewBox="0 0 150 34" role="img" aria-label="GARDP"><use href="#gardpMark"/><text x="40" y="27" class="gardp-word">GARDP</text></svg>
+      <div class="brand-sub"><b>BI Hub</b><small>Prototype</small></div>
     </div>
     <nav class="nav" id="nav"></nav>
-    <div class="rail-foot"><b>Proposal 1 demo.</b> All documents, figures and people shown are simulated sample data, prepared by ALCIMED for illustration.</div>
+    <div class="rail-foot"><div class="row" style="flex-wrap:nowrap;gap:10px;margin-bottom:8px"><svg width="34" height="34" viewBox="0 0 34 34" role="img" aria-label="Alcimed" style="flex:none"><use href="#alcimedMark"/></svg><span class="eyebrow" style="line-height:1.4">Proposed by<br><b style="color:var(--ink);letter-spacing:.04em">Alcimed</b></span></div><b>Proposal 1 demo.</b> All documents, figures and people shown are simulated sample data, prepared for illustration.</div>
   </aside>
   <div class="main">
     <header class="top">
@@ -643,7 +667,7 @@ function vHome(el){
   <section class="hero">
     <canvas id="heroCanvas" aria-hidden="true"></canvas>
     <div class="hero-in">
-      <span class="eyebrow">GARDP Business Intelligence Hub · Proposal 1</span>
+      <div class="cobrand"><svg width="120" height="28" viewBox="0 0 150 34" role="img" aria-label="GARDP"><use href="#gardpMark"/><text x="40" y="27" class="gardp-word">GARDP</text></svg><span class="x">×</span><svg width="30" height="30" viewBox="0 0 34 34" role="img" aria-label="Alcimed"><use href="#alcimedMark"/></svg><span class="eyebrow">Business Intelligence Hub · Proposal 1</span></div>
       <h1>Ask the organisation’s memory. <em>Trace every answer</em> to its source.</h1>
       <p>One governed repository for intelligence and research content, auto-classified against a taxonomy GARDP owns, searchable in plain language, with an assistant that cites the passage behind each claim.</p>
       <form class="askbox" id="heroAsk">
