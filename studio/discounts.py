@@ -21,11 +21,12 @@ def get_row(code):
 
 
 def issue(code):
-    """Code PHYSIQUE (QR du poster) : parrainage via produit physique, usage unique."""
+    """Code du poster (QR + n° de commande) : remise FIDELITE, usage unique. Meme taux que celui imprime sur le
+    poster (Pricing.discount_rate, 15 %)."""
     code = norm(code)
     if not code:
         return
-    pct = int(round(Pricing.get().referral_physical_rate * 100))
+    pct = int(round(Pricing.get().discount_rate * 100))
     Discount.objects.get_or_create(code=code, defaults={
         "kind": Discount.LOYALTY, "percent": pct, "max_uses": 1,
         "status": Discount.ISSUED, "active": True})

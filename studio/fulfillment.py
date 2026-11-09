@@ -23,21 +23,21 @@ A4_W, A4_H = 2480, 3508
 DPI = 300
 MARGIN = 110
 COLS = 6
-STRIP_H = 360
+STRIP_H = 520          # bandeau bas (logo + remise) : poster imprime en A5, QR lisible (~28 mm)
 
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 DUP = cv2.FONT_HERSHEY_DUPLEX
 
 POSTER_STR = {
-    "fr": {"disc": "REMISE FIDELITE", "sub": "-15% sur votre prochaine commande",
+    "fr": {"disc": "REMISE FIDELITE", "sub": "-{pct}% sur votre prochaine commande",
            "scan": "Scannez ou saisissez le code", "code": "Code : "},
-    "en": {"disc": "LOYALTY DISCOUNT", "sub": "-15% off your next order",
+    "en": {"disc": "LOYALTY DISCOUNT", "sub": "-{pct}% off your next order",
            "scan": "Scan or enter the code", "code": "Code: "},
-    "de": {"disc": "TREUE-RABATT", "sub": "-15% auf Ihre naechste Bestellung",
+    "de": {"disc": "TREUE-RABATT", "sub": "-{pct}% auf Ihre naechste Bestellung",
            "scan": "Code scannen oder eingeben", "code": "Code: "},
-    "es": {"disc": "DESCUENTO FIDELIDAD", "sub": "-15% en tu proxima compra",
+    "es": {"disc": "DESCUENTO FIDELIDAD", "sub": "-{pct}% en tu proxima compra",
            "scan": "Escanea o introduce el codigo", "code": "Codigo: "},
-    "it": {"disc": "SCONTO FEDELTA", "sub": "-15% sul tuo prossimo ordine",
+    "it": {"disc": "SCONTO FEDELTA", "sub": "-{pct}% sul tuo prossimo ordine",
            "scan": "Scansiona o inserisci il codice", "code": "Codice: "},
 }
 FRENCH_COUNTRIES = {"France", "Belgique", "Suisse", "Luxembourg", "Canada",
@@ -149,26 +149,34 @@ def _compose_poster(uid, d, colors, lang, simple=False, out=None):
         hs = _fit_scale(c["hex"], cell_w - 16, FONT, 2, 1.0)
         cv2.putText(img, c["hex"], (x + 10, y + block_h + int(hexh * 0.72)), FONT, hs, (40, 40, 40), 2, cv2.LINE_AA)
 
-    # Bandeau bas : logo a gauche, remise a droite.
+    # Bandeau bas (agrandi pour l'impression A5) : logo a gauche, remise + QR a droite.
     logo = _logo()
+    logo_end = MARGIN
     if logo is not None:
-        lw = 520
+        lw = 720
         lh = int(logo.shape[0] * lw / logo.shape[1])
+        if lh > STRIP_H - 80:
+            lw, lh = int(lw * (STRIP_H - 80) / lh), STRIP_H - 80
         _paste(img, cv2.resize(logo, (lw, lh), interpolation=cv2.INTER_AREA),
                MARGIN, strip_top + (STRIP_H - lh) // 2)
+        logo_end = MARGIN + lw
 
     if not simple:     # bandeau remise fidelite (kit physique uniquement)
-        q = _qr(f"{settings.PBN_DISCOUNT_URL}?id={uid}", STRIP_H - 90)
+        from .models import Pricing
+        pct = int(round(Pricing.get().discount_rate * 100))     # meme taux que le code (discounts.issue)
+        q = _qr(f"{settings.PBN_DISCOUNT_URL}?id={uid}", STRIP_H - 50)
         qh = q.shape[0] if q is not None else 0
         qx = A4_W - MARGIN - qh
         if q is not None:
-            img[strip_top + 40:strip_top + 40 + qh, qx:qx + qh] = q
-        right = qx - 40
-        lines = [(S["disc"], DUP, 1.5, 3, (30, 30, 30), 90),
-                 (S["sub"], FONT, 0.95, 2, (70, 70, 70), 150),
-                 (S["scan"], FONT, 0.8, 2, (120, 120, 120), 200),
-                 (S["code"] + uid, FONT, 1.0, 2, (30, 30, 30), 260)]
+            img[strip_top + (STRIP_H - qh) // 2:strip_top + (STRIP_H - qh) // 2 + qh, qx:qx + qh] = q
+        right = qx - 50
+        room = right - logo_end - 50                              # le texte ne chevauche jamais le logo
+        lines = [(S["disc"], DUP, 2.2, 4, (30, 30, 30), 130),
+                 (S["sub"].format(pct=pct), FONT, 1.4, 3, (50, 50, 50), 225),
+                 (S["scan"], FONT, 1.15, 2, (110, 110, 110), 305),
+                 (S["code"] + uid, DUP, 1.45, 3, (30, 30, 30), 400)]
         for txt, font, sc, th, color, dy in lines:
+            sc = _fit_scale(txt, room, font, th, sc)
             (tw, _), _ = cv2.getTextSize(txt, font, sc, th)
             cv2.putText(img, txt, (right - tw, strip_top + dy), font, sc, color, th, cv2.LINE_AA)
 

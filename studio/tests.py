@@ -2091,3 +2091,22 @@ class YingsaGrid2026MigrationTests(TestCase):
         self.assertEqual(y.grid_shipping("40x50", 24, "DE"), 12.5 + 6)           # Europe : +6 $ taxes et frais
         self.assertEqual(y.grid_shipping("40x50", 24, "GB"), 10.0)
         self.assertEqual(other.grid()["products"][0]["key"], "toile")             # autre devis : inchange
+
+
+class PosterDiscountRateTests(TestCase):
+    """Le code du poster (n° de commande) vaut la remise fidelite imprimee dessus (15 %), pas 40 %."""
+    def test_issue_and_existing_codes(self):
+        import importlib
+        from django.apps import apps
+        from studio import discounts
+        from studio.models import Discount, Pricing
+        p = Pricing.get(); p.discount_rate = 0.15; p.referral_physical_rate = 0.40; p.save()
+        discounts.issue("NEW00000-0001")
+        self.assertEqual(Discount.objects.get(code="NEW00000-0001").percent, 15)
+        make_order(uid="OLD00000-0001", status=Order.SHIPPED)
+        Discount.objects.create(code="OLD00000-0001", kind="loyalty", percent=40, max_uses=1)   # poster deja imprime
+        Discount.objects.create(code="FRIEND40", kind="loyalty", percent=40, max_uses=1)         # autre code : intact
+        importlib.import_module("studio.migrations.0078_poster_codes_loyalty_rate").forward(apps, None)
+        self.assertEqual(Discount.objects.get(code="OLD00000-0001").percent, 15)
+        self.assertEqual(Discount.objects.get(code="FRIEND40").percent, 40)
+        self.assertEqual(discounts.rate_for("OLD00000-0001"), 0.15)
