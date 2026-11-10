@@ -2110,3 +2110,43 @@ class PosterDiscountRateTests(TestCase):
         self.assertEqual(Discount.objects.get(code="OLD00000-0001").percent, 15)
         self.assertEqual(Discount.objects.get(code="FRIEND40").percent, 40)
         self.assertEqual(discounts.rate_for("OLD00000-0001"), 0.15)
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+class KitFromCanvasOrderNumberTests(TestCase):
+    """Commander le kit depuis une toile de la galerie (ou deja commandee) : nouveau n° de commande + dossier propre,
+    le modele partage n'est jamais modifie et deux commandes du meme modele ne s'ecrasent pas."""
+    def _canvas(self, uid):
+        import os, json
+        from PIL import Image
+        d = os.path.join(MEDIA, "orders", uid)
+        os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "%s_digipaint.svg" % uid), "w").write(
+            '<svg viewBox="0 0 400 500"><path class="z" id="%s-z1"/></svg>' % uid)
+        open(os.path.join(d, "%s_template.svg" % uid), "w").write('<svg viewBox="0 0 400 500"></svg>')
+        Image.new("RGB", (40, 50), "red").save(os.path.join(d, "%s_preview.png" % uid))
+        json.dump([{"number": 1, "hex": "#ff0000"}], open(os.path.join(d, "%s_colors.json" % uid), "w"))
+        return d
+
+    def test_gallery_model_gets_its_own_order_number(self):
+        import os, re
+        d = self._canvas("gal-mer-plages-big-sea-turtle")
+        before = sorted(os.listdir(d))
+        self.client.get("/play/gal-mer-plages-big-sea-turtle/buy/")
+        a = self.client.session["order"]["uid"]
+        self.assertRegex(a, r"^[0-9A-F]{8}-[0-9A-F]{4}$")
+        self.assertEqual(self.client.session["order"]["from_canvas"], "gal-mer-plages-big-sea-turtle")
+        nd = os.path.join(MEDIA, "orders", a)
+        self.assertTrue(os.path.exists(os.path.join(nd, "%s_digipaint.svg" % a)))
+        self.assertIn(a, open(os.path.join(nd, "%s_digipaint.svg" % a)).read())
+        self.client.get("/play/gal-mer-plages-big-sea-turtle/buy/")
+        self.assertNotEqual(self.client.session["order"]["uid"], a)                # 2e commande : autre numero
+        self.assertEqual(sorted(os.listdir(d)), before)                            # modele partage intact
+
+    def test_own_canvas_kept_until_ordered(self):
+        self._canvas("OWN00000-0001")
+        self.client.get("/play/OWN00000-0001/buy/")
+        self.assertEqual(self.client.session["order"]["uid"], "OWN00000-0001")    # pas encore commandee
+        make_order(uid="OWN00000-0001", status=Order.SHIPPED)
+        self.client.get("/play/OWN00000-0001/buy/")
+        self.assertNotEqual(self.client.session["order"]["uid"], "OWN00000-0001")  # deja commandee : nouveau n°

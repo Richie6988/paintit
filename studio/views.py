@@ -254,14 +254,52 @@ def gen_finalize(request):
     return redirect("studio:preview")            # revelation : on voit l'apercu, clic -> jeu
 
 
+# Fichiers propres a une commande (production) : jamais recopies d'une toile vers une nouvelle commande
+_ORDER_ONLY = ("_order.json", "_supplier.json", "_supplier.txt", "_supplier_colors.jpg", "_supplier_card.jpg",
+               "_poster.png", "_template.tiff", "_template.pdf")
+
+
+def _clone_canvas(uid):
+    """Nouvelle commande de kit a partir d'une toile (modele de la galerie, toile deja commandee...) : nouveau
+    n° de commande + copie de la toile dans son propre dossier. Chaque commande a ainsi son numero et ses fichiers
+    de production, sans toucher au modele partage ni ecraser une commande precedente. -> nouveau uid."""
+    import shutil
+    src = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    new = f"{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:4].upper()}"
+    dst = os.path.join(settings.MEDIA_ROOT, "orders", new)
+    os.makedirs(dst, exist_ok=True)
+    for n in os.listdir(src):
+        p = os.path.join(src, n)
+        if not os.path.isfile(p) or n in ("order.json", "production.zip") or n.endswith(_ORDER_ONLY):
+            continue
+        out = os.path.join(dst, n.replace(uid, new, 1) if n.startswith(uid) else n)
+        if n.endswith((".json", ".svg", ".txt")):
+            with open(p, encoding="utf-8", errors="replace") as f:
+                txt = f.read().replace(uid, new)
+            with open(out, "w", encoding="utf-8") as f:
+                f.write(txt)
+        else:
+            shutil.copyfile(p, out)
+    return new
+
+
 def digipaint_buy(request, uid):
     """Retour a la commande (kit vide ou version peinte) SANS regenerer."""
     request.session["order_variant"] = request.GET.get("v", "blank")
     import json
     import re
+    if "/" in uid or uid.startswith("."):
+        raise Http404
     d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
     if not os.path.exists(os.path.join(d, f"{uid}_digipaint.svg")):
         return redirect("studio:upload")
+    # Modele de la galerie (partage) ou toile deja commandee : nouvelle commande avec son propre numero.
+    # Sinon (toile du client pas encore commandee, ou commande en cours non payee) : on garde la toile.
+    if uid.startswith(("gal-", "lib-", "mkt-")) or Order.objects.filter(uid=uid).exclude(status=Order.PENDING).exists():
+        origin, uid = uid, _clone_canvas(uid)
+        d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    else:
+        origin = uid
     # « Modifier » (couleurs, cadrage) depuis l'apercu doit repartir de la photo de CETTE toile,
     # pas de la derniere photo envoyee sur le site
     from .pipeline import source_file
@@ -288,7 +326,7 @@ def digipaint_buy(request, uid):
         "orientation": orientation, "format_label": "40 x 50 cm",
         "difficulty": "auto", "lang": get_language() or "fr",
         "canvas_price": canvas, "brushes": False, "brushes_amount": 0.0,
-        "price": canvas, "colors_list": colors_list,
+        "price": canvas, "colors_list": colors_list, "from_canvas": origin,
     }
     return redirect("studio:preview")
 
