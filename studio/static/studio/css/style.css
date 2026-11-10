@@ -999,3 +999,11 @@ body.pv-busy .options .cta{opacity:.6;pointer-events:none}
 .g-reset{height:48px;padding:0 16px;border:0;background:none;color:var(--accent,#2f6bf2);font-weight:700;cursor:pointer}
 .g-reset[hidden]{display:none}
 @media (max-width:560px){.g-filters2 #gsort{flex-basis:100%}.g-range{flex-basis:100%}}
+
+/* Accueil : resultat du parcours 1-2-3 (photo du kit livre) */
+.kit-result{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px;align-items:center;
+  max-width:1100px;margin:0 auto 34px;padding:0 clamp(20px,5vw,64px)}
+.kit-result img{display:block;width:100%;height:auto;border-radius:18px;border:1px solid var(--ring);background:#fff}
+.kit-result h2{margin:0 0 10px;font-size:clamp(22px,2.6vw,30px)}
+.kit-result p{margin:0;color:var(--muted,#666);line-height:1.55}
+@media (max-width:760px){.kit-result{grid-template-columns:1fr;gap:16px}.kit-result figcaption{text-align:center}}

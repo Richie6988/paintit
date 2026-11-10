@@ -32,6 +32,18 @@
   <div class="step"><span>3</span><h3>{% trans "Découvrez votre toile. Donnez-lui vie." %}</h3><p>{% blocktrans with t="<b>" e="</b>" %}Jouez-la gratuitement en ligne, puis commandez votre kit pour la peindre chez vous. Votre chef-d’œuvre digital reste accessible à tout moment dans {{ t }}Mes toiles{{ e }}.{% endblocktrans %}</p></div>
 </section>
 
+<section class="kit-result">
+  <picture>
+    <source srcset="{% static 'studio/img/kit_contents.webp' %}" type="image/webp">
+    <img src="{% static 'studio/img/kit_contents.jpg' %}" width="820" height="540" loading="lazy" decoding="async"
+         alt="{% trans "Contenu d'un kit PaintIt : toile numérotée, peintures numérotées, pinceaux, cadre en bois à monter et poster de référence avec la palette" %}">
+  </picture>
+  <figcaption>
+    <h2>{% trans "Le résultat : votre kit, livré chez vous" %}</h2>
+    <p>{% trans "Toile imprimée avec les numéros, peintures numérotées, pinceaux et poster de référence avec votre palette. Ici avec l'option cadre à monter." %}</p>
+  </figcaption>
+</section>
+
 <section class="cta-after-steps" style="text-align:center;max-width:820px;margin:6px auto 4px;padding:0 20px">
   <a class="cta big" data-cta="Accueil · Essayer avec ma photo" href="{% url 'studio:upload' %}">{% trans "Essayer avec ma photo" %}</a>
   <p class="reassure">{% trans "Gratuit, sans inscription. Aperçu en quelques secondes." %}</p>
