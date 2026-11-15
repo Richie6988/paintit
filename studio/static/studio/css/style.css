@@ -1019,3 +1019,9 @@ body.pv-busy .options .cta{opacity:.6;pointer-events:none}
 @keyframes faspin{to{transform:rotate(360deg)}}
 .fa-bar{display:block;width:220px;max-width:100%;height:6px;border-radius:6px;background:#e8edf7;overflow:hidden}
 .fa-bar i{display:block;height:100%;width:4%;background:#2f6bf2;transition:width .6s}
+
+/* Apercu : pinceaux offerts */
+.gift-line{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:#fff7e6;
+  border:1px dashed #e9b44c;color:var(--ink);font-size:.95rem}
+.gift-line b{color:#b26a00}
+.gift-ic{font-size:1.35rem;line-height:1}

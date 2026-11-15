@@ -2177,7 +2177,7 @@ class PreviewFormatVariantTests(TestCase):
         o = self.client.session["order"]
         self.assertNotEqual(o["uid"], self.base)
         self.assertEqual((o["width_cm"], o["height_cm"], o["gen_w"], o["gen_h"]), (40, 40, 40.0, 40.0))
-        self.assertEqual((o["finish"], o["brushes"]), ("fk", True))
+        self.assertEqual((o["finish"], o["brushes"], o["price"]), ("fk", False, o["canvas_price"]))   # pinceaux offerts
         self.assertNotIn("zones", o)                                        # recomptees pour cette toile
         self.assertEqual(self.client.session["my_uids"], [o["uid"]])
         self.assertTrue(DigitalCanvas.objects.filter(uid=o["uid"], width_cm=40, height_cm=40).exists())

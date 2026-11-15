@@ -2177,3 +2177,12 @@ msgstr "Vorschau, Spiel und Ihr Set richten sich nach dem gewählten Format."
 #, python-format
 msgid "Adaptation de votre toile au format %s…"
 msgstr "Ihre Leinwand wird an das Format %s angepasst…"
+
+msgid "Offert"
+msgstr "Geschenkt"
+
+msgid "3 pinceaux haute qualité inclus dans votre kit"
+msgstr "3 hochwertige Pinsel in Ihrem Set enthalten"
+
+msgid "3 pinceaux haute qualité"
+msgstr "3 hochwertige Pinsel"

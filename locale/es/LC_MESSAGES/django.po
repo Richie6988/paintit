@@ -2143,3 +2143,12 @@ msgstr "La vista previa, el juego y tu kit siguen el formato elegido."
 #, python-format
 msgid "Adaptation de votre toile au format %s…"
 msgstr "Adaptando tu lienzo al formato %s…"
+
+msgid "Offert"
+msgstr "De regalo"
+
+msgid "3 pinceaux haute qualité inclus dans votre kit"
+msgstr "3 pinceles de alta calidad incluidos en tu kit"
+
+msgid "3 pinceaux haute qualité"
+msgstr "3 pinceles de alta calidad"

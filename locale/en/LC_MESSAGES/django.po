@@ -2131,3 +2131,12 @@ msgstr "The preview, the game and your kit follow the chosen size."
 #, python-format
 msgid "Adaptation de votre toile au format %s…"
 msgstr "Adapting your canvas to %s…"
+
+msgid "Offert"
+msgstr "Free gift"
+
+msgid "3 pinceaux haute qualité inclus dans votre kit"
+msgstr "3 high-quality brushes included in your kit"
+
+msgid "3 pinceaux haute qualité"
+msgstr "3 high-quality brushes"

@@ -579,6 +579,7 @@ def preview(request):
             finish = next(f for f in ("ck", "fk", "nk") if f in cf["fin"])
         order["finish"] = finish
         order.pop("framed", None)
+        order["brushes"], order["brushes_amount"] = False, 0.0     # 3 pinceaux toujours inclus (offerts)
         order["canvas_price"] = cf["fin"][finish]
         order["width_cm"], order["height_cm"], order["format_label"] = cf["w"], cf["h"], cf["label"]
         order["price"] = round(order["canvas_price"] + order.get("brushes_amount", 0.0), 2)
@@ -840,7 +841,7 @@ def preview_switch(request):
     new.update({k: val for k, val in vo.items() if k not in ("finish", "brushes", "brushes_amount", "price",
                                                           "canvas_price", "variants")})
     new["variants"] = order.get("variants")
-    if not _apply_format(new, kf, request.POST.get("finish"), request.POST.get("brushes")):
+    if not _apply_format(new, kf, request.POST.get("finish"), False):
         return JsonResponse({"error": "format"}, status=400)
     request.session["order"] = new
     if old and old != new["uid"]:                # « Mes toiles » : la toile gratuite suit le format choisi
@@ -865,7 +866,7 @@ def set_options(request):
         if not kf:      # format courant (pas de changement de format dans le formulaire)
             a, b = sorted((int(float(order.get("width_cm") or 40)), int(float(order.get("height_cm") or 50))))
             kf = KitFormat.objects.filter(width_cm=a, height_cm=b).first()
-        if not _apply_format(order, kf, request.POST.get("finish"), request.POST.get("brushes"), p):
+        if not _apply_format(order, kf, request.POST.get("finish"), False, p):   # pinceaux inclus, jamais factures
             return redirect("studio:preview")    # format / finition non proposes (formulaire modifie)
         request.session["order"] = order
     return redirect("studio:delivery")
