@@ -676,6 +676,17 @@ class Supplier(models.Model):
         return next((r for r in self.grid().get("rows") or []
                      if r.get("product") == p and r.get("on") and format_key(*r["size"].split("x")) == fmt_key), None)
 
+    def grid_sizes(self):
+        """Formats (cles orientation-independantes) proposes dans la grille, toutes finitions confondues."""
+        out = set()
+        for r in self.grid().get("rows") or []:
+            try:
+                if r.get("on"):
+                    out.add(format_key(*str(r.get("size") or "").lower().split("x")))
+            except (TypeError, ValueError):
+                continue
+        return sorted(out, key=lambda k: [int(x) for x in k.split("x")])
+
     def grid_zone(self, iso2):
         """Zone de livraison du devis pour un pays (ISO2) : pays explicite, sinon « EU », sinon « * »."""
         zones = self.grid().get("zones") or []

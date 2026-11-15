@@ -2237,6 +2237,40 @@ def landing(request, slug):
     return render(request, "studio/landing.html", ctx)
 
 
+def _add_missing_formats(sup):
+    """Cree les formats de la grille du fournisseur absents du Kit (NON disponibles). Prix proposes = format
+    existant le plus proche en surface, ajuste au ratio des couts d'achat ; supplements FK / NK recopies."""
+    from .models import KitFormat
+    have = {kf.key: kf for kf in KitFormat.objects.all()}
+    # references : formats deja publies-tarifes par l'admin, de preference achetes chez ce fournisseur
+    refs = [k for k in have.values() if sup.goods_cost(k.key, 24) is not None] or list(have.values())
+    added = []
+    for key in sup.grid_sizes():
+        if key in have:
+            continue
+        w, h = (int(x) for x in key.split("x"))
+        ref = min(refs, key=lambda k: abs(k.width_cm * k.height_cm - w * h)) if refs else None
+        price = 34.9
+        if ref is not None:
+            price = float(ref.price)
+            c_new, c_ref = (sup.goods_cost(k, 24, False, f) for k, f in ((key, "ck"), (ref.key, "ck")))
+            if c_new is None or c_ref is None:
+                c_new, c_ref = w * h, ref.width_cm * ref.height_cm           # pas de CK : a la surface
+            if c_ref:
+                price = max(9.9, round(price * c_new / c_ref) - 0.1)
+        kf = KitFormat.objects.create(
+            width_cm=w, height_cm=h, price=round(price, 2), available=False, fk_available=False, nk_available=False,
+            fk_price=ref.fk_price if ref else 9.9, nk_price=ref.nk_price if ref else 12,
+            sort=KitFormat.objects.count())
+        have[key] = kf
+        added.append(kf)
+    if added:                                        # liste rangee par taille (pas d'ordre manuel dans l'admin)
+        for i, kf in enumerate(sorted(have.values(), key=lambda k: (k.width_cm * k.height_cm, k.width_cm))):
+            if kf.sort != i:
+                KitFormat.objects.filter(pk=kf.pk).update(sort=i)
+    return added
+
+
 def shop_pricing(request):
     from django.contrib.admin.views.decorators import staff_member_required
     from django.contrib import messages
@@ -2248,13 +2282,15 @@ def shop_pricing(request):
     from .models import Supplier, CompanyInfo, KitFormat as _KF, supplier_color_count
     sup = Supplier.for_checkout("kit")
     if request.method == "POST" and request.POST.get("op") == "align" and sup:
-        if not any(sup.offer_get("formats", kf.key).get("on") or sup.goods_cost(kf.key, 24, False, "nk") is not None
+        if not sup.grid_sizes() and not any(sup.offer_get("formats", kf.key).get("on") or sup.goods_cost(kf.key, 24, False, "nk") is not None
                    for kf in _KF.objects.all()):
             messages.error(request, "L'offre de %s ne contient aucun format : saisissez-la d'abord sur sa fiche "
                                     "(Modifier → Offre & tarifs)." % sup.name)
             return redirect("studio:shop_pricing")
-        # Disponibilites du Kit = ce que le fournisseur actif propose
-        for kf in _KF.objects.all():
+        added = _add_missing_formats(sup)
+        # Disponibilites du Kit = ce que le fournisseur actif propose (formats tout juste ajoutes : non publies
+        # tant que leur prix de vente n'a pas ete verifie)
+        for kf in _KF.objects.exclude(pk__in=[a.pk for a in added]):
             kf.available = bool(sup.offer_get("formats", kf.key).get("on"))          # CK : toile seule
             kf.fk_available = sup.goods_cost(kf.key, 24, False, "fk") is not None    # cadre a monter tarife
             kf.nk_available = sup.goods_cost(kf.key, 24, False, "nk") is not None    # kit encadre tarife
@@ -2265,6 +2301,10 @@ def shop_pricing(request):
         kit.av_brushes = bool(sup.offer_get("extras", "brushes").get("on"))
         kit.save()
         messages.success(request, "Disponibilités alignées sur l'offre de %s." % sup.name)
+        if added:
+            messages.warning(request, "%d format(s) du fournisseur ajouté(s) : %s. Prix de vente proposés d'après le "
+                                      "format le plus proche : vérifiez-les, puis cochez CK / FK / NK pour les "
+                                      "publier." % (len(added), ", ".join(a.key for a in added)))
         return redirect("studio:shop_pricing")
     if request.method == "POST":
         def f(name, d=0.0):
@@ -2340,6 +2380,7 @@ def shop_pricing(request):
         "sup_ship": ((sup.offer or {}).get("shipping") or {}) if sup else {},
         "sup_zone": ((sup.grid_zone("FR") or {}).get("label") if sup and sup.grid() else ""),
         "kit_formats": kfs,
+        "sup_missing": [k for k in (sup.grid_sizes() if sup else []) if k not in {kf.key for kf in kfs}],
         "kit_colors": kit_colors,
         "tab_dims": [{"key":k,"price":getattr(tab,"d_"+k),"av":getattr(tab,"av_"+k)}
                      for k in ["30x40","40x50","50x70","60x80","70x100","80x120"]],

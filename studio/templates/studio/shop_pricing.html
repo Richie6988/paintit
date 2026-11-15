@@ -44,6 +44,8 @@
       <div style="background:#fff;border:1px solid #e2e8f2;border-radius:14px;padding:18px">
         <h2 style="margin-top:0">Kit a peindre</h2>
         <h3>Formats disponibles</h3>
+        {% if sup_missing %}<div class="warn" style="margin:0 0 8px">Formats proposés par {{ sup.name }} absents ici : <b>{{ sup_missing|join:", " }}</b>.
+          Cliquez « Aligner les disponibilités sur le fournisseur » pour les ajouter (non publiés, prix à vérifier).</div>{% endif %}
         <table><tr><th>Format</th><th>Prix TTC sans cadre CK (&euro;)</th><th>CK dispo</th>{% if sup %}<th>Coût fourn.</th>{% endif %}<th>+ Cadre à monter FK (&euro;)</th><th>+ Encadrée NK (&euro;)</th><th></th></tr>
         {% for kf in kit_formats %}<tr>
           <td><b>{{ kf.width_cm }} &times; {{ kf.height_cm }} cm</b></td>

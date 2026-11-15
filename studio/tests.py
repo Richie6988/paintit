@@ -2093,6 +2093,36 @@ class YingsaGrid2026MigrationTests(TestCase):
         self.assertEqual(other.grid()["products"][0]["key"], "toile")             # autre devis : inchange
 
 
+class AlignAddsSupplierFormatsTests(TestCase):
+    """/admin-tarifs/ : toutes les tailles du devis fournisseur deviennent des formats du Kit (CK, FK, NK
+    controlables) ; ajoutees NON publiees avec un prix propose, les formats existants restent alignes."""
+    def test_align_creates_missing_formats(self):
+        import importlib
+        from django.contrib.auth.models import User
+        from studio.models import Supplier, KitFormat
+        grid = importlib.import_module("studio.migrations.0077_yingsa_grid_2026").GRID_2026
+        KitFormat.objects.all().delete()
+        k = KitFormat.objects.create(width_cm=40, height_cm=50, price=34.9, available=False)
+        KitFormat.objects.create(width_cm=60, height_cm=80, price=59.9, available=True)      # hors devis
+        Supplier.objects.create(name="Yingsa", active=True, checkout="kit", integration="woo",
+                                offer={"grid": dict(grid, currency="EUR", fx=1.0)})
+        self.client.force_login(User.objects.create_user("st", password="x", is_staff=True))
+        page = self.client.get("/admin-tarifs/")
+        self.assertIn("50x75", page.context["sup_missing"])
+        self.client.post("/admin-tarifs/", {"op": "align"})
+        keys = [f.key for f in KitFormat.objects.all()]
+        self.assertEqual(keys, ["20x20", "30x40", "30x50", "40x40", "40x50", "40x60", "50x50", "50x60",
+                                "50x70", "50x75", "60x80"])                    # ranges par taille
+        new = KitFormat.objects.exclude(pk=k.pk).exclude(width_cm=60)
+        self.assertFalse(new.filter(available=True).exists() or new.filter(fk_available=True).exists()
+                         or new.filter(nk_available=True).exists())           # rien publie sans verification
+        self.assertEqual(float(KitFormat.objects.get(width_cm=50, height_cm=75).price), round(34.9 * 9.5 / 6.5) - 0.1)
+        k.refresh_from_db()
+        self.assertTrue(k.available and k.fk_available and not k.nk_available)   # existant : aligne
+        self.assertFalse(KitFormat.objects.get(width_cm=60).available)
+        self.assertEqual(self.client.get("/admin-tarifs/").context["sup_missing"], [])
+
+
 class PosterDiscountRateTests(TestCase):
     """Le code du poster (n° de commande) vaut la remise fidelite imprimee dessus (15 %), pas 40 %."""
     def test_issue_and_existing_codes(self):
