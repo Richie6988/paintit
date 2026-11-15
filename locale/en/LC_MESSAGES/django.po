@@ -2143,3 +2143,10 @@ msgstr "Set of 3 precision brushes"
 
 msgid "Poster de référence : votre image et la palette numérotée"
 msgstr "Reference poster: your image and the numbered palette"
+
+msgid "Peintures numérotées"
+msgstr "Numbered paints"
+
+#, python-format
+msgid "Coupon fidélité -%(p)s %%"
+msgstr "Loyalty coupon -%(p)s%%"

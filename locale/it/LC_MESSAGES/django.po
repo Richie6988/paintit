@@ -2168,3 +2168,10 @@ msgstr "Set di 3 pennelli di precisione"
 
 msgid "Poster de référence : votre image et la palette numérotée"
 msgstr "Poster di riferimento: la tua immagine e la palette numerata"
+
+msgid "Peintures numérotées"
+msgstr "Colori numerati"
+
+#, python-format
+msgid "Coupon fidélité -%(p)s %%"
+msgstr "Coupon fedeltà -%(p)s%%"

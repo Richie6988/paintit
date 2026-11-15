@@ -605,7 +605,8 @@ def preview(request):
                    "finishes": [f for f in ("ck", "fk", "nk") if any(f in fm["fin"] for fm in formats)],
                    "base_local": fx.order_amounts(order, cur)["canvas"], "bp_local": fx.local(p.brushes_price, cur),
                    "money_js": money_js,
-                   "brushes_available": p.av_brushes})
+                   "brushes_available": p.av_brushes,
+                   "loyalty_pct": int(round(float(p.discount_rate or 0) * 100))})
 
 
 def preview_reformat(request):

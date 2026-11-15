@@ -71,8 +71,6 @@
     {% endif %}
     <div class="price-line">{% trans "Prix" %} : <b id="ptotal">{% money_local base_local %}</b>
       <small>{% trans "livraison offerte" %}</small></div>
-    <div class="gift-line"><span class="gift-ic" aria-hidden="true">🎁</span>
-      <span><b>{% trans "Offert" %}</b> · {% trans "Set de 3 pinceaux de précision, pour les détails les plus fins" %}</span></div>
     <button class="cta" data-cta="Aperçu · Je commande" type="submit">{% trans "Je commande" %}</button>
   </form>
 
@@ -87,32 +85,32 @@
   <div class="kit-included">
     <h3>{% trans "Inclus dans le kit" %}</h3>
     <div class="kit-items">
-      <div class="kit-item"><img class="kit-photo" src="{% static 'studio/img/kit_pots.jpg' %}" alt=""><span>{% trans "Pots de peinture assortis" %}</span></div>
-      <div class="kit-item"><img class="kit-photo" src="{% static 'studio/img/kit_poster.png' %}" alt="{% trans "Poster de référence : votre image et la palette numérotée" %}" loading="lazy"><span>{% trans "Poster et instructions" %}</span></div>
-      <div class="kit-item">
-        <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
-          <path d="M14 54 40 18" stroke-width="3.2" stroke="#2f6bf2"/><path d="M22 56 44 22" stroke-width="3.2" stroke="#2f6bf2"/>
-          <path d="M31 57 48 26" stroke-width="3.2" stroke="#2f6bf2"/>
-          <path d="M40 18l4-8 3 3-3 6zM44 22l5-7 2 3-4 6zM48 26l5-6 2 3-5 5z" fill="#c98a00"/></g></svg>
-        <span>{% trans "Set de 3 pinceaux de précision" %}</span>
-      </div>
-      <div class="kit-item">
-        <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">
-          <path d="M12 22 32 12l20 10v20L32 52 12 42z" fill="#eef2f9"/><path d="M12 22l20 10 20-10M32 32v20"/></g></svg>
-        <span>{% trans "Livraison" %}</span>
-      </div>
-      <div class="kit-item">
-        <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">
-          <rect x="10" y="16" width="44" height="30" rx="4" fill="#dfe8ff"/><path d="M24 26l10 5-10 5z" fill="#2f6bf2" stroke="none"/>
-          <path d="M20 52h24" stroke-width="2.4"/></g></svg>
-        <span>{% trans "Toile digitale jouable" %}</span>
-      </div>
-      <div class="kit-item">
-        <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">
-          <path d="M10 20h44v10a4 4 0 0 0 0 8v6H10v-6a4 4 0 0 0 0-8z" fill="#fff4e0"/>
-          <path d="M28 20v24" stroke-dasharray="2 3"/><text x="38" y="38" font-size="11" font-weight="800" fill="#c98a00" stroke="none">%</text></g></svg>
-        <span>{% trans "Coupon de réduction" %}</span>
-      </div>
+      <div class="kit-item"><div class="kv"><img src="{% static 'studio/img/kit_pots.jpg' %}" alt="" loading="lazy"></div>
+        <span>{% trans "Peintures numérotées" %}</span></div>
+      <div class="kit-item"><div class="kv kv-top"><img src="{% static 'studio/img/kit_poster.png' %}" alt="{% trans "Poster de référence : votre image et la palette numérotée" %}" loading="lazy"></div>
+        <span>{% trans "Poster et instructions" %}</span></div>
+      <div class="kit-item"><em class="kv-badge">{% trans "Offert" %}</em>
+        <div class="kv"><svg viewBox="0 0 64 64" aria-hidden="true">
+          <g transform="rotate(-20 32 60)"><rect x="29" y="24" width="6" height="34" rx="3" fill="#2f6bf2"/><rect x="29.4" y="17" width="5.2" height="8" rx="1" fill="#f5b301"/><path d="M29.4 17C29.6 11 32 6 32 6s2.4 5 2.6 11z" fill="#12224f"/></g>
+          <g><rect x="29" y="24" width="6" height="34" rx="3" fill="#12224f"/><rect x="29.4" y="17" width="5.2" height="8" rx="1" fill="#f5b301"/><path d="M29.4 17C29.6 11 32 6 32 6s2.4 5 2.6 11z" fill="#2f6bf2"/></g>
+          <g transform="rotate(20 32 60)"><rect x="29" y="24" width="6" height="34" rx="3" fill="#7b9cff"/><rect x="29.4" y="17" width="5.2" height="8" rx="1" fill="#f5b301"/><path d="M29.4 17C29.6 11 32 6 32 6s2.4 5 2.6 11z" fill="#12224f"/></g></svg></div>
+        <span>{% trans "Set de 3 pinceaux de précision" %}</span></div>
+      <div class="kit-item"><div class="kv"><svg viewBox="0 0 64 64" aria-hidden="true">
+          <rect x="5" y="18" width="34" height="24" rx="4" fill="#2f6bf2"/><path d="M14 30l5 5 9-9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M39 25h10.5l8.5 9.5V42H39z" fill="#12224f"/><path d="M42.5 28.5h6l5 5.5h-11z" fill="#dfe8ff"/>
+          <circle cx="16" cy="45" r="5.5" fill="#fff" stroke="#12224f" stroke-width="3"/><circle cx="48" cy="45" r="5.5" fill="#fff" stroke="#12224f" stroke-width="3"/></svg></div>
+        <span>{% trans "Livraison offerte" %}</span></div>
+      <div class="kit-item"><div class="kv"><svg viewBox="0 0 64 64" aria-hidden="true">
+          <rect x="13" y="6" width="38" height="52" rx="7" fill="#12224f"/><rect x="17" y="11" width="30" height="38" rx="2.5" fill="#dfe8ff"/>
+          <circle cx="39" cy="19" r="4.5" fill="#f5b301"/><path d="M17 41l9-12 7 8 5-5 9 8v9H17z" fill="#2f6bf2"/>
+          <path d="M17 49v-5l9-6 8 5 13-4v10z" fill="#7b9cff"/><circle cx="32" cy="53.5" r="1.8" fill="#fff"/></svg></div>
+        <span>{% trans "Toile digitale jouable" %}</span></div>
+      <div class="kit-item"><div class="kv"><svg viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M7 17h50v10a5 5 0 0 0 0 10v10H7V37a5 5 0 0 0 0-10z" fill="#ffe7a3" stroke="#e0a100" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M23 17v30" stroke="#e0a100" stroke-width="2" stroke-dasharray="3 3"/>
+          <circle cx="35" cy="26" r="3.5" fill="none" stroke="#12224f" stroke-width="2.6"/><circle cx="47" cy="38" r="3.5" fill="none" stroke="#12224f" stroke-width="2.6"/>
+          <path d="M48 24 34 40" stroke="#12224f" stroke-width="2.6" stroke-linecap="round"/></svg></div>
+        <span>{% blocktrans with p=loyalty_pct %}Coupon fidélité -{{ p }} %{% endblocktrans %}</span></div>
     </div>
   </div>
 
