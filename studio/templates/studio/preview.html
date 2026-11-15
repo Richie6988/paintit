@@ -72,7 +72,7 @@
     <div class="price-line">{% trans "Prix" %} : <b id="ptotal">{% money_local base_local %}</b>
       <small>{% trans "livraison offerte" %}</small></div>
     <div class="gift-line"><span class="gift-ic" aria-hidden="true">🎁</span>
-      <span><b>{% trans "Offert" %}</b> · {% trans "3 pinceaux haute qualité inclus dans votre kit" %}</span></div>
+      <span><b>{% trans "Offert" %}</b> · {% trans "Set de 3 pinceaux de précision, pour les détails les plus fins" %}</span></div>
     <button class="cta" data-cta="Aperçu · Je commande" type="submit">{% trans "Je commande" %}</button>
   </form>
 
@@ -105,13 +105,13 @@
     <h3>{% trans "Inclus dans le kit" %}</h3>
     <div class="kit-items">
       <div class="kit-item"><img class="kit-photo" src="{% static 'studio/img/kit_pots.jpg' %}" alt=""><span>{% trans "Pots de peinture assortis" %}</span></div>
-      <div class="kit-item"><img class="kit-photo" src="{% static 'studio/img/kit_poster.png' %}" alt=""><span>{% trans "Poster et instructions" %}</span></div>
+      <div class="kit-item"><img class="kit-photo" src="{% static 'studio/img/kit_poster.png' %}" alt="{% trans "Poster de référence : votre image et la palette numérotée" %}" loading="lazy"><span>{% trans "Poster et instructions" %}</span></div>
       <div class="kit-item">
         <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
           <path d="M14 54 40 18" stroke-width="3.2" stroke="#2f6bf2"/><path d="M22 56 44 22" stroke-width="3.2" stroke="#2f6bf2"/>
           <path d="M31 57 48 26" stroke-width="3.2" stroke="#2f6bf2"/>
           <path d="M40 18l4-8 3 3-3 6zM44 22l5-7 2 3-4 6zM48 26l5-6 2 3-5 5z" fill="#c98a00"/></g></svg>
-        <span>{% trans "3 pinceaux haute qualité" %}</span>
+        <span>{% trans "Set de 3 pinceaux de précision" %}</span>
       </div>
       <div class="kit-item">
         <svg viewBox="0 0 64 64" fill="none"><g stroke="#12224f" stroke-width="2" stroke-linejoin="round">

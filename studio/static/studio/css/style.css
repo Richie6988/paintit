@@ -452,7 +452,8 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 /* Inclus dans le kit (apercu) */
 .kit-included{margin-top:18px}
 .kit-included h3{margin:0 0 10px}
-.kit-items{display:flex;gap:14px;flex-wrap:wrap}
+.kit-items{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr));gap:14px}
+.kit-items .kit-item{min-width:0}
 .kit-item{flex:1;min-width:140px;background:#fff;border:1px solid var(--ring);border-radius:14px;
   padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
 .kit-item svg{width:56px;height:56px}
@@ -550,7 +551,7 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
   .nav-right{width:100%;justify-content:space-between}
   .panel{padding:14px;border-radius:16px}
   .steps,.preview-grid,.print-grid{grid-template-columns:1fr !important}
-  .kit-items{gap:10px}
+  .kit-items{gap:10px;grid-template-columns:repeat(2,1fr)}
   .kit-item{min-width:calc(50% - 6px)}
   .models-grid{grid-template-columns:repeat(2,1fr);gap:10px}
   .mc-btn{font-size:.86rem;padding:9px 10px}

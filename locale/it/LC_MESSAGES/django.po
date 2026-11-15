@@ -2160,8 +2160,11 @@ msgstr "Adattamento della tua tela al formato %s…"
 msgid "Offert"
 msgstr "In regalo"
 
-msgid "3 pinceaux haute qualité inclus dans votre kit"
-msgstr "3 pennelli di alta qualità inclusi nel tuo kit"
+msgid "Set de 3 pinceaux de précision, pour les détails les plus fins"
+msgstr "Set di 3 pennelli di precisione, per i dettagli più fini"
 
-msgid "3 pinceaux haute qualité"
-msgstr "3 pennelli di alta qualità"
+msgid "Set de 3 pinceaux de précision"
+msgstr "Set di 3 pennelli di precisione"
+
+msgid "Poster de référence : votre image et la palette numérotée"
+msgstr "Poster di riferimento: la tua immagine e la palette numerata"

@@ -2135,8 +2135,11 @@ msgstr "Adapting your canvas to %s…"
 msgid "Offert"
 msgstr "Free gift"
 
-msgid "3 pinceaux haute qualité inclus dans votre kit"
-msgstr "3 high-quality brushes included in your kit"
+msgid "Set de 3 pinceaux de précision, pour les détails les plus fins"
+msgstr "Set of 3 precision brushes, for the finest details"
 
-msgid "3 pinceaux haute qualité"
-msgstr "3 high-quality brushes"
+msgid "Set de 3 pinceaux de précision"
+msgstr "Set of 3 precision brushes"
+
+msgid "Poster de référence : votre image et la palette numérotée"
+msgstr "Reference poster: your image and the numbered palette"

@@ -2181,8 +2181,11 @@ msgstr "Ihre Leinwand wird an das Format %s angepasst…"
 msgid "Offert"
 msgstr "Geschenkt"
 
-msgid "3 pinceaux haute qualité inclus dans votre kit"
-msgstr "3 hochwertige Pinsel in Ihrem Set enthalten"
+msgid "Set de 3 pinceaux de précision, pour les détails les plus fins"
+msgstr "Set mit 3 Präzisionspinseln für feinste Details"
 
-msgid "3 pinceaux haute qualité"
-msgstr "3 hochwertige Pinsel"
+msgid "Set de 3 pinceaux de précision"
+msgstr "Set mit 3 Präzisionspinseln"
+
+msgid "Poster de référence : votre image et la palette numérotée"
+msgstr "Referenzposter: Ihr Bild und die nummerierte Farbpalette"
