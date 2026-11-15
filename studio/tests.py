@@ -2123,6 +2123,85 @@ class AlignAddsSupplierFormatsTests(TestCase):
         self.assertEqual(self.client.get("/admin-tarifs/").context["sup_missing"], [])
 
 
+class PreviewFormatVariantTests(TestCase):
+    """Apercu : choisir un format d'une autre proportion bascule vers la toile calculee a ces proportions
+    (precalculee une fois par proportion, pas a chaque clic) ; aller-retour sans recalcul."""
+    def setUp(self):
+        import tempfile, shutil
+        from unittest import mock
+        from django.test import override_settings
+        from studio.models import KitFormat, Pricing
+        self.tmp = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, self.tmp, True)
+        ov = override_settings(MEDIA_ROOT=self.tmp); ov.enable(); self.addCleanup(ov.disable)
+        KitFormat.objects.all().delete()
+        self.k45 = KitFormat.objects.create(width_cm=40, height_cm=50, price=34.9, available=True, fk_available=True)
+        self.k44 = KitFormat.objects.create(width_cm=40, height_cm=40, price=29.9, available=True, fk_available=True)
+        self.k60 = KitFormat.objects.create(width_cm=50, height_cm=60, price=42.9, available=True)    # ~ 40x50
+        p = Pricing.get(); p.av_brushes = True; p.save()
+        self.calls = []
+
+        def fake_generate(src, colors, w, h, uid=None, **kw):
+            self.calls.append((uid, w, h))
+            os.makedirs(os.path.join(self.tmp, "orders", uid), exist_ok=True)
+            return {"uid": uid, "preview_url": "", "template_url": "", "colors_list": [{"number": 1}], "min_zone_mm": 2}
+        for target, fn in (("studio.views.generate", fake_generate),
+                           ("studio.genqueue.submit", lambda f, *a, **k: f(*a, **k))):
+            m = mock.patch(target, fn); m.start(); self.addCleanup(m.stop)
+        photo = os.path.join(self.tmp, "photo.jpg"); open(photo, "wb").write(b"x")
+        base = "BASE0000-0001"; os.makedirs(os.path.join(self.tmp, "orders", base))
+        s = self.client.session
+        s["last_photo"] = photo; s["my_uids"] = [base]
+        s["order"] = {"uid": base, "colors": 24, "width_cm": 40, "height_cm": 50, "gen_w": 40, "gen_h": 50,
+                      "orientation": "portrait", "format_label": "40 x 50 cm", "canvas_price": 40, "price": 40,
+                      "colors_list": [{"number": 1}], "zones": 300, "lang": "fr", "focus": [0.5, 0.5]}
+        s.save()
+        from studio.models import DigitalCanvas
+        DigitalCanvas.objects.create(email="a@b.c", uid=base, colors=24, orientation="portrait",
+                                     width_cm=40, height_cm=50, source="digital")
+        self.base = base
+
+    def test_precompute_switch_and_back(self):
+        from studio.models import DigitalCanvas
+        page = self.client.get("/preview/")
+        same = {fm["id"]: fm["same"] for fm in page.context["formats"]}
+        self.assertEqual(same, {self.k45.id: True, self.k44.id: False, self.k60.id: True})   # 50x60 ~ 40x50
+        self.assertContains(page, "aspect-ratio:40/50")
+        r = self.client.post("/preview/variants/").json()
+        self.assertEqual(r["started"], 1)                                   # une seule autre proportion : carree
+        self.assertEqual([(w, h) for _, w, h in self.calls], [(40.0, 40.0)])
+        self.client.post("/preview/variants/")                              # deja calculee : rien de plus
+        self.assertEqual(len(self.calls), 1)
+        # clic 40x40 en « cadre a monter » + pinceaux : bascule immediate, sans nouveau calcul
+        r = self.client.post("/preview/switch/", {"kit_format": self.k44.id, "finish": "fk", "brushes": "on"})
+        self.assertEqual(r.json()["state"], "ready")
+        o = self.client.session["order"]
+        self.assertNotEqual(o["uid"], self.base)
+        self.assertEqual((o["width_cm"], o["height_cm"], o["gen_w"], o["gen_h"]), (40, 40, 40.0, 40.0))
+        self.assertEqual((o["finish"], o["brushes"]), ("fk", True))
+        self.assertNotIn("zones", o)                                        # recomptees pour cette toile
+        self.assertEqual(self.client.session["my_uids"], [o["uid"]])
+        self.assertTrue(DigitalCanvas.objects.filter(uid=o["uid"], width_cm=40, height_cm=40).exists())
+        page = self.client.get("/preview/")
+        self.assertContains(page, "aspect-ratio:40.0/40.0")
+        self.assertEqual(page.context["current_format"], self.k44.id)
+        # retour au 40x50 : la toile d'origine, toujours sans recalcul
+        self.assertEqual(self.client.post("/preview/switch/", {"kit_format": self.k45.id, "finish": "ck"}).json()["state"], "ready")
+        self.assertEqual(self.client.session["order"]["uid"], self.base)
+        self.assertEqual(len(self.calls), 1)
+
+    def test_on_demand_when_not_precomputed(self):
+        r = self.client.post("/preview/switch/", {"kit_format": self.k44.id, "finish": "ck"})
+        self.assertEqual(r.json()["state"], "pending")                     # calcul lance a la demande
+        self.assertEqual(self.client.post("/preview/switch/", {"kit_format": self.k44.id}).json()["state"], "ready")
+        self.assertEqual(len(self.calls), 1)
+
+    def test_paid_order_not_regenerated_when_exact(self):
+        from studio import views
+        views._reformat_for_supplier({"uid": self.base, "gen_w": 40, "gen_h": 40, "width_cm": 40, "height_cm": 40})
+        self.assertEqual(self.calls, [])
+        views._reformat_for_supplier({"uid": self.base, "gen_w": 40, "gen_h": 50, "width_cm": 50, "height_cm": 60})
+
+
 class PosterDiscountRateTests(TestCase):
     """Le code du poster (n° de commande) vaut la remise fidelite imprimee dessus (15 %), pas 40 %."""
     def test_issue_and_existing_codes(self):

@@ -2124,3 +2124,10 @@ msgid ""
 msgstr ""
 "PaintIt custom paint-by-numbers kit: numbered canvas, numbered paints, "
 "brushes, DIY wooden frame and reference poster with the palette"
+
+msgid "L'aperçu, le jeu et votre kit suivent le format choisi."
+msgstr "The preview, the game and your kit follow the chosen size."
+
+#, python-format
+msgid "Adaptation de votre toile au format %s…"
+msgstr "Adapting your canvas to %s…"

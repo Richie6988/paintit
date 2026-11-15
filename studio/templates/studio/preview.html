@@ -11,14 +11,16 @@
 
 
   <div class="reveal-hero">
-    <div class="reveal" id="prevReveal" style="--pos:55%;aspect-ratio:{{ order.width_cm|unlocalize }}/{{ order.height_cm|unlocalize }}">
+    <div class="reveal" id="prevReveal" style="--pos:55%;aspect-ratio:{{ gen_w|unlocalize }}/{{ gen_h|unlocalize }}">
       <img class="reveal-img" src="{% url 'studio:order_image' order.uid 'template' %}" alt="" draggable="false">
       <div class="reveal-top"><img class="reveal-img" src="{% url 'studio:order_image' order.uid 'source' %}" alt="" draggable="false"></div>
       <div class="reveal-handle"><span class="knob"></span></div>
       <span class="rh-cap">{% trans "Votre photo" %}</span><span class="rh-cap r">{% trans "Votre toile" %}</span>
     </div>
+    <div class="fmt-adapt" id="fmtAdapt" hidden><div class="fa-box"><span class="fa-spin"></span>
+      <b id="fmtAdaptTxt"></b><span class="fa-bar"><i id="fmtAdaptBar"></i></span></div></div>
     <p class="reveal-hint">{% trans "Glissez pour comparer votre photo et la toile à peindre." %}</p>
-    <div class="prev-thumbs">
+    <div class="prev-thumbs" style="--thumb-ar:{{ gen_w|unlocalize }}/{{ gen_h|unlocalize }}">
       <button type="button" class="pthumb" data-full="{% url 'studio:order_image' order.uid 'preview' %}">
         <img src="{% url 'studio:order_image' order.uid 'preview' %}" alt=""><span>{% trans "Toile coloriée" %}</span></button>
       <button type="button" class="pthumb" data-full="{% url 'studio:order_image' order.uid 'template' %}">
@@ -59,12 +61,12 @@
       <div class="fmt-opts">
         {% for fm in formats %}
         <label class="fmt-opt">
-          <input type="radio" name="kit_format" value="{{ fm.id }}" data-fin="{{ fm.loc|safe_json|force_escape }}" data-w="{{ fm.w|unlocalize }}" data-h="{{ fm.h|unlocalize }}" {% if fm.id == current_format %}checked{% endif %}>
+          <input type="radio" name="kit_format" value="{{ fm.id }}" data-fin="{{ fm.loc|safe_json|force_escape }}" data-w="{{ fm.w|unlocalize }}" data-h="{{ fm.h|unlocalize }}" data-label="{{ fm.w|unlocalize }} × {{ fm.h|unlocalize }} cm"{% if fm.same %} data-same="1"{% endif %} {% if fm.id == current_format %}checked{% endif %}>
           <span class="fmt-card"><b>{{ fm.label }}</b><em class="fmt-p"></em></span>
         </label>
         {% endfor %}
       </div>
-      <small class="fmt-note">{% trans "Votre toile est ajustée au format choisi lors de la préparation de votre commande." %}</small>
+      <small class="fmt-note">{% trans "L'aperçu, le jeu et votre kit suivent le format choisi." %}</small>
     </div>
     {% endif %}
     <div class="price-line">{% trans "Prix" %} : <b id="ptotal">{% money_local base_local %}</b>
@@ -156,10 +158,38 @@
       if (sel && fin(sel)[f] !== undefined) price = fin(sel)[f];
       if (t) t.textContent = fx(price + (cb && cb.checked ? bp : 0));
     }
-    fmts.forEach(function(r){ r.addEventListener('change', upd); });
+    fmts.forEach(function(r){ r.addEventListener('change', upd); r.addEventListener('change', function(){ if (r.checked) adapt(r); }); });
     fins.forEach(function(r){ r.addEventListener('change', upd); });
     if (cb) cb.addEventListener('change', upd);
+    // ---- format aux proportions differentes : bascule vers la toile calculee a ces proportions ----
+    var box = document.getElementById('fmtAdapt'), boxTxt = document.getElementById('fmtAdaptTxt'),
+        bar = document.getElementById('fmtAdaptBar'), form = document.querySelector('form.options'),
+        locks = document.querySelectorAll('form.options button[type=submit], .digital-offer .digibtn'), token = 0;
+    function lock(on){ locks.forEach(function(b){ b.style.pointerEvents = on ? 'none' : ''; b.style.opacity = on ? .45 : ''; }); }
+    function done(){ box.hidden = true; lock(false); }
+    function adapt(r){
+      var my = ++token;
+      if (r.dataset.same) { done(); return; }            // meme proportion que la toile affichee
+      boxTxt.textContent = '{{ adapt_txt|escapejs }}'.replace('%s', r.dataset.label);
+      bar.style.width = '4%'; box.hidden = false; lock(true);
+      (function poll(){
+        if (my !== token) return;                        // un autre format a ete choisi entre-temps
+        var fd = new FormData(form);
+        fetch("{% url 'studio:preview_switch' %}", {method: 'POST', body: fd, headers: {'X-CSRFToken': '{{ csrf_token }}'}})
+          .then(function(x){ return x.json(); })
+          .then(function(d){
+            if (my !== token) return;
+            if (d.state === 'ready') { location.reload(); return; }
+            if (d.state === 'pending') { bar.style.width = Math.max(4, d.pct || 0) + '%'; setTimeout(poll, 1200); return; }
+            done();                                      // indisponible : l'ajustement se fera a la preparation
+          }).catch(function(){ if (my === token) done(); });
+      })();
+    }
     upd();
+    var cur = document.querySelector('input[name=kit_format]:checked');
+    if (cur && !cur.dataset.same) adapt(cur);            // format par defaut d'une autre proportion
+    else if (Array.prototype.some.call(fmts, function(r){ return !r.dataset.same; }))
+      fetch("{% url 'studio:preview_variants' %}", {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}}).catch(function(){});
   })();
 </script>
 <script>

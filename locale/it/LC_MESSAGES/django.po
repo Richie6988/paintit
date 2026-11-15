@@ -2149,3 +2149,10 @@ msgstr ""
 "Kit di pittura con i numeri personalizzato PaintIt: tela numerata, colori "
 "numerati, pennelli, telaio in legno da montare e poster di riferimento con "
 "la palette"
+
+msgid "L'aperçu, le jeu et votre kit suivent le format choisi."
+msgstr "Anteprima, gioco e kit seguono il formato scelto."
+
+#, python-format
+msgid "Adaptation de votre toile au format %s…"
+msgstr "Adattamento della tua tela al formato %s…"

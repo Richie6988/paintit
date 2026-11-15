@@ -2170,3 +2170,10 @@ msgstr ""
 "Personalisiertes Malen-nach-Zahlen-Set von PaintIt: nummerierte Leinwand, "
 "nummerierte Farben, Pinsel, Holzrahmen zum Selbstaufbauen und Referenzposter"
 " mit der Farbpalette"
+
+msgid "L'aperçu, le jeu et votre kit suivent le format choisi."
+msgstr "Vorschau, Spiel und Ihr Set richten sich nach dem gewählten Format."
+
+#, python-format
+msgid "Adaptation de votre toile au format %s…"
+msgstr "Ihre Leinwand wird an das Format %s angepasst…"

@@ -2136,3 +2136,10 @@ msgstr ""
 "Kit de pintura por números personalizado PaintIt: lienzo numerado, pinturas "
 "numeradas, pinceles, marco de madera para montar y póster de referencia con "
 "la paleta"
+
+msgid "L'aperçu, le jeu et votre kit suivent le format choisi."
+msgstr "La vista previa, el juego y tu kit siguen el formato elegido."
+
+#, python-format
+msgid "Adaptation de votre toile au format %s…"
+msgstr "Adaptando tu lienzo al formato %s…"

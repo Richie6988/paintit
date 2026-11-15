@@ -255,7 +255,7 @@ def gen_finalize(request):
 
 
 # Fichiers propres a une commande (production) : jamais recopies d'une toile vers une nouvelle commande
-_ORDER_ONLY = ("_order.json", "_supplier.json", "_supplier.txt", "_supplier_colors.jpg", "_supplier_card.jpg",
+_ORDER_ONLY = ("_order.json", "_variant.json", "_supplier.json", "_supplier.txt", "_supplier_colors.jpg", "_supplier_card.jpg",
                "_poster.png", "_template.tiff", "_template.pdf")
 
 
@@ -564,6 +564,9 @@ def preview(request):
                             "ratio": round(fw / fh, 3), "fin": fin})
     gw, gh = order.get("gen_w") or order.get("width_cm"), order.get("gen_h") or order.get("height_cm")
     gen_ratio = round(float(gw) / float(gh), 3) if gw and gh else None
+    _variant_base(request, order)
+    for fm in formats:          # meme proportion que la toile affichee : pas de bascule necessaire
+        fm["same"] = bool(gen_ratio) and abs(fm["ratio"] - gen_ratio) / max(fm["ratio"], gen_ratio) <= VARIANT_TOL
     current_format = next((fm["id"] for fm in formats
                            if float(fm["w"]) == float(order.get("width_cm") or 0)
                            and float(fm["h"]) == float(order.get("height_cm") or 0)),
@@ -596,6 +599,7 @@ def preview(request):
     return render(request, "studio/preview.html",
                   {"order": order, "brushes_price": p.brushes_price, "formats": formats, "level": level,
                    "gen_ratio": gen_ratio, "gen_w": gw, "gen_h": gh,
+                   "adapt_txt": _("Adaptation de votre toile au format %s…"),
                    "current_format": current_format, "finish": finish,
                    "finishes": [f for f in ("ck", "fk", "nk") if any(f in fm["fin"] for fm in formats)],
                    "base_local": fx.order_amounts(order, cur)["canvas"], "bp_local": fx.local(p.brushes_price, cur),
@@ -639,6 +643,215 @@ def preview_reformat(request):
     return redirect("%s?uid=%s" % (reverse("studio:processing"), uid))
 
 
+def _apply_format(order, kf, finish, brushes, p=None):
+    """Format + finition + pinceaux choisis -> dimensions et prix de la commande. False si non proposes."""
+    p = p or Pricing.get()
+    finish = finish if finish in ("ck", "fk", "nk") else "ck"
+    if not kf or not (kf.available if finish == "ck" else kf.finish_price(finish) is not None):
+        return False
+    fw, fh = _oriented_dims(kf, order)
+    order["width_cm"], order["height_cm"] = fw, fh
+    order["format_label"] = "%d x %d cm" % (fw, fh)
+    order["finish"] = finish
+    order.pop("framed", None)
+    order["canvas_price"] = round(float(kf.price) + p.color_price(order.get("colors", 24))
+                                  + kf.finish_price(finish), 2)
+    brushes = bool(brushes) and p.av_brushes
+    bp = p.brushes_price if brushes else 0.0
+    order["brushes"] = brushes
+    order["brushes_amount"] = round(bp, 2)
+    order["price"] = round(order["canvas_price"] + bp, 2)
+    return True
+
+
+def _oriented_dims(kf, order):
+    a, b = sorted((kf.width_cm, kf.height_cm))
+    return (b, a) if order.get("orientation") == "paysage" else (a, b)
+
+
+# ---- Apercu aux proportions du format choisi --------------------------------------------------------------
+# La toile est calculee une fois par PROPORTION (pas par format) : les formats a moins de 5 % d'ecart partagent
+# le meme calcul. Les proportions les plus commandees sont precalculees en arriere-plan des l'affichage de
+# l'apercu (une seule tache, l'une apres l'autre) ; les autres a la demande. Choisir un format = bascule
+# instantanee vers la toile deja prete (images, jeu, telechargement et commande sur le meme n°).
+VARIANT_TOL = 0.05
+VARIANT_PRECOMPUTE = max(0, int(os.environ.get("PREVIEW_VARIANTS", "3")))
+
+
+def _variant_for(order, w, h):
+    r, best = float(w) / float(h), None
+    for v in order.get("variants") or []:
+        vr = float(v["w"]) / float(v["h"])
+        if abs(vr - r) / max(vr, r) <= VARIANT_TOL and (best is None or abs(vr - r) < abs(best["w"] / best["h"] - r)):
+            best = v
+    return best
+
+
+def _variant_file(uid):
+    return os.path.join(settings.MEDIA_ROOT, "orders", uid, "%s_variant.json" % uid)
+
+
+def _variant_state(v):
+    if os.path.isfile(_variant_file(v["uid"])):
+        return "ready", 100
+    job = jobs.get(v["uid"])
+    if job is None:
+        return "missing", 0
+    if job.get("error") or (job.get("done") and not job.get("order")):
+        return "error", 0
+    return "pending", int(job.get("pct") or 0)
+
+
+def _write_variant(uid, order):
+    import json
+    try:
+        with open(_variant_file(uid), "w", encoding="utf-8") as fh:
+            json.dump(order, fh, ensure_ascii=False)
+    except (OSError, TypeError, ValueError):
+        logger.exception("Variante d'apercu %s", uid)
+
+
+def _variant_base(request, order):
+    """1er affichage de l'apercu : la toile calculee devient la variante de sa proportion."""
+    if order.get("variants"):
+        return
+    gw, gh = order.get("gen_w") or order.get("width_cm"), order.get("gen_h") or order.get("height_cm")
+    if not (gw and gh and order.get("uid")):
+        return
+    order["variants"] = [{"uid": order["uid"], "w": float(gw), "h": float(gh)}]
+    _write_variant(order["uid"], {k: v for k, v in order.items() if k != "variants"})
+    request.session["order"] = order
+
+
+def _variant_params(request, order):
+    src = request.session.get("last_photo")
+    if not src or not os.path.exists(src):
+        from .pipeline import source_file
+        src = source_file(os.path.join(settings.MEDIA_ROOT, "orders", order.get("uid", "")), order.get("uid", ""))
+    if not src or not os.path.exists(src):
+        return None
+    lvl = order.get("difficulty") if order.get("difficulty") in ("easy", "medium", "expert") else "auto"
+    return {"src": src, "colors": int(order.get("colors", 24)), "orientation": order.get("orientation", "portrait"),
+            "lang": order.get("lang") or get_language() or "fr", "focus": tuple(order.get("focus") or (0.5, 0.5)),
+            "source_name": request.session.get("last_photo_name") or os.path.basename(src), "level": lvl}
+
+
+def _run_variants(specs, prm):
+    """Calcule les variantes l'une apres l'autre (un seul emplacement de la file de generation)."""
+    for v in specs:
+        if jobs.get(v["uid"]) is None:                 # abandonnee (expiree) : inutile de la calculer
+            continue
+        _run_generation(v["uid"], prm["src"], prm["colors"], v["w"], v["h"], "40x50", prm["orientation"],
+                        prm["lang"], prm["focus"], source_name=prm["source_name"], level=prm["level"])
+        job = jobs.get(v["uid"]) or {}
+        if job.get("order"):
+            _write_variant(v["uid"], job["order"])
+
+
+def _start_variants(request, order, dims):
+    """Lance le calcul des proportions `dims` [(w, h)] absentes. -> nouvelles variantes (ou None si file pleine)."""
+    prm = _variant_params(request, order)
+    if not prm:
+        return None
+    specs = []
+    for w, h in dims:
+        if _variant_for(order, w, h) is None and not any(abs(s["w"] / s["h"] - w / h) / max(s["w"] / s["h"], w / h)
+                                                           <= VARIANT_TOL for s in specs):
+            specs.append({"uid": f"{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:4].upper()}",
+                          "w": float(w), "h": float(h)})
+    if not specs:
+        return []
+    for v in specs:
+        jobs.start(v["uid"])
+    try:
+        genqueue.submit(_run_variants, specs, prm)
+    except genqueue.QueueFull:
+        for v in specs:
+            jobs.pop(v["uid"])
+        return None
+    order["variants"] = (order.get("variants") or []) + specs
+    request.session["order"] = order
+    return specs
+
+
+def _offered_formats(order):
+    """Formats proposes (toutes finitions), les plus commandes d'abord : [(KitFormat, w, h)]."""
+    from collections import Counter
+    from .models import KitFormat, format_key
+    pop = Counter(format_key(w, h) for w, h in Order.objects.filter(is_test=False)
+                  .exclude(status=Order.PENDING).values_list("width_cm", "height_cm"))
+    kfs = [kf for kf in KitFormat.objects.all() if kf.available or kf.fk_available or kf.nk_available]
+    kfs.sort(key=lambda kf: -pop.get(kf.key, 0))
+    return [(kf,) + _oriented_dims(kf, order) for kf in kfs]
+
+
+def preview_variants(request):
+    """Apercu affiche : precalcul en arriere-plan des proportions les plus commandees."""
+    order = request.session.get("order")
+    if request.method != "POST" or not order:
+        return JsonResponse({"error": "order"}, status=400)
+    _variant_base(request, order)
+    want = []
+    for kf, w, h in _offered_formats(order):
+        if _variant_for(order, w, h) is None and len(want) < VARIANT_PRECOMPUTE:
+            want.append((w, h))
+    started = _start_variants(request, order, want) if want else []
+    return JsonResponse({"started": len(started or []), "busy": started is None})
+
+
+def preview_switch(request):
+    """Format choisi dans l'apercu : bascule vers la toile a ses proportions (prete -> immediat ;
+    sinon calcul lance / en cours -> progression)."""
+    order = request.session.get("order")
+    if request.method != "POST" or not order:
+        return JsonResponse({"error": "order"}, status=400)
+    from .models import KitFormat, DigitalCanvas
+    kf = KitFormat.objects.filter(id=request.POST.get("kit_format")).first()
+    if not kf:
+        return JsonResponse({"error": "format"}, status=400)
+    _variant_base(request, order)
+    w, h = _oriented_dims(kf, order)
+    v = _variant_for(order, w, h)
+    if v is None:
+        started = _start_variants(request, order, [(w, h)])
+        if not started:
+            return JsonResponse({"error": "busy" if started is None else "source"}, status=503)
+        return JsonResponse({"state": "pending", "pct": 0})
+    state, pct = _variant_state(v)
+    if state == "missing":                       # calcul perdu (redemarrage, expiration) : relance
+        prm = _variant_params(request, order)
+        if not prm:
+            return JsonResponse({"error": "source"}, status=400)
+        jobs.start(v["uid"])
+        try:
+            genqueue.submit(_run_variants, [v], prm)
+        except genqueue.QueueFull:
+            jobs.pop(v["uid"])
+            return JsonResponse({"error": "busy"}, status=503)
+        return JsonResponse({"state": "pending", "pct": 0})
+    if state != "ready":
+        return JsonResponse({"state": state, "pct": pct}, status=200 if state == "pending" else 500)
+    import json
+    with open(_variant_file(v["uid"]), encoding="utf-8") as fh:
+        vo = json.load(fh)
+    old = order.get("uid")
+    new = {k: val for k, val in order.items() if k not in ("zones", "preview_url", "template_url", "colors_list",
+                                                            "min_zone_mm")}
+    new.update({k: val for k, val in vo.items() if k not in ("finish", "brushes", "brushes_amount", "price",
+                                                          "canvas_price", "variants")})
+    new["variants"] = order.get("variants")
+    if not _apply_format(new, kf, request.POST.get("finish"), request.POST.get("brushes")):
+        return JsonResponse({"error": "format"}, status=400)
+    request.session["order"] = new
+    if old and old != new["uid"]:                # « Mes toiles » : la toile gratuite suit le format choisi
+        u = request.session.get("my_uids", [])
+        if old in u:
+            request.session["my_uids"] = [new["uid"] if x == old else x for x in u]
+            DigitalCanvas.objects.filter(uid=old, source="digital").update(
+                uid=new["uid"], width_cm=new["gen_w"], height_cm=new["gen_h"])
+    return JsonResponse({"state": "ready"})
+
+
 def set_options(request):
     """Depuis l'apercu : option pinceaux, puis vers la livraison."""
     order = request.session.get("order")
@@ -652,23 +865,8 @@ def set_options(request):
         if not kf:      # format courant (pas de changement de format dans le formulaire)
             a, b = sorted((int(float(order.get("width_cm") or 40)), int(float(order.get("height_cm") or 50))))
             kf = KitFormat.objects.filter(width_cm=a, height_cm=b).first()
-        finish = request.POST.get("finish") if request.POST.get("finish") in ("ck", "fk", "nk") else "ck"
-        offered = kf and (kf.available if finish == "ck" else kf.finish_price(finish) is not None)
-        if not offered:     # format / finition non proposes (formulaire modifie) : retour a l'apercu
-            return redirect("studio:preview")
-        a, b = sorted((kf.width_cm, kf.height_cm))
-        fw, fh = (b, a) if order.get("orientation") == "paysage" else (a, b)
-        order["width_cm"], order["height_cm"] = fw, fh
-        order["format_label"] = "%d x %d cm" % (fw, fh)
-        order["finish"] = finish
-        order.pop("framed", None)
-        order["canvas_price"] = round(float(kf.price) + p.color_price(order.get("colors", 24))
-                                      + kf.finish_price(finish), 2)
-        brushes = bool(request.POST.get("brushes")) and p.av_brushes
-        bp = p.brushes_price if brushes else 0.0
-        order["brushes"] = brushes
-        order["brushes_amount"] = round(bp, 2)
-        order["price"] = round(order["canvas_price"] + bp, 2)
+        if not _apply_format(order, kf, request.POST.get("finish"), request.POST.get("brushes"), p):
+            return redirect("studio:preview")    # format / finition non proposes (formulaire modifie)
         request.session["order"] = order
     return redirect("studio:delivery")
 
@@ -1596,6 +1794,9 @@ def _reformat_for_supplier(o):
     uid = o.get("uid")
     if not uid:
         return
+    if o.get("gen_w") and float(o["gen_w"]) == float(o.get("width_cm") or 0) \
+            and float(o.get("gen_h") or 0) == float(o.get("height_cm") or 0):
+        return                                     # toile deja calculee au format commande (celle vue et jouee)
     d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
     src = source_file(d, uid)
     try:
