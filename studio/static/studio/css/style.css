@@ -434,8 +434,8 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 /* Offre digitale sous l'offre physique (apercu) */
 .digital-offer{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
   margin-top:14px;padding:14px 18px;border:1px dashed var(--ring);border-radius:14px;background:#f7faff}
-.digital-offer .do-txt{display:flex;flex-direction:column}
-.digital-offer .do-acts{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;width:100%}
+.digital-offer .do-txt{display:flex;flex-direction:column;flex:1 1 320px}
+.digital-offer .do-acts{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap}
 .digital-offer .digibtn.dl{border:0;cursor:pointer;font:inherit;font-weight:700;background:linear-gradient(120deg,#1f9d55,#0ea5b7)}
 .digital-offer .do-note{color:var(--muted,#5b647a);font-size:.78rem;width:100%}
 .digital-offer .do-txt b{color:var(--ink)}
@@ -613,7 +613,8 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 .soon-tag{background:#fff4e0;color:#c98a00;font-weight:800;font-size:.66rem;padding:2px 7px;border-radius:999px;margin-left:6px;text-transform:uppercase;letter-spacing:.03em}
 
 /* Apercu : prix avant les options */
-.options .price-line{width:100%;font-size:1.2rem;font-weight:800;color:var(--ink);margin-bottom:4px}
+.options>.fmt-select,.options>.colors-info{flex-basis:100%}
+.options .price-line{flex:1 1 auto;font-size:1.2rem;font-weight:800;color:var(--ink);margin:0}
 .options .price-line b{color:var(--accent,#2f6bf2)}
 .options .price-line small{font-weight:600;color:#1e8848;margin-left:8px;font-size:.8rem}
 
@@ -750,6 +751,8 @@ main{overflow-x:clip}
   .digital-offer{flex-wrap:wrap}
   .digital-offer .digibtn{width:100%;text-align:center;justify-content:center}
   form .cta[type=submit]{width:100%}
+  .options .price-line{flex-basis:100%}
+  .digital-offer .do-acts{width:100%}
 }
 .cgv-check span{font-weight:400;color:var(--muted,#5b647a);line-height:1.45}
 /* Bandeau du haut : message et langues cote a cote a TOUTES les largeurs (jamais superposes) */
