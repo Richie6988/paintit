@@ -462,8 +462,6 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 .kv img{width:100%;height:100%;object-fit:cover;display:block}
 .kv-top img{object-position:top}
 .kv svg{width:60px;height:60px}
-.kv-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);white-space:nowrap;box-shadow:0 2px 6px rgba(201,138,0,.25);font-style:normal;font-size:.68rem;font-weight:800;letter-spacing:.02em;
-  text-transform:uppercase;color:#8a5200;background:#ffe7a3;border-radius:999px;padding:3px 8px}
 .kit-item span{font-size:.86rem;line-height:1.3;color:var(--ink);font-weight:600}
 
 /* Confirmation : poster recu */
