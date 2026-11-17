@@ -37,6 +37,7 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("create/", views.upload, name="upload"),
     path("current-photo/", views.current_photo, name="current_photo"),
+    path("create/recommend/", views.recommend_colors, name="recommend_colors"),
     path("create/processing/", views.processing, name="processing"),
     path("create/progress/", views.gen_progress, name="gen_progress"),
     path("create/finalize/", views.gen_finalize, name="gen_finalize"),

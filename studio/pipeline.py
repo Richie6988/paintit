@@ -18,12 +18,8 @@ def new_uid():
     return f"{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:4].upper()}"
 
 
-def _center_crop_to_ratio(src_path, dst_path, target_ratio, fx=0.5, fy=0.5):
-    """Recadre au ratio largeur/hauteur du format autour d'un point focal.
-    fx, fy in [0,1] : 0.5 = centre (defaut). Permet un recadrage manuel."""
-    img = cv2.imread(src_path)
-    if img is None:
-        return src_path
+def crop_to_ratio(img, target_ratio, fx=0.5, fy=0.5):
+    """Recadre (en memoire) au ratio largeur/hauteur autour d'un point focal fx, fy in [0,1]."""
     fx = min(1.0, max(0.0, float(fx)))
     fy = min(1.0, max(0.0, float(fy)))
     h, w = img.shape[:2]
@@ -38,6 +34,16 @@ def _center_crop_to_ratio(src_path, dst_path, target_ratio, fx=0.5, fy=0.5):
         y0 = int(round((h - nh) * fy))
         y0 = max(0, min(h - nh, y0))
         img = img[y0:y0 + nh, :]
+    return img
+
+
+def _center_crop_to_ratio(src_path, dst_path, target_ratio, fx=0.5, fy=0.5):
+    """Recadre au ratio largeur/hauteur du format autour d'un point focal.
+    fx, fy in [0,1] : 0.5 = centre (defaut). Permet un recadrage manuel."""
+    img = cv2.imread(src_path)
+    if img is None:
+        return src_path
+    img = crop_to_ratio(img, target_ratio, fx, fy)
     long_side = max(img.shape[:2])
     cap = 1500
     if long_side > cap:

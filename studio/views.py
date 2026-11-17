@@ -13,6 +13,7 @@ from django.http import FileResponse, Http404, HttpResponse, HttpResponsePermane
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.views.decorators.clickjacking import xframe_options_sameorigin, xframe_options_exempt
 from django.utils.translation import get_language, gettext as _
 from django.contrib.admin.views.decorators import staff_member_required
@@ -191,6 +192,46 @@ def upload(request):
     })
     resp["Cache-Control"] = "no-store, private"                # retour arriere : page rechargee avec la photo en cours
     return resp
+
+
+@require_POST
+def recommend_colors(request):
+    """Pre-analyse de la photo (miniature envoyee par le navigateur, ou photo deja conservee en session) :
+    nombre de couleurs recommande AVANT la vraie generation. Rien n'est enregistre."""
+    import cv2
+    import numpy as np
+    import pbn
+    from .pipeline import crop_to_ratio
+    if security.rate_limited("reco:" + security.client_ip(request), 120, 3600):
+        return JsonResponse({"error": "rate"}, status=429)
+    f = request.FILES.get("photo")
+    img = None
+    if f and f.size <= 4 * 1024 * 1024:
+        img = cv2.imdecode(np.frombuffer(f.read(), np.uint8), cv2.IMREAD_COLOR)
+    elif not f and request.POST.get("use_last"):
+        p = request.session.get("last_photo")
+        img = cv2.imread(p) if p and os.path.exists(p) else None
+    if img is None or min(img.shape[:2]) < 16:
+        return JsonResponse({"error": "image"}, status=400)
+    try:
+        fx = float(request.POST.get("focus_x", "0.5")); fy = float(request.POST.get("focus_y", "0.5"))
+    except (TypeError, ValueError):
+        fx = fy = 0.5
+    ratio = 50 / 40 if request.POST.get("orientation") == "paysage" else 40 / 50
+    options = [int(v) for v, _l in UploadForm().fields["colors"].choices]
+    try:
+        r = pbn.recommend_colors(crop_to_ratio(img, ratio, fx, fy), options)
+    except Exception:
+        logger.exception("Recommandation couleurs")
+        return JsonResponse({"error": "analyse"}, status=500)
+    best, top = r["best"], max(options)
+    if best == min(options) and r["stats"][best][0] <= pbn.RECO_ERR_FLOOR:
+        why = _("Image simple : %(n)d couleurs suffisent pour un rendu fidèle.") % {"n": best}
+    elif best == top:
+        why = _("Photo riche en détails : chaque couleur compte pour un rendu fidèle.")
+    else:
+        why = _("Au-delà, les couleurs ajoutées seraient presque identiques : plus de zones à peindre, sans meilleur rendu.")
+    return JsonResponse({"colors": best, "why": why})
 
 
 def processing(request):

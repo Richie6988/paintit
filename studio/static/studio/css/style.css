@@ -916,6 +916,8 @@ main{overflow-x:clip}
 @keyframes barSheen{to{transform:translateX(100%)}}
 .loader-inline .bar-pct{font-weight:800;color:var(--accent-d);font-variant-numeric:tabular-nums;font-size:.86rem;margin-left:6px}
 .seg-hint.seg-face{color:#1f56cf}
+.seg-hint.seg-reco{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:999px;background:#e6f6ec;color:#1e8848}
+.reco-hint:not([hidden]){color:#1e5a37}
 .segmented.seg4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .segmented.seg4 .seg{min-width:0}
 .segmented.seg4 .seg span{padding-left:4px;padding-right:4px}

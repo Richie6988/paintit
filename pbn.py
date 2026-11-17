@@ -314,6 +314,52 @@ def quantize(bgr, k, seed=0, sample=60000, weights=None):
     return labels, palette_bgr
 
 
+RECO_MIN_GAIN = 0.15      # un cran de couleurs en plus doit reduire l'ecart de couleur d'au moins 15 % (net)
+RECO_ERR_FLOOR = 2.0      # ecart de couleur (DeltaE) sous lequel une amelioration n'est plus visible
+RECO_RUNS = 4
+RECO_SAMPLE = 12000
+
+
+def recommend_colors(bgr, options=(12, 24, 36, 48), side=260, seed=0):
+    """Pre-analyse rapide (< 1 s) AVANT le vrai pipeline : quel nombre de couleurs rend le mieux ?
+    Pour chaque option, K-means pondere par le detail (comme le pipeline) sur une miniature :
+      - err  : ecart de couleur moyen (DeltaE, pondere par le detail) -> fidelite ;
+      - band : part (ponderee) des contours separant deux teintes quasi identiques (DeltaE2000 < 8) :
+               des traits a peindre qui n'apportent rien visuellement et hachent les degrades.
+    -> {"best": k, "stats": {k: (err, band)}}"""
+    options = sorted(int(k) for k in options)
+    f = side / float(max(bgr.shape[:2]))
+    img = cv2.resize(bgr, None, fx=min(1.0, f), fy=min(1.0, f), interpolation=cv2.INTER_AREA)
+    sm = cv2.pyrMeanShiftFiltering(img, 6, 28)
+    w = detail_weights(sm).ravel()
+    lab = cv2.cvtColor(sm.astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB).reshape(-1, 3)
+    acc = {k: [] for k in options}
+    for r in range(RECO_RUNS):                       # moyenne de plusieurs tirages : recommandation stable
+        rs = np.random.RandomState(seed + r)
+        idx = rs.choice(len(lab), min(RECO_SAMPLE, len(lab)), replace=False, p=w / w.sum())
+        uniq = len(np.unique(np.round(lab[idx]), axis=0))
+        for k in options:
+            kk = max(2, min(k, uniq))
+            C = KMeans(n_clusters=kk, random_state=seed + r, n_init=1, max_iter=60).fit(lab[idx]).cluster_centers_
+            d = _nearest(lab, C)
+            err = np.sqrt(((lab - C[d]) ** 2).sum(1))
+            L = d.reshape(sm.shape[:2])
+            D = delta_e2000(C.astype(np.float64), C.astype(np.float64))
+            edges = np.concatenate([D[a[a != b], b[a != b]] for a, b in ((L[:, :-1], L[:, 1:]), (L[:-1], L[1:]))])
+            acc[k].append((float((err * w).sum() / w.sum()), float(np.clip(1 - edges / 8.0, 0, 1).mean()) if len(edges) else 0.0))
+    stats = {k: tuple(round(float(v), 3) for v in np.mean(acc[k], 0)) for k in options}
+    # On monte d'un cran tant que les couleurs ajoutees ameliorent VISIBLEMENT le rendu : ecart moyen
+    # reduit d'au moins RECO_MIN_GAIN, NET de la part de contours inutiles ajoutes (teintes quasi
+    # identiques qui hachent les degrades), et tant que l'ecart reste au-dessus du seuil de perception.
+    best = options[0]
+    for nxt in options[1:]:
+        (e0, b0), (e1, b1) = stats[best], stats[nxt]
+        if e0 <= RECO_ERR_FLOOR or (e0 - e1) / e0 - (b1 - b0) < RECO_MIN_GAIN:
+            break
+        best = nxt
+    return {"best": best, "stats": stats}
+
+
 # --------------------------------------------------------------------------- #
 # Nettoyage des petites zones
 # --------------------------------------------------------------------------- #

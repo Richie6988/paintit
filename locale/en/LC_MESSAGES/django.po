@@ -2150,3 +2150,26 @@ msgstr "Numbered paints"
 #, python-format
 msgid "Coupon fidélité -%(p)s %%"
 msgstr "Loyalty coupon -%(p)s%%"
+
+msgid "Analyse de votre photo…"
+msgstr "Analysing your photo…"
+
+msgid "Recommandé"
+msgstr "Recommended"
+
+msgid "Pour cette photo, nous recommandons {n} couleurs."
+msgstr "For this photo, we recommend {n} colors."
+
+#, python-format
+msgid "Image simple : %(n)d couleurs suffisent pour un rendu fidèle."
+msgstr "Simple image: %(n)d colors are enough for a faithful result."
+
+msgid "Photo riche en détails : chaque couleur compte pour un rendu fidèle."
+msgstr "Highly detailed photo: every color counts for a faithful result."
+
+msgid ""
+"Au-delà, les couleurs ajoutées seraient presque identiques : plus de zones à"
+" peindre, sans meilleur rendu."
+msgstr ""
+"Beyond that, extra colors would be almost identical: more areas to paint, "
+"with no better result."

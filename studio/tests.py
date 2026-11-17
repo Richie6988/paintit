@@ -2353,3 +2353,31 @@ class DigitalActivityAndPurchasesTests(TestCase):
         self.assertEqual((d["rows"], d["created"], d["gallery_n"]), ([], 0, 0))
         r = self.client.get("/admin-hub/catalogue/")
         self.assertContains(r, "1 achat")
+
+
+class ColorRecommendationTests(TestCase):
+    def _flat(self):
+        import numpy as np, cv2
+        img = np.full((300, 240, 3), (240, 240, 240), np.uint8)
+        for c, p in [((30, 30, 200), (60, 80)), ((200, 80, 20), (150, 150)), ((20, 160, 40), (100, 230))]:
+            cv2.circle(img, p, 45, c, -1)
+        return img
+
+    def test_flat_image_needs_few_colors(self):
+        import pbn
+        r = pbn.recommend_colors(self._flat(), (12, 24, 36, 48))
+        self.assertEqual(r["best"], 12)
+        self.assertEqual(sorted(r["stats"]), [12, 24, 36, 48])
+
+    def test_endpoint_returns_available_option(self):
+        import cv2
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        ok, buf = cv2.imencode(".jpg", self._flat())
+        r = self.client.post("/create/recommend/", {"orientation": "portrait", "focus_x": "0.5", "focus_y": "0.5",
+                                                    "photo": SimpleUploadedFile("m.jpg", buf.tobytes(), "image/jpeg")})
+        self.assertEqual(r.status_code, 200)
+        from studio.forms import UploadForm
+        self.assertIn(r.json()["colors"], [int(v) for v, _l in UploadForm().fields["colors"].choices])
+        self.assertTrue(r.json()["why"])
+        self.assertEqual(self.client.post("/create/recommend/", {}).status_code, 400)        # ni photo ni session
+        self.assertEqual(self.client.get("/create/recommend/").status_code, 405)

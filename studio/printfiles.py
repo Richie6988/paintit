@@ -5,7 +5,7 @@ Source : <uid>_template.svg (vectoriel, en mm). Aucune dependance systeme (pas d
                           -> nettete infinie, format prefere des imprimeurs ;
   - <uid>_template.tiff : raster 600 dpi (plafonne pour les tres grands formats), traits anti-crenelage
                           avec precision sub-pixel, chiffres en vraie typo, niveaux de gris 8 bits, LZW.
-Finitions « premium » : traits gris anthracite fins et reguliers, chiffres gris moyen avec un fin
+Finitions « premium » : traits gris clair fins et reguliers, chiffres gris clair avec un fin
 halo blanc (restent lisibles meme quand ils touchent un trait), marges de securite respectees.
 Marge blanche de PAD_MM autour de la toile (montage sur chassis) et n° de commande imprime au-dessus.
 """
@@ -13,7 +13,7 @@ import os
 import re
 
 LINE_MM = 0.2          # epaisseur des traits (mm) : fin mais bien visible sous la peinture
-LINE_GREY = 45         # anthracite (0 = noir)
+LINE_GREY = 140        # gris clair (0 = noir) : guide visible, discret une fois peint
 NUM_GREY = 150         # chiffres gris clair : lisibles, facilement couverts par la peinture
 HALO = 0.14            # halo blanc autour des chiffres (fraction de la taille du chiffre)
 MAX_MEGAPIXELS = 160   # plafond memoire du TIFF (dpi reduit automatiquement au-dela)

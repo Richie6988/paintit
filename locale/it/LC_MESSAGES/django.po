@@ -2175,3 +2175,26 @@ msgstr "Colori numerati"
 #, python-format
 msgid "Coupon fidélité -%(p)s %%"
 msgstr "Coupon fedeltà -%(p)s%%"
+
+msgid "Analyse de votre photo…"
+msgstr "Analisi della tua foto…"
+
+msgid "Recommandé"
+msgstr "Consigliato"
+
+msgid "Pour cette photo, nous recommandons {n} couleurs."
+msgstr "Per questa foto consigliamo {n} colori."
+
+#, python-format
+msgid "Image simple : %(n)d couleurs suffisent pour un rendu fidèle."
+msgstr "Immagine semplice: %(n)d colori bastano per un risultato fedele."
+
+msgid "Photo riche en détails : chaque couleur compte pour un rendu fidèle."
+msgstr "Foto ricca di dettagli: ogni colore conta per un risultato fedele."
+
+msgid ""
+"Au-delà, les couleurs ajoutées seraient presque identiques : plus de zones à"
+" peindre, sans meilleur rendu."
+msgstr ""
+"Oltre, i colori aggiunti sarebbero quasi identici: più zone da dipingere, "
+"senza un risultato migliore."
