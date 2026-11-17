@@ -2287,3 +2287,31 @@ class KitFromCanvasOrderNumberTests(TestCase):
         make_order(uid="OWN00000-0001", status=Order.SHIPPED)
         self.client.get("/play/OWN00000-0001/buy/")
         self.assertNotEqual(self.client.session["order"]["uid"], "OWN00000-0001")  # deja commandee : nouveau n°
+
+
+class RegenCatalogueTests(TestCase):
+    def test_prices_slider_free_and_collab_reset(self):
+        import io, tempfile, shutil
+        from unittest import mock
+        from django.core.management import call_command
+        from studio.models import DigitalCanvas, CollabRoom
+        a = DigitalCanvas.objects.create(email="__library__", uid="gal-a", price=3, in_slider=True, colors=24)
+        b = DigitalCanvas.objects.create(email="__library__", uid="gal-b", price=0, in_slider=False, colors=24)
+        call_command("regen_catalogue", "--prices-only", "--set-prices", "0,50", stdout=io.StringIO())
+        a.refresh_from_db(); b.refresh_from_db()
+        self.assertEqual(str(a.price), "0.00"); self.assertEqual(str(b.price), "0.50")
+        # regeneration : image source retrouvee dans gallery/, generation appelee, etat collaboratif invalide
+        tmp = tempfile.mkdtemp()
+        try:
+            src = os.path.join(tmp, "gal-b.jpg")
+            open(src, "wb").close()
+            CollabRoom.objects.create(token="t1", uid="gal-b", painted={"1": "#fff"})
+            with mock.patch("studio.management.commands.regen_catalogue.gallery_sources", return_value=[(tmp, tmp)]), \
+                    mock.patch("studio.management.commands.regen_catalogue.seed_item") as seed:
+                call_command("regen_catalogue", "gal-b", stdout=io.StringIO())
+            self.assertTrue(seed.called)
+            self.assertEqual(seed.call_args[0][0]["uid"], "gal-b")
+            self.assertEqual(CollabRoom.objects.get(token="t1").painted, {})
+            b.refresh_from_db(); self.assertEqual(str(b.price), "0.50")   # prix conserve sans --set-prices
+        finally:
+            shutil.rmtree(tmp)

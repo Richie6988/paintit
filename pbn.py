@@ -220,11 +220,11 @@ def _refine_snap(bgr, labels, av, av_rgb, chosen, iters=4):
 
     def reseed(ch, lab, slots, used):
         """Teintes vides -> teinte du nuancier qui reduit le plus l'erreur totale (ajout glouton)."""
-        sub = px[:: max(1, len(px) // 20000)]
+        sub = px[:: max(1, len(px) // 5000)].astype(np.float32)
         cur = np.array([j for n_, j in enumerate(ch) if j >= 0 and n_ not in slots], int)
         used = set(int(j) for j in cur)
         dcur = ((sub[:, None, :] - av_lab[cur][None]) ** 2).sum(-1).min(1) if len(cur) else np.full(len(sub), np.inf)
-        dall = ((sub[:, None, :] - av_lab[None]) ** 2).sum(-1)
+        dall = ((sub[:, None, :] - av_lab[None].astype(np.float32)) ** 2).sum(-1)
         for i in slots:
             gain = np.maximum(0, dcur[:, None] - dall).sum(0)
             gain[list(used)] = -1
