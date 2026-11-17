@@ -152,7 +152,7 @@ def delta_e2000(lab1, lab2):
     return np.sqrt((dLp / Sl) ** 2 + (dCp / Sc) ** 2 + (dHp / Sh) ** 2 + Rt * (dCp / Sc) * (dHp / Sh))
 
 
-def snap_palette(labels, palette_bgr, available):
+def snap_palette(labels, palette_bgr, available, bgr=None):
     """2e passe : remplace chaque couleur calculee par la teinte DISPONIBLE la plus proche (CIEDE2000).
     available = [{"code": .., "hex": "#RRGGBB"}, ...] (nuancier fournisseur).
     Affectation gloutonne, les couleurs les plus presentes choisissent d'abord, sans doublon tant que le
@@ -178,17 +178,132 @@ def snap_palette(labels, palette_bgr, available):
     palette = np.array([av_rgb[j][::-1] for j in uniq], dtype=np.uint8)
     codes = [str(av[j].get("code", "")) for j in uniq]
     de = [float(min(D[c, j] for c in range(k) if choice[c] == j)) for j in uniq]
+    if bgr is not None:
+        labels, palette, codes, de = _refine_snap(bgr, labels, av, av_rgb, uniq)
     return labels, palette, codes, de
 
 
-def quantize(bgr, k, seed=0, sample=60000):
+def _nearest(lab_px, lab_c, chunk=100000):
+    lab_px, lab_c = np.asarray(lab_px, np.float32), np.asarray(lab_c, np.float32)
+    out = np.empty(len(lab_px), np.int32)
+    for i in range(0, len(lab_px), chunk):
+        d = ((lab_px[i:i + chunk, None, :] - lab_c[None, :, :]) ** 2).sum(-1)
+        out[i:i + chunk] = d.argmin(1)
+    return out
+
+
+def _refine_snap(bgr, labels, av, av_rgb, chosen, iters=4):
+    """K-means CONTRAINT au nuancier : chaque pixel va a la teinte retenue la plus proche
+    (une teinte mal appariee n'occupe plus que les pixels ou elle convient, au lieu de
+    tout un cluster -> plus de halos), puis chaque teinte est re-choisie au plus pres
+    de la moyenne de ses pixels. Une teinte (quasi) vide est re-semee sur la teinte du nuancier
+    qui reduit le plus l'erreur, pour tenir le nombre de couleurs autant que le nuancier le permet."""
+    H, W = labels.shape
+    px = cv2.cvtColor(bgr.astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB).reshape(-1, 3).astype(np.float64)
+    av_lab = _to_lab(av_rgb)
+    chosen = list(chosen)
+    k = len(chosen)
+
+    full = px
+    if len(px) > 150000:     # iterations sur un echantillon, affectation finale sur toute l'image
+        px = px[np.random.RandomState(0).choice(len(px), 150000, replace=False)]
+
+    def assign(ch, pts=None):
+        pts = px if pts is None else pts
+        lab = _nearest(pts, av_lab[ch])
+        return lab, np.bincount(lab, minlength=len(ch))
+
+    def means_of(lab, cnt, pts=None):
+        pts = px if pts is None else pts
+        sums = np.stack([np.bincount(lab, weights=pts[:, i], minlength=len(cnt)) for i in range(3)], 1)
+        return sums / np.maximum(cnt, 1)[:, None]
+
+    def reseed(ch, lab, slots, used):
+        """Teintes vides -> teinte du nuancier qui reduit le plus l'erreur totale (ajout glouton)."""
+        sub = px[:: max(1, len(px) // 20000)]
+        cur = np.array([j for n_, j in enumerate(ch) if j >= 0 and n_ not in slots], int)
+        used = set(int(j) for j in cur)
+        dcur = ((sub[:, None, :] - av_lab[cur][None]) ** 2).sum(-1).min(1) if len(cur) else np.full(len(sub), np.inf)
+        dall = ((sub[:, None, :] - av_lab[None]) ** 2).sum(-1)
+        for i in slots:
+            gain = np.maximum(0, dcur[:, None] - dall).sum(0)
+            gain[list(used)] = -1
+            j = int(gain.argmax())
+            if gain[j] <= 0:
+                continue
+            ch[i] = j
+            used.add(j)
+            dcur = np.minimum(dcur, dall[:, j])
+        return ch
+
+    min_px = max(1, int(len(px) * 0.0025))
+    for it in range(iters + 1):
+        lab, cnt = assign(chosen)
+        if it == iters:
+            break
+        means = means_of(lab, cnt)
+        D = delta_e2000(means, av_lab)
+        new, used = [-1] * k, set()
+        for i in np.argsort(-cnt):
+            if cnt[i] >= min_px:          # teinte quasi vide (< 0.25 %) : re-semee ci-dessous
+                j = next((int(j) for j in np.argsort(D[i]) if int(j) not in used), None)
+                if j is not None:
+                    new[i] = j
+                    used.add(j)
+        empty = [i for i in range(k) if new[i] < 0]
+        if empty:      # re-semis : pixels les plus mal rendus
+            new = reseed(new, lab, empty, used)
+        new = [j for j in new if j >= 0]
+        if new == chosen:
+            break
+        chosen = new
+    for _ in range(3):         # derniere chance pour une teinte restee (quasi) vide
+        empty = [i for i in range(len(chosen)) if cnt[i] < min_px]
+        if not empty:
+            break
+        chosen = reseed(list(chosen), lab, empty, set(chosen))
+        lab, cnt = assign(chosen)
+    px = full
+    lab, cnt = assign(chosen)
+    keep = [i for i in np.argsort(-cnt) if cnt[i]]          # plus presentes d'abord
+    remap = np.full(len(chosen), -1, np.int32)
+    remap[keep] = np.arange(len(keep))
+    labels = remap[lab].reshape(H, W)
+    means = means_of(lab, cnt)[keep]
+    chosen = [chosen[i] for i in keep]
+    palette = np.array([av_rgb[j][::-1] for j in chosen], dtype=np.uint8)
+    codes = [str(av[j].get("code", "")) for j in chosen]
+    de = [float(delta_e2000(means[i:i + 1], av_lab[j:j + 1])[0, 0]) for i, j in enumerate(chosen)]
+    return labels, palette, codes, de
+
+
+DETAIL_W_BASE = 0.25    # poids des aplats (1 + ce poids pour les zones les plus detaillees)
+
+
+def detail_weights(bgr):
+    """Poids d'echantillonnage du K-means : les zones detaillees (visage, contours)
+    comptent jusqu'a 5x plus que les aplats/degrades (fonds), pour que les couleurs
+    supplementaires servent aux details et non a decouper le fond en halos."""
+    L = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[..., 0].astype(np.float32)
+    g = cv2.magnitude(cv2.Sobel(L, cv2.CV_32F, 1, 0, ksize=3), cv2.Sobel(L, cv2.CV_32F, 0, 1, ksize=3))
+    g = cv2.GaussianBlur(g, (0, 0), 3)
+    g /= max(1e-6, float(np.percentile(g, 95)))
+    return DETAIL_W_BASE + np.clip(g, 0, 1)
+
+
+def quantize(bgr, k, seed=0, sample=60000, weights=None):
     """K-means en LAB. Retourne (labels HxW int, palette_bgr Kx3 uint8).
-    Ajusté sur un échantillon (rapide) puis prédit sur toute l'image."""
+    Ajusté sur un échantillon (pondéré par `weights` si fourni) puis prédit sur toute l'image."""
     lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
     Z = lab.reshape(-1, 3).astype(np.float32)
     km = KMeans(n_clusters=k, random_state=seed, n_init=3)
-    if len(Z) > sample:
-        idx = np.random.RandomState(seed).choice(len(Z), sample, replace=False)
+    if len(Z) > sample or weights is not None:
+        rs = np.random.RandomState(seed)
+        if weights is not None:
+            w = np.asarray(weights, np.float64).ravel()
+            idx = rs.choice(len(Z), min(sample, len(Z)), replace=False, p=w / w.sum())
+        else:
+            idx = rs.choice(len(Z), sample, replace=False)
         km.fit(Z[idx])
         labels = km.predict(Z).reshape(bgr.shape[:2])
     else:
@@ -239,7 +354,7 @@ def _reassign(labels, mask, k):
     return labels[tuple(idx)]
 
 
-def clean_small(labels, k, min_area, min_radius=0.0, passes=4):
+def clean_small(labels, k, min_area, min_radius=0.0, passes=4, protect=None):
     """Fusionne les zones trop petites en AIRE (min_area) ou trop FINES (rayon
     inscrit < min_radius, donc impeignables) dans leur voisin le plus proche."""
     for _ in range(passes):
@@ -251,18 +366,112 @@ def clean_small(labels, k, min_area, min_radius=0.0, passes=4):
             n, cc = cv2.connectedComponents(m.astype(np.uint8), connectivity=8)
             if n <= 1:
                 continue
-            counts = np.bincount(cc.ravel())
-            dt = ndimage.distance_transform_edt(m) if min_radius > 0 else None
-            for lb in range(1, n):
-                too_small = counts[lb] < min_area
-                if not too_small and min_radius > 0:
-                    too_small = dt[cc == lb].max() < min_radius
-                if too_small:
-                    small |= (cc == lb)
+            counts = np.bincount(cc.ravel(), minlength=n)
+            bad = counts < min_area
+            if min_radius > 0:     # rayon inscrit de chaque composante, en une passe (vectorise)
+                dt = cv2.distanceTransform(m.astype(np.uint8), cv2.DIST_L2, cv2.DIST_MASK_PRECISE)
+                bad |= np.bincount(cc[dt >= min_radius], minlength=n) == 0
+            if protect is not None:   # trait fin detecte : conserve
+                bad &= ~(np.bincount(cc.ravel(), weights=protect.ravel(), minlength=n) > 0.5 * counts)
+            bad[0] = False
+            if bad.any():
+                small |= bad[cc]
         if not small.any():
             break
         labels = _reassign(labels, small, k)
     return labels
+
+
+THIN_LINE_MIN_MM = 18.0   # longueur mini d'un trait (mm) : cables/mats oui, levres/meches non
+
+
+def _line_samples(img, x1, y1, x2, y2, off):
+    n = int(np.hypot(x2 - x1, y2 - y1)) + 1
+    nx, ny = -(y2 - y1) / max(n - 1, 1), (x2 - x1) / max(n - 1, 1)
+    t = np.linspace(0, 1, n)
+    xs = np.clip((x1 + t * (x2 - x1) + off * nx).round().astype(int), 0, img.shape[1] - 1)
+    ys = np.clip((y1 + t * (y2 - y1) + off * ny).round().astype(int), 0, img.shape[0] - 1)
+    return img[ys, xs]
+
+
+def detect_thin_lines(bgr, px_per_mm, thr=8.0, min_len_mm=THIN_LINE_MIN_MM):
+    """Structures fines et rectilignes (cables, mats, fils, coutures) que le lissage et le
+    nettoyage des zones effacent. Un trait = pixels qui different du fond local (mediane
+    ~2.4mm), alignes (Hough) et differents des DEUX cotes, cotes semblables entre eux
+    (exclut les simples bords d'aplats). -> [(x1, y1, x2, y2, lab_trait, lab_fond)]"""
+    lab = cv2.cvtColor(bgr.astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB)
+    k = 2 * int(max(2, round(1.2 * px_per_mm))) + 1
+    labm = cv2.cvtColor(cv2.medianBlur(bgr, k).astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB)
+    mask = (np.linalg.norm(lab - labm, axis=2) > thr).astype(np.uint8)
+    L = max(8, int(min_len_mm * px_per_mm))
+    segs = cv2.HoughLinesP(mask * 255, 1, np.pi / 360, threshold=int(L * 0.6),
+                           minLineLength=L, maxLineGap=3)
+    out = []
+    if segs is None:
+        return out
+    side = max(2, int(round(1.3 * px_per_mm)))
+    for x1, y1, x2, y2 in segs.reshape(-1, 4).tolist():
+        if _line_samples(mask, x1, y1, x2, y2, 0).mean() < 0.7:
+            continue
+        a = np.median(_line_samples(lab, x1, y1, x2, y2, side), 0)
+        b = np.median(_line_samples(lab, x1, y1, x2, y2, -side), 0)
+        bg = (a + b) / 2
+        # pixel le plus contraste du profil (-1, 0, +1) : le trait tombe rarement pile sur la grille
+        prof = np.stack([_line_samples(lab, x1, y1, x2, y2, o) for o in (-1, 0, 1)])
+        best = np.linalg.norm(prof - bg, axis=2).argmax(0)
+        c = np.median(prof[best, np.arange(prof.shape[1])], 0)
+        da, db = np.linalg.norm(c - a), np.linalg.norm(c - b)
+        if min(da, db) > thr and np.linalg.norm(a - b) < 0.6 * min(da, db):
+            # trait plus fin qu'un pixel = melange avec le fond : on "demelange" vers sa vraie teinte
+            out.append((x1, y1, x2, y2, c, bg))
+    return out
+
+
+def overlay_lines(labels, palette_bgr, lines, width_px, extend_px=0):
+    """Redessine les traits fins par-dessus la carte de zones, dans la teinte de la palette
+    la plus proche, a une largeur peignable. -> (labels, masque des traits)"""
+    prot = np.zeros(labels.shape, np.uint8)
+    if not lines:
+        return labels, prot.astype(bool)
+    pal_lab = cv2.cvtColor(np.asarray(palette_bgr, np.uint8).reshape(-1, 1, 3).astype(np.float32) / 255.0,
+                           cv2.COLOR_BGR2LAB).reshape(-1, 3)
+    out = labels.copy()
+    # Teinte "demelangee" de chaque trait, puis harmonisee : les traits paralleles de teinte
+    # voisine (suspentes d'un pont, barreaux...) forment une seule structure -> une seule couleur.
+    info = []
+    for x1, y1, x2, y2, c, bg in lines:
+        info.append([float(np.hypot(x2 - x1, y2 - y1)), np.degrees(np.arctan2(y2 - y1, x2 - x1)) % 180,
+                     bg + (c - bg) * 1.8, bg, float(np.linalg.norm(c - bg))])
+    groups = []
+    for i in sorted(range(len(info)), key=lambda i: -info[i][0]):
+        ln, ang, true = info[i][:3]
+        for g in groups:
+            da = abs(ang - g["ang"]); da = min(da, 180 - da)
+            if da < 6 and np.linalg.norm(true - g["c"]) < 20:
+                g["w"] += ln; g["c"] = g["c"] + (true - g["c"]) * ln / g["w"]; g["m"].append(i)
+                break
+        else:
+            groups.append({"ang": ang, "c": true.copy(), "w": ln, "m": [i]})
+    tone = {}
+    for g in groups:
+        for i in g["m"]:
+            tone[i] = g["c"]
+    for i, (x1, y1, x2, y2, c, bg) in enumerate(lines):
+        d = np.linalg.norm(pal_lab - tone[i], axis=1)
+        d[np.linalg.norm(pal_lab - info[i][3], axis=1) < 0.5 * info[i][4]] = np.inf   # pas la teinte du fond
+        lb = int(np.argmin(d))
+        n = max(1.0, float(np.hypot(x2 - x1, y2 - y1)))
+        ex, ey = (x2 - x1) / n * extend_px, (y2 - y1) / n * extend_px
+        p1 = (int(round(x1 - ex)), int(round(y1 - ey)))
+        p2 = (int(round(x2 + ex)), int(round(y2 + ey)))
+        m = np.zeros(labels.shape, np.uint8)
+        cv2.line(m, p1, p2, 1, int(width_px), lineType=cv2.LINE_8)
+        m = m.astype(bool)
+        if prot[m].mean() > 0.5:          # doublon (Hough renvoie des segments paralleles) : pas d'epaississement
+            continue
+        out[m] = lb
+        prot |= m
+    return out, prot.astype(bool)
 
 
 def count_zones(labels, k):
@@ -393,6 +602,9 @@ def _chaikin(pts, closed, iters=2):
     return P
 
 
+LABEL_MIN_R_MM = 1.0     # rayon inscrit mini (mm) pour imprimer un numero
+
+
 def build_svg(labels, k, mmx, mmy, w_mm, h_mm, eps, min_label_area,
               stroke_mm=0.25):
     paths = []
@@ -423,7 +635,6 @@ def build_svg(labels, k, mmx, mmy, w_mm, h_mm, eps, min_label_area,
 
     # Numeros : un par composante connexe, dimensionne pour TENIR dans le cercle
     # inscrit de la zone (evite les chevauchements) ; zones trop petites -> pas de numero.
-    LABEL_MIN_R_MM = 1.0
     FS_CAP_MM = 7.0
     for c in range(k):
         m = (labels == c).astype(np.uint8)
@@ -908,7 +1119,7 @@ def run(args):
     qkey = None
     if base_key:
         import hashlib
-        qkey = hashlib.sha1((base_key + repr((args.colors, args.seed, [(c.get("code"), c.get("hex")) for c in avail]))
+        qkey = hashlib.sha1((base_key + repr(("q2", args.colors, args.seed, [(c.get("code"), c.get("hex")) for c in avail]))
                              ).encode()).hexdigest()[:24]
     q = _cache_get(cache_dir, qkey, "q") if qkey else None
     if q is not None:
@@ -918,25 +1129,25 @@ def run(args):
         if avail:
             args.colors = len(palette)
     else:
-        labels, palette = quantize(sm, args.colors, args.seed)
+        labels, palette = quantize(sm, args.colors, args.seed, weights=detail_weights(sm))
         codes, deltas = [None] * len(palette), [0.0] * len(palette)
         if avail:      # nuancier fournisseur : teintes reellement disponibles
-            labels, palette, codes, deltas = snap_palette(labels, palette, avail)
+            labels, palette, codes, deltas = snap_palette(labels, palette, avail, bgr=sm)
             args.colors = len(palette)
         _cache_put(cache_dir, qkey, "q", {"labels": labels, "palette": np.asarray(palette),
                                          "codes": np.asarray([c or "" for c in codes]), "deltas": np.asarray(deltas, float)})
     _p(32, "colors")
 
-    # Lissage de la carte de labels (plus fort quand il y a beaucoup de couleurs).
+    # Lissage de la carte de labels (vote majoritaire).
     d = DETAIL[args.detail]
-    mk = 5 if args.colors >= 24 else d["mode_k"]
-    mi = 3 if args.colors >= 24 else d["mode_iter"]
-    labels = mode_filter(labels, args.colors, ksize=mk, iterations=mi)
+    labels = mode_filter(labels, args.colors, ksize=d["mode_k"], iterations=d["mode_iter"])
 
     min_mm2 = args.min_zone_mm ** 2
     min_area = max(4, int(round(min_mm2 / (mmx * mmy))))
     px_per_mm = 1.0 / mmx
-    min_radius = max(1.0, getattr(args, "min_paint_mm", 0.6) * px_per_mm)
+    # Rayon inscrit mini = celui qui permet d'imprimer un numero (LABEL_MIN_R_MM) :
+    # plus de zones peignables mais sans numero (et detail mieux reparti entre les couleurs).
+    min_radius = max(1.0, max(getattr(args, "min_paint_mm", 0.6), LABEL_MIN_R_MM) * px_per_mm)
     labels = clean_small(labels, args.colors, min_area, min_radius=0.0, passes=3)
     labels = clean_small(labels, args.colors, min_area, min_radius=min_radius, passes=1)
 
@@ -950,6 +1161,25 @@ def run(args):
     if _mz:
         max_zones = int(np.clip(int(_mz), 2, 9999))
     labels = limit_zones(labels, args.colors, min_area, max_zones, min_radius=min_radius)
+    if getattr(args, "thin_lines", True):
+        # Cables, mats, fils... : rendus a largeur peignable (~1.2mm) au lieu d'etre effaces.
+        lines = detect_thin_lines(img, px_per_mm)
+        if lines:
+            labels, prot = overlay_lines(labels, palette, lines, max(2, int(round(1.2 * px_per_mm))),
+                                         extend_px=int(round(1.5 * px_per_mm)))
+            labels = clean_small(labels, args.colors, min_area, min_radius=min_radius, passes=2, protect=prot)
+        print(f"[i] traits fins: {len(lines)}")
+    # Legende = toile : une teinte effacee par le nettoyage n'est ni listee ni fournie.
+    used = np.unique(labels)
+    if len(used) < args.colors:
+        remap = np.full(args.colors, -1, np.int64)
+        remap[used] = np.arange(len(used))
+        labels = remap[labels].astype(labels.dtype)
+        palette = np.asarray(palette)[used]
+        codes = [codes[i] for i in used]
+        deltas = [deltas[i] for i in used]
+        print(f"[i] couleurs absentes de la toile retirees : {args.colors} -> {len(used)}")
+        args.colors = len(used)
     print(f"[i] zones finales: {count_zones(labels, args.colors)} (plafond {max_zones})")
     _p(58, "zones")
     # Une zone doit pouvoir accueillir un chiffre lisible (~2mm).

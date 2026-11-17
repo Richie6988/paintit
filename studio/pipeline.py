@@ -139,7 +139,7 @@ def generate(image_path, colors, width_cm, height_cm, uid=None, dpi=None, progre
         image=cropped, colors=int(colors), width_cm=float(width_cm),
         height_cm=float(height_cm), dpi=int(dpi or settings.PBN_DPI),
         min_zone_mm=mzm, min_paint_mm=mpm,
-        detail=("low" if int(colors) >= 24 else "med"), smooth="meanshift", cnn="none",
+        detail="med", smooth="meanshift", cnn="none",
         hed_model_dir="./hed", stroke_mm=0.25, seed=0, out=uid, outdir=outdir,
         max_px=int(min(1400, max(1100, max(float(width_cm), float(height_cm)) * 20))),
         brand=settings.PBN_BRAND, logo=None, pal_scale=3,

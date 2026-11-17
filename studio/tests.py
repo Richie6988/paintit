@@ -379,6 +379,34 @@ class SupplierPaletteTests(TestCase):
         self.assertEqual(sorted(codes), ["R", "R2", "W"])                     # 3 teintes distinctes
         self.assertEqual(pal2.shape, (3, 3))
 
+    def test_refined_snap_fixes_halo_cluster(self):
+        """Un cluster mal apparie (degrade) ne garde que les pixels ou sa teinte convient."""
+        import numpy as np, pbn
+        img = np.zeros((40, 40, 3), np.uint8); img[:, :20] = (200, 200, 200); img[:, 20:] = (40, 40, 200)
+        labels = np.zeros((40, 40), int); labels[:, 20:] = 1; labels[:, 18:20] = 1   # bande mal classee
+        pal = np.array([[200, 200, 200], [40, 40, 200]], np.uint8)
+        av = [{"code": "G", "hex": "#C8C8C8"}, {"code": "R", "hex": "#C82828"}, {"code": "B", "hex": "#0000FF"}]
+        lab2, pal2, codes, de = pbn.snap_palette(labels, pal, av, bgr=img)
+        self.assertEqual(sorted(codes), ["G", "R"])
+        g = codes.index("G")
+        self.assertTrue((lab2[:, :20] == g).all())                           # la bande retrouve sa vraie teinte
+
+    def test_thin_line_detected_and_kept(self):
+        """Un cable fin sur un ciel est detecte et redessine ; un simple bord d'aplat ne l'est pas."""
+        import numpy as np, cv2, pbn
+        img = np.full((200, 200, 3), (200, 160, 60), np.uint8)               # ciel
+        cv2.line(img, (100, 10), (100, 190), (40, 60, 200), 1)              # cable 1 px
+        lines = pbn.detect_thin_lines(img, 2.2)
+        self.assertTrue(lines)
+        self.assertTrue(all(abs(l[0] - 100) <= 1 and abs(l[2] - 100) <= 1 for l in lines))
+        edge = np.full((200, 200, 3), (200, 160, 60), np.uint8); edge[:, 100:] = (40, 60, 200)
+        self.assertEqual(pbn.detect_thin_lines(edge, 2.2), [])
+        labels = np.zeros((200, 200), int)
+        pal = np.array([[200, 160, 60], [40, 60, 200]], np.uint8)
+        out, prot = pbn.overlay_lines(labels, pal, lines, 3)
+        self.assertTrue((out[50:150, 100] == 1).all())
+        self.assertTrue((pbn.clean_small(out, 2, 400, min_radius=2.2, protect=prot)[50:150, 100] == 1).all())
+
     def test_supplier_json_uses_codes(self):
         from studio.fulfillment import supplier_colors
         out = supplier_colors([{"number": 1, "hex": "#FFFFFF", "rgb": [255, 255, 255], "code": "1"},
