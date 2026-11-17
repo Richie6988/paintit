@@ -33,9 +33,36 @@ def _count_zones(uid):
         return 0
 
 
+def _fidelity(uid):
+    """Ecart de couleur moyen (DeltaE) entre la photo source et la toile coloriee : plus bas = plus fidele."""
+    import cv2
+    import numpy as np
+    from django.conf import settings
+    from studio.pipeline import source_file
+    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    src, prev = cv2.imread(source_file(d, uid) or ""), cv2.imread(os.path.join(d, "%s_preview.png" % uid))
+    if src is None or prev is None:
+        return None
+    src = cv2.GaussianBlur(cv2.resize(src, (prev.shape[1], prev.shape[0]), interpolation=cv2.INTER_AREA), (0, 0), 1.5)
+    lab = lambda x: cv2.cvtColor(x.astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB)
+    return float(np.linalg.norm(lab(src) - lab(prev), axis=2).mean())
+
+
+def _zone_cap(w, h, colors):
+    """Plafond de zones du reglage auto (cf. pbn.run)."""
+    return int(min(3000, max(240, w * h * (0.20 + colors * 0.010))))
+
+
+EXPERT = (1.0, 0.6)          # = DENSITY_LEVELS["expert"] (densite zones/cm2, finesse)
+CAP_HIT = 0.85               # plafond quasi atteint : le detail de l'image a ete bride
+EXPERT_MIN_GAIN = 0.05       # « expert » conserve seulement s'il est >= 5 % plus fidele
+
+
 class Command(BaseCommand):
     help = ("Regenere toutes les toiles du catalogue (galerie + slider) avec l'algorithme actuel, a partir de "
-            "leur image source, en reglage standard (rien n'est repris de l'ancien design). Titre, categorie, prix, "
+            "leur image source (rien n'est repris de l'ancien design), reglages optimises pour le rendu : nombre de "
+            "couleurs recommande par la pre-analyse de l'image, densite « expert » si le plafond de zones bride le "
+            "detail ET qu'elle est mesurablement plus fidele. Titre, categorie, prix, "
             "slider et visibilite sont conserves. Les parties en cours sur ces toiles repartent de zero. Option --set-prices : prix des modeles hors slider, "
             "ceux du slider passent gratuits.")
 
@@ -44,6 +71,8 @@ class Command(BaseCommand):
         parser.add_argument("--dry-run", action="store_true", help="Liste sans rien modifier.")
         parser.add_argument("--set-prices", metavar="EUR", help="Ex. 0.50 : prix hors slider ; slider = gratuit.")
         parser.add_argument("--prices-only", action="store_true", help="Applique --set-prices sans regenerer.")
+        parser.add_argument("--keep-colors", action="store_true", help="Garde le nombre de couleurs actuel de chaque modele.")
+        parser.add_argument("--no-density", action="store_true", help="Densite auto, sans essai « expert ».")
 
     def handle(self, *args, **opts):
         qs = DigitalCanvas.objects.filter(email=LIB).order_by("uid")
@@ -72,15 +101,23 @@ class Command(BaseCommand):
                     continue
                 it, sdir = dict(src[0]), src[1]
                 landscape = m.orientation == "paysage"
-                old_zones = m.zones or _count_zones(m.uid)
-                it.update(colors=int(m.colors or it["colors"]), landscape=landscape,
-                          slug=m.showcase_slug or it["slug"], density=None, detail=1.0)
+                w, h = (50, 40) if landscape else (40, 50)
+                old_zones, old_colors = m.zones or _count_zones(m.uid), m.colors
+                colors = int(m.colors or it["colors"])
+                if not opts["keep_colors"]:
+                    colors = self._recommend(it["path"], w, h) or colors
+                it.update(colors=colors, landscape=landscape, slug=m.showcase_slug or it["slug"], density=None, detail=1.0)
                 try:
                     seed_item(it, sdir, log=self.stdout.write)
+                    level = "auto"
+                    zones, fid = _count_zones(m.uid), _fidelity(m.uid)
+                    if not opts["no_density"] and fid is not None and zones >= CAP_HIT * _zone_cap(w, h, colors):
+                        level = self._try_expert(it, sdir, m.uid, fid)
                 except Exception as e:
                     self.stdout.write(self.style.ERROR("%s : echec (%s)" % (tag, e)))
                     fail += 1
                     continue
+                tag += ", %d -> %d couleurs, densite %s" % (old_colors, colors, level)
                 m.refresh_from_db()
                 m.zones = _count_zones(m.uid)
                 m.save(update_fields=["zones"])
@@ -94,3 +131,37 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(tag))
         if not opts["dry_run"]:
             self.stdout.write(self.style.SUCCESS("%d toile(s) traitee(s), %d echec(s)." % (ok, fail)))
+
+    def _recommend(self, path, w, h):
+        """Nombre de couleurs recommande (pre-analyse pbn.recommend_colors), parmi les options proposees."""
+        import cv2
+        import pbn
+        from studio.forms import UploadForm
+        from studio.pipeline import crop_to_ratio
+        img = cv2.imread(path)
+        if img is None:
+            return None
+        options = [int(v) for v, _l in UploadForm().fields["colors"].choices]
+        return pbn.recommend_colors(crop_to_ratio(img, w / h), options)["best"]
+
+    def _try_expert(self, it, sdir, uid, fid_auto):
+        """Plafond de zones atteint : essai en densite « expert » ; conserve seulement si nettement plus fidele,
+        sinon la version auto est restauree a l'identique. -> niveau retenu."""
+        import shutil
+        import tempfile
+        from django.conf import settings
+        from studio.management.commands.seed_library import Command as Seed
+        d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+        keep = tempfile.mkdtemp()
+        try:
+            shutil.copytree(d, os.path.join(keep, "auto"))
+            seed_item(dict(it, density=EXPERT[0], detail=EXPERT[1]), sdir, log=self.stdout.write)
+            fid = _fidelity(uid)
+            if fid is not None and fid <= fid_auto * (1 - EXPERT_MIN_GAIN):
+                return "expert (fidelite %.2f -> %.2f)" % (fid_auto, fid)
+            shutil.rmtree(d)
+            shutil.copytree(os.path.join(keep, "auto"), d)
+            Seed()._render_showcase(uid, it["slug"], sdir)
+            return "auto (expert essaye, gain insuffisant)"
+        finally:
+            shutil.rmtree(keep, ignore_errors=True)

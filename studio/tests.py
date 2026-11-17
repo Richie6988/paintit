@@ -2381,3 +2381,33 @@ class ColorRecommendationTests(TestCase):
         self.assertTrue(r.json()["why"])
         self.assertEqual(self.client.post("/create/recommend/", {}).status_code, 400)        # ni photo ni session
         self.assertEqual(self.client.get("/create/recommend/").status_code, 405)
+
+
+class RegenExpertTrialTests(TestCase):
+    def test_expert_rejected_restores_auto_files(self):
+        import io, tempfile, shutil
+        from unittest import mock
+        from django.test import override_settings
+        from studio.management.commands import regen_catalogue as rc
+        media = tempfile.mkdtemp()
+        try:
+            d = os.path.join(media, "orders", "gal-z"); os.makedirs(d)
+            open(os.path.join(d, "gal-z_preview.png"), "w").write("AUTO")
+
+            def fake_seed(it, sdir, log=None):         # la generation « expert » reecrit les fichiers
+                open(os.path.join(d, "gal-z_preview.png"), "w").write("EXPERT")
+            with override_settings(MEDIA_ROOT=media), \
+                    mock.patch.object(rc, "seed_item", side_effect=fake_seed), \
+                    mock.patch.object(rc, "_fidelity", return_value=9.9), \
+                    mock.patch("studio.management.commands.seed_library.Command._render_showcase") as show:
+                level = rc.Command(stdout=io.StringIO())._try_expert({"slug": "z"}, media, "gal-z", 10.0)
+            self.assertTrue(level.startswith("auto"))                       # 1 % de mieux : insuffisant
+            self.assertEqual(open(os.path.join(d, "gal-z_preview.png")).read(), "AUTO")
+            self.assertTrue(show.called)
+            with override_settings(MEDIA_ROOT=media), \
+                    mock.patch.object(rc, "seed_item", side_effect=fake_seed), \
+                    mock.patch.object(rc, "_fidelity", return_value=9.0):
+                self.assertTrue(rc.Command(stdout=io.StringIO())._try_expert({"slug": "z"}, media, "gal-z", 10.0).startswith("expert"))
+            self.assertEqual(open(os.path.join(d, "gal-z_preview.png")).read(), "EXPERT")
+        finally:
+            shutil.rmtree(media)
