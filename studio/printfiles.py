@@ -14,7 +14,7 @@ import re
 
 LINE_MM = 0.2          # epaisseur des traits (mm) : fin mais bien visible sous la peinture
 LINE_GREY = 45         # anthracite (0 = noir)
-NUM_GREY = 105         # chiffres gris moyen : lisibles, couverts par la peinture
+NUM_GREY = 150         # chiffres gris clair : lisibles, facilement couverts par la peinture
 HALO = 0.14            # halo blanc autour des chiffres (fraction de la taille du chiffre)
 MAX_MEGAPIXELS = 160   # plafond memoire du TIFF (dpi reduit automatiquement au-dela)
 PAD_MM = 40            # marge blanche autour de la toile (montage sur chassis) : 40x50 -> 48x58 cm
