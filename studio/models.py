@@ -53,6 +53,7 @@ class Pricing(models.Model):
     referral_rate = models.FloatField("Parrainage (partage digital)", default=0.20)
     referral_physical_rate = models.FloatField("Parrainage via produit physique", default=0.40)
     free_shipping = models.BooleanField("Livraison offerte", default=True)
+    digital_stats_since = models.DateTimeField("Pilotage : toiles numériques et achats suivis depuis", null=True, blank=True)
     delivery_days_min = models.IntegerField("Delai livraison min (jours)", default=5)
     delivery_days_max = models.IntegerField("Delai livraison max (jours)", default=9)
     # Couts dropshipping (pour la marge)

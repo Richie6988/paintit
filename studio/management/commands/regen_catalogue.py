@@ -35,9 +35,8 @@ def _count_zones(uid):
 
 class Command(BaseCommand):
     help = ("Regenere toutes les toiles du catalogue (galerie + slider) avec l'algorithme actuel, a partir de "
-            "leur image source. Titre, categorie, prix, slider et visibilite sont conserves ; le nombre de zones "
-            "est plafonne a l'ancien (meme difficulte). La progression des parties en cours sur ces toiles "
-            "repart de zero (les zones changent). Option --set-prices : prix des modeles hors slider, "
+            "leur image source, en reglage standard (rien n'est repris de l'ancien design). Titre, categorie, prix, "
+            "slider et visibilite sont conserves. Les parties en cours sur ces toiles repartent de zero. Option --set-prices : prix des modeles hors slider, "
             "ceux du slider passent gratuits.")
 
     def add_arguments(self, parser):
@@ -73,11 +72,9 @@ class Command(BaseCommand):
                     continue
                 it, sdir = dict(src[0]), src[1]
                 landscape = m.orientation == "paysage"
-                w, h = (50, 40) if landscape else (40, 50)
                 old_zones = m.zones or _count_zones(m.uid)
                 it.update(colors=int(m.colors or it["colors"]), landscape=landscape,
-                          slug=m.showcase_slug or it["slug"],
-                          density=(old_zones / (w * h) if old_zones else None), detail=1.0)
+                          slug=m.showcase_slug or it["slug"], density=None, detail=1.0)
                 try:
                     seed_item(it, sdir, log=self.stdout.write)
                 except Exception as e:

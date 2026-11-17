@@ -3044,14 +3044,18 @@ def erp_test_data(request):
 @_test_scope
 def admin_hub(request):
     from . import erp
-    from .models import Order, ContactMessage
+    from .models import Order, Pricing
+    if request.method == "POST" and request.POST.get("op") == "reset_digital":
+        Pricing.objects.filter(pk=Pricing.get().pk).update(digital_stats_since=timezone.now())
+        from django.contrib import messages
+        messages.success(request, "Suivi des toiles numériques et achats remis à zéro.")
+        return redirect(request.get_full_path())
     period = request.GET.get("p", "30d")
     k = erp.kpis(period)
     ctx = {"k": k, "series": erp.series(k["period"]), "mix": erp.mix(k["period"]),
            "pipeline": erp.pipeline(), "actions": erp.actions(), "cust": erp.customer_stats(),
            "recent_orders": list(Order.objects.order_by("-created_at")[:8]),
-           "recent_msgs": list(ContactMessage.objects.order_by("answered", "-created_at")[:6]),
-           "gallery_all": erp.gallery_sales(), "erp_section": "hub", "testdata": _test_info(request)}
+           "digital": erp.digital_activity(), "erp_section": "hub", "testdata": _test_info(request)}
     from django.contrib import admin as _admin
     ctx.update(_admin.site.each_context(request))
     return render(request, "admin/hub.html", ctx)
@@ -3910,13 +3914,15 @@ def erp_catalogue(request):
     cats = sorted(set(c for c in lib.values_list("category", flat=True) if c))
     stats = {"models": lib.count(), "free": lib.filter(price=0).count(), "paid": lib.filter(price__gt=0).count(),
              "players": sum(owners.get(u, 0) for u in lib.values_list("uid", flat=True)),
-             "sales": sum(owners.get(u, 0) for u in lib.filter(price__gt=0).values_list("uid", flat=True)),
+             "sales": 0,
              "customer": DigitalCanvas.objects.exclude(email=LIB_EMAIL).exclude(source="library").count(),
              "slider": lib.filter(in_slider=True).count(), "hidden": lib.filter(hidden=True).count()}
     from .management.commands.purge_old_data import production_expired
     stats["purge_due"] = sum(1 for _ in production_expired(60))
-    stats["revenue"] = round(sum(float(p) * owners.get(u, 0) for u, p in lib.filter(price__gt=0)
-                                 .values_list("uid", "price")), 2)
+    from . import erp as _erp
+    bought = _erp.gallery_purchases_by_uid()          # achats reels (grand livre), quel que soit le prix actuel
+    gs = _erp.gallery_sales()
+    stats["sales"], stats["revenue"] = gs["n"], gs["revenue"]
     if tab == "customer":
         qs = DigitalCanvas.objects.exclude(email=LIB_EMAIL).exclude(source="library")
         if q:
@@ -3940,8 +3946,11 @@ def erp_catalogue(request):
         items = list(qs.order_by("-created_at" if sort == "recent" else "title"))
         for m in items:
             m.players = owners.get(m.uid, 0)
+            m.bought, m.bought_rev = bought.get(m.uid, (0, 0.0))
         if sort == "popular":
             items.sort(key=lambda m: -m.players)
+        elif sort == "bought":
+            items.sort(key=lambda m: (-m.bought, -m.bought_rev))
     from .pipeline import source_file
     shows = set()
     for folder in (os.path.join(settings.BASE_DIR, "studio", "static", "studio", "showcase"),

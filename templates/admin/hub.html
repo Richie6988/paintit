@@ -89,18 +89,22 @@
       </table>
     </div>
     <div class="card">
-      <div class="card-h"><h2>Messages</h2><a href="/admin-hub/messages/">Tous →</a></div>
+      <div class="card-h"><h2>Toiles numériques &amp; achats</h2>
+        <form method="post" data-confirm="Remettre à zéro le suivi des toiles numériques et achats ?" data-confirm-text="La liste et les compteurs repartent de maintenant. Rien n'est supprimé (commandes, toiles des clients et grand livre conservés)." data-ok="Remettre à zéro" style="margin:0">{% csrf_token %}
+          <button name="op" value="reset_digital" style="background:none;border:0;padding:0;font-weight:700;font-size:.84rem;color:#2f6bf2;cursor:pointer;white-space:nowrap">Remettre à zéro</button></form></div>
+      <div class="muted" style="font-size:.8rem;margin:-4px 0 8px">{% if digital.since %}Depuis le {{ digital.since|date:"d/m/Y H:i" }}{% else %}Depuis le début{% endif %}</div>
       <table class="t">
-        {% for m in recent_msgs %}<tr>
-          <td>{% if not m.answered %}<span class="dot"></span>{% endif %}<a href="/admin-hub/messages/{{ m.id }}/">{{ m.name|default:m.email|truncatechars:20 }}</a></td>
-          <td>{{ m.subject|default:"(sans sujet)"|truncatechars:34 }}</td>
-          <td class="muted r">{{ m.created_at|timesince }}</td>
-        </tr>{% empty %}<tr><td class="muted">Aucun message.</td></tr>{% endfor %}
+        {% for r in digital.rows %}<tr>
+          <td><a href="/play/{{ r.c.uid }}/" target="_blank" title="{{ r.c.uid }}">{{ r.title|truncatechars:22 }}</a><div class="muted" style="font-size:.76rem">{{ r.c.email|truncatechars:26 }}</div></td>
+          <td>{{ r.kind }}<div class="muted" style="font-size:.76rem">{{ r.c.colors }} couleurs</div></td>
+          <td class="r">{% if r.amount %}<b>{{ r.amount|floatformat:"2g" }} €</b>{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td class="muted r">{{ r.c.created_at|timesince }}</td>
+        </tr>{% empty %}<tr><td class="muted">Aucune toile numérique ni achat{% if digital.since %} depuis la remise à zéro{% endif %}.</td></tr>{% endfor %}
       </table>
       <div class="mini" style="margin-top:12px">
-        <div><b>{{ k.cur.canvases }}</b><span>toiles numériques créées</span></div>
-        <div><b>{{ gallery_all.n }}</b><span>modèles galerie vendus</span></div>
-        <div><b>{{ gallery_all.revenue|floatformat:"2g" }} €</b><span>ventes galerie (total)</span></div>
+        <div><b>{{ digital.created }}</b><span>toiles numériques créées</span></div>
+        <div><b>{{ digital.digital_n }}</b><span>toiles perso achetées · {{ digital.digital_rev|floatformat:"2g" }}&nbsp;€</span></div>
+        <div><b>{{ digital.gallery_n }}</b><span>modèles galerie achetés · {{ digital.gallery_rev|floatformat:"2g" }}&nbsp;€</span></div>
       </div>
     </div>
   </div>

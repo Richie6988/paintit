@@ -2315,3 +2315,41 @@ class RegenCatalogueTests(TestCase):
             b.refresh_from_db(); self.assertEqual(str(b.price), "0.50")   # prix conserve sans --set-prices
         finally:
             shutil.rmtree(tmp)
+
+
+class DigitalActivityAndPurchasesTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from studio import ledger
+        from studio.models import DigitalCanvas
+        self.staff = User.objects.create_superuser("boss2", "b@x.fr", "pw-Secret-123")
+        DigitalCanvas.objects.create(email="__library__", uid="gal-x", price="0.50", title="Rose")
+        DigitalCanvas.objects.create(email="a@x.fr", uid="gal-x", source="library")
+        DigitalCanvas.objects.create(email="b@x.fr", uid="ABCD-1234", source="digital")
+        ledger.record_sale("gallery", "gal-x", 2.0, stripe_id="pi_g1", email="a@x.fr")   # paye 2 EUR (ancien prix)
+        ledger.record_sale("digital", "ABCD-1234", 4.9, stripe_id="pi_d1", email="b@x.fr")
+        from studio.models import LedgerEntry
+        LedgerEntry.objects.update(is_test=False)          # encaissements reels (Stripe live)
+
+    def test_real_amounts_not_current_price(self):
+        from studio import erp
+        self.assertEqual(erp.gallery_sales(), {"n": 1, "revenue": 2.0})
+        self.assertEqual(erp.gallery_purchases_by_uid()["gal-x"], (1, 2.0))
+        d = erp.digital_activity()
+        self.assertEqual((d["created"], d["digital_n"], d["gallery_n"], d["gallery_rev"]), (1, 1, 1, 2.0))
+        kinds = {r["c"].uid: (r["kind"], r["amount"]) for r in d["rows"]}
+        self.assertEqual(kinds["gal-x"], ("Modèle galerie acheté", 2.0))
+        self.assertEqual(kinds["ABCD-1234"], ("Toile perso achetée", 4.9))
+
+    def test_hub_reset_and_catalogue_kpi(self):
+        from studio import erp
+        self.client.force_login(self.staff)
+        r = self.client.get("/admin-hub/")
+        self.assertContains(r, "Toiles numériques &amp; achats")
+        self.assertNotContains(r, "Aucun message")
+        self.client.post("/admin-hub/", {"op": "reset_digital"})
+        d = erp.digital_activity()
+        self.assertIsNotNone(d["since"])
+        self.assertEqual((d["rows"], d["created"], d["gallery_n"]), ([], 0, 0))
+        r = self.client.get("/admin-hub/catalogue/")
+        self.assertContains(r, "1 achat")

@@ -59,16 +59,60 @@ def _sales(start, end):
                 source="digital", created_at__gte=start, created_at__lt=end).count()}
 
 
-def gallery_sales(start=None, end=None):
-    """Ventes de modeles payants de la galerie : une ligne DigitalCanvas joueur (source=library)
-    par achat ; prix = prix actuel du modele en galerie (estimation)."""
-    prices = {u: float(p) for u, p in DigitalCanvas.objects.filter(email=LIB, price__gt=0)
-              .values_list("uid", "price")}
-    qs = DigitalCanvas.objects.filter(source="library", uid__in=list(prices)).exclude(email=LIB)
+def _ledger_sales(source, start=None, end=None):
+    """Encaissements reels (grand livre, hors ecritures de test) d'une source : ventes - remboursements."""
+    from .models import LedgerEntry
+    qs = LedgerEntry.real.filter(source=source, kind__in=("sale", "refund"))
     if start:
-        qs = qs.filter(created_at__gte=start, created_at__lt=end)
-    uids = list(qs.values_list("uid", flat=True))
-    return {"n": len(uids), "revenue": round(sum(prices[u] for u in uids), 2)}
+        qs = qs.filter(date__gte=start)
+    if end:
+        qs = qs.filter(date__lt=end)
+    return qs
+
+
+def gallery_sales(start=None, end=None):
+    """Ventes de modeles payants de la galerie, montants REELLEMENT encaisses (grand livre Stripe) :
+    un changement de prix du catalogue ne reecrit pas l'historique."""
+    qs = _ledger_sales("gallery", start, end)
+    agg = qs.aggregate(rev=Sum("amount"))
+    return {"n": qs.filter(kind="sale").count() - qs.filter(kind="refund").count(),
+            "revenue": round(agg["rev"] or 0.0, 2)}
+
+
+def gallery_purchases_by_uid():
+    """uid -> (nb d'achats nets, montant encaisse) pour les modeles de la galerie."""
+    out = {}
+    for uid, kind, amount in _ledger_sales("gallery").values_list("uid", "kind", "amount"):
+        n, rev = out.get(uid, (0, 0.0))
+        out[uid] = (n + (1 if kind == "sale" else -1), rev + (amount or 0.0))
+    return {u: (max(0, n), round(r, 2)) for u, (n, r) in out.items()}
+
+
+def digital_activity(limit=12):
+    """Pilotage : toiles numeriques creees et achats (toile perso / modele galerie) depuis la derniere
+    remise a zero. -> {since, rows, created, digital_n, digital_rev, gallery_n, gallery_rev}"""
+    since = Pricing.get().digital_stats_since
+    canv = DigitalCanvas.objects.exclude(email=LIB).exclude(email="")
+    if since:
+        canv = canv.filter(created_at__gte=since)
+    paid = {}
+    for src in ("digital", "gallery"):
+        for uid, email, amount in _ledger_sales(src, since).filter(kind="sale").values_list("uid", "email", "amount"):
+            paid[(src, uid, (email or "").lower())] = amount
+    titles = dict(DigitalCanvas.objects.filter(email=LIB).values_list("uid", "title"))
+    rows = []
+    for c in canv.order_by("-created_at")[:limit]:
+        src = "gallery" if c.source == "library" else "digital"
+        amount = paid.get((src, c.uid, c.email.lower()))
+        kind = {"digital": "Toile perso achetée" if amount else "Toile perso",
+                "gift": "Toile offerte"}.get(c.source) or ("Modèle galerie acheté" if amount else "Modèle galerie gratuit")
+        rows.append({"c": c, "kind": kind, "amount": amount, "title": c.title or titles.get(c.uid) or c.uid})
+    dig, gal = _ledger_sales("digital", since), _ledger_sales("gallery", since)
+    return {"since": since, "rows": rows,
+            "created": canv.exclude(source="library").count(),
+            "digital_n": dig.filter(kind="sale").count(), "digital_rev": round(dig.aggregate(r=Sum("amount"))["r"] or 0.0, 2),
+            "gallery_n": gal.filter(kind="sale").count() - gal.filter(kind="refund").count(),
+            "gallery_rev": round(gal.aggregate(r=Sum("amount"))["r"] or 0.0, 2)}
 
 
 def _delta(cur, prev):
@@ -87,7 +131,7 @@ def kpis(period="30d"):
         ("aov", "Panier moyen", "eur", ""),
         ("new_customers", "Nouveaux clients", "int", "1re commande payée sur la période"),
         ("pay_rate", "Taux de paiement", "pct", "Payées / commandes créées"),
-        ("gallery_revenue", "Ventes galerie", "eur", "Modeles payants (prix actuel)"),
+        ("gallery_revenue", "Ventes galerie", "eur", "Modèles payants (montants encaissés)"),
         ("discounts", "Remises accordées", "eur", ""),
     ]
     out = []

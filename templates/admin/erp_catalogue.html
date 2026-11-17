@@ -72,7 +72,7 @@
   <div class="kpis">
     <div class="kpi"><div class="l">Modèles publiés</div><div class="v">{{ stats.models }}</div><div class="muted">{{ stats.free }} gratuits · {{ stats.paid }} payants{% if stats.hidden %} · {{ stats.hidden }} hors ligne{% endif %}</div></div>
     <div class="kpi"><div class="l">Joueurs</div><div class="v">{{ stats.players }}</div><div class="muted">toiles de la galerie en cours</div></div>
-    <div class="kpi"><div class="l">Ventes galerie</div><div class="v">{{ stats.sales }}</div><div class="muted">{{ stats.revenue|floatformat:"2g" }} € (prix actuels)</div></div>
+    <div class="kpi"><div class="l">Ventes galerie</div><div class="v">{{ stats.sales }}</div><div class="muted">achats · {{ stats.revenue|floatformat:"2g" }} € encaissés</div></div>
     <div class="kpi"><div class="l">Slider de l'accueil</div><div class="v">{{ stats.slider }}</div><div class="muted"><a href="?slider=1">voir les modèles affichés</a></div></div>
     <div class="kpi" title="Fichiers de fabrication des commandes supprimés 60 jours après l'expédition, sauf toiles conservées dans Mes toiles (purge quotidienne à 4 h)"><div class="l">Toiles clients</div><div class="v">{{ stats.customer }}</div><div class="muted">dans « Mes toiles » · purge à J+60 après expédition{% if stats.purge_due %} : {{ stats.purge_due }} à la prochaine{% endif %}</div></div>
   </div>
@@ -89,7 +89,7 @@
       <select name="cat" onchange="this.form.submit()"><option value="">Toutes catégories</option>{% for c in cats %}<option value="{{ c }}" {% if c == cat %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
       <select name="price" onchange="this.form.submit()"><option value="">Tous les prix</option><option value="free" {% if pf == 'free' %}selected{% endif %}>Gratuits</option><option value="paid" {% if pf == 'paid' %}selected{% endif %}>Payants</option></select>
       <label class="sw" style="font-size:.84rem;font-weight:700"><input type="checkbox" name="slider" value="1" {% if slider %}checked{% endif %} onchange="this.form.submit()" style="width:auto"> Dans le slider</label>
-      <select name="sort" onchange="this.form.submit()"><option value="recent">Plus récents</option><option value="popular" {% if sort == 'popular' %}selected{% endif %}>Plus joués</option><option value="title" {% if sort == 'title' %}selected{% endif %}>Titre A→Z</option></select>
+      <select name="sort" onchange="this.form.submit()"><option value="recent">Plus récents</option><option value="popular" {% if sort == 'popular' %}selected{% endif %}>Plus joués</option><option value="bought" {% if sort == 'bought' %}selected{% endif %}>Plus achetés</option><option value="title" {% if sort == 'title' %}selected{% endif %}>Titre A→Z</option></select>
       {% endif %}
       <button class="pbtn" type="submit">Filtrer</button>
       {% if q or cat or pf or slider %}<a class="pbtn" href="?tab={{ tab }}">Réinitialiser</a>{% endif %}
@@ -126,7 +126,7 @@
           <div class="body">
             <div class="t">{{ m.title|default:m.uid }}</div>
             <div class="m">{{ m.category|default:"Sans catégorie" }} · {{ m.colors }} couleurs</div>
-            <div class="m">{{ m.players }} joueur{{ m.players|pluralize }}{% if m.price > 0 %} · {{ m.players }} vente{{ m.players|pluralize }}{% endif %}</div>
+            <div class="m">{{ m.players }} joueur{{ m.players|pluralize }} · <b title="Achats encaissés (grand livre Stripe), même si le prix a changé depuis">{{ m.bought }} achat{{ m.bought|pluralize }}</b>{% if m.bought_rev %} · {{ m.bought_rev|floatformat:"2g" }} €{% endif %}</div>
           </div>
           <div class="acts">
             <button class="pbtn sm pri" type="button" onclick='openEdit({{ m.pk }}, "{{ m.uid|escapejs }}", {{ m.has_source|yesno:"true,false" }}, "{{ m.title|escapejs }}", "{{ m.category|escapejs }}", "{{ m.price }}")'>Modifier</button>
