@@ -121,15 +121,16 @@
 (function(){
   var form=document.getElementById('pbn-form'), hint=document.getElementById('recoHint'), input=document.getElementById('id_photo');
   if(!form||!hint)return;
-  var picked={{ has_photo|yesno:"true,false" }}, seq=0, blob=null, timer=null;
+  var picked=false, shown=false, seq=0, blob=null, timer=null;   /* picked : choix manuel APRES la recommandation */
   var T_WAIT='{% filter escapejs %}{% trans "Analyse de votre photo…" %}{% endfilter %}',
       T_RECO='{% filter escapejs %}{% trans "Recommandé" %}{% endfilter %}',
       T_LINE='{% filter escapejs %}{% trans "Pour cette photo, nous recommandons {n} couleurs." %}{% endfilter %}';
-  document.querySelectorAll('input[name=colors]').forEach(function(r){r.addEventListener('click',function(e){if(e.isTrusted)picked=true;});});
+  document.querySelectorAll('input[name=colors]').forEach(function(r){r.addEventListener('click',function(e){if(e.isTrusted&&shown)picked=true;});});
   function mark(n){document.querySelectorAll('.seg-reco').forEach(function(b){b.remove();});
     var r=document.querySelector('input[name=colors][value="'+n+'"]');if(!r)return;
     var b=document.createElement('small');b.className='seg-hint seg-reco';b.textContent=T_RECO;r.parentNode.querySelector('span').appendChild(b);
-    if(!picked)r.checked=true;}
+    shown=true;
+    if(!picked){r.checked=true;var sp=r.parentNode.querySelector('span');sp.classList.remove('seg-pulse');void sp.offsetWidth;sp.classList.add('seg-pulse');}}
   function ask(){var my=++seq,fd=new FormData();
     fd.append('csrfmiddlewaretoken',form.querySelector('[name=csrfmiddlewaretoken]').value);
     fd.append('orientation',(form.querySelector('input[name=orientation]:checked')||{}).value||'portrait');
@@ -147,7 +148,7 @@
     img.onload=function(){var k=Math.min(1,480/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');
       c.width=Math.max(1,Math.round(img.naturalWidth*k));c.height=Math.max(1,Math.round(img.naturalHeight*k));
       c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
-      c.toBlob(function(b){blob=b;picked=false;later();},'image/jpeg',0.88);};
+      c.toBlob(function(b){blob=b;picked=false;shown=false;later();},'image/jpeg',0.88);};
     img.src=url;});
   document.querySelectorAll('input[name=orientation]').forEach(function(r){r.addEventListener('change',function(){if(blob||{{ has_photo|yesno:"true,false" }})later();});});
   var box=document.getElementById('cropbox');if(box)box.addEventListener('pointerup',function(){if(blob||{{ has_photo|yesno:"true,false" }})later();});

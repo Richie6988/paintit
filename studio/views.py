@@ -213,6 +213,9 @@ def recommend_colors(request):
         img = cv2.imread(p) if p and os.path.exists(p) else None
     if img is None or min(img.shape[:2]) < 16:
         return JsonResponse({"error": "image"}, status=400)
+    k = 480.0 / max(img.shape[:2])      # meme miniature que celle du navigateur : meme recommandation
+    if k < 1:
+        img = cv2.resize(img, None, fx=k, fy=k, interpolation=cv2.INTER_AREA)
     try:
         fx = float(request.POST.get("focus_x", "0.5")); fy = float(request.POST.get("focus_y", "0.5"))
     except (TypeError, ValueError):
