@@ -2198,3 +2198,24 @@ msgid ""
 msgstr ""
 "Oltre, i colori aggiunti sarebbero quasi identici: più zone da dipingere, "
 "senza un risultato migliore."
+
+msgid ""
+"Peu de petits détails : de grandes zones suffisent, plus de zones ne "
+"changerait pas le rendu."
+msgstr ""
+"Pochi piccoli dettagli: bastano zone ampie, più zone non cambierebbero il "
+"risultato."
+
+msgid "Détails moyens : densité standard."
+msgstr "Dettagli medi: densità standard."
+
+msgid "Beaucoup de petits détails : plus de zones pour les garder."
+msgstr "Molti piccoli dettagli: più zone per conservarli."
+
+msgid "Densité recommandée : {d}."
+msgstr "Densità consigliata: {d}."
+
+msgid ""
+"Facile : grandes zones. Expert : plus de zones, idéal pour les visages et "
+"portraits."
+msgstr "Facile: zone ampie. Esperto: più zone, ideale per volti e ritratti."

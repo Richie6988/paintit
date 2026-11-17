@@ -107,7 +107,9 @@
       setTimeout(function(){base.src=s.t;photo.src=s.p;base.style.opacity=1;photo.style.opacity=1;},260);}
     function startRot(){autoOn=true; if(seq.length>1&&!window.__rot&&base&&photo){window.__rot=setInterval(rotStep,6500);}}
     function stopRot(){autoOn=false; if(window.__rot){clearInterval(window.__rot);window.__rot=null;}}
-    function down(e){ dragging=true; stopRot(); setPos((e.touches?e.touches[0]:e).clientX); e.preventDefault(); }
+    /* Mobile : le curseur ne capte le doigt que sur la barre ; ailleurs, la page defile normalement. */
+    function nearBar(x){var b=r.getBoundingClientRect(),p=parseFloat(getComputedStyle(r).getPropertyValue('--pos'))||50;return Math.abs(x-(b.left+b.width*p/100))<=32;}
+    function down(e){ if(e.touches&&!nearBar(e.touches[0].clientX))return; dragging=true; stopRot(); setPos((e.touches?e.touches[0]:e).clientX); e.preventDefault(); }
     function move(e){ if(dragging) setPos((e.touches?e.touches[0]:e).clientX); }
     r.addEventListener('mousedown',down); r.addEventListener('touchstart',down,{passive:false});
     window.addEventListener('mousemove',move); window.addEventListener('touchmove',move,{passive:false});

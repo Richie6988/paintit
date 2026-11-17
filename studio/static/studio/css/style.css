@@ -174,7 +174,7 @@ main{min-height:70vh}
 /* ===== Slider avant/apres (accueil) ===== */
 .reveal{position:relative;width:100%;aspect-ratio:600/444;border-radius:16px;overflow:hidden;
   border:1px solid var(--ring);box-shadow:0 30px 60px -30px rgba(0,0,0,.3);
-  cursor:ew-resize;user-select:none;background:#fff;touch-action:none}
+  cursor:ew-resize;user-select:none;background:#fff;touch-action:pan-y}
 .reveal-img{transition:opacity .3s;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
   pointer-events:none;-webkit-user-drag:none}
 .reveal-top{position:absolute;inset:0;clip-path:inset(0 calc(100% - var(--pos)) 0 0);will-change:clip-path}
@@ -490,7 +490,7 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 
 /* Révélation slider (aperçu) */
 .reveal-hero{max-width:420px;margin:0 auto 18px}
-.preview-reveal{position:relative;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 12px 30px rgba(18,34,79,.15);user-select:none;touch-action:none;cursor:ew-resize;background:#fff}
+.preview-reveal{position:relative;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 12px 30px rgba(18,34,79,.15);user-select:none;touch-action:pan-y;cursor:ew-resize;background:#fff}
 .preview-reveal img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;-webkit-user-drag:none}
 .preview-reveal .rh-lines{mix-blend-mode:multiply;opacity:.9}
 .preview-reveal .rh-photo{clip-path:inset(0 calc(100% - var(--pos)) 0 0)}

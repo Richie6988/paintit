@@ -48,10 +48,11 @@
 
     <div class="field">
       <span>{{ form.density.label }} <small class="muted">({% trans "zones / cm²" %})</small></span>
-      <div class="segmented seg4">
+      <div class="segmented">
         {% for r in form.density %}<label class="seg">{{ r.tag }}<span>{{ r.choice_label }}{% if r.data.value == "expert" %}<small class="seg-hint seg-face">{% trans "idéal visages" %}</small>{% endif %}</span></label>{% endfor %}
       </div>
-      <small class="field-hint">{% trans "Auto : réglage idéal selon le nombre de couleurs. Facile : grandes zones. Expert : plus de zones, idéal pour les visages et portraits." %}</small>
+      <small class="field-hint reco-hint" id="densHint" aria-live="polite" hidden></small>
+      <small class="field-hint">{% trans "Facile : grandes zones. Expert : plus de zones, idéal pour les visages et portraits." %}</small>
     </div>
 
     <p class="gen-note"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>{% trans "La génération peut prendre jusqu'à une minute. Plus il y a de couleurs, plus c'est détaillé (et un peu plus long)." %}</p>
@@ -119,28 +120,33 @@
 <script>
 /* Recommandation du nombre de couleurs : pre-analyse d'une miniature de la photo (rien n'est enregistre). */
 (function(){
-  var form=document.getElementById('pbn-form'), hint=document.getElementById('recoHint'), input=document.getElementById('id_photo');
+  var form=document.getElementById('pbn-form'), hint=document.getElementById('recoHint'), dhint=document.getElementById('densHint'), input=document.getElementById('id_photo');
   if(!form||!hint)return;
-  var picked=false, shown=false, seq=0, blob=null, timer=null;   /* picked : choix manuel APRES la recommandation */
+  /* picked[name] : choix manuel APRES la recommandation (on ne l'ecrase plus) */
+  var picked={colors:false,density:false}, shown={colors:false,density:false}, seq=0, blob=null, timer=null;
   var T_WAIT='{% filter escapejs %}{% trans "Analyse de votre photo…" %}{% endfilter %}',
       T_RECO='{% filter escapejs %}{% trans "Recommandé" %}{% endfilter %}',
-      T_LINE='{% filter escapejs %}{% trans "Pour cette photo, nous recommandons {n} couleurs." %}{% endfilter %}';
-  document.querySelectorAll('input[name=colors]').forEach(function(r){r.addEventListener('click',function(e){if(e.isTrusted&&shown)picked=true;});});
-  function mark(n){document.querySelectorAll('.seg-reco').forEach(function(b){b.remove();});
-    var r=document.querySelector('input[name=colors][value="'+n+'"]');if(!r)return;
-    var b=document.createElement('small');b.className='seg-hint seg-reco';b.textContent=T_RECO;r.parentNode.querySelector('span').appendChild(b);
-    shown=true;
-    if(!picked){r.checked=true;var sp=r.parentNode.querySelector('span');sp.classList.remove('seg-pulse');void sp.offsetWidth;sp.classList.add('seg-pulse');}}
+      T_LINE='{% filter escapejs %}{% trans "Pour cette photo, nous recommandons {n} couleurs." %}{% endfilter %}',
+      T_DENS='{% filter escapejs %}{% trans "Densité recommandée : {d}." %}{% endfilter %}';
+  ['colors','density'].forEach(function(nm){document.querySelectorAll('input[name='+nm+']').forEach(function(r){r.addEventListener('click',function(e){if(e.isTrusted&&shown[nm])picked[nm]=true;});});});
+  function mark(nm,n){document.querySelectorAll('input[name='+nm+']').forEach(function(x){var o=x.parentNode.querySelector('.seg-reco');if(o)o.remove();});
+    var r=document.querySelector('input[name='+nm+'][value="'+n+'"]');if(!r)return null;
+    var sp=r.parentNode.querySelector('span'),b=document.createElement('small');b.className='seg-hint seg-reco';b.textContent=T_RECO;sp.appendChild(b);
+    shown[nm]=true;
+    if(!picked[nm]){r.checked=true;sp.classList.remove('seg-pulse');void sp.offsetWidth;sp.classList.add('seg-pulse');}
+    return sp.firstChild.textContent.trim();}
   function ask(){var my=++seq,fd=new FormData();
     fd.append('csrfmiddlewaretoken',form.querySelector('[name=csrfmiddlewaretoken]').value);
     fd.append('orientation',(form.querySelector('input[name=orientation]:checked')||{}).value||'portrait');
     fd.append('focus_x',document.getElementById('focus_x').value);fd.append('focus_y',document.getElementById('focus_y').value);
     if(blob)fd.append('photo',blob,'mini.jpg');else fd.append('use_last','1');
-    hint.hidden=false;hint.textContent=T_WAIT;
+    hint.hidden=false;hint.textContent=T_WAIT;if(dhint)dhint.hidden=true;
     fetch('{% url "studio:recommend_colors" %}',{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
       if(my!==seq)return;
       if(!d||!d.colors){hint.hidden=true;return;}
-      mark(d.colors);hint.textContent=T_LINE.replace('{n}',d.colors)+' '+d.why;
+      mark('colors',d.colors);hint.textContent=T_LINE.replace('{n}',d.colors)+' '+d.why;
+      var lbl=d.density&&mark('density',d.density);
+      if(dhint&&lbl){dhint.hidden=false;dhint.textContent=T_DENS.replace('{d}',lbl)+' '+d.dwhy;}
     }).catch(function(){if(my===seq)hint.hidden=true;});}
   function later(){clearTimeout(timer);timer=setTimeout(ask,500);}
   if(input)input.addEventListener('change',function(){var f=input.files&&input.files[0];if(!f)return;
@@ -148,7 +154,7 @@
     img.onload=function(){var k=Math.min(1,480/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');
       c.width=Math.max(1,Math.round(img.naturalWidth*k));c.height=Math.max(1,Math.round(img.naturalHeight*k));
       c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
-      c.toBlob(function(b){blob=b;picked=false;shown=false;later();},'image/jpeg',0.88);};
+      c.toBlob(function(b){blob=b;picked={colors:false,density:false};shown={colors:false,density:false};later();},'image/jpeg',0.88);};
     img.src=url;});
   document.querySelectorAll('input[name=orientation]').forEach(function(r){r.addEventListener('change',function(){if(blob||{{ has_photo|yesno:"true,false" }})later();});});
   var box=document.getElementById('cropbox');if(box)box.addEventListener('pointerup',function(){if(blob||{{ has_photo|yesno:"true,false" }})later();});

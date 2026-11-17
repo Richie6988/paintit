@@ -17,6 +17,16 @@ ORIENTATION_CHOICES = [("portrait", _("Portrait")), ("paysage", _("Paysage"))]
 DENSITY_CHOICES = [("auto", _("Auto")), ("easy", _("Facile")), ("medium", _("Moyen")), ("expert", _("Expert"))]
 # niveau -> (densite zones/cm2, finesse des zones) ; auto = reglage standard selon les couleurs
 DENSITY_LEVELS = {"auto": (None, 1.0), "easy": (0.25, 1.35), "medium": (0.45, 1.0), "expert": (1.0, 0.6)}
+# Page Creer : plus de choix « Auto », le niveau recommande pour la photo est preselectionne.
+UPLOAD_DENSITY_CHOICES = [c for c in DENSITY_CHOICES if c[0] != "auto"]
+
+
+def density_caps(width_cm, height_cm):
+    """Plafond de zones de chaque niveau (cf. pbn.run) pour un format donne."""
+    a = float(width_cm) * float(height_cm)
+    return {lv: int(min(3000, max(240, a * d))) for lv, (d, _f) in DENSITY_LEVELS.items() if d}
+
+
 COLOR_CHOICES = [("12", _("12 couleurs")), ("24", _("24 couleurs")), ("36", _("36 couleurs")), ("48", _("48 couleurs"))]
 
 PHONE_CODES = [
@@ -46,7 +56,7 @@ class UploadForm(forms.Form):
                                     widget=forms.RadioSelect, label=_("Orientation"))
     colors = forms.ChoiceField(choices=COLOR_CHOICES, initial="24",
                                widget=forms.RadioSelect, label=_("Nombre de couleurs"))
-    density = forms.ChoiceField(choices=DENSITY_CHOICES, initial="auto", required=False,
+    density = forms.ChoiceField(choices=UPLOAD_DENSITY_CHOICES, initial="medium", required=False,
                                 widget=forms.RadioSelect, label=_("Densité de zones"))
 
     def __init__(self, *args, **kwargs):

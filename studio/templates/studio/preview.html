@@ -191,7 +191,9 @@ document.addEventListener('DOMContentLoaded',function(){
   var r=document.getElementById('prevReveal');
   if(r){var dragging=false;
     function setPos(x){var b=r.getBoundingClientRect();var p=(x-b.left)/b.width;p=Math.max(0,Math.min(1,p));r.style.setProperty('--pos',(p*100)+'%');}
-    function down(e){dragging=true;setPos((e.touches?e.touches[0]:e).clientX);e.preventDefault();}
+    /* Mobile : le curseur ne capte le doigt que sur la barre ; ailleurs, la page defile normalement. */
+    function nearBar(x){var b=r.getBoundingClientRect(),p=parseFloat(getComputedStyle(r).getPropertyValue('--pos'))||50;return Math.abs(x-(b.left+b.width*p/100))<=32;}
+    function down(e){if(e.touches&&!nearBar(e.touches[0].clientX))return;dragging=true;setPos((e.touches?e.touches[0]:e).clientX);e.preventDefault();}
     function move(e){if(dragging)setPos((e.touches?e.touches[0]:e).clientX);}
     r.addEventListener('mousedown',down); r.addEventListener('touchstart',down,{passive:false});
     window.addEventListener('mousemove',move); window.addEventListener('touchmove',move,{passive:false});

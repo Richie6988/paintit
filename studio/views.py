@@ -19,7 +19,7 @@ from django.utils.translation import get_language, gettext as _
 from django.contrib.admin.views.decorators import staff_member_required
 
 from . import fulfillment, supplier, discounts, address, emails, payments, receipts, jobs, genqueue, security
-from .forms import UploadForm, DeliveryForm, ContactForm, FORMATS, dimensions
+from .forms import UploadForm, DeliveryForm, ContactForm, FORMATS, dimensions, density_caps
 from .models import Order, OrderEvent, Pricing, DigitalCanvas, EmailCode, CompanyInfo, finish_of
 from .pipeline import generate, compute_price, price_cfg
 
@@ -143,7 +143,7 @@ def upload(request):
                 p = Pricing.get()
                 fmt = "40x50" if p.format_available("40x50") else p.available_formats()[0]
                 colors = int(form.cleaned_data["colors"])
-                level = form.cleaned_data.get("density") or "auto"
+                level = form.cleaned_data.get("density") or "medium"
                 orientation = form.cleaned_data["orientation"]
                 w, h = dimensions(fmt, orientation)
                 try:
@@ -176,7 +176,7 @@ def upload(request):
         if order:
             initial = {"orientation": order.get("orientation"),
                        "colors": str(order.get("colors")),
-                       "density": order.get("difficulty") if order.get("difficulty") in ("easy", "medium", "expert") else "auto"}
+                       "density": order.get("difficulty") if order.get("difficulty") in ("easy", "medium", "expert") else "medium"}
         form = UploadForm(initial=initial)
     has_photo = bool(last_photo and os.path.exists(last_photo))
     fx, fy = (request.session.get("last_focus") or [0.5, 0.5]) if has_photo else (0.5, 0.5)
@@ -223,7 +223,10 @@ def recommend_colors(request):
     ratio = 50 / 40 if request.POST.get("orientation") == "paysage" else 40 / 50
     options = [int(v) for v, _l in UploadForm().fields["colors"].choices]
     try:
-        r = pbn.recommend_colors(crop_to_ratio(img, ratio, fx, fy), options)
+        crop = crop_to_ratio(img, ratio, fx, fy)
+        r = pbn.recommend_colors(crop, options)
+        w, h = (50, 40) if ratio > 1 else (40, 50)
+        dens = pbn.recommend_density(crop, r["best"], density_caps(w, h))["best"]
     except Exception:
         logger.exception("Recommandation couleurs")
         return JsonResponse({"error": "analyse"}, status=500)
@@ -234,7 +237,10 @@ def recommend_colors(request):
         why = _("Photo riche en détails : chaque couleur compte pour un rendu fidèle.")
     else:
         why = _("Au-delà, les couleurs ajoutées seraient presque identiques : plus de zones à peindre, sans meilleur rendu.")
-    return JsonResponse({"colors": best, "why": why})
+    dwhy = {"easy": _("Peu de petits détails : de grandes zones suffisent, plus de zones ne changerait pas le rendu."),
+            "medium": _("Détails moyens : densité standard."),
+            "expert": _("Beaucoup de petits détails : plus de zones pour les garder.")}[dens]
+    return JsonResponse({"colors": best, "why": why, "density": dens, "dwhy": dwhy})
 
 
 def processing(request):

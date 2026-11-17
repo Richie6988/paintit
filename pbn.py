@@ -360,6 +360,42 @@ def recommend_colors(bgr, options=(12, 24, 36, 48), side=260, seed=0):
     return {"best": best, "stats": stats}
 
 
+RECO_DENS_SIDE = 400          # ~1 mm/px sur un 40x50
+RECO_DENS_MIN_PX = 6          # zone retenue : peignable ET numerotable a cette echelle
+RECO_DENS_MARGIN = 1.15       # plafond depasse de moins de 15 % : gain invisible, on reste au niveau inferieur
+
+
+def estimate_zones(bgr, colors, side=RECO_DENS_SIDE, min_px=RECO_DENS_MIN_PX, seed=0):
+    """Nombre de zones que l'image « demande » naturellement (sans plafond), estime en < 1 s sur une
+    miniature : memes etapes que le pipeline (lissage, K-means pondere, filtre mode), puis comptage des
+    zones assez grandes pour etre peintes."""
+    f = side / float(max(bgr.shape[:2]))
+    im = cv2.resize(bgr, None, fx=min(1.0, f), fy=min(1.0, f), interpolation=cv2.INTER_AREA)
+    sm = cv2.pyrMeanShiftFiltering(im, 6, 28)
+    lab = cv2.cvtColor(sm.astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB).reshape(-1, 3)
+    w = detail_weights(sm).ravel()
+    idx = np.random.RandomState(seed).choice(len(lab), min(RECO_SAMPLE, len(lab)), replace=False, p=w / w.sum())
+    k = max(2, min(int(colors), len(np.unique(np.round(lab[idx]), axis=0))))
+    C = KMeans(n_clusters=k, random_state=seed, n_init=1, max_iter=60).fit(lab[idx]).cluster_centers_
+    L = mode_filter(_nearest(lab, C).reshape(sm.shape[:2]).astype(np.int32), k, 3, 1)
+    n = 0
+    for c in range(k):
+        nl, cc = cv2.connectedComponents((L == c).astype(np.uint8), connectivity=4)
+        if nl > 1:
+            n += int((np.bincount(cc.ravel())[1:] >= min_px).sum())
+    return n
+
+
+def recommend_density(bgr, colors, caps, margin=RECO_DENS_MARGIN):
+    """caps : {niveau: plafond de zones}. Niveau le plus simple dont le plafond laisse passer le detail de
+    l'image : au-dela, les zones ajoutees ne changent pas le rendu (mesure : meme fidelite), seulement
+    le temps de peinture. -> {"best": niveau, "zones": estimation}"""
+    n = estimate_zones(bgr, colors)
+    order = sorted(caps, key=caps.get)
+    best = next((lv for lv in order if caps[lv] * margin >= n), order[-1])
+    return {"best": best, "zones": n}
+
+
 # --------------------------------------------------------------------------- #
 # Nettoyage des petites zones
 # --------------------------------------------------------------------------- #

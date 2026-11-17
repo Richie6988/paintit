@@ -2379,8 +2379,31 @@ class ColorRecommendationTests(TestCase):
         from studio.forms import UploadForm
         self.assertIn(r.json()["colors"], [int(v) for v, _l in UploadForm().fields["colors"].choices])
         self.assertTrue(r.json()["why"])
+        self.assertEqual(r.json()["density"], "easy")          # 3 grands disques : aucun detail fin
+        self.assertTrue(r.json()["dwhy"])
         self.assertEqual(self.client.post("/create/recommend/", {}).status_code, 400)        # ni photo ni session
         self.assertEqual(self.client.get("/create/recommend/").status_code, 405)
+
+
+class DensityRecommendationTests(TestCase):
+    CAPS = {"easy": 500, "medium": 900, "expert": 2000}
+
+    def test_busy_image_needs_more_zones(self):
+        import numpy as np, pbn
+        rs = np.random.RandomState(1)
+        busy = (rs.randint(0, 6, (40, 50, 1)) * 45).repeat(3, 2).astype(np.uint8)       # damier de petites taches
+        busy = np.kron(busy, np.ones((10, 10, 1), np.uint8))
+        busy[..., 1] = np.roll(busy[..., 1], 37, 0)
+        r = pbn.recommend_density(busy, 24, self.CAPS)
+        self.assertGreater(r["zones"], 900 * pbn.RECO_DENS_MARGIN)
+        self.assertEqual(r["best"], "expert")
+        flat = np.full((400, 500, 3), 200, np.uint8)
+        self.assertEqual(pbn.recommend_density(flat, 24, self.CAPS)["best"], "easy")
+
+    def test_upload_form_has_no_auto(self):
+        from studio.forms import UploadForm, density_caps
+        self.assertEqual([v for v, _l in UploadForm().fields["density"].choices], ["easy", "medium", "expert"])
+        self.assertEqual(density_caps(40, 50), {"easy": 500, "medium": 900, "expert": 2000})
 
 
 class RegenExpertTrialTests(TestCase):
