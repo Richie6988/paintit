@@ -2489,6 +2489,24 @@ class DensityRecommendationTests(TestCase):
         self.assertEqual(density_caps(40, 50), {"easy": 500, "medium": 900, "expert": 2000})
 
 
+class RegenCachePurgeTests(TestCase):
+    def test_new_cache_entries_removed_old_kept(self):
+        import tempfile, shutil
+        from django.test import override_settings
+        from studio.management.commands import regen_catalogue as rc
+        media = tempfile.mkdtemp()
+        try:
+            d = os.path.join(media, "cache", "pbn"); os.makedirs(d)
+            open(os.path.join(d, "client_sm.npz"), "w").write("x")             # cache d'un client : garde
+            with override_settings(MEDIA_ROOT=media):
+                before = rc._cache_files()
+                open(os.path.join(d, "regen_q.npz"), "w").write("x")          # cree pendant la regeneration
+                rc._purge_new_cache(before)
+            self.assertEqual(os.listdir(d), ["client_sm.npz"])
+        finally:
+            shutil.rmtree(media, ignore_errors=True)
+
+
 class RegenExpertTrialTests(TestCase):
     def test_expert_rejected_restores_auto_files(self):
         import io, tempfile, shutil

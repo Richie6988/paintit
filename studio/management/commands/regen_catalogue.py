@@ -48,6 +48,26 @@ def _fidelity(uid):
     return float(np.linalg.norm(lab(src) - lab(prev), axis=2).mean())
 
 
+def _cache_files():
+    from django.conf import settings
+    d = os.path.join(settings.MEDIA_ROOT, "cache", "pbn")
+    try:
+        return d, set(os.listdir(d))
+    except OSError:
+        return d, set()
+
+
+def _purge_new_cache(before):
+    """Le cache de calcul (~7 Mo par generation, garde 24 h) n'apporte rien a une regeneration du
+    catalogue : on supprime les entrees creees pendant celle-ci, sinon des Go s'accumulent."""
+    d, now = _cache_files()
+    for f in now - before[1]:
+        try:
+            os.remove(os.path.join(d, f))
+        except OSError:
+            pass
+
+
 def _zone_cap(w, h, colors):
     """Plafond de zones du reglage auto (cf. pbn.run)."""
     return int(min(3000, max(240, w * h * (0.20 + colors * 0.010))))
@@ -107,6 +127,7 @@ class Command(BaseCommand):
                 if not opts["keep_colors"]:
                     colors = self._recommend(it["path"], w, h) or colors
                 it.update(colors=colors, landscape=landscape, slug=m.showcase_slug or it["slug"], density=None, detail=1.0)
+                before = _cache_files()
                 try:
                     seed_item(it, sdir, log=self.stdout.write)
                     level = "auto"
@@ -117,6 +138,8 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.ERROR("%s : echec (%s)" % (tag, e)))
                     fail += 1
                     continue
+                finally:
+                    _purge_new_cache(before)
                 tag += ", %d -> %d couleurs, densite %s" % (old_colors, colors, level)
                 m.refresh_from_db()
                 m.zones = _count_zones(m.uid)
