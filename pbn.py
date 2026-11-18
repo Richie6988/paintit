@@ -465,6 +465,8 @@ def clean_small(labels, k, min_area, min_radius=0.0, passes=4, protect=None):
 
 
 THIN_LINE_MIN_MM = 18.0   # longueur mini d'un trait (mm) : cables/mats oui, levres/meches non
+THIN_LINE_TEXTURE = 0.30  # densite de « taches » autour du trait au-dela de laquelle la zone est une texture
+THIN_LINE_SOLID = 0.85    # continuite exigee d'un trait en zone texturee
 
 
 def _line_samples(img, x1, y1, x2, y2, off):
@@ -493,7 +495,13 @@ def detect_thin_lines(bgr, px_per_mm, thr=8.0, min_len_mm=THIN_LINE_MIN_MM):
         return out
     side = max(2, int(round(1.3 * px_per_mm)))
     for x1, y1, x2, y2 in segs.reshape(-1, 4).tolist():
-        if _line_samples(mask, x1, y1, x2, y2, 0).mean() < 0.7:
+        on = _line_samples(mask, x1, y1, x2, y2, 0).mean()
+        if on < 0.7:
+            continue
+        # Texture (pelage tachete, feuillage, gravier...) : des taches alignees par hasard forment un
+        # « trait » discontinu au milieu d'autres taches. Un vrai trait reste continu meme en zone chargee.
+        band = np.mean([_line_samples(mask, x1, y1, x2, y2, o).mean() for o in range(-3 * side, 3 * side + 1) if abs(o) > 1])
+        if band > THIN_LINE_TEXTURE and on < THIN_LINE_SOLID:
             continue
         a = np.median(_line_samples(lab, x1, y1, x2, y2, side), 0)
         b = np.median(_line_samples(lab, x1, y1, x2, y2, -side), 0)
@@ -538,7 +546,17 @@ def overlay_lines(labels, palette_bgr, lines, width_px, extend_px=0):
     for g in groups:
         for i in g["m"]:
             tone[i] = g["c"]
-    for i, (x1, y1, x2, y2, c, bg) in enumerate(lines):
+    # Les plus longs d'abord : Hough renvoie souvent plusieurs segments decales de 1-2 px pour un meme
+    # trait ; dessines tous, ils fusionnent les faisceaux de traits paralleles en une barre epaisse.
+    keep = np.zeros(labels.shape, np.uint8)
+    for i in sorted(range(len(lines)), key=lambda i: -info[i][0]):
+        x1, y1, x2, y2, c, bg = lines[i]
+        axis = np.zeros(labels.shape, np.uint8)
+        cv2.line(axis, (x1, y1), (x2, y2), 1, 1, lineType=cv2.LINE_8)
+        # Doublon, ou trait parallele trop proche (faisceau de traits fins) : dessines a largeur peignable,
+        # ils fusionneraient en barre. On garde un ecart peignable (une largeur de trait) entre deux traits.
+        if keep[axis.astype(bool)].mean() > 0.5:
+            continue
         d = np.linalg.norm(pal_lab - tone[i], axis=1)
         d[np.linalg.norm(pal_lab - info[i][3], axis=1) < 0.5 * info[i][4]] = np.inf   # pas la teinte du fond
         lb = int(np.argmin(d))
@@ -548,12 +566,92 @@ def overlay_lines(labels, palette_bgr, lines, width_px, extend_px=0):
         p2 = (int(round(x2 + ex)), int(round(y2 + ey)))
         m = np.zeros(labels.shape, np.uint8)
         cv2.line(m, p1, p2, 1, int(width_px), lineType=cv2.LINE_8)
+        cv2.line(keep, p1, p2, 1, 3 * int(width_px), lineType=cv2.LINE_8)
         m = m.astype(bool)
-        if prot[m].mean() > 0.5:          # doublon (Hough renvoie des segments paralleles) : pas d'epaississement
-            continue
         out[m] = lb
         prot |= m
     return out, prot.astype(bool)
+
+
+SPOT_CONTRAST = 25.0      # DeltaE mini entre une tache et son entourage (taches du pelage, yeux, fleurs...)
+SPOT_R_MM = (0.45, 1.6)   # rayon equivalent (mm) : plus petit = bruit ; plus grand = deja garde par le pipeline
+
+
+def detect_spots(bgr, px_per_mm, contrast=SPOT_CONTRAST):
+    """Petites taches tres contrastees (taches d'un guepard, pupilles, petites fleurs) que le seuil de
+    taille des zones efface. -> [(cx, cy, r_px, lab_tache, lab_fond, score)] par score decroissant."""
+    lab = cv2.cvtColor(bgr.astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB)
+    k = 2 * int(max(2, round(2.0 * px_per_mm))) + 1                  # fond local ~4 mm
+    labm = cv2.cvtColor(cv2.medianBlur(bgr, k).astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB)
+    de = np.linalg.norm(lab - labm, axis=2)
+    mask = (de > contrast).astype(np.uint8)
+    n, cc, st, cen = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    if n <= 1:
+        return []
+    rmin, rmax = SPOT_R_MM[0] * px_per_mm, SPOT_R_MM[1] * px_per_mm
+    area = st[1:, cv2.CC_STAT_AREA].astype(np.float64)
+    bw, bh = st[1:, cv2.CC_STAT_WIDTH], st[1:, cv2.CC_STAT_HEIGHT]
+    r = np.sqrt(area / np.pi)
+    ok = (r >= rmin) & (r <= rmax) & (area >= 0.45 * bw * bh) & (np.maximum(bw, bh) <= 3 * np.minimum(bw, bh))
+    ids = np.flatnonzero(ok) + 1
+    if not len(ids):
+        return []
+    flat = cc.ravel()
+    sel = np.isin(flat, ids)
+    lbl = flat[sel]
+    order = np.argsort(lbl, kind="stable")
+    lbl = lbl[order]
+    px_c = lab.reshape(-1, 3)[sel][order]
+    px_b = labm.reshape(-1, 3)[sel][order]
+    cuts = np.flatnonzero(np.diff(lbl)) + 1
+    out = []
+    starts = np.concatenate([[0], cuts])
+    for st_i, g_c, g_b, g_d in zip(starts, np.split(px_c, cuts), np.split(px_b, cuts), np.split(de.ravel()[sel][order], cuts)):
+        i = lbl[st_i]
+        out.append((float(cen[i][0]), float(cen[i][1]), float(r[i - 1]), np.median(g_c, 0), np.median(g_b, 0),
+                    float(g_d.mean() * area[i - 1])))
+    out.sort(key=lambda t: -t[5])
+    return out
+
+
+def overlay_spots(labels, palette_bgr, spots, r_min_px, budget, protect=None, bgr=None):
+    """Redessine les taches effacees, en disque de taille peignable (et numerotable), dans la teinte
+    de palette la plus proche (jamais celle du fond). Au plus `budget` nouvelles zones.
+    -> (labels, masque des taches)"""
+    prot = np.zeros(labels.shape, bool)
+    if not spots or budget <= 0:
+        return labels, prot
+    pal_lab = cv2.cvtColor(np.asarray(palette_bgr, np.uint8).reshape(-1, 1, 3).astype(np.float32) / 255.0,
+                           cv2.COLOR_BGR2LAB).reshape(-1, 3)
+    src_lab = None if bgr is None else cv2.cvtColor(bgr.astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB)
+    out = labels.copy()
+    busy = np.zeros(labels.shape, np.uint8)
+    if protect is not None:
+        busy[protect] = 1                              # pas par-dessus un trait redessine
+    drawn = 0
+    for cx, cy, r, c, bg, _s in spots:
+        if drawn >= budget:
+            break
+        d = np.linalg.norm(pal_lab - c, axis=1)
+        d[np.linalg.norm(pal_lab - bg, axis=1) < 0.5 * np.linalg.norm(c - bg)] = np.inf
+        lb = int(np.argmin(d))
+        rr = int(round(max(r, r_min_px)))
+        m = np.zeros(labels.shape, np.uint8)
+        cv2.circle(m, (int(round(cx)), int(round(cy))), rr, 1, -1)
+        m = m.astype(bool)
+        if busy[m].any():                              # chevauche une tache deja posee / un trait
+            continue
+        if (out[m] == lb).mean() > 0.7:                # deja presente sur la toile : rien a faire
+            continue
+        if src_lab is not None:                        # garde-fou : la toile doit y gagner en fidelite
+            px = src_lab[m]
+            if np.linalg.norm(px - pal_lab[lb], axis=1).sum() >= np.linalg.norm(px - pal_lab[out[m]], axis=1).sum():
+                continue
+        out[m] = lb
+        prot |= m
+        cv2.circle(busy, (int(round(cx)), int(round(cy))), rr + 1, 1, -1)   # garder un liseré entre deux taches
+        drawn += 1
+    return out, prot
 
 
 def count_zones(labels, k):
@@ -1243,6 +1341,7 @@ def run(args):
     if _mz:
         max_zones = int(np.clip(int(_mz), 2, 9999))
     labels = limit_zones(labels, args.colors, min_area, max_zones, min_radius=min_radius)
+    lines, prot = [], None
     if getattr(args, "thin_lines", True):
         # Cables, mats, fils... : rendus a largeur peignable (~1.2mm) au lieu d'etre effaces.
         lines = detect_thin_lines(img, px_per_mm)
@@ -1251,6 +1350,17 @@ def run(args):
                                          extend_px=int(round(1.5 * px_per_mm)))
             labels = clean_small(labels, args.colors, min_area, min_radius=min_radius, passes=2, protect=prot)
         print(f"[i] traits fins: {len(lines)}")
+    if getattr(args, "spots", True):
+        # Taches (pelage, pupilles, petites fleurs) : redessinees a taille peignable au lieu d'etre
+        # effacees par le seuil de taille, dans la limite du plafond de zones.
+        spots = detect_spots(img, px_per_mm)
+        budget = max_zones - count_zones(labels, args.colors)
+        if spots and budget > 0:
+            lp = prot
+            labels, sp = overlay_spots(labels, palette, spots, min_radius + 0.5, budget, protect=lp, bgr=img)
+            keep = sp if lp is None else (sp | lp)
+            labels = clean_small(labels, args.colors, min_area, min_radius=min_radius, passes=1, protect=keep)
+            print(f"[i] taches: {len(spots)} candidates, budget {budget}")
     # Legende = toile : une teinte effacee par le nettoyage n'est ni listee ni fournie.
     used = np.unique(labels)
     if len(used) < args.colors:

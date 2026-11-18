@@ -407,6 +407,37 @@ class SupplierPaletteTests(TestCase):
         self.assertTrue((out[50:150, 100] == 1).all())
         self.assertTrue((pbn.clean_small(out, 2, 400, min_radius=2.2, protect=prot)[50:150, 100] == 1).all())
 
+    def test_spotted_texture_is_not_a_line_and_spots_are_kept(self):
+        """Pelage tachete : pas de faux traits ; les taches effacees sont redessinees (taille peignable),
+        dans la limite du budget de zones, jamais en teinte du fond."""
+        import numpy as np, cv2, pbn
+        rs = np.random.RandomState(3)
+        fur = np.full((300, 300, 3), (90, 160, 205), np.uint8)               # fauve
+        pts = [(int(x), int(y)) for x, y in rs.randint(6, 294, (420, 2))]
+        for x, y in pts:
+            cv2.circle(fur, (x, y), 2, (25, 25, 30), -1)                     # taches ~2 mm
+        self.assertEqual(pbn.detect_thin_lines(fur, 2.2), [])
+        spots = pbn.detect_spots(fur, 2.2)
+        self.assertGreater(len(spots), 50)
+        pal = np.array([[90, 160, 205], [25, 25, 30]], np.uint8)
+        labels = np.zeros((300, 300), int)                                   # taches effacees par le pipeline
+        out, prot = pbn.overlay_spots(labels, pal, spots, 3.0, 40, bgr=fur)
+        n = cv2.connectedComponents((out == 1).astype(np.uint8))[0] - 1
+        self.assertTrue(0 < n <= 40)
+        self.assertTrue((out[prot] == 1).all())
+        out2, _p = pbn.overlay_spots(labels, pal, spots, 3.0, 0, bgr=fur)    # pas de budget : rien
+        self.assertEqual(int(out2.sum()), 0)
+
+    def test_parallel_duplicates_do_not_merge_into_a_bar(self):
+        import numpy as np, pbn
+        labels = np.zeros((100, 200), int)
+        pal = np.array([[220, 220, 220], [20, 20, 20]], np.uint8)
+        c, bg = np.array([10.0, 0, 0]), np.array([90.0, 0, 0])
+        lines = [(10, 50, 190, 50, c, bg), (10, 51, 190, 51, c, bg), (10, 52, 190, 52, c, bg)]
+        one, _p = pbn.overlay_lines(labels, pal, lines[:1], 3)
+        out, prot = pbn.overlay_lines(labels, pal, lines, 3)
+        self.assertEqual(int((out[:, 100] == 1).sum()), int((one[:, 100] == 1).sum()))   # un trait, pas une barre
+
     def test_supplier_json_uses_codes(self):
         from studio.fulfillment import supplier_colors
         out = supplier_colors([{"number": 1, "hex": "#FFFFFF", "rgb": [255, 255, 255], "code": "1"},
