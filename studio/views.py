@@ -44,9 +44,10 @@ def _rate():
 
 def home(request):
     import json as _json
-    # carrousel du home : modeles GRATUITS tires au hasard dans toute la galerie
-    lib = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-", price=0, hidden=False)
-               .order_by("?")[:12])
+    # carrousel du home : TOUT le catalogue visible (gratuits et payants), ordre aleatoire, vignettes legeres
+    lib = list(DigitalCanvas.objects.filter(email="__library__", uid__startswith="gal-", hidden=False).order_by("?"))
+    for m in lib:
+        m.thumb = thumb_url(m.uid)
     from django.templatetags.static import static as _static
     lib_slugs = {s: sl and not h for s, sl, h in DigitalCanvas.objects.filter(email="__library__").exclude(showcase_slug="")
                  .values_list("showcase_slug", "in_slider", "hidden")}
@@ -923,9 +924,48 @@ def set_options(request):
     return redirect("studio:delivery")
 
 
+THUMB_W = 600                      # vignettes du catalogue (carrousel de l'accueil, galerie)
+PUBLIC_PREFIXES = ("gal-", "lib-", "mkt-")
+
+
+def _thumb_path(uid):
+    """Vignette JPEG d'un modele public, (re)generee depuis l'apercu si absente ou perimee. -> chemin ou None."""
+    d = os.path.join(settings.MEDIA_ROOT, "orders", uid)
+    src, dst = os.path.join(d, "%s_preview.png" % uid), os.path.join(d, "%s_thumb.jpg" % uid)
+    if not os.path.exists(src):
+        return None
+    if not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
+        from PIL import Image
+        with Image.open(src) as im:
+            im = im.convert("RGB")
+            if im.width > THUMB_W:
+                im = im.resize((THUMB_W, round(im.height * THUMB_W / im.width)), Image.LANCZOS)
+            tmp = "%s.%s.tmp.jpg" % (dst, uuid.uuid4().hex[:8])     # requetes simultanees : pas de collision
+            im.save(tmp, "JPEG", quality=84, optimize=True, progressive=True)
+            os.replace(tmp, dst)
+    return dst
+
+
+def thumb_url(uid):
+    """URL versionnee de la vignette (cache navigateur long ; change apres une regeneration)."""
+    p = os.path.join(settings.MEDIA_ROOT, "orders", uid, "%s_preview.png" % uid)
+    v = int(os.path.getmtime(p)) if os.path.exists(p) else 0
+    return "%s?v=%d" % (reverse("studio:order_image", args=[uid, "thumb"]), v)
+
+
 def order_image(request, uid, kind):
-    if kind not in ("preview", "template", "digipaint", "poster", "source"):
+    if kind not in ("preview", "template", "digipaint", "poster", "source", "thumb"):
         raise Http404
+    if kind == "thumb":
+        if not uid.startswith(PUBLIC_PREFIXES) or "/" in uid or uid.startswith("."):
+            raise Http404
+        path = _thumb_path(uid)
+        if not path:
+            raise Http404
+        resp = FileResponse(open(path, "rb"), content_type="image/jpeg")
+        resp["Cache-Control"] = "public, max-age=2592000, immutable"   # URL versionnee (?v=)
+        resp["X-Robots-Tag"] = "noindex, nofollow, noimageindex"
+        return resp
     if kind == "source":
         # Photo d'origine du client : donnee personnelle -> staff, proprietaire (session) ou modele de galerie.
         own = uid == (request.session.get("order") or {}).get("uid") or uid in request.session.get("my_uids", [])
@@ -1089,6 +1129,8 @@ def gallery(request):
                 m.save(update_fields=["zones"])
     from . import seo
     from django.utils.translation import gettext as _t
+    for m in models:
+        m.thumb = thumb_url(m.uid)
     models.sort(key=lambda m: bool(m.price and m.price > 0))   # gratuites d'abord : envie de tester (tri stable)
     from collections import Counter
     from . import categories

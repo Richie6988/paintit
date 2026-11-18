@@ -2525,6 +2525,42 @@ class DensityRecommendationTests(TestCase):
         self.assertEqual(density_caps(40, 50), {"easy": 500, "medium": 900, "expert": 2000})
 
 
+@override_settings(MEDIA_ROOT=MEDIA)
+class CatalogueThumbTests(TestCase):
+    def _model(self, uid, price="0"):
+        from decimal import Decimal
+        from PIL import Image
+        from studio.models import DigitalCanvas
+        d = os.path.join(MEDIA, "orders", uid); os.makedirs(d, exist_ok=True)
+        Image.new("RGB", (1100, 1375), (200, 120, 40)).save(os.path.join(d, uid + "_preview.png"))
+        return DigitalCanvas.objects.create(email="__library__", uid=uid, title=uid, price=Decimal(price), colors=24)
+
+    def tearDown(self):
+        import shutil as _sh
+        for u in ("gal-th1", "gal-th2", "gal-th3"):
+            _sh.rmtree(os.path.join(MEDIA, "orders", u), ignore_errors=True)
+
+    def test_home_carousel_shows_whole_catalogue_with_thumbs(self):
+        self._model("gal-th1"); self._model("gal-th2", "0.50")
+        h = self._model("gal-th3"); h.hidden = True; h.save()
+        r = self.client.get("/")
+        html = r.content.decode()
+        self.assertIn("/preview/img/gal-th1/thumb/?v=", html)
+        self.assertIn("/preview/img/gal-th2/thumb/?v=", html)          # payant aussi
+        self.assertNotIn("gal-th3", html)                               # masque : non
+        self.assertNotIn("/preview/img/gal-th1/preview/", html)         # plus d'apercu pleine taille
+
+    def test_thumb_is_small_cached_and_public_only(self):
+        from PIL import Image
+        self._model("gal-th1")
+        r = self.client.get("/preview/img/gal-th1/thumb/")
+        self.assertEqual((r.status_code, r["Content-Type"]), (200, "image/jpeg"))
+        self.assertIn("max-age", r["Cache-Control"])
+        im = Image.open(os.path.join(MEDIA, "orders", "gal-th1", "gal-th1_thumb.jpg"))
+        self.assertEqual(im.width, 600)
+        self.assertEqual(self.client.get("/preview/img/ABCD-1234/thumb/").status_code, 404)   # commande client : jamais
+
+
 class RegenCachePurgeTests(TestCase):
     def test_new_cache_entries_removed_old_kept(self):
         import tempfile, shutil

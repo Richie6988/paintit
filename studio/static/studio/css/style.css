@@ -703,7 +703,7 @@ a.mc-thumb-card{text-decoration:none;color:inherit}
 @keyframes lib-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .lib-carousel .lib-tile{flex:0 0 auto;width:200px;position:relative;border-radius:14px;overflow:hidden;box-shadow:0 6px 18px rgba(18,34,79,.12);transition:transform .15s}
 .lib-carousel .lib-tile:hover{transform:translateY(-4px)}
-.lib-carousel .lib-tile img{width:100%;aspect-ratio:40/50;object-fit:cover;display:block}
+.lib-carousel .lib-tile img{width:100%;height:auto;aspect-ratio:40/50;object-fit:cover;display:block}
 
 /* ===== Pied de page (centre, sobre) ===== */
 .foot{margin-top:56px;background:#0f1836;color:#c8d2ea;border-top:1px solid rgba(255,255,255,.06)}
