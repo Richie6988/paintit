@@ -254,6 +254,37 @@ class BackupTests(TestCase):
         self.assertTrue(any(f.startswith("db-") for f in os.listdir(out)))
         shutil.rmtree(out, ignore_errors=True)
 
+    def test_media_backup_skips_cache_and_rotates(self):
+        """Archive medias sans le cache de calcul ; retention propre aux medias (2 par defaut) ;
+        jamais d'archive si le disque n'a pas la place."""
+        import tarfile
+        from unittest import mock
+        from django.core.management import call_command
+        media, out = tempfile.mkdtemp(), tempfile.mkdtemp()
+        try:
+            for d in ("orders", "cache", "jobs"):
+                os.makedirs(os.path.join(media, d)); open(os.path.join(media, d, "f.txt"), "w").write(d)
+            for stamp in ("20260101-000000", "20260102-000000"):
+                open(os.path.join(out, "media-%s.tar.gz" % stamp), "w").write("old")
+            import sqlite3
+            real = sqlite3.connect
+            with override_settings(MEDIA_ROOT=media), \
+                    mock.patch("studio.management.commands.backup_data.sqlite3.connect",
+                               side_effect=lambda p: real(p if str(p).startswith(out) else ":memory:")):
+                call_command("backup_data", "--dir", out, stdout=open(os.devnull, "w"))
+                arch = sorted(f for f in os.listdir(out) if f.startswith("media-"))
+                self.assertEqual(len(arch), 2)                       # retention medias = 2
+                self.assertNotIn("media-20260101-000000.tar.gz", arch)
+                names = tarfile.open(os.path.join(out, arch[-1])).getnames()
+                self.assertIn("media/orders/f.txt", names)
+                self.assertFalse([n for n in names if n.startswith(("media/cache", "media/jobs"))])
+                full = mock.Mock(free=10)                            # disque plein
+                with mock.patch("studio.management.commands.backup_data.shutil.disk_usage", return_value=full):
+                    call_command("backup_data", "--dir", out, stdout=open(os.devnull, "w"), stderr=open(os.devnull, "w"))
+                self.assertFalse(any(f > arch[-1] for f in os.listdir(out) if f.startswith("media-")))   # rien de cree
+        finally:
+            shutil.rmtree(media, ignore_errors=True); shutil.rmtree(out, ignore_errors=True)
+
 
 class AdminSecurityTests(TestCase):
     def setUp(self):
