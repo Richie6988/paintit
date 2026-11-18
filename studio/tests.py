@@ -459,6 +459,27 @@ class SupplierPaletteTests(TestCase):
         out2, _p = pbn.overlay_spots(labels, pal, spots, 3.0, 0, bgr=fur)    # pas de budget : rien
         self.assertEqual(int(out2.sum()), 0)
 
+    def test_ripples_and_light_seams_are_not_redrawn(self):
+        """Vaguelettes (rayures paralleles) et sutures claires courtes : pas de batons redessines ;
+        un cable sombre isole sur le meme fond reste detecte."""
+        import numpy as np, cv2, pbn
+        rs = np.random.RandomState(5)
+        water = np.full((300, 400, 3), (190, 170, 150), np.uint8)
+        for y in range(20, 290, 9):                                           # rides douces tous les ~4 mm
+            x = int(rs.randint(0, 40))
+            while x < 380:                                                    # plusieurs rides par rangee
+                n = int(rs.randint(50, 120)); cv2.line(water, (x, y), (x + n, y + int(rs.randint(-2, 3))), (140, 122, 105), 2)
+                x += n + int(rs.randint(10, 40))
+        water = cv2.GaussianBlur(water, (0, 0), 1.0)
+        ys = [l[1] for l in pbn.detect_thin_lines(water, 2.2)]              # 30 rangees : seules les rangees du bord
+        self.assertTrue(all(y <= 25 or y >= 275 for y in ys), ys)          # (voisines d'un seul cote) peuvent passer
+        shell = np.full((300, 400, 3), (40, 60, 100), np.uint8)
+        cv2.line(shell, (100, 100), (160, 160), (200, 215, 225), 1)          # suture claire ~38 mm
+        self.assertEqual(pbn.detect_thin_lines(shell, 2.2), [])
+        sky = np.full((300, 400, 3), (230, 200, 160), np.uint8)
+        cv2.line(sky, (200, 10), (200, 290), (60, 60, 70), 1)                # cable
+        self.assertTrue(pbn.detect_thin_lines(sky, 2.2))
+
     def test_parallel_duplicates_do_not_merge_into_a_bar(self):
         import numpy as np, pbn
         labels = np.zeros((100, 200), int)

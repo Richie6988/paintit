@@ -467,6 +467,11 @@ def clean_small(labels, k, min_area, min_radius=0.0, passes=4, protect=None):
 THIN_LINE_MIN_MM = 18.0   # longueur mini d'un trait (mm) : cables/mats oui, levres/meches non
 THIN_LINE_TEXTURE = 0.30  # densite de « taches » autour du trait au-dela de laquelle la zone est une texture
 THIN_LINE_SOLID = 0.85    # continuite exigee d'un trait en zone texturee
+THIN_LINE_SNR = 8.0       # trait net : contraste >= 8x le bruit du fond voisin (cable sur ciel, trait d'encre)
+THIN_LINE_LONG_MM = 35.0  # ... ou trait long (structure) ...
+THIN_LINE_SNR_LONG = 3.0  # ... encore nettement visible
+THIN_LINE_DOMINANT_SNR = 7.0   # trait dominant (long et tres net) : jamais pris pour une rayure de texture
+THIN_LINE_DOMINANT_MM = 60.0
 
 
 def _line_samples(img, x1, y1, x2, y2, off):
@@ -486,7 +491,8 @@ def detect_thin_lines(bgr, px_per_mm, thr=8.0, min_len_mm=THIN_LINE_MIN_MM):
     lab = cv2.cvtColor(bgr.astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB)
     k = 2 * int(max(2, round(1.2 * px_per_mm))) + 1
     labm = cv2.cvtColor(cv2.medianBlur(bgr, k).astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB)
-    mask = (np.linalg.norm(lab - labm, axis=2) > thr).astype(np.uint8)
+    de = np.linalg.norm(lab - labm, axis=2)
+    mask = (de > thr).astype(np.uint8)
     L = max(8, int(min_len_mm * px_per_mm))
     segs = cv2.HoughLinesP(mask * 255, 1, np.pi / 360, threshold=int(L * 0.6),
                            minLineLength=L, maxLineGap=3)
@@ -494,6 +500,10 @@ def detect_thin_lines(bgr, px_per_mm, thr=8.0, min_len_mm=THIN_LINE_MIN_MM):
     if segs is None:
         return out
     side = max(2, int(round(1.3 * px_per_mm)))
+    lum = cv2.GaussianBlur(lab[..., 0], (0, 0), 1.0)
+    gx = cv2.Sobel(lum, cv2.CV_32F, 1, 0, ksize=3) / 8
+    gy = cv2.Sobel(lum, cv2.CV_32F, 0, 1, ksize=3) / 8
+    ring = [o for o in range(-int(12 * px_per_mm), int(12 * px_per_mm) + 1) if abs(o) > 3 * px_per_mm]
     for x1, y1, x2, y2 in segs.reshape(-1, 4).tolist():
         on = _line_samples(mask, x1, y1, x2, y2, 0).mean()
         if on < 0.7:
@@ -503,6 +513,29 @@ def detect_thin_lines(bgr, px_per_mm, thr=8.0, min_len_mm=THIN_LINE_MIN_MM):
         band = np.mean([_line_samples(mask, x1, y1, x2, y2, o).mean() for o in range(-3 * side, 3 * side + 1) if abs(o) > 1])
         if band > THIN_LINE_TEXTURE and on < THIN_LINE_SOLID:
             continue
+        # Lisibilite : contraste du trait / « bruit » du fond juste a cote (90e centile). Vaguelettes, joints
+        # de dalles, murets, sutures d'une carapace... sont des traits faibles sur fond deja texture : un
+        # fragment redessine y fait un baton isole. On garde un trait net sur fond lisse, ou long et visible.
+        d0 = np.median(np.max([_line_samples(de, x1, y1, x2, y2, o) for o in (-1, 0, 1)], 0))
+        bg_noise = np.percentile(np.concatenate([_line_samples(de, x1, y1, x2, y2, o)
+                                                 for o in range(-3 * side, 3 * side + 1) if abs(o) > 2]), 90)
+        snr = d0 / max(bg_noise, 1.0)
+        length_mm = np.hypot(x2 - x1, y2 - y1) / px_per_mm
+        if not (snr >= THIN_LINE_SNR or (length_mm >= THIN_LINE_LONG_MM and snr >= THIN_LINE_SNR_LONG)):
+            continue
+        # Champ de rayures (vaguelettes, joints de dalles, murets) : bords paralleles au trait des DEUX
+        # cotes (3-12 mm) et peu de bords dans les autres directions. Le trait n'est qu'une rayure parmi
+        # d'autres ; sauf s'il domine nettement (cable principal d'un pont, a cote de son jumeau).
+        nx, ny = -(y2 - y1) / max(length_mm * px_per_mm, 1), (x2 - x1) / max(length_mm * px_per_mm, 1)
+        gpar, gper = np.abs(gx * nx + gy * ny), np.abs(gx * ny - gy * nx)
+        pl = np.mean([_line_samples(gpar, x1, y1, x2, y2, o).mean() for o in ring if o < 0])
+        pr = np.mean([_line_samples(gpar, x1, y1, x2, y2, o).mean() for o in ring if o > 0])
+        per = np.mean([_line_samples(gper, x1, y1, x2, y2, o).mean() for o in ring])
+        stripes = min(pl, pr) / max(d0, 1.0)
+        aniso = (pl + pr) / 2 / max(per, 0.05)
+        dominant = snr >= THIN_LINE_DOMINANT_SNR and length_mm >= THIN_LINE_DOMINANT_MM
+        if not dominant and ((stripes >= 0.025 and aniso >= 4.0) or (stripes >= 0.03 and aniso >= 2.5)):
+            continue
         a = np.median(_line_samples(lab, x1, y1, x2, y2, side), 0)
         b = np.median(_line_samples(lab, x1, y1, x2, y2, -side), 0)
         bg = (a + b) / 2
@@ -511,6 +544,10 @@ def detect_thin_lines(bgr, px_per_mm, thr=8.0, min_len_mm=THIN_LINE_MIN_MM):
         best = np.linalg.norm(prof - bg, axis=2).argmax(0)
         c = np.median(prof[best, np.arange(prof.shape[1])], 0)
         da, db = np.linalg.norm(c - a), np.linalg.norm(c - b)
+        # Trait CLAIR sur fond sombre : en photo, surtout des reflets, ecumes, sutures (carapace)... Les vrais
+        # objets fins (cables, fils, mats) se detachent presque toujours en sombre : clair = dominant seulement.
+        if c[0] > bg[0] and not dominant:
+            continue
         if min(da, db) > thr and np.linalg.norm(a - b) < 0.6 * min(da, db):
             # trait plus fin qu'un pixel = melange avec le fond : on "demelange" vers sa vraie teinte
             out.append((x1, y1, x2, y2, c, bg))
