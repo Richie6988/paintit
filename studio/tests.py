@@ -2549,6 +2549,8 @@ class CatalogueThumbTests(TestCase):
         self.assertIn("/preview/img/gal-th2/thumb/?v=", html)          # payant aussi
         self.assertNotIn("gal-th3", html)                               # masque : non
         self.assertNotIn("/preview/img/gal-th1/preview/", html)         # plus d'apercu pleine taille
+        car = html[html.index('class="lib-showcase"'):html.index("</section>", html.index('class="lib-showcase"'))]
+        self.assertNotIn("g-price", car)                                # prix decouvert apres l'essai, pas avant
 
     def test_thumb_is_small_cached_and_public_only(self):
         from PIL import Image

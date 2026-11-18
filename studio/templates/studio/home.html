@@ -80,13 +80,11 @@
     {% for m in library_preview %}
     <a class="lib-tile" href="{% url 'studio:digipaint' m.uid %}">
       <img src="{{ m.thumb }}" alt="{{ m.art_caption|default:m.title }}" width="200" height="250" loading="lazy" decoding="async">
-      {% if m.price and m.price > 0 %}<span class="g-price">{% money m.price %}</span>{% endif %}
     </a>
     {% endfor %}
     {% for m in library_preview %}
     <a class="lib-tile" href="{% url 'studio:digipaint' m.uid %}" aria-hidden="true" tabindex="-1">
       <img src="{{ m.thumb }}" alt="" width="200" height="250" loading="lazy" decoding="async">
-      {% if m.price and m.price > 0 %}<span class="g-price">{% money m.price %}</span>{% endif %}
     </a>
     {% endfor %}
   </div></div>
