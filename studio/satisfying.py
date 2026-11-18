@@ -167,7 +167,7 @@ def schedule(n_zones, numbers, mode, fill_seconds, seed=0, areas=None, centers=N
 
 
 # ---------------- Musique generee (libre de droits) ----------------
-DENSITIES = [("orig", "Celle de la toile"), ("easy", "Facile (grandes zones)"), ("medium", "Moyen"),
+DENSITIES = [("orig", "Auto (recommandée pour la photo)"), ("easy", "Facile (grandes zones)"), ("medium", "Moyen"),
              ("expert", "Expert (zones fines)")]
 MUSIC_STYLES = [("ambient", "Douce"), ("electro", "Électro"), ("space", "Space"), ("none", "Aucune")]
 _hz = lambda m: 440.0 * 2 ** ((m - 69) / 12)

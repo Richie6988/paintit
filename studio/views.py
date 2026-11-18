@@ -5398,9 +5398,16 @@ def erp_videos(request):
                         uid = make(src, name, 12, "easy", label + " · 12 couleurs")
                         uid2 = make(src, name, hi, "expert", label + " · %d couleurs" % hi)
                     else:
-                        ncol = want if 6 <= want <= 64 else (24 if f else len(satisfying._palette(uid)))
+                        ncol = want if 6 <= want <= 64 else (None if f else len(satisfying._palette(uid)))
+                        if ncol is None or level == "orig":
+                            # Auto : reglages recommandes pour CETTE photo (couleurs et/ou densite)
+                            from .pipeline import recommended_settings
+                            rc, rl = recommended_settings(src, 40, 50)
+                            ncol = ncol or rc
+                            if level == "orig":
+                                level = rl
                         uid = make(src, name, ncol, level, " · ".join(
-                            [label] + ([dict(satisfying.DENSITIES)[level]] if level != "orig" else [])
+                            [label] + [dict(satisfying.DENSITIES)[level]]
                             + (["%d couleurs" % ncol] if recolor or f else [])))
             except Exception as exc:
                 logger.exception("Video canvas")
@@ -5610,9 +5617,11 @@ def erp_images(request):
                     else:
                         from .forms import DENSITY_LEVELS
                         from .pipeline import generate
+                        from .pipeline import recommended_settings
                         uid = ("vid-" if op == "video" else "mkt-") + _uuid.uuid4().hex[:10]
-                        dens, det = DENSITY_LEVELS["auto"]
-                        generate(hd, 24, 40, 50, uid=uid, source_name="stock-%d.jpg" % img.pk, density=dens, detail=det)
+                        ncol, lvl = recommended_settings(hd, 40, 50)        # meilleur rendu pour cette photo
+                        dens, det = DENSITY_LEVELS[lvl]
+                        generate(hd, ncol, 40, 50, uid=uid, source_name="stock-%d.jpg" % img.pk, density=dens, detail=det)
                         imagebank.mark_used(img, ("vidéo " if op == "video" else "studio ") + uid)
                         if op == "video":
                             satisfying.save_label(uid, "Banque · %s" % img.title[:80])

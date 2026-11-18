@@ -5,9 +5,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}PaintIt{% endblock %}</title>
-  <link rel="icon" type="image/svg+xml" href="{% static 'studio/img/icon.svg' %}">
-  <link rel="icon" type="image/png" href="{% static 'studio/img/favicon.png' %}">
-  <link rel="apple-touch-icon" href="{% static 'studio/img/favicon.png' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'studio/img/favicon.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'studio/img/apple-touch-icon.png' %}">
   <meta name="description" content="{% block meta_description %}{% trans "Peinture par numéros personnalisée à partir de votre photo : aperçu gratuit, jeu en ligne, kit complet livré gratuitement." %}{% endblock %}">
   {% block meta_robots %}{% endblock %}
   <meta property="og:site_name" content="PaintIt">
@@ -44,7 +43,7 @@
   {% include "studio/_topbar.html" %}
   <header class="nav">
     <a class="brand-logo" href="{% url 'studio:home' %}">
-      <img src="{% static 'studio/img/icon.svg' %}" alt="PaintIt">
+      <img src="{% static 'studio/img/icon.png' %}" alt="PaintIt">
       <span class="brand-word" data-noi18n translate="no"><span class="p">Paint</span><span class="it">It</span></span>
     </a>
     <div class="nav-right">
@@ -65,7 +64,7 @@
   <main>{% block content %}{% endblock %}</main>
   <footer class="foot">
     <div class="foot-in">
-      <a href="{% url 'studio:home' %}" class="foot-logo"><img src="{% static 'studio/img/icon.svg' %}" alt=""><span>PaintIt</span></a>
+      <a href="{% url 'studio:home' %}" class="foot-logo"><img src="{% static 'studio/img/icon.png' %}" alt=""><span>PaintIt</span></a>
       <p class="foot-motto">{% trans "Votre souvenir. Votre chef-d’œuvre." %}</p>
       <nav class="foot-nav">
         <a href="{% url 'studio:faq' %}">{% trans "FAQ" %}</a>

@@ -70,7 +70,7 @@
       <label data-for="fill guess tips">Densité des zones
         <select name="density">{% for k, l in densities %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select></label>
       <label>Couleurs
-        <input type="text" name="colors" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" placeholder="Auto" id="vcolors" title="Auto = celles de la toile (24 pour une image importée). De 6 à 64 : recrée la toile depuis la photo d'origine.">
+        <input type="text" name="colors" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" placeholder="Auto" id="vcolors" title="Auto = celles de la toile ; pour une image importée, le nombre recommandé par l'analyse de la photo. De 6 à 64 : recrée la toile depuis la photo d'origine.">
         <small class="muted" style="font-weight:500" id="vcolors-hint">Auto, ou un nombre de 6 à 64</small></label>
       <label data-for="fill">Remplissage
         <select name="mode"><option value="flow">Vague (se propage)</option><option value="random">Aléatoire (accélère)</option><option value="colors">Couleur par couleur</option></select></label>

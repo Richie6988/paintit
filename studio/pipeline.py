@@ -18,6 +18,30 @@ def new_uid():
     return f"{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:4].upper()}"
 
 
+VIDEO_COLOR_OPTIONS = (12, 24, 36, 48)
+
+
+def recommended_settings(image_path, width_cm, height_cm, color_options=VIDEO_COLOR_OPTIONS, focus=(0.5, 0.5)):
+    """Meilleurs reglages pour une photo (pre-analyse, < 1 s) : (nb de couleurs, niveau de densite).
+    Meme analyse que la page Creer et que la regeneration du catalogue. Repli (24, "medium")."""
+    import cv2
+    import pbn
+    from .forms import density_caps
+    img = cv2.imread(image_path)
+    if img is None:
+        return 24, "medium"
+    k = 480.0 / max(img.shape[:2])
+    if k < 1:
+        img = cv2.resize(img, None, fx=k, fy=k, interpolation=cv2.INTER_AREA)
+    crop = crop_to_ratio(img, float(width_cm) / float(height_cm), *focus)
+    try:
+        colors = pbn.recommend_colors(crop, color_options)["best"]
+        level = pbn.recommend_density(crop, colors, density_caps(width_cm, height_cm))["best"]
+    except Exception:
+        return 24, "medium"
+    return int(colors), level
+
+
 def crop_to_ratio(img, target_ratio, fx=0.5, fy=0.5):
     """Recadre (en memoire) au ratio largeur/hauteur autour d'un point focal fx, fy in [0,1]."""
     fx = min(1.0, max(0.0, float(fx)))

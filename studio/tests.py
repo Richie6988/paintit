@@ -1210,6 +1210,42 @@ class SatisfyingVideoTests(TestCase):
         from studio import satisfying
         self.assertEqual(satisfying.sources()[0][0], v.canvas_uid)
 
+    def test_upload_image_auto_uses_recommended_settings(self):
+        """Image importee en mode Auto : couleurs ET densite recommandees pour la photo (pas 24 fixe)."""
+        import shutil as _sh
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from studio.models import SocialVideo
+        seen = {}
+
+        def fake_generate(path, colors, w, h, uid=None, source_name=None, density=None, detail=1.0):
+            seen.update(colors=colors, density=density, detail=detail)
+            src, dst = os.path.join(MEDIA, "orders", self.UID), os.path.join(MEDIA, "orders", uid)
+            os.makedirs(dst)
+            for ext in ("_digipaint.svg", "_colors.json"):
+                _sh.copy(os.path.join(src, self.UID + ext), os.path.join(dst, uid + ext))
+        with mock.patch("studio.pipeline.generate", side_effect=fake_generate), mock.patch("studio.satisfying.enqueue"), \
+                mock.patch("studio.pipeline.recommended_settings", return_value=(36, "expert")) as rec:
+            self.client.post("/admin-hub/videos/", {"op": "create", "image": SimpleUploadedFile("me.jpg", b"x"),
+                                                    "density": "orig", "music_style": "electro"})
+        rec.assert_called_once()
+        self.assertEqual((seen["colors"], seen["density"], seen["detail"]), (36, 1.0, 0.6))
+        self.assertIn("Expert", SocialVideo.objects.get().title)
+
+    def test_recommended_settings_on_real_image(self):
+        import tempfile, cv2, numpy as np
+        from studio.pipeline import recommended_settings, VIDEO_COLOR_OPTIONS
+        img = np.full((500, 400, 3), (230, 230, 230), np.uint8)
+        cv2.circle(img, (200, 250), 120, (40, 80, 200), -1)
+        f = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False); f.close()
+        cv2.imwrite(f.name, img)
+        try:
+            c, lv = recommended_settings(f.name, 40, 50)
+        finally:
+            os.remove(f.name)
+        self.assertIn(c, VIDEO_COLOR_OPTIONS)
+        self.assertEqual((c, lv), (12, "easy"))                              # aplat simple
+        self.assertEqual(recommended_settings("/nexiste/pas.jpg", 40, 50), (24, "medium"))
+
 
 class SiteBannerTests(TestCase):
     def setUp(self):

@@ -439,9 +439,11 @@ def _bulk_one(kind, img, opts):
         from .forms import DENSITY_LEVELS
         from .models import SocialVideo
         from .pipeline import generate
+        from .pipeline import recommended_settings
         uid = "vid-" + uuid.uuid4().hex[:10]
-        dens, det = DENSITY_LEVELS["auto"]
-        generate(hd, opts["colors"], 40, 50, uid=uid, source_name="stock-%d.jpg" % img.pk, density=dens, detail=det)
+        ncol, lvl = recommended_settings(hd, 40, 50)          # meilleur rendu pour cette photo
+        dens, det = DENSITY_LEVELS[lvl]
+        generate(hd, ncol, 40, 50, uid=uid, source_name="stock-%d.jpg" % img.pk, density=dens, detail=det)
         label = "Banque · %s" % img.title[:80]
         satisfying.save_label(uid, label)
         fmt, style = opts.get("fmt", "fill"), opts.get("music_style", "ambient")

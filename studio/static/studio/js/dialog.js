@@ -19,9 +19,9 @@
   }[lang] || null;
   if (!T) T = {ok: "Confirmer", cancel: "Annuler", close: "OK", copy: "Copier", copied: "Copié ✓", confirm: "Confirmation", info: "Information", danger: "Supprimer"};
 
-  // logo : a cote de ce script (…/studio/js/dialog.js -> …/studio/img/icon.svg)
+  // logo : a cote de ce script (…/studio/js/dialog.js -> …/studio/img/icon.png)
   var me = document.currentScript && document.currentScript.src || "";
-  var ICON = me ? me.replace(/js\/dialog[^\/]*$/, "img/icon.svg") : "/static/studio/img/icon.svg";
+  var ICON = me ? me.replace(/js\/dialog[^\/]*$/, "img/icon.png") : "/static/studio/img/icon.png";
 
   var css = ""
     + ".pitd-ov{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;"
