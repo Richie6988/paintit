@@ -246,6 +246,95 @@ def dashboard(days=30):
             "devices": devices, "langs": langs, "live": live, "periods": PERIODS, "days": str(days)}
 
 
+# --------------------------------------------------------------------------- visiteurs en direct
+_LANG_RX = re.compile(r"^/(en|de|es|it)(?=/)")
+_STATIC_LABELS = [
+    ("/", "Accueil"), ("/create/", "Créer : choisit sa photo"), ("/create/processing/", "Créer : génération en cours"),
+    ("/preview/", "Aperçu de sa toile"), ("/play/", "Galerie du jeu"), ("/my-models/", "Mes toiles"),
+    ("/paint/", "Mes toiles"), ("/delivery/", "Commande : adresse de livraison"), ("/checkout/", "Commande : paiement"),
+    ("/order/confirmed/", "Commande confirmée"), ("/play/buy-success/", "Achat d'un modèle confirmé"),
+    ("/paint/unlock-success/", "Déblocage confirmé"), ("/faq/", "FAQ"), ("/contact/", "Contact"), ("/cgv/", "CGV"),
+    ("/privacy/", "Confidentialité"), ("/mentions-legales/", "Mentions légales"), ("/discount/", "Code promo"),
+]
+# etape la plus avancee du parcours (pour lire d'un coup d'oeil ou en est le visiteur)
+STAGES = ["Découverte", "Joue en ligne", "Crée sa toile", "Voit son aperçu", "Commande", "Paie", "A commandé"]
+
+
+def _stage(path):
+    p = _LANG_RX.sub("", path)
+    if p.startswith(("/order/confirmed", "/play/buy-success", "/paint/unlock-success")):
+        return 6
+    if p.startswith("/checkout") or re.match(r"^/play/[^/]+/(pay|buy|unlock)/", p) or p.startswith("/paint/pay"):
+        return 5
+    if p.startswith("/delivery"):
+        return 4
+    if p.startswith("/preview"):
+        return 3
+    if p.startswith("/create"):
+        return 2
+    if p.startswith(("/play", "/paint", "/my-models")):
+        return 1
+    return 0
+
+
+def page_label(path, titles=None):
+    """Chemin -> libelle lisible (« Joue : Coucher de soleil »)."""
+    p = _LANG_RX.sub("", path or "/").split("?")[0]
+    lang = (_LANG_RX.match(path or "") or [None, None])[1]
+    suffix = " (%s)" % lang.upper() if lang else ""
+    for k, lab in _STATIC_LABELS:
+        if p == k:
+            return lab + suffix
+    m = re.match(r"^/play/([^/]+)/(?:(pay|buy|unlock|order|get|download|confirm)/)?$", p)
+    if m:
+        uid, act = m.groups()
+        t = (titles or {}).get(uid)
+        what = "« %s »" % t if t else ("un modèle du catalogue" if uid.startswith("gal-") else "sa toile")
+        verb = {"pay": "Paie", "buy": "Achète", "unlock": "Débloque", "order": "Commande le kit de",
+                "get": "Télécharge", "download": "Télécharge", "confirm": "Confirme"}.get(act, "Joue")
+        return "%s : %s%s" % (verb, what, suffix)
+    if p.startswith("/print/"):
+        return "Impression de sa toile" + suffix
+    return p + suffix
+
+
+def live_visitors(minutes=30, active_s=300):
+    """Visiteurs actifs ces `minutes` : ou ils sont, ce qu'ils ont vu et fait (donnees anonymes du jour)."""
+    import datetime
+    from .models import DigitalCanvas, PageHit, SiteEvent, Visit
+    now = timezone.now()
+    visits = list(Visit.objects.filter(last_at__gte=now - datetime.timedelta(minutes=minutes)).order_by("-last_at")[:60])
+    if not visits:
+        return []
+    hits = {}
+    for h in PageHit.objects.filter(visit__in=visits).order_by("at"):
+        hits.setdefault(h.visit_id, []).append(h)
+    evs = {}
+    for e in SiteEvent.objects.filter(day__in={v.day for v in visits}, visitor__in=[v.visitor for v in visits]).order_by("at"):
+        evs.setdefault((e.day, e.visitor), []).append(e)
+    uids = {m.group(1) for hs in hits.values() for h in hs for m in [re.match(r"^(?:/[a-z]{2})?/play/([^/]+)/", h.path)] if m}
+    titles = dict(DigitalCanvas.objects.filter(email="__library__", uid__in=uids).values_list("uid", "title"))
+    out = []
+    for i, v in enumerate(visits, 1):
+        hs = hits.get(v.id, [])
+        cur = hs[-1] if hs else None
+        idle = int((now - v.last_at).total_seconds())
+        path = [{"label": page_label(h.path, titles), "at": h.at, "s": h.duration_s} for h in hs[-12:]]
+        stage = max([_stage(h.path) for h in hs] or [0])
+        actions = [{"at": e.at, "kind": {"cta": "Clic", "generation": "Génération"}.get(e.kind, e.kind), "name": e.name}
+                   for e in evs.get((v.day, v.visitor), [])][-10:]
+        out.append({
+            "n": i, "flag": flag(v.country), "country": COUNTRIES.get(v.country, v.country or "Inconnu"),
+            "device": {"mobile": "Mobile", "tablet": "Tablette", "desktop": "Ordinateur"}.get(v.device, v.device or "?"),
+            "lang": (v.lang or "").upper(), "source": ("utm : " + v.utm_source) if v.utm_source else (v.referrer or "Accès direct"),
+            "entry": page_label(v.entry_path, titles), "first_at": v.first_at, "pages": v.pages,
+            "duration_s": v.duration_s, "now": page_label(cur.path, titles) if cur else "—",
+            "now_since": int((now - cur.at).total_seconds()) if cur else 0,
+            "active": idle <= active_s, "idle_min": idle // 60, "stage": STAGES[stage], "stage_i": stage,
+            "path": path, "more": max(0, len(hs) - 12), "actions": actions})
+    return out
+
+
 def purge(months=13):
     """Conservation des mesures d'audience : 13 mois (recommandation CNIL)."""
     import datetime

@@ -2563,6 +2563,48 @@ class CatalogueThumbTests(TestCase):
         self.assertEqual(self.client.get("/preview/img/ABCD-1234/thumb/").status_code, 404)   # commande client : jamais
 
 
+class LiveVisitorsTests(TestCase):
+    def _visit(self, minutes_ago, paths, visitor="v1", country="FR", **kw):
+        from datetime import timedelta
+        from django.utils import timezone
+        from studio.models import PageHit, Visit
+        now = timezone.now(); t0 = now - timedelta(minutes=minutes_ago + len(paths))
+        v = Visit.objects.create(day=timezone.localdate(), visitor=visitor, first_at=t0, last_at=now - timedelta(minutes=minutes_ago),
+                                 entry_path=paths[0], country=country, device="mobile", lang="fr", pages=len(paths), **kw)
+        for i, p in enumerate(paths):
+            PageHit.objects.create(visit=v, at=t0 + timedelta(minutes=i), path=p, duration_s=30)
+        return v
+
+    def test_live_detail_current_page_stage_and_actions(self):
+        from decimal import Decimal
+        from django.utils import timezone
+        from studio import analytics
+        from studio.models import DigitalCanvas, SiteEvent
+        DigitalCanvas.objects.create(email="__library__", uid="gal-sun", title="Coucher de soleil", price=Decimal("0"), colors=24)
+        self._visit(1, ["/", "/play/", "/play/gal-sun/"], visitor="a")
+        self._visit(2, ["/en/create/", "/en/preview/", "/en/delivery/"], visitor="b", country="DE", utm_source="tiktok")
+        self._visit(45, ["/faq/"], visitor="c")                                   # parti : hors liste
+        SiteEvent.objects.create(at=timezone.now(), day=timezone.localdate(), visitor="b", kind="generation", name="Aperçu (upload)")
+        live = analytics.live_visitors()
+        self.assertEqual(len(live), 2)
+        a, b = live
+        self.assertEqual(a["now"], "Joue : « Coucher de soleil »")
+        self.assertEqual((a["stage"], a["active"], a["device"]), ("Joue en ligne", True, "Mobile"))
+        self.assertEqual(b["now"], "Commande : adresse de livraison (EN)")
+        self.assertEqual((b["stage"], b["source"], b["country"]), ("Commande", "utm : tiktok", "Allemagne"))
+        self.assertEqual(b["actions"][0]["kind"], "Génération")
+        self.assertEqual([h["label"] for h in b["path"]][:2], ["Créer : choisit sa photo (EN)", "Aperçu de sa toile (EN)"])
+
+    def test_live_panel_staff_only(self):
+        from django.contrib.auth.models import User
+        self._visit(1, ["/checkout/"], visitor="z")
+        self.assertNotEqual(self.client.get("/admin-hub/activity/?live=1").status_code, 200)
+        u = User.objects.create_superuser("boss2", "b2@x.fr", "pw-Secret-123"); self.client.force_login(u)
+        r = self.client.get("/admin-hub/activity/?live=1")
+        self.assertContains(r, "Commande : paiement")
+        self.assertContains(self.client.get("/admin-hub/activity/"), 'id="livePanel"')
+
+
 class RegenCachePurgeTests(TestCase):
     def test_new_cache_entries_removed_old_kept(self):
         import tempfile, shutil

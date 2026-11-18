@@ -5821,7 +5821,9 @@ def erp_activity(request):
     """Activite du site : visiteurs, pays, pages d'entree, temps passe, pages vues, clics CTA, generations."""
     from django.contrib import admin as _admin
     from . import analytics
+    if request.GET.get("live") == "1":            # rafraichissement du panneau « en ligne »
+        return render(request, "admin/_live_visitors.html", {"visitors": analytics.live_visitors()})
     days = request.GET.get("p", "30")
     days = int(days) if days in dict(analytics.PERIODS) else 30
-    return render(request, "admin/erp_activity.html", {
+    return render(request, "admin/erp_activity.html", {"visitors": analytics.live_visitors(),
         **_admin.site.each_context(request), "a": analytics.dashboard(days), "erp_section": "activity"})

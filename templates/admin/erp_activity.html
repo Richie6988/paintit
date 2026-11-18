@@ -34,16 +34,45 @@
  .live{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:700;color:#1e5b35;background:#e7f6ec;border-radius:999px;padding:4px 10px}
  .live::before{content:"";width:8px;height:8px;border-radius:50%;background:#1f9d55;box-shadow:0 0 0 3px rgba(31,157,85,.25)}
  .empty{color:#8a93a6;font-size:.82rem;padding:10px 0}
+ button.live{border:0;cursor:pointer;font:inherit;font-size:.8rem;font-weight:700}
+ button.live:hover{background:#d6f0de}
+ .lv-panel{margin:0 0 16px;padding:14px 16px}
+ .lv-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:10px}
+ .lv-head .muted{font-size:.78rem}
+ .lv-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+ .lv{border:1px solid #e3e8f2;border-radius:12px;padding:10px 12px;background:#fff}
+ .lv.idle{opacity:.7}
+ .lv-top{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:.82rem}
+ .lv-who{font-weight:600}
+ .lv-stage{font-size:.72rem;font-weight:700;border-radius:999px;padding:2px 8px;background:#eef2fa;color:#34446b;white-space:nowrap}
+ .lv-stage.s3,.lv-stage.s4{background:#fff4dc;color:#8a5a00}
+ .lv-stage.s5{background:#ffe6d6;color:#a2440b}
+ .lv-stage.s6{background:#e1f5e8;color:#1e5b35}
+ .lv-now{margin:6px 0 2px;font-size:.9rem;display:flex;flex-wrap:wrap;gap:4px;align-items:baseline}
+ .lv-now .dot{width:8px;height:8px;border-radius:50%;background:#1f9d55;display:inline-block;align-self:center}
+ .lv-now .dot.off{background:#b9c1d3}
+ .lv-meta{font-size:.76rem}
+ .lv-more summary{cursor:pointer;font-size:.78rem;color:#2f6bf2;margin-top:6px}
+ .lv-path,.lv-act{margin:6px 0 0;padding-left:18px;font-size:.8rem;line-height:1.55}
+ .lv-act{list-style:none;padding-left:0;border-top:1px dashed #e3e8f2;padding-top:6px}
+ .lv-act li{list-style:none;margin-left:0}
+ .lv .t{color:#8a93a6;font-variant-numeric:tabular-nums}
 </style>
 <div class="erp">
   <div class="erp-head">
     <div><h1>Activité du site</h1>
       <div class="muted">Du {{ a.start|date:"d/m/Y" }} au {{ a.end|date:"d/m/Y" }} · comparé à la période précédente · mesure interne sans cookie, robots et équipe exclus</div></div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <span class="live" title="Visiteurs actifs ces 30 dernières minutes">{{ a.live }} en ligne</span>
+      <button type="button" class="live" id="liveBtn" aria-expanded="false" aria-controls="livePanel" title="Voir ce que font les visiteurs actifs ces 30 dernières minutes">{{ a.live }} en ligne ▾</button>
       <div class="seg">{% for key, label in a.periods %}<a href="?p={{ key }}" class="{% if key == a.days %}on{% endif %}">{{ label }}</a>{% endfor %}</div>
     </div>
   </div>
+
+  <section class="card lv-panel" id="livePanel" hidden>
+    <div class="lv-head"><b>En ce moment sur le site</b>
+      <span class="muted">Visiteurs anonymes (sans cookie) actifs ces 30 dernières minutes · point vert = actif il y a moins de 5 min · actualisé toutes les 20 s</span></div>
+    <div id="liveBody">{% include "admin/_live_visitors.html" %}</div>
+  </section>
 
   <div class="kpis">
     {% for c in a.cards %}
@@ -99,4 +128,21 @@
       <p class="muted" style="font-size:.76rem;margin:12px 0 0">Entonnoir : {{ a.cur.visits }} visiteurs → {{ a.cur.generations }} générations ({{ a.cur.gen_rate|default:"—" }} %) → {{ a.cur.orders }} commandes ({{ a.cur.conv|default:"—" }} %).</p></div>
   </div>
 </div>
+<script>
+(function(){
+  var b=document.getElementById('liveBtn'),p=document.getElementById('livePanel'),body=document.getElementById('liveBody'),timer=null;
+  if(!b||!p)return;
+  function label(){b.textContent=body.querySelectorAll('.lv').length+' en ligne '+(p.hidden?'▾':'▴');}
+  function refresh(){
+    var keep=[].map.call(body.querySelectorAll('.lv-more'),function(d){return d.open;});
+    fetch('?live=1',{credentials:'same-origin'}).then(function(r){return r.ok?r.text():null;}).then(function(h){
+      if(h===null)return; body.innerHTML=h;
+      body.querySelectorAll('.lv-more').forEach(function(d,i){if(keep[i])d.open=true;});   // garde les parcours ouverts
+      label();
+    }).catch(function(){});
+  }
+  b.addEventListener('click',function(){p.hidden=!p.hidden;b.setAttribute('aria-expanded',String(!p.hidden));label();
+    clearInterval(timer);if(!p.hidden)timer=setInterval(refresh,20000);});
+})();
+</script>
 {% endblock %}

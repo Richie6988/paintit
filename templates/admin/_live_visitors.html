@@ -1,0 +1,25 @@
+{% if visitors %}
+<div class="lv-list">
+  {% for v in visitors %}
+  <div class="lv{% if not v.active %} idle{% endif %}">
+    <div class="lv-top">
+      <span class="lv-who">{{ v.flag }} {{ v.country }} · {{ v.device }}{% if v.lang %} · {{ v.lang }}{% endif %}</span>
+      <span class="lv-stage s{{ v.stage_i }}">{{ v.stage }}</span>
+    </div>
+    <div class="lv-now">
+      {% if v.active %}<span class="dot"></span>{% else %}<span class="dot off"></span>{% endif %}
+      <b>{{ v.now }}</b>
+      <span class="muted">· {% if v.active %}depuis {% if v.now_since >= 60 %}{% widthratio v.now_since 60 1 %} min{% else %}{{ v.now_since }} s{% endif %}{% else %}inactif depuis {{ v.idle_min }} min{% endif %}</span>
+    </div>
+    <div class="lv-meta muted">Arrivé à {{ v.first_at|date:"H:i" }} via {{ v.source }} · {{ v.pages }} page{{ v.pages|pluralize }}{% if v.duration_s %} · {% if v.duration_s >= 60 %}{% widthratio v.duration_s 60 1 %} min{% else %}{{ v.duration_s }} s{% endif %} mesurées{% endif %}</div>
+    <details class="lv-more"><summary>Parcours{% if v.actions %} et {{ v.actions|length }} action{{ v.actions|length|pluralize }}{% endif %}</summary>
+      <ol class="lv-path">
+        {% if v.more %}<li class="muted">… {{ v.more }} page{{ v.more|pluralize }} plus tôt</li>{% endif %}
+        {% for h in v.path %}<li><span class="t">{{ h.at|date:"H:i" }}</span> {{ h.label }}{% if h.s %} <span class="muted">({% if h.s >= 60 %}{% widthratio h.s 60 1 %} min{% else %}{{ h.s }} s{% endif %})</span>{% endif %}</li>{% endfor %}
+      </ol>
+      {% if v.actions %}<ul class="lv-act">{% for a in v.actions %}<li><span class="t">{{ a.at|date:"H:i" }}</span> <b>{{ a.kind }}</b> {{ a.name }}</li>{% endfor %}</ul>{% endif %}
+    </details>
+  </div>
+  {% endfor %}
+</div>
+{% else %}<div class="empty">Personne en ligne ces 30 dernières minutes.</div>{% endif %}
