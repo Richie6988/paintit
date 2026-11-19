@@ -2194,3 +2194,6 @@ msgid ""
 "Facile : grandes zones. Expert : plus de zones, idéal pour les visages et "
 "portraits."
 msgstr "Easy: large areas. Expert: more areas, ideal for faces and portraits."
+
+msgid "Adaptation au format…"
+msgstr "Adapting to the format…"

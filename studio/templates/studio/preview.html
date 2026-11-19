@@ -148,14 +148,33 @@
     // ---- format aux proportions differentes : bascule vers la toile calculee a ces proportions ----
     var box = document.getElementById('fmtAdapt'), boxTxt = document.getElementById('fmtAdaptTxt'),
         bar = document.getElementById('fmtAdaptBar'), form = document.querySelector('form.options'),
-        locks = document.querySelectorAll('form.options button[type=submit], .digital-offer .digibtn'), token = 0;
-    function lock(on){ locks.forEach(function(b){ b.style.pointerEvents = on ? 'none' : ''; b.style.opacity = on ? .45 : ''; }); }
-    function done(){ box.hidden = true; lock(false); }
+        orderBtn = document.querySelector('form.options button[type=submit]'),
+        playBtn = document.querySelector('.digital-offer .digibtn'), token = 0, busy = false, intent = null, waitT = null;
+    var PLAY = "{% url 'studio:digipaint' 'UIDX' %}", T_WAIT = '{{ wait_txt|escapejs }}';
+    // Les boutons restent actifs pendant le calcul (quelques secondes, en arriere-plan). Un clic avant la fin :
+    // le bouton lui-meme indique l'attente, et l'action part des que la toile au bon format est prete.
+    function go(uid){
+      var it = intent; intent = null; clearTimeout(waitT);
+      if (it === 'order') { form.submit(); return; }
+      if (it === 'play') { location.href = uid ? PLAY.replace('UIDX', uid) : playBtn.href; return; }
+      location.reload();                                 // pas de clic en attente : affiche la nouvelle toile
+    }
+    function done(){ busy = false; box.hidden = true; if (intent) go(null); }
+    function wait(btn, what, e){
+      if (!busy) return;                                 // rien en cours : comportement normal
+      e.preventDefault();
+      if (intent) return;
+      intent = what; btn.classList.add('btn-wait'); btn.setAttribute('aria-busy', 'true');
+      btn.dataset.label = btn.textContent; btn.innerHTML = '<span class="bw-spin"></span>' + T_WAIT;
+      waitT = setTimeout(function(){ busy = false; go(null); }, 25000);   // filet : on n'attend jamais indefiniment
+    }
+    if (orderBtn) orderBtn.addEventListener('click', function(e){ wait(orderBtn, 'order', e); });
+    if (playBtn) playBtn.addEventListener('click', function(e){ wait(playBtn, 'play', e); });
     function adapt(r){
       var my = ++token;
       if (r.dataset.same) { done(); return; }            // meme proportion que la toile affichee
       boxTxt.textContent = '{{ adapt_txt|escapejs }}'.replace('%s', r.dataset.label);
-      bar.style.width = '4%'; box.hidden = false; lock(true);
+      bar.style.width = '4%'; box.hidden = false; busy = true;
       (function poll(){
         if (my !== token) return;                        // un autre format a ete choisi entre-temps
         var fd = new FormData(form);
@@ -163,7 +182,7 @@
           .then(function(x){ return x.json(); })
           .then(function(d){
             if (my !== token) return;
-            if (d.state === 'ready') { location.reload(); return; }
+            if (d.state === 'ready') { busy = false; go(d.uid); return; }
             if (d.state === 'pending') { bar.style.width = Math.max(4, d.pct || 0) + '%'; setTimeout(poll, 1200); return; }
             done();                                      // indisponible : l'ajustement se fera a la preparation
           }).catch(function(){ if (my === token) done(); });

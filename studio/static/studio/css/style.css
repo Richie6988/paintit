@@ -1035,3 +1035,9 @@ body.pv-busy .options .cta{opacity:.6;pointer-events:none}
 .fa-bar{display:block;width:220px;max-width:100%;height:6px;border-radius:6px;background:#e8edf7;overflow:hidden}
 .fa-bar i{display:block;height:100%;width:4%;background:#2f6bf2;transition:width .6s}
 
+
+/* Apercu : bouton clique pendant l'adaptation au format (l'action part des que c'est pret) */
+.btn-wait{cursor:progress}
+.bw-spin{display:inline-block;width:14px;height:14px;margin-right:8px;vertical-align:-2px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.45);border-top-color:#fff;animation:faspin .8s linear infinite}
+@media (prefers-reduced-motion:reduce){.bw-spin{animation-duration:2.4s}}

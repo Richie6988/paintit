@@ -2207,3 +2207,6 @@ msgid ""
 "portraits."
 msgstr ""
 "Fácil: zonas grandes. Experto: más zonas, ideal para caras y retratos."
+
+msgid "Adaptation au format…"
+msgstr "Adaptando al formato…"

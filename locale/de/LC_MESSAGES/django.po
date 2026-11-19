@@ -2244,3 +2244,6 @@ msgid ""
 msgstr ""
 "Leicht: große Felder. Experte: mehr Felder, ideal für Gesichter und "
 "Porträts."
+
+msgid "Adaptation au format…"
+msgstr "Anpassung an das Format…"

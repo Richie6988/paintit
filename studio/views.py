@@ -652,6 +652,7 @@ def preview(request):
                   {"order": order, "brushes_price": p.brushes_price, "formats": formats, "level": level,
                    "gen_ratio": gen_ratio, "gen_w": gw, "gen_h": gh,
                    "adapt_txt": _("Adaptation de votre toile au format %s…"),
+                   "wait_txt": _("Adaptation au format…"),
                    "current_format": current_format, "finish": finish,
                    "finishes": [f for f in ("ck", "fk", "nk") if any(f in fm["fin"] for fm in formats)],
                    "base_local": fx.order_amounts(order, cur)["canvas"], "bp_local": fx.local(p.brushes_price, cur),
@@ -902,7 +903,7 @@ def preview_switch(request):
             request.session["my_uids"] = [new["uid"] if x == old else x for x in u]
             DigitalCanvas.objects.filter(uid=old, source="digital").update(
                 uid=new["uid"], width_cm=new["gen_w"], height_cm=new["gen_h"])
-    return JsonResponse({"state": "ready"})
+    return JsonResponse({"state": "ready", "uid": new["uid"]})
 
 
 def set_options(request):

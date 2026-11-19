@@ -2321,6 +2321,7 @@ class PreviewFormatVariantTests(TestCase):
         # clic 40x40 en « cadre a monter » + pinceaux : bascule immediate, sans nouveau calcul
         r = self.client.post("/preview/switch/", {"kit_format": self.k44.id, "finish": "fk", "brushes": "on"})
         self.assertEqual(r.json()["state"], "ready")
+        self.assertEqual(r.json()["uid"], self.client.session["order"]["uid"])   # « Tester ma toile » suit la bascule
         o = self.client.session["order"]
         self.assertNotEqual(o["uid"], self.base)
         self.assertEqual((o["width_cm"], o["height_cm"], o["gen_w"], o["gen_h"]), (40, 40, 40.0, 40.0))
